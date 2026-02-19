@@ -1,23 +1,23 @@
-# Worship Setlist Assistant
+# Cadentia
 
 ## Overview
 
-Worship Setlist Assistant is an AI-assisted recommendation platform
-designed to help worship directors build cohesive, doctrinally-aligned,
-musically-continuous setlists.
+Cadentia is an AI-assisted recommendation platform designed to help musicians build cohesive, musically-continuous setlists.
 
 The system combines:
 
--   Guided conversational UI (Telegram / future WhatsApp)
--   LLM-based intent interpretation layer
--   Deterministic Recommendation Engine (REng)
--   Curated Song Dataset
--   Admin Song Import/Scraper Tool
+- Guided conversational UI (Telegram / future WhatsApp)
+- LLM-based intent interpretation layer
+- Deterministic Recommendation Engine (REng)
+- Curated Song Dataset
+- Admin Song Import/Scraper Tool
 
 The platform is designed for church and mission-network use,
-prioritizing: - Doctrinal safety - Musical continuity (no cuts between
-songs) - Key grouping and energy arc modeling - Controlled AI usage (LLM
-for interpretation, not selection)
+prioritizing: 
+- Doctrinal safety 
+- Musical continuity (no cuts between songs) 
+- Key grouping and energy arc modeling 
+- Controlled AI usage (LLM for interpretation, not selection)
 
 ------------------------------------------------------------------------
 
@@ -67,7 +67,7 @@ for interpretation, not selection)
 ## Suggested Directory Structure
 
 
-    worship-assistant/
+    cadentia/
     ├── api/
     │   ├── controller/
     │   ├── dto/
@@ -108,7 +108,8 @@ for interpretation, not selection)
     ├── db/
     │   └── migrations/
     │
-    └── ARCHITECTURE.md
+    └── docs/
+        └── ARCHITECTURE.md
 
 ------------------------------------------------------------------------
 
