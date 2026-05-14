@@ -63,3 +63,24 @@ The LLM must output:
 -   Only backend REng may generate setlists.
 -   All LLM output must pass JSON schema validation.
 -   All recommendations must cite dataset references.
+
+------------------------------------------------------------------------
+
+## Coding Guidelines
+
+### GitHub
+
+- All commits should follow conventional commits format
+
+### Java
+
+- In general, follow [Google Java Style](https://google.github.io/styleguide/javaguide.html), but use four spaces instead of two
+- Avoid star imports
+- Use imports instead of full class names
+
+#### Testing
+
+- Use assertj library for assertions
+- Follow Given/When/Then or Arrange/Act/Assert pattern for tests
+- Add captors at class level with `@Captor` annotation instead of inline in tests
+- JUnit and mockito
