@@ -18,6 +18,10 @@ Store curated arrangements in canonical base keys and generate transpositions dy
 
 Define the internal representation for keys, modes, accidentals, chord roots, chord qualities, slash chords, Nashville-style notation if supported, and invalid chord handling.
 
+### Deliverable
+
+- Representation rules: [`docs/arrangement-transposition-rules.md`](../arrangement-transposition-rules.md)
+
 ### Acceptance criteria
 
 - Documents supported keys and enharmonic spelling rules.
