@@ -25,6 +25,33 @@ Review the repository's current persistence, schema, model, migration, and seed-
 - Confirms how schema changes will be reviewed and run locally.
 - Does not change runtime behavior unless schema scaffolding already exists and requires metadata updates.
 
+### Implementation note
+
+Current repository mapping before adding ADR-001 schema migrations:
+
+- **Application stack:** the backend is a Java 21 Spring Boot 3.1 API module under `apps/api`, built from the root Maven reactor. It already includes Spring Web, Validation, Actuator, Spring Data JDBC, Flyway, and the PostgreSQL JDBC driver. TypeScript intent contracts live under `packages/intent-contracts`, but catalog persistence is owned by the Java API.
+- **Persistence mechanism:** PostgreSQL is already configured as the only runtime database through `spring.datasource` properties in `apps/api/src/main/resources/application.yml`; local development uses the `postgres` service in `docker-compose.yml`. Flyway is enabled with `classpath:db/migration`, and the only current migration is `apps/api/src/main/resources/db/migration/V001__bootstrap_schema.sql`, which is a placeholder bootstrap migration and does not create catalog tables.
+- **Current catalog code:** `apps/api/src/main/java/com/cadentia/catalog/entity/Song.java` is a minimal record with `id`, `title`, and `language`; `SongRepository` exposes only `findById`; `InMemorySongRepository` is a stub that returns empty results. There is no implemented JDBC repository, generated database types, seed-data loader, or production catalog fixture yet.
+- **Recommendation boundary:** `apps/api/src/main/java/com/cadentia/reng/RecommendableArrangement.java` is the current recommendation-facing shape, while `SetlistService` intentionally returns `PENDING_CATALOG_IMPLEMENTATION` and does not select songs. ADR-001 migrations must preserve this guardrail until approved catalog data and ADR-002 read models exist.
+
+Files and directories expected to be affected by the ADR-001 database implementation:
+
+- `apps/api/src/main/resources/db/migration/` for Flyway SQL migrations such as the next `V002__...sql` catalog schema migration.
+- `apps/api/src/main/resources/application.yml` only if Flyway or datasource configuration metadata must change; no second persistence technology should be introduced.
+- `docker-compose.yml` only if local PostgreSQL service configuration needs metadata-compatible adjustments; pgvector is available through the image but ADR-001 subtask work must not add vector or semantic-search schema.
+- `apps/api/src/main/java/com/cadentia/catalog/` for canonical catalog entities, repositories, services, and validation-oriented data-access types.
+- `apps/api/src/main/java/com/cadentia/reng/` only for consuming approved catalog/read-model data after persistence exists; recommendation logic must not become the source of song truth.
+- `apps/api/src/test/java/com/cadentia/` for repository/service tests and migration-backed fixture verification.
+- `docs/diagrams/er-diagrams.md`, `docs/ARCHITECTURE.md`, and ADR implementation-plan files for documentation updates that match implemented migration names and relationships.
+- `apps/api/src/main/openapi/cadentia-api.yaml` and generated `com.cadentia.generated.*` classes only if API request/response contracts change; they are not the database type source of truth.
+
+Local review and execution convention:
+
+- Schema changes should be introduced as ordered Flyway migrations in `apps/api/src/main/resources/db/migration/` and reviewed as SQL diffs alongside matching Java data-access changes and documentation updates.
+- Run local PostgreSQL with `docker compose up -d postgres`, then run `mvn test` from the repository root to compile the API and let Spring/Flyway-backed tests exercise migrations when such tests are added.
+- Run `scripts/check.sh` before merge when the full Java and TypeScript toolchains are available; this runs Maven tests plus npm tests, typecheck, and build.
+- Keep seed or fixture data separate from production catalog data. Until a seed convention is added, test fixtures should live under `apps/api/src/test/resources/` or test-scoped SQL files rather than in production Flyway migrations unless explicitly documented.
+
 ### Restrictions
 
 - Do not introduce a second persistence technology.
