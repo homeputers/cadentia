@@ -230,7 +230,7 @@ class AdminImportReviewServiceTest {
         verify(songRepository).createApprovalRecord(approvalCommandCaptor.capture());
         assertThat(approvalCommandCaptor.getValue())
                 .extracting(CreateApprovalRecordCommand::approvalType, CreateApprovalRecordCommand::status)
-                .containsExactly(ApprovalType.CATALOG_INCLUSION, ApprovalStatus.PENDING);
+                .containsExactly(ApprovalType.EDITORIAL, ApprovalStatus.PENDING);
         verify(songRepository).markImportCandidateMerged(candidate.id(), song.id());
     }
 
@@ -371,7 +371,7 @@ class AdminImportReviewServiceTest {
                 songId,
                 null,
                 null,
-                ApprovalType.CATALOG_INCLUSION,
+                ApprovalType.EDITORIAL,
                 status,
                 "reviewer@example.test",
                 "Created from reviewed import candidate; approval remains pending.",

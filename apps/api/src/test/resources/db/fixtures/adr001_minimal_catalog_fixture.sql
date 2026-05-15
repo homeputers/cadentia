@@ -251,7 +251,7 @@ INSERT INTO approval_records (
         '681f8944-19c6-4b22-8c05-0babfaaac2fa',
         NULL,
         NULL,
-        'CATALOG_INCLUSION',
+        'EDITORIAL',
         'PENDING',
         'test-fixture-reviewer',
         'Fixture row only; intentionally pending so it is not recommendable.'
@@ -271,8 +271,8 @@ INSERT INTO approval_records (
         NULL,
         NULL,
         '5238de29-e02e-418f-a4d5-b221bd18bb79',
-        'COPYRIGHT',
-        'NEEDS_CHANGES',
+        'LICENSING',
+        'NEEDS_REVIEW',
         'test-fixture-reviewer',
-        'Fixture lyric document is synthetic and intentionally not copyright-approved for production use.'
+        'Fixture lyric document is synthetic and intentionally not licensing-approved for production use.'
     );

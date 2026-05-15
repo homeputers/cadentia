@@ -4,6 +4,5 @@ public enum ApprovalStatus {
     PENDING,
     APPROVED,
     REJECTED,
-    NEEDS_CHANGES,
-    REVOKED
+    NEEDS_REVIEW
 }

@@ -40,7 +40,7 @@ class MinimalCatalogFixtureTest {
                 .contains("productionApproved")
                 .contains("externalServices")
                 .contains("'PENDING'")
-                .contains("'NEEDS_CHANGES'")
+                .contains("'NEEDS_REVIEW'")
                 .doesNotContain("'APPROVED'");
     }
 

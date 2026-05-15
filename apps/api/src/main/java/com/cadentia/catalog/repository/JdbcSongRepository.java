@@ -11,6 +11,7 @@ import com.cadentia.catalog.entity.ProvenanceRecord;
 import com.cadentia.catalog.entity.Song;
 import com.cadentia.catalog.entity.Tag;
 import com.cadentia.catalog.model.ApprovalStatus;
+import com.cadentia.catalog.model.ApprovalStatusTransition;
 import com.cadentia.catalog.model.ApprovalType;
 import com.cadentia.catalog.model.ArrangementSourceType;
 import com.cadentia.catalog.model.CreateApprovalRecordCommand;
@@ -564,7 +565,17 @@ public class JdbcSongRepository implements SongRepository {
     }
 
     @Override
+    @Transactional
     public Optional<ApprovalRecord> updateApprovalRecord(UUID id, UpdateApprovalRecordCommand command) {
+        Optional<ApprovalStatus> currentStatus = queryOptional(
+                "SELECT status FROM approval_records WHERE id = :id",
+                Map.of("id", id),
+                (rs, rowNum) -> ApprovalStatus.valueOf(rs.getString("status")));
+        if (currentStatus.isEmpty()) {
+            return Optional.empty();
+        }
+        ApprovalStatusTransition.requireAllowed(currentStatus.get(), command.status());
+
         String sql = """
                 UPDATE approval_records
                 SET status = :status,
