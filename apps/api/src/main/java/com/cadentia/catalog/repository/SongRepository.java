@@ -3,23 +3,29 @@ package com.cadentia.catalog.repository;
 import com.cadentia.catalog.entity.ApprovalRecord;
 import com.cadentia.catalog.entity.Arrangement;
 import com.cadentia.catalog.entity.ImportBatch;
+import com.cadentia.catalog.entity.ImportCandidate;
 import com.cadentia.catalog.entity.LyricsDocument;
+import com.cadentia.catalog.entity.ProposedDuplicateMatch;
 import com.cadentia.catalog.entity.ProvenanceRecord;
 import com.cadentia.catalog.entity.Song;
 import com.cadentia.catalog.entity.Tag;
 import com.cadentia.catalog.model.CreateApprovalRecordCommand;
 import com.cadentia.catalog.model.CreateArrangementCommand;
 import com.cadentia.catalog.model.CreateImportBatchCommand;
+import com.cadentia.catalog.model.CreateImportCandidateCommand;
 import com.cadentia.catalog.model.CreateLyricsDocumentCommand;
+import com.cadentia.catalog.model.CreateProposedDuplicateMatchCommand;
 import com.cadentia.catalog.model.CreateProvenanceRecordCommand;
 import com.cadentia.catalog.model.CreateSongCommand;
 import com.cadentia.catalog.model.CreateTagCommand;
+import com.cadentia.catalog.model.ImportCandidateStatus;
 import com.cadentia.catalog.model.TagType;
 import com.cadentia.catalog.model.UpdateApprovalRecordCommand;
 import com.cadentia.catalog.model.UpdateArrangementCommand;
 import com.cadentia.catalog.model.UpdateImportBatchCommand;
 import com.cadentia.catalog.model.UpdateSongCommand;
 import com.cadentia.catalog.model.UpdateTagCommand;
+import com.cadentia.scraperadmin.CatalogSongCandidate;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -69,6 +75,18 @@ public interface SongRepository {
     Optional<ImportBatch> findImportBatchById(UUID id);
 
     Optional<ImportBatch> updateImportBatch(UUID id, UpdateImportBatchCommand command);
+
+    ImportCandidate createImportCandidate(CreateImportCandidateCommand command);
+
+    List<ImportCandidate> findImportCandidatesByBatchId(UUID importBatchId);
+
+    Optional<ImportCandidate> updateImportCandidateStatus(UUID id, ImportCandidateStatus status);
+
+    ProposedDuplicateMatch createProposedDuplicateMatch(CreateProposedDuplicateMatchCommand command);
+
+    List<ProposedDuplicateMatch> findProposedDuplicateMatchesByImportCandidateId(UUID importCandidateId);
+
+    List<CatalogSongCandidate> findCatalogSongCandidatesForDeduplication();
 
     ProvenanceRecord createProvenanceRecord(CreateProvenanceRecordCommand command);
 

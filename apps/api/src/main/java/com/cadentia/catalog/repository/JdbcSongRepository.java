@@ -3,7 +3,9 @@ package com.cadentia.catalog.repository;
 import com.cadentia.catalog.entity.ApprovalRecord;
 import com.cadentia.catalog.entity.Arrangement;
 import com.cadentia.catalog.entity.ImportBatch;
+import com.cadentia.catalog.entity.ImportCandidate;
 import com.cadentia.catalog.entity.LyricsDocument;
+import com.cadentia.catalog.entity.ProposedDuplicateMatch;
 import com.cadentia.catalog.entity.ProvenanceRecord;
 import com.cadentia.catalog.entity.Song;
 import com.cadentia.catalog.entity.Tag;
@@ -13,11 +15,15 @@ import com.cadentia.catalog.model.ArrangementSourceType;
 import com.cadentia.catalog.model.CreateApprovalRecordCommand;
 import com.cadentia.catalog.model.CreateArrangementCommand;
 import com.cadentia.catalog.model.CreateImportBatchCommand;
+import com.cadentia.catalog.model.CreateImportCandidateCommand;
 import com.cadentia.catalog.model.CreateLyricsDocumentCommand;
+import com.cadentia.catalog.model.CreateProposedDuplicateMatchCommand;
 import com.cadentia.catalog.model.CreateProvenanceRecordCommand;
 import com.cadentia.catalog.model.CreateSongCommand;
 import com.cadentia.catalog.model.CreateTagCommand;
+import com.cadentia.catalog.model.DuplicateMatchStatus;
 import com.cadentia.catalog.model.ImportBatchStatus;
+import com.cadentia.catalog.model.ImportCandidateStatus;
 import com.cadentia.catalog.model.ImportMethod;
 import com.cadentia.catalog.model.KeyMode;
 import com.cadentia.catalog.model.LicenseType;
@@ -29,6 +35,7 @@ import com.cadentia.catalog.model.UpdateArrangementCommand;
 import com.cadentia.catalog.model.UpdateImportBatchCommand;
 import com.cadentia.catalog.model.UpdateSongCommand;
 import com.cadentia.catalog.model.UpdateTagCommand;
+import com.cadentia.scraperadmin.CatalogSongCandidate;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
@@ -61,6 +68,13 @@ public class JdbcSongRepository implements SongRepository {
             + "source_system, source_uri, source_label, license_type, license_notes, import_method, confidence_score, captured_at";
     private static final String APPROVAL_COLUMNS = "id, song_id, arrangement_id, lyrics_document_id, approval_type, status, "
             + "reviewer, review_notes, reviewed_at, created_at";
+
+    private static final String IMPORT_CANDIDATE_COLUMNS = "id, import_batch_id, external_candidate_id, raw_title, "
+            + "normalized_title, source_artist_name, source_artist_metadata::text AS source_artist_metadata_json, "
+            + "ccli_number, lyrics_hash, source_payload::text AS source_payload_json, status, merged_song_id, "
+            + "created_at, updated_at";
+    private static final String PROPOSED_DUPLICATE_MATCH_COLUMNS = "id, import_candidate_id, candidate_song_id, "
+            + "match_score, match_signals::text AS match_signals_json, status, suggested_by, created_at, updated_at";
 
     private final NamedParameterJdbcTemplate jdbcTemplate;
 
@@ -291,6 +305,86 @@ public class JdbcSongRepository implements SongRepository {
     }
 
     @Override
+    public ImportCandidate createImportCandidate(CreateImportCandidateCommand command) {
+        String sql = """
+                INSERT INTO import_candidates (
+                    import_batch_id, external_candidate_id, raw_title, normalized_title, source_artist_name,
+                    source_artist_metadata, ccli_number, lyrics_hash, source_payload, status
+                ) VALUES (
+                    :importBatchId, :externalCandidateId, :rawTitle, :normalizedTitle, :sourceArtistName,
+                    CAST(:sourceArtistMetadataJson AS jsonb), :ccliNumber, :lyricsHash,
+                    CAST(:sourcePayloadJson AS jsonb), :status
+                )
+                RETURNING %s
+                """.formatted(IMPORT_CANDIDATE_COLUMNS);
+        return jdbcTemplate.queryForObject(sql, importCandidateParams(command), importCandidateMapper());
+    }
+
+    @Override
+    public List<ImportCandidate> findImportCandidatesByBatchId(UUID importBatchId) {
+        return jdbcTemplate.query("SELECT " + IMPORT_CANDIDATE_COLUMNS
+                        + " FROM import_candidates WHERE import_batch_id = :importBatchId ORDER BY created_at, id",
+                Map.of("importBatchId", importBatchId), importCandidateMapper());
+    }
+
+    @Override
+    public Optional<ImportCandidate> updateImportCandidateStatus(UUID id, ImportCandidateStatus status) {
+        String sql = """
+                UPDATE import_candidates
+                SET status = :status,
+                    updated_at = now()
+                WHERE id = :id
+                RETURNING %s
+                """.formatted(IMPORT_CANDIDATE_COLUMNS);
+        return queryOptional(sql, Map.of("id", id, "status", status.name()), importCandidateMapper());
+    }
+
+    @Override
+    public ProposedDuplicateMatch createProposedDuplicateMatch(CreateProposedDuplicateMatchCommand command) {
+        String sql = """
+                INSERT INTO proposed_duplicate_matches (
+                    import_candidate_id, candidate_song_id, match_score, match_signals, status, suggested_by
+                ) VALUES (
+                    :importCandidateId, :candidateSongId, :matchScore, CAST(:matchSignalsJson AS jsonb),
+                    :status, :suggestedBy
+                )
+                RETURNING %s
+                """.formatted(PROPOSED_DUPLICATE_MATCH_COLUMNS);
+        return jdbcTemplate.queryForObject(sql, proposedDuplicateMatchParams(command), proposedDuplicateMatchMapper());
+    }
+
+    @Override
+    public List<ProposedDuplicateMatch> findProposedDuplicateMatchesByImportCandidateId(UUID importCandidateId) {
+        return jdbcTemplate.query("SELECT " + PROPOSED_DUPLICATE_MATCH_COLUMNS
+                        + " FROM proposed_duplicate_matches WHERE import_candidate_id = :importCandidateId "
+                        + "ORDER BY match_score DESC, created_at, id",
+                Map.of("importCandidateId", importCandidateId), proposedDuplicateMatchMapper());
+    }
+
+    @Override
+    public List<CatalogSongCandidate> findCatalogSongCandidatesForDeduplication() {
+        String sql = """
+                SELECT DISTINCT ON (songs.id)
+                    songs.id,
+                    songs.canonical_title,
+                    songs.normalized_title,
+                    songs.original_artist_display,
+                    songs.ccli_number,
+                    lyrics_documents.content_hash AS lyrics_hash
+                FROM songs
+                LEFT JOIN arrangements
+                    ON arrangements.song_id = songs.id
+                    AND arrangements.is_active = true
+                    AND arrangements.default_for_song = true
+                LEFT JOIN lyrics_documents
+                    ON lyrics_documents.arrangement_id = arrangements.id
+                    AND lyrics_documents.is_current = true
+                ORDER BY songs.id, lyrics_documents.created_at DESC NULLS LAST
+                """;
+        return jdbcTemplate.query(sql, Map.of(), catalogSongCandidateMapper());
+    }
+
+    @Override
     public ProvenanceRecord createProvenanceRecord(CreateProvenanceRecordCommand command) {
         String sql = """
                 INSERT INTO provenance_records (
@@ -488,6 +582,30 @@ public class JdbcSongRepository implements SongRepository {
                 .addValue("completed", command.completed());
     }
 
+    private static MapSqlParameterSource importCandidateParams(CreateImportCandidateCommand command) {
+        return new MapSqlParameterSource()
+                .addValue("importBatchId", command.importBatchId())
+                .addValue("externalCandidateId", command.externalCandidateId())
+                .addValue("rawTitle", command.rawTitle())
+                .addValue("normalizedTitle", command.normalizedTitle())
+                .addValue("sourceArtistName", command.sourceArtistName())
+                .addValue("sourceArtistMetadataJson", command.sourceArtistMetadataJson())
+                .addValue("ccliNumber", command.ccliNumber())
+                .addValue("lyricsHash", command.lyricsHash())
+                .addValue("sourcePayloadJson", command.sourcePayloadJson())
+                .addValue("status", command.status().name());
+    }
+
+    private static MapSqlParameterSource proposedDuplicateMatchParams(CreateProposedDuplicateMatchCommand command) {
+        return new MapSqlParameterSource()
+                .addValue("importCandidateId", command.importCandidateId())
+                .addValue("candidateSongId", command.candidateSongId())
+                .addValue("matchScore", command.matchScore())
+                .addValue("matchSignalsJson", command.matchSignalsJson())
+                .addValue("status", command.status().name())
+                .addValue("suggestedBy", command.suggestedBy());
+    }
+
     private static MapSqlParameterSource provenanceParams(CreateProvenanceRecordCommand command) {
         return new MapSqlParameterSource()
                 .addValue("songId", command.songId())
@@ -595,6 +713,47 @@ public class JdbcSongRepository implements SongRepository {
                 rs.getString("summary_json"),
                 instant(rs, "started_at"),
                 instant(rs, "completed_at"));
+    }
+
+    private static RowMapper<ImportCandidate> importCandidateMapper() {
+        return (rs, rowNum) -> new ImportCandidate(
+                uuid(rs, "id"),
+                uuid(rs, "import_batch_id"),
+                rs.getString("external_candidate_id"),
+                rs.getString("raw_title"),
+                rs.getString("normalized_title"),
+                rs.getString("source_artist_name"),
+                rs.getString("source_artist_metadata_json"),
+                rs.getString("ccli_number"),
+                rs.getString("lyrics_hash"),
+                rs.getString("source_payload_json"),
+                ImportCandidateStatus.valueOf(rs.getString("status")),
+                uuid(rs, "merged_song_id"),
+                instant(rs, "created_at"),
+                instant(rs, "updated_at"));
+    }
+
+    private static RowMapper<ProposedDuplicateMatch> proposedDuplicateMatchMapper() {
+        return (rs, rowNum) -> new ProposedDuplicateMatch(
+                uuid(rs, "id"),
+                uuid(rs, "import_candidate_id"),
+                uuid(rs, "candidate_song_id"),
+                rs.getBigDecimal("match_score"),
+                rs.getString("match_signals_json"),
+                DuplicateMatchStatus.valueOf(rs.getString("status")),
+                rs.getString("suggested_by"),
+                instant(rs, "created_at"),
+                instant(rs, "updated_at"));
+    }
+
+    private static RowMapper<CatalogSongCandidate> catalogSongCandidateMapper() {
+        return (rs, rowNum) -> new CatalogSongCandidate(
+                uuid(rs, "id"),
+                rs.getString("canonical_title"),
+                rs.getString("normalized_title"),
+                rs.getString("original_artist_display"),
+                rs.getString("ccli_number"),
+                rs.getString("lyrics_hash"));
     }
 
     private static RowMapper<ProvenanceRecord> provenanceMapper() {
