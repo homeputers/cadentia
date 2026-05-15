@@ -1,5 +1,6 @@
 package com.cadentia.catalog.model;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -81,6 +82,28 @@ class CatalogWriteCommandValidationTest {
                         "test"))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("versionNumber");
+    }
+
+
+    @Test
+    void lyricsFormatAcceptsOnlyAdr004DeclaredValues() {
+        // Arrange
+        String[] supportedFormats = {"plain_text", "chordpro", "onsong", "markdown"};
+
+        // Act / Assert
+        for (String supportedFormat : supportedFormats) {
+            assertThat(LyricsFormat.fromDeclaredValue(supportedFormat).storageValue()).isEqualTo(supportedFormat);
+        }
+        assertThat(LyricsFormat.acceptedValues()).isEqualTo("plain_text, chordpro, onsong, markdown");
+    }
+
+    @Test
+    void lyricsFormatRejectsUnsupportedDeclaredValueWithAcceptedValues() {
+        // Arrange / Act / Assert
+        assertThatThrownBy(() -> LyricsFormat.fromDeclaredValue("openlyrics"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("openlyrics")
+                .hasMessageContaining("plain_text, chordpro, onsong, markdown");
     }
 
     @Test

@@ -139,7 +139,7 @@ INSERT INTO lyrics_documents (
 ) VALUES (
     '5238de29-e02e-418f-a4d5-b221bd18bb79',
     '81d1126b-a6c8-4227-bc16-2dbde1ad5004',
-    'PLAIN_TEXT',
+    'plain_text',
     E'Holy God, You lead us with mercy\nWe answer with grateful praise\n',
     'sha256:6e7cd46c5b9e64a6410ea09a9c2db0abec4bfd8860c867b353c4367f61693275',
     1,
