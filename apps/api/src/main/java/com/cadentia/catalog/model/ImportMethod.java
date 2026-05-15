@@ -1,0 +1,9 @@
+package com.cadentia.catalog.model;
+
+public enum ImportMethod {
+    MANUAL_ENTRY,
+    CSV_IMPORT,
+    API_IMPORT,
+    SCRAPER_REVIEWED,
+    TEST_FIXTURE
+}
