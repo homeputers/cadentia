@@ -232,3 +232,106 @@ CREATE INDEX approval_records_arrangement_type_reviewed_at_idx
 CREATE INDEX approval_records_lyrics_type_reviewed_at_idx
     ON approval_records (lyrics_document_id, approval_type, reviewed_at DESC)
     WHERE lyrics_document_id IS NOT NULL;
+
+COMMENT ON TABLE songs IS 'Canonical song identities curated by Cadentia; recommendation agents must only use persisted songs from this catalog.';
+COMMENT ON COLUMN songs.id IS 'Database-generated canonical song identifier.';
+COMMENT ON COLUMN songs.canonical_title IS 'Human-readable primary title for the canonical song.';
+COMMENT ON COLUMN songs.normalized_title IS 'Search and deduplication title normalized by application import logic.';
+COMMENT ON COLUMN songs.primary_language IS 'Primary ISO-like language code for the canonical song text.';
+COMMENT ON COLUMN songs.original_artist_display IS 'Display name for the original or best-known artist when known.';
+COMMENT ON COLUMN songs.composer_credits IS 'Composer, author, translator, or publishing credits retained as structured text pending richer credit modeling.';
+COMMENT ON COLUMN songs.ccli_number IS 'Optional CCLI song number used for deterministic lookup and licensing workflows.';
+COMMENT ON COLUMN songs.year_written IS 'Optional year the song was written or first published.';
+COMMENT ON COLUMN songs.song_status IS 'Catalog lifecycle state for the canonical song record.';
+COMMENT ON COLUMN songs.doctrinal_notes IS 'Review notes about doctrinal concerns or affirmations for the canonical song.';
+COMMENT ON COLUMN songs.created_at IS 'Database timestamp when the canonical song was created.';
+COMMENT ON COLUMN songs.updated_at IS 'Database timestamp when the canonical song was last updated.';
+
+COMMENT ON TABLE arrangements IS 'Musical arrangements belonging to canonical songs, including key, tempo, and worship-team usability metadata.';
+COMMENT ON COLUMN arrangements.id IS 'Database-generated arrangement identifier.';
+COMMENT ON COLUMN arrangements.song_id IS 'Canonical song that owns this arrangement.';
+COMMENT ON COLUMN arrangements.name IS 'Human-readable arrangement name or version label.';
+COMMENT ON COLUMN arrangements.normalized_name IS 'Search and deduplication label normalized by application import logic.';
+COMMENT ON COLUMN arrangements.source_type IS 'Controlled source category describing how this arrangement originated.';
+COMMENT ON COLUMN arrangements.language IS 'Language code for this arrangement, which may differ from the canonical song language for translations.';
+COMMENT ON COLUMN arrangements.musical_key IS 'Preferred notated key center for this arrangement.';
+COMMENT ON COLUMN arrangements.key_mode IS 'Controlled mode classification for the arrangement key.';
+COMMENT ON COLUMN arrangements.tempo_bpm IS 'Preferred arrangement tempo in beats per minute.';
+COMMENT ON COLUMN arrangements.time_signature IS 'Preferred time signature for the arrangement.';
+COMMENT ON COLUMN arrangements.duration_seconds IS 'Expected arrangement duration in seconds.';
+COMMENT ON COLUMN arrangements.energy_level IS 'Curated musical energy rating from 1 to 5.';
+COMMENT ON COLUMN arrangements.difficulty_level IS 'Curated worship-team difficulty rating from 1 to 5.';
+COMMENT ON COLUMN arrangements.default_for_song IS 'Marks the single default arrangement for the owning song when one is curated.';
+COMMENT ON COLUMN arrangements.is_active IS 'Whether this arrangement is active for catalog workflows.';
+COMMENT ON COLUMN arrangements.created_at IS 'Database timestamp when the arrangement was created.';
+COMMENT ON COLUMN arrangements.updated_at IS 'Database timestamp when the arrangement was last updated.';
+
+COMMENT ON TABLE lyrics_documents IS 'Versioned lyrics or chord documents traceable to a specific arrangement and source reference.';
+COMMENT ON COLUMN lyrics_documents.id IS 'Database-generated lyrics document identifier.';
+COMMENT ON COLUMN lyrics_documents.arrangement_id IS 'Arrangement that this lyrics document describes.';
+COMMENT ON COLUMN lyrics_documents.format IS 'Controlled lyrics document format.';
+COMMENT ON COLUMN lyrics_documents.content IS 'Lyrics or chord document content; full copyrighted content must only be stored with documented licensing.';
+COMMENT ON COLUMN lyrics_documents.content_hash IS 'Application-computed content hash for deduplication and integrity checks.';
+COMMENT ON COLUMN lyrics_documents.version_number IS 'Monotonic version number within the arrangement.';
+COMMENT ON COLUMN lyrics_documents.is_current IS 'Marks the current lyrics document for the arrangement.';
+COMMENT ON COLUMN lyrics_documents.contains_chords IS 'Whether the document includes chord symbols.';
+COMMENT ON COLUMN lyrics_documents.contains_sections IS 'Whether the document includes structured song sections.';
+COMMENT ON COLUMN lyrics_documents.source_reference IS 'Human-readable reference to the source used for this document.';
+COMMENT ON COLUMN lyrics_documents.created_by IS 'User, process, or fixture identifier that created this document.';
+COMMENT ON COLUMN lyrics_documents.created_at IS 'Database timestamp when the lyrics document was created.';
+
+COMMENT ON TABLE tags IS 'Controlled taxonomy tags used to classify songs and arrangements for deterministic filtering.';
+COMMENT ON COLUMN tags.id IS 'Database-generated tag identifier.';
+COMMENT ON COLUMN tags.tag_type IS 'Controlled taxonomy category for the tag.';
+COMMENT ON COLUMN tags.name IS 'Human-readable tag name.';
+COMMENT ON COLUMN tags.slug IS 'Stable normalized tag slug unique within the tag type.';
+COMMENT ON COLUMN tags.description IS 'Optional explanation of how the tag should be applied.';
+COMMENT ON COLUMN tags.is_active IS 'Whether this tag is active for catalog workflows.';
+COMMENT ON COLUMN tags.created_at IS 'Database timestamp when the tag was created.';
+COMMENT ON COLUMN tags.updated_at IS 'Database timestamp when the tag was last updated.';
+
+COMMENT ON TABLE song_tags IS 'Many-to-many mapping between canonical songs and taxonomy tags.';
+COMMENT ON COLUMN song_tags.song_id IS 'Canonical song assigned to the tag.';
+COMMENT ON COLUMN song_tags.tag_id IS 'Tag assigned to the canonical song.';
+COMMENT ON COLUMN song_tags.created_at IS 'Database timestamp when the song-tag mapping was created.';
+
+COMMENT ON TABLE arrangement_tags IS 'Many-to-many mapping between arrangements and taxonomy tags.';
+COMMENT ON COLUMN arrangement_tags.arrangement_id IS 'Arrangement assigned to the tag.';
+COMMENT ON COLUMN arrangement_tags.tag_id IS 'Tag assigned to the arrangement.';
+COMMENT ON COLUMN arrangement_tags.created_at IS 'Database timestamp when the arrangement-tag mapping was created.';
+
+COMMENT ON TABLE import_batches IS 'Auditable batches for catalog import or fixture loading workflows.';
+COMMENT ON COLUMN import_batches.id IS 'Database-generated import batch identifier.';
+COMMENT ON COLUMN import_batches.source_system IS 'External system, fixture, or manual source for the batch.';
+COMMENT ON COLUMN import_batches.initiated_by IS 'User or process that initiated the import batch.';
+COMMENT ON COLUMN import_batches.status IS 'Controlled lifecycle state for the import batch.';
+COMMENT ON COLUMN import_batches.summary_json IS 'Structured import summary such as counts, warnings, and non-authoritative diagnostics.';
+COMMENT ON COLUMN import_batches.started_at IS 'Database timestamp when the import batch started.';
+COMMENT ON COLUMN import_batches.completed_at IS 'Database timestamp when the import batch completed, failed, or was cancelled.';
+
+COMMENT ON TABLE provenance_records IS 'First-class provenance evidence tying songs, arrangements, or lyrics documents to reviewed source material.';
+COMMENT ON COLUMN provenance_records.id IS 'Database-generated provenance record identifier.';
+COMMENT ON COLUMN provenance_records.song_id IS 'Song described by this provenance record when the record targets a song.';
+COMMENT ON COLUMN provenance_records.arrangement_id IS 'Arrangement described by this provenance record when the record targets an arrangement.';
+COMMENT ON COLUMN provenance_records.lyrics_document_id IS 'Lyrics document described by this provenance record when the record targets a lyrics document.';
+COMMENT ON COLUMN provenance_records.import_batch_id IS 'Import batch that captured this provenance record.';
+COMMENT ON COLUMN provenance_records.source_system IS 'System, catalog, publisher, or fixture source where the evidence came from.';
+COMMENT ON COLUMN provenance_records.source_uri IS 'Optional URI for the source evidence when available and safe to store.';
+COMMENT ON COLUMN provenance_records.source_label IS 'Human-readable source citation or label.';
+COMMENT ON COLUMN provenance_records.license_type IS 'Controlled license or permission classification for the source evidence.';
+COMMENT ON COLUMN provenance_records.license_notes IS 'Additional licensing, attribution, or review notes.';
+COMMENT ON COLUMN provenance_records.import_method IS 'Controlled method used to capture the provenance evidence.';
+COMMENT ON COLUMN provenance_records.confidence_score IS 'Optional confidence score from 0 to 1 assigned by deterministic import/review logic.';
+COMMENT ON COLUMN provenance_records.captured_at IS 'Database timestamp when the provenance evidence was captured.';
+
+COMMENT ON TABLE approval_records IS 'First-class review decisions for songs, arrangements, or lyrics documents.';
+COMMENT ON COLUMN approval_records.id IS 'Database-generated approval record identifier.';
+COMMENT ON COLUMN approval_records.song_id IS 'Song reviewed by this approval record when the record targets a song.';
+COMMENT ON COLUMN approval_records.arrangement_id IS 'Arrangement reviewed by this approval record when the record targets an arrangement.';
+COMMENT ON COLUMN approval_records.lyrics_document_id IS 'Lyrics document reviewed by this approval record when the record targets a lyrics document.';
+COMMENT ON COLUMN approval_records.approval_type IS 'Controlled review category such as doctrinal, musical, editorial, copyright, or catalog inclusion.';
+COMMENT ON COLUMN approval_records.status IS 'Controlled review outcome or current approval state.';
+COMMENT ON COLUMN approval_records.reviewer IS 'Human reviewer, review group, or controlled process responsible for the decision.';
+COMMENT ON COLUMN approval_records.review_notes IS 'Review notes explaining the decision, rejection, or required changes.';
+COMMENT ON COLUMN approval_records.reviewed_at IS 'Database timestamp for when the review decision was made.';
+COMMENT ON COLUMN approval_records.created_at IS 'Database timestamp when the approval record was created.';
