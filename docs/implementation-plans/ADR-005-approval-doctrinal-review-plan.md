@@ -32,6 +32,108 @@ Document which entities require each approval type before recommendation eligibi
 - Do not collapse approval types into a single boolean.
 - Do not allow import merge to imply approval automatically.
 
+### Implementation note
+
+Approval requirements for ADR-005 are defined as explicit, typed gates. The
+Recommendation Engine and ADR-002 read model must treat a missing approval record
+the same as an unapproved approval record. Only the `approved` status satisfies a
+gate. `pending`, `rejected`, and `needs_review` all make the scoped entity
+ineligible for production recommendation use until a later human/admin decision
+sets the required approval type back to `approved`.
+
+#### Required approvals by recommendable entity path
+
+| Entity path | Required approval records before recommendation eligibility | Scope of the approval | Notes |
+| --- | --- | --- | --- |
+| Canonical song | `doctrinal`, `editorial`, `licensing` | Song-level theological/content identity and catalog metadata | These approvals establish that the canonical song is acceptable to include in the curated catalog. They do not approve every arrangement or lyrics version automatically. |
+| Arrangement | `musical`, `editorial` | Arrangement-specific key, tempo, meter, language, default/active status, and usable music metadata | A song-level approval is required first, but arrangement approvals must still be explicit because a poor or incorrect arrangement can be unsuitable even when the song is approved. |
+| Current lyrics document used by an arrangement | `doctrinal`, `editorial`, `licensing` | Exact lyrics/chord-sheet source version attached to the arrangement | Lyrics approvals are version-specific. Replacing the current lyrics document or changing its raw source must require fresh approvals for the new lyrics document. |
+| Imported candidate content | None for recommendation; imports are never recommendable directly | Import batch/candidate review only | Import review, deduplication, or merge may create or update songs, arrangements, lyrics documents, and provenance, but it must not create implied approvals or bypass the explicit approval workflow. |
+| Fully recommendable arrangement row in `v_recommendable_arrangements` | Approved canonical song gates plus approved arrangement gates plus approved current lyrics-document gates | Joined song + arrangement + current lyrics document path | ADR-002 must emit a row only when every required scoped approval exists with status `approved`; otherwise the arrangement is excluded. |
+
+Minimum production eligibility rule for `v_recommendable_arrangements`:
+
+```text
+song.doctrinal = approved
+song.editorial = approved
+song.licensing = approved
+arrangement.musical = approved
+arrangement.editorial = approved
+current_lyrics_document.doctrinal = approved
+current_lyrics_document.editorial = approved
+current_lyrics_document.licensing = approved
+```
+
+If an arrangement has no current lyrics document, it is not recommendable until the
+product explicitly introduces an instrumental-only use case with its own ADR and
+approval gates.
+
+#### Use-case-specific rules
+
+- **Recommendation generation:** require the full production eligibility rule.
+  Callers must not opt out of approval gating, and small candidate pools must not
+  trigger fallback to unapproved content.
+- **Admin catalog browsing and review queues:** may show `pending`, `rejected`,
+  and `needs_review` records, but these views must be clearly separate from
+  recommendation candidate retrieval.
+- **Import merge and deduplication:** may create draft or in-review canonical
+  records, attach provenance, and preserve review notes. Merge completion does
+  not satisfy doctrinal, editorial, musical, or licensing approvals.
+- **Test fixtures:** may include explicitly approved synthetic records for happy
+  paths and clearly named unapproved fixtures for negative tests. Tests must not
+  rely on hidden defaults.
+
+#### Status handling
+
+- `approved`: satisfies the matching approval gate for the exact scoped entity
+  and approval type.
+- `pending`: does not satisfy eligibility; used when review has been requested
+  but no final approving decision has been made.
+- `rejected`: does not satisfy eligibility; the scoped entity must remain out of
+  production recommendations until remediated and re-reviewed.
+- `needs_review`: does not satisfy eligibility; use this when a prior decision
+  is stale, disputed, affected by changed content, or requires follow-up.
+- Missing approval record: does not satisfy eligibility and must be interpreted
+  as not approved, not as implicitly pending or implicitly approved.
+
+#### Approval actors
+
+- **Doctrinal reviewer:** a human or designated admin role accountable for
+  theological/content review may create, update, or revoke `doctrinal` approvals.
+- **Catalog editor:** a human or designated admin role accountable for metadata
+  quality may create, update, or revoke `editorial` approvals.
+- **Music reviewer:** a human or designated admin role accountable for musical
+  usability may create, update, or revoke `musical` approvals.
+- **Licensing reviewer:** a human or designated admin role accountable for source
+  rights and use permissions may create, update, or revoke `licensing` approvals.
+- **System jobs/importers:** may initialize records that need review and may
+  record provenance or audit metadata, but must not approve or revoke doctrinal
+  or licensing decisions automatically.
+- **LLM components:** must not create, update, revoke, or infer approvals. LLMs
+  also must not select songs for recommendation.
+
+Every approval mutation must capture the actor identity, decision timestamp,
+approval type, status, scoped entity, and optional notes or audit context. If a
+previously approved entity changes in a way that affects the reviewed scope, the
+responsible application service must mark the affected approval gate as
+`needs_review` or create a new pending review version rather than continuing to
+serve the stale approval.
+
+#### ADR-002 enforcement contract
+
+`v_recommendable_arrangements` must join the canonical song, active arrangement,
+and current lyrics document to their required approval records by entity id and
+approval type. The view should expose approval flags or timestamps needed for
+explainability, but it must filter to rows where every required gate is
+`approved`. Reviewer notes are private governance data and must not be projected
+into user-facing recommendation responses.
+
+Implementation alignment required before schema work: ADR-005 names the approval
+types `doctrinal`, `editorial`, `musical`, and `licensing`, while the current
+Java/database model still uses `COPYRIGHT` and `CATALOG_INCLUSION` in addition
+to the other types. Subtask 2 must align enum and constraint values with the ADR
+terms before the read model depends on these gates.
+
 ## Subtask 2: Implement approval schema constraints and transitions
 
 ### Context
