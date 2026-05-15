@@ -19,6 +19,13 @@ Each plan is written as a sequence of AI-agent-ready subtasks. Every subtask inc
 - [ADR-006 Implementation Plan: Arrangement Transposition Policy](./ADR-006-arrangement-transposition-plan.md)
 - [ADR-007 Implementation Plan: Tag Taxonomy and Controlled Vocabulary Strategy](./ADR-007-tag-taxonomy-plan.md)
 
+## Operational workflow docs
+
+- [Song Import and Deduplication Workflow](../import-workflow.md) documents the
+  ADR-003 staged import lifecycle, statuses, reviewer responsibilities,
+  deterministic deduplication signals, merge behavior, failure handling, and
+  fixture-driven verification commands.
+
 ## Recommended implementation order
 
 The plans should generally be implemented from the source-of-truth catalog outward. ADR-001 establishes the normalized data foundation, while ADR-002, ADR-003, ADR-004, ADR-005, ADR-006, and ADR-007 can then build on that foundation with the dependency order shown below.

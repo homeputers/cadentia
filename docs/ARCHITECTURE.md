@@ -185,8 +185,9 @@ graph TD
 
 - ADR-002 recommendation candidate read model derived from canonical catalog
   tables.
-- ADR-003 import and deduplication staging built around `import_batches` and
-  provenance records.
+- ADR-003 import and deduplication staging is documented in
+  `docs/import-workflow.md`; future work can add concrete source adapters or
+  operator-facing endpoints without bypassing staged review and provenance.
 - ADR-004 lyrics parsing and format-specific validation for `lyrics_documents`.
 - ADR-005 approval workflows that update `approval_records` and gate
   recommendation eligibility.
