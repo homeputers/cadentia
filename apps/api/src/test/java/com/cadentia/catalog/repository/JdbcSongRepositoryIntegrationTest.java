@@ -39,11 +39,13 @@ import com.cadentia.catalog.model.TagType;
 import com.cadentia.catalog.model.UpdateApprovalRecordCommand;
 import com.cadentia.catalog.model.UpdateArrangementCommand;
 import com.cadentia.catalog.model.UpdateImportBatchCommand;
+import com.cadentia.catalog.model.UpdateLyricsDocumentCommand;
 import com.cadentia.catalog.model.UpdateSongCommand;
 import com.cadentia.catalog.model.UpdateTagCommand;
 import com.cadentia.scraperadmin.CatalogSongCandidate;
 import java.math.BigDecimal;
 import java.util.Map;
+import org.assertj.core.groups.Tuple;
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -169,6 +171,75 @@ class JdbcSongRepositoryIntegrationTest {
         assertThat(repository.findTagByTypeAndSlug(updatedTag.tagType(), updatedTag.slug())).contains(updatedTag);
         assertThat(repository.findTagsBySongId(song.id())).containsExactly(updatedTag);
         assertThat(repository.findTagsByArrangementId(arrangement.id())).containsExactly(updatedTag);
+    }
+
+    @Test
+    void storesRawLyricsContentWithoutLossyNormalization() {
+        // Arrange
+        Song song = createSong();
+        Arrangement arrangement = createArrangement(song);
+        String chordProContent = "{title: Fixture}\n{start_of_verse}\n[A]Alpha [D/F#]Beta\n{end_of_verse}\n";
+        String markdownContent = "## Verse 1\n- Alpha **beta**\n\n> spoken marker\n";
+        String plainTextContent = "Line one\n\n  Line two with leading spaces\nLine three  ";
+
+        // Act
+        LyricsDocument chordProDocument = repository.createLyricsDocument(new CreateLyricsDocumentCommand(
+                arrangement.id(), LyricsFormat.CHORDPRO, chordProContent, "raw-chordpro-hash", 1, true,
+                true, true, "fixture://lyrics/chordpro", "integration-test"));
+        LyricsDocument markdownDocument = repository.createLyricsDocument(new CreateLyricsDocumentCommand(
+                arrangement.id(), LyricsFormat.MARKDOWN, markdownContent, "raw-markdown-hash", 2, true,
+                false, true, "fixture://lyrics/markdown", "integration-test"));
+        LyricsDocument plainTextDocument = repository.createLyricsDocument(new CreateLyricsDocumentCommand(
+                arrangement.id(), LyricsFormat.PLAIN_TEXT, plainTextContent, "raw-plain-text-hash", 3, true,
+                false, false, "fixture://lyrics/plain-text", "integration-test"));
+
+        // Assert
+        assertThat(repository.findLyricsDocumentById(chordProDocument.id()).orElseThrow().content())
+                .isEqualTo(chordProContent);
+        assertThat(repository.findLyricsDocumentById(markdownDocument.id()).orElseThrow().content())
+                .isEqualTo(markdownContent);
+        assertThat(repository.findLyricsDocumentById(plainTextDocument.id()).orElseThrow().content())
+                .isEqualTo(plainTextContent);
+        assertThat(repository.findLyricsDocumentsByArrangementId(arrangement.id()))
+                .extracting(LyricsDocument::current)
+                .containsExactly(false, false, true);
+    }
+
+    @Test
+    void updatingLyricsDocumentCreatesNewAuditableVersionAndPreservesProvenance() {
+        // Arrange
+        ImportBatch importBatch = createImportBatch();
+        Song song = createSong();
+        Arrangement arrangement = createArrangement(song);
+        String initialContent = "Initial fixture line\nwith exact breaks";
+        String updatedContent = "# Updated Fixture\n\n[A]Alpha marker remains raw\n";
+        LyricsDocument initialDocument = repository.createLyricsDocument(new CreateLyricsDocumentCommand(
+                arrangement.id(), LyricsFormat.PLAIN_TEXT, initialContent, "initial-raw-hash", 1, true,
+                false, false, "fixture://lyrics/initial", "integration-test"));
+        ProvenanceRecord initialProvenance = repository.createProvenanceRecord(new CreateProvenanceRecordCommand(
+                null, null, initialDocument.id(), importBatch.id(), "fixture-admin",
+                "https://example.test/lyrics/initial", "Initial fixture lyrics source", LicenseType.NOT_APPLICABLE,
+                "Fixture-only excerpt for storage tests.", ImportMethod.TEST_FIXTURE, BigDecimal.ONE));
+
+        // Act
+        LyricsDocument updatedDocument = repository.updateLyricsDocument(initialDocument.id(),
+                new UpdateLyricsDocumentCommand(
+                        LyricsFormat.MARKDOWN, updatedContent, "updated-raw-hash", true, true,
+                        "fixture://lyrics/updated", "editor@example.test"))
+                .orElseThrow();
+
+        // Assert
+        assertThat(updatedDocument.versionNumber()).isEqualTo(2);
+        assertThat(updatedDocument.current()).isTrue();
+        assertThat(updatedDocument.content()).isEqualTo(updatedContent);
+        assertThat(updatedDocument.createdBy()).isEqualTo("editor@example.test");
+        assertThat(repository.findProvenanceRecordById(initialProvenance.id()).orElseThrow().lyricsDocumentId())
+                .isEqualTo(initialDocument.id());
+        assertThat(repository.findLyricsDocumentsByArrangementId(arrangement.id()))
+                .extracting(LyricsDocument::content, LyricsDocument::versionNumber, LyricsDocument::current)
+                .containsExactly(
+                        Tuple.tuple(initialContent, 1, false),
+                        Tuple.tuple(updatedContent, 2, true));
     }
 
     @Test

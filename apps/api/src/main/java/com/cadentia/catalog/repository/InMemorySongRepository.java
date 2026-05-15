@@ -26,6 +26,7 @@ import com.cadentia.catalog.model.TagType;
 import com.cadentia.catalog.model.UpdateApprovalRecordCommand;
 import com.cadentia.catalog.model.UpdateArrangementCommand;
 import com.cadentia.catalog.model.UpdateImportBatchCommand;
+import com.cadentia.catalog.model.UpdateLyricsDocumentCommand;
 import com.cadentia.catalog.model.UpdateSongCommand;
 import com.cadentia.catalog.model.UpdateTagCommand;
 import com.cadentia.scraperadmin.CatalogSongCandidate;
@@ -82,6 +83,11 @@ public class InMemorySongRepository implements SongRepository {
 
     @Override
     public Optional<LyricsDocument> findLyricsDocumentById(UUID id) {
+        return Optional.empty();
+    }
+
+    @Override
+    public Optional<LyricsDocument> updateLyricsDocument(UUID id, UpdateLyricsDocumentCommand command) {
         return Optional.empty();
     }
 

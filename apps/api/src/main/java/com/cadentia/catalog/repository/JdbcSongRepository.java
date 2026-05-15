@@ -36,6 +36,7 @@ import com.cadentia.catalog.model.TagType;
 import com.cadentia.catalog.model.UpdateApprovalRecordCommand;
 import com.cadentia.catalog.model.UpdateArrangementCommand;
 import com.cadentia.catalog.model.UpdateImportBatchCommand;
+import com.cadentia.catalog.model.UpdateLyricsDocumentCommand;
 import com.cadentia.catalog.model.UpdateSongCommand;
 import com.cadentia.catalog.model.UpdateTagCommand;
 import com.cadentia.scraperadmin.CatalogSongCandidate;
@@ -52,6 +53,7 @@ import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 @Repository
 public class JdbcSongRepository implements SongRepository {
@@ -192,7 +194,11 @@ public class JdbcSongRepository implements SongRepository {
     }
 
     @Override
+    @Transactional
     public LyricsDocument createLyricsDocument(CreateLyricsDocumentCommand command) {
+        if (command.current()) {
+            demoteCurrentLyricsDocument(command.arrangementId());
+        }
         String sql = """
                 INSERT INTO lyrics_documents (
                     arrangement_id, format, content, content_hash, version_number, is_current,
@@ -210,6 +216,33 @@ public class JdbcSongRepository implements SongRepository {
     public Optional<LyricsDocument> findLyricsDocumentById(UUID id) {
         return queryOptional("SELECT " + LYRICS_COLUMNS + " FROM lyrics_documents WHERE id = :id",
                 Map.of("id", id), lyricsMapper());
+    }
+
+    @Override
+    @Transactional
+    public Optional<LyricsDocument> updateLyricsDocument(UUID id, UpdateLyricsDocumentCommand command) {
+        Optional<UUID> arrangementId = queryOptional(
+                "SELECT arrangement_id FROM lyrics_documents WHERE id = :id",
+                Map.of("id", id),
+                (rs, rowNum) -> uuid(rs, "arrangement_id"));
+        if (arrangementId.isEmpty()) {
+            return Optional.empty();
+        }
+        demoteCurrentLyricsDocument(arrangementId.get());
+        String sql = """
+                INSERT INTO lyrics_documents (
+                    arrangement_id, format, content, content_hash, version_number, is_current,
+                    contains_chords, contains_sections, source_reference, created_by
+                )
+                SELECT
+                    :arrangementId, :format, :content, :contentHash, COALESCE(MAX(version_number), 0) + 1, true,
+                    :containsChords, :containsSections, :sourceReference, :createdBy
+                FROM lyrics_documents
+                WHERE arrangement_id = :arrangementId
+                RETURNING %s
+                """.formatted(LYRICS_COLUMNS);
+        return Optional.ofNullable(jdbcTemplate.queryForObject(
+                sql, lyricsUpdateParams(arrangementId.get(), command), lyricsMapper()));
     }
 
     @Override
@@ -607,6 +640,12 @@ public class JdbcSongRepository implements SongRepository {
                 .addValue("active", active);
     }
 
+    private void demoteCurrentLyricsDocument(UUID arrangementId) {
+        jdbcTemplate.update(
+                "UPDATE lyrics_documents SET is_current = false WHERE arrangement_id = :arrangementId AND is_current",
+                Map.of("arrangementId", arrangementId));
+    }
+
     private static MapSqlParameterSource lyricsParams(CreateLyricsDocumentCommand command) {
         return new MapSqlParameterSource()
                 .addValue("arrangementId", command.arrangementId())
@@ -619,6 +658,18 @@ public class JdbcSongRepository implements SongRepository {
                 .addValue("containsSections", command.containsSections())
                 .addValue("sourceReference", command.sourceReference())
                 .addValue("createdBy", command.createdBy());
+    }
+
+    private static MapSqlParameterSource lyricsUpdateParams(UUID arrangementId, UpdateLyricsDocumentCommand command) {
+        return new MapSqlParameterSource()
+                .addValue("arrangementId", arrangementId)
+                .addValue("format", command.format().storageValue())
+                .addValue("content", command.content())
+                .addValue("contentHash", command.contentHash())
+                .addValue("containsChords", command.containsChords())
+                .addValue("containsSections", command.containsSections())
+                .addValue("sourceReference", command.sourceReference())
+                .addValue("createdBy", command.editedBy());
     }
 
     private static MapSqlParameterSource tagParams(CreateTagCommand command) {
