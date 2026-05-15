@@ -65,6 +65,9 @@ public class JdbcSongRepository implements SongRepository {
     private static final String LYRICS_COLUMNS = "id, arrangement_id, format, content, content_hash, version_number, "
             + "is_current, contains_chords, contains_sections, source_reference, created_by, created_at";
     private static final String TAG_COLUMNS = "id, tag_type, name, slug, description, is_active, created_at, updated_at";
+    private static final String TAG_COLUMNS_QUALIFIED = "tags.id AS id, tags.tag_type AS tag_type, "
+            + "tags.name AS name, tags.slug AS slug, tags.description AS description, tags.is_active AS is_active, "
+            + "tags.created_at AS created_at, tags.updated_at AS updated_at";
     private static final String IMPORT_COLUMNS = "id, source_system, initiated_by, status, summary_json::text AS summary_json, "
             + "started_at, completed_at";
     private static final String PROVENANCE_COLUMNS = "id, song_id, arrangement_id, lyrics_document_id, import_batch_id, "
@@ -267,14 +270,15 @@ public class JdbcSongRepository implements SongRepository {
 
     @Override
     public List<Tag> findTagsBySongId(UUID songId) {
-        return jdbcTemplate.query("SELECT " + TAG_COLUMNS + " FROM tags INNER JOIN song_tags ON tags.id = song_tags.tag_id "
+        return jdbcTemplate.query("SELECT " + TAG_COLUMNS_QUALIFIED
+                        + " FROM tags INNER JOIN song_tags ON tags.id = song_tags.tag_id "
                         + "WHERE song_tags.song_id = :songId ORDER BY tags.tag_type, tags.slug",
                 Map.of("songId", songId), tagMapper());
     }
 
     @Override
     public List<Tag> findTagsByArrangementId(UUID arrangementId) {
-        return jdbcTemplate.query("SELECT " + TAG_COLUMNS
+        return jdbcTemplate.query("SELECT " + TAG_COLUMNS_QUALIFIED
                         + " FROM tags INNER JOIN arrangement_tags ON tags.id = arrangement_tags.tag_id "
                         + "WHERE arrangement_tags.arrangement_id = :arrangementId ORDER BY tags.tag_type, tags.slug",
                 Map.of("arrangementId", arrangementId), tagMapper());
