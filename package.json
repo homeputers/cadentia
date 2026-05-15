@@ -1,0 +1,23 @@
+{
+  "name": "cadentia",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AI-assisted worship setlist recommendation platform.",
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces",
+    "test": "npm run test --workspaces",
+    "typecheck": "npm run typecheck --workspaces"
+  },
+  "engines": {
+    "node": ">=20.11.0",
+    "npm": ">=10.0.0"
+  },
+  "devDependencies": {
+    "typescript": "5.5.4",
+    "vitest": "4.1.6"
+  }
+}
