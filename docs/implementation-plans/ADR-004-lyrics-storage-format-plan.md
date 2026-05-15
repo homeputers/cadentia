@@ -129,6 +129,10 @@ Create parser interfaces and initial deterministic parsers for the supported for
 - Do not block raw document storage because derived parsing fails.
 - Do not claim full ChordPro or OnSong compatibility unless covered by tests.
 
+### Implementation note
+
+Subtask 4 parser scaffolding is implemented with a `LyricsParser` abstraction keyed by `LyricsFormat`, a registry for available deterministic parsers, and parser output commands that update only derived columns on `lyrics_documents`. The initial deterministic parsers cover conservative section, chord occurrence, and structural marker extraction for `plain_text`, `chordpro`, and `markdown`; they are intentionally limited to behaviors covered by unit tests and do not claim full ChordPro compatibility. `onsong` remains a storable declared format, but parser lookup records an `UNSUPPORTED` parse result until OnSong compatibility rules and fixtures are added. Derived parse payloads are stored in `parsed_sections`, `chord_map`, and `structural_markers` JSONB columns with `parse_status`, parser metadata, timestamp, and non-blocking parse error details; `lyrics_documents.content` remains the authoritative raw source and is never mutated by parse updates.
+
 ## Subtask 5: Document safe lyrics handling
 
 ### Context
