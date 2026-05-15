@@ -4,6 +4,7 @@ import com.cadentia.catalog.entity.ApprovalRecord;
 import com.cadentia.catalog.entity.Arrangement;
 import com.cadentia.catalog.entity.ImportBatch;
 import com.cadentia.catalog.entity.ImportCandidate;
+import com.cadentia.catalog.entity.ImportCandidateReview;
 import com.cadentia.catalog.entity.LyricsDocument;
 import com.cadentia.catalog.entity.ProposedDuplicateMatch;
 import com.cadentia.catalog.entity.ProvenanceRecord;
@@ -13,11 +14,13 @@ import com.cadentia.catalog.model.CreateApprovalRecordCommand;
 import com.cadentia.catalog.model.CreateArrangementCommand;
 import com.cadentia.catalog.model.CreateImportBatchCommand;
 import com.cadentia.catalog.model.CreateImportCandidateCommand;
+import com.cadentia.catalog.model.CreateImportCandidateReviewCommand;
 import com.cadentia.catalog.model.CreateLyricsDocumentCommand;
 import com.cadentia.catalog.model.CreateProposedDuplicateMatchCommand;
 import com.cadentia.catalog.model.CreateProvenanceRecordCommand;
 import com.cadentia.catalog.model.CreateSongCommand;
 import com.cadentia.catalog.model.CreateTagCommand;
+import com.cadentia.catalog.model.DuplicateMatchStatus;
 import com.cadentia.catalog.model.ImportCandidateStatus;
 import com.cadentia.catalog.model.TagType;
 import com.cadentia.catalog.model.UpdateApprovalRecordCommand;
@@ -80,11 +83,23 @@ public interface SongRepository {
 
     List<ImportCandidate> findImportCandidatesByBatchId(UUID importBatchId);
 
+    Optional<ImportCandidate> findImportCandidateById(UUID id);
+
     Optional<ImportCandidate> updateImportCandidateStatus(UUID id, ImportCandidateStatus status);
+
+    Optional<ImportCandidate> markImportCandidateMerged(UUID id, UUID mergedSongId);
 
     ProposedDuplicateMatch createProposedDuplicateMatch(CreateProposedDuplicateMatchCommand command);
 
     List<ProposedDuplicateMatch> findProposedDuplicateMatchesByImportCandidateId(UUID importCandidateId);
+
+    Optional<ProposedDuplicateMatch> findProposedDuplicateMatchById(UUID id);
+
+    Optional<ProposedDuplicateMatch> updateProposedDuplicateMatchStatus(UUID id, DuplicateMatchStatus status);
+
+    ImportCandidateReview createImportCandidateReview(CreateImportCandidateReviewCommand command);
+
+    List<ImportCandidateReview> findImportCandidateReviewsByImportCandidateId(UUID importCandidateId);
 
     List<CatalogSongCandidate> findCatalogSongCandidatesForDeduplication();
 
