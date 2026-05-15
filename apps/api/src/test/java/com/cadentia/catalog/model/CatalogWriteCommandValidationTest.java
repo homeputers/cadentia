@@ -84,6 +84,20 @@ class CatalogWriteCommandValidationTest {
                 .hasMessageContaining("versionNumber");
     }
 
+    @Test
+    void updateLyricsDocumentRejectsBlankEditor() {
+        // Arrange / Act / Assert
+        assertThatThrownBy(() -> new UpdateLyricsDocumentCommand(
+                        LyricsFormat.PLAIN_TEXT,
+                        "Fixture lyrics excerpt",
+                        "sha256:fixture",
+                        false,
+                        false,
+                        "fixture://lyrics",
+                        " "))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("editedBy");
+    }
 
     @Test
     void lyricsFormatAcceptsOnlyAdr004DeclaredValues() {
@@ -174,6 +188,8 @@ class CatalogWriteCommandValidationTest {
                     KeyMode.MAJOR, 120, "4/4", 180, 3, 2, true, true);
             new CreateLyricsDocumentCommand(arrangementId, LyricsFormat.PLAIN_TEXT, "Fixture lyrics excerpt",
                     "sha256:fixture", 1, true, false, false, "fixture://lyrics", "test");
+            new UpdateLyricsDocumentCommand(LyricsFormat.MARKDOWN, "## Fixture excerpt",
+                    "sha256:fixture-update", false, true, "fixture://lyrics/update", "editor");
             new CreateTagCommand(TagType.THEME, "Praise", "praise", "Fixture tag", true);
             new CreateImportBatchCommand("fixture", "test", ImportBatchStatus.PENDING, "{}");
             new CreateProvenanceRecordCommand(songId, null, null, importBatchId, "fixture", "fixture://source",
