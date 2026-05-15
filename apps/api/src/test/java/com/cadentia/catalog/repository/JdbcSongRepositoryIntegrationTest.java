@@ -44,9 +44,14 @@ import com.cadentia.catalog.model.UpdateImportBatchCommand;
 import com.cadentia.catalog.model.UpdateLyricsDocumentCommand;
 import com.cadentia.catalog.model.UpdateSongCommand;
 import com.cadentia.catalog.model.UpdateTagCommand;
+import com.cadentia.catalog.service.ArrangementRetrievalResult;
+import com.cadentia.catalog.service.ArrangementTranspositionSource;
+import com.cadentia.catalog.service.CatalogService;
+import com.cadentia.catalog.transposition.MusicalKey;
 import com.cadentia.scraperadmin.CatalogSongCandidate;
 import java.math.BigDecimal;
 import java.util.Map;
+import java.util.Optional;
 import org.assertj.core.groups.Tuple;
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.BeforeEach;
@@ -176,6 +181,51 @@ class JdbcSongRepositoryIntegrationTest {
     }
 
     @Test
+    void retrievesDynamicArrangementTranspositionsWithoutCreatingArrangementRows() {
+        // Arrange
+        Song song = createSong();
+        Arrangement arrangement = createArrangement(song);
+        String rawContent = "[G]Alpha [C]Beta [D/F#]Gamma";
+        LyricsDocument lyricsDocument = repository.createLyricsDocument(new CreateLyricsDocumentCommand(
+                arrangement.id(), LyricsFormat.CHORDPRO, rawContent, "dynamic-transposition-hash", 1, true,
+                true, true, "fixture://lyrics/dynamic-transposition", "integration-test"));
+        repository.updateLyricsParseResult(lyricsDocument.id(),
+                new UpdateLyricsParseResultCommand(
+                        LyricsParseStatus.PARSED,
+                        null,
+                        "deterministic-chordpro-parser",
+                        "adr-004-v1",
+                        "[{\"label\":\"verse\",\"startLine\":1,\"endLine\":1}]",
+                        "[{\"chord\":\"G\",\"line\":1,\"characterOffset\":0},"
+                                + "{\"chord\":\"C\",\"line\":1,\"characterOffset\":8},"
+                                + "{\"chord\":\"D/F#\",\"line\":1,\"characterOffset\":16}]",
+                        "[]"))
+                .orElseThrow();
+        CatalogService service = new CatalogService(repository);
+        Integer initialArrangementCount = arrangementCount();
+
+        // Act
+        ArrangementRetrievalResult aResult = service.retrieveArrangement(
+                arrangement.id(), Optional.of(new MusicalKey("A", KeyMode.MAJOR))).orElseThrow();
+        ArrangementRetrievalResult bbResult = service.retrieveArrangement(
+                arrangement.id(), Optional.of(new MusicalKey("Bb", KeyMode.MAJOR))).orElseThrow();
+
+        // Assert
+        assertThat(aResult.baseKey()).isEqualTo(new MusicalKey("G", KeyMode.MAJOR));
+        assertThat(aResult.requestedTargetKey()).isEqualTo(new MusicalKey("A", KeyMode.MAJOR));
+        assertThat(aResult.transpositionInterval()).isEqualTo(2);
+        assertThat(aResult.transpositionSource()).isEqualTo(ArrangementTranspositionSource.PARSED_CHORD_MAP);
+        assertThat(aResult.chordMapJson()).contains("\"chord\":\"A\"").contains("\"chord\":\"D\"");
+        assertThat(bbResult.requestedTargetKey()).isEqualTo(new MusicalKey("Bb", KeyMode.MAJOR));
+        assertThat(bbResult.transpositionInterval()).isEqualTo(3);
+        assertThat(bbResult.chordMapJson()).contains("\"chord\":\"Bb\"").contains("\"chord\":\"Eb\"");
+        assertThat(repository.findLyricsDocumentById(lyricsDocument.id()).orElseThrow().content())
+                .isEqualTo(rawContent);
+        assertThat(repository.findArrangementById(arrangement.id()).orElseThrow().musicalKey()).isEqualTo("G");
+        assertThat(arrangementCount()).isEqualTo(initialArrangementCount);
+    }
+
+    @Test
     void storesRawLyricsContentWithoutLossyNormalization() {
         // Arrange
         Song song = createSong();
@@ -241,7 +291,8 @@ class JdbcSongRepositoryIntegrationTest {
         assertThat(parsedDocument.parseStatus()).isEqualTo(LyricsParseStatus.PARSED);
         assertThat(parsedDocument.parsedAt()).isNotNull();
         assertThat(parsedDocument.parsedSectionsJson()).contains("chorus");
-        assertThat(repository.findLyricsDocumentById(lyricsDocument.id()).orElseThrow().content()).isEqualTo(rawContent);
+        assertThat(repository.findLyricsDocumentById(lyricsDocument.id()).orElseThrow().content())
+                .isEqualTo(rawContent);
     }
 
     @Test
@@ -487,6 +538,10 @@ class JdbcSongRepositoryIntegrationTest {
         assertThat(repository.findCatalogSongCandidatesForDeduplication())
                 .extracting(CatalogSongCandidate::songId)
                 .contains(song.id());
+    }
+
+    private Integer arrangementCount() {
+        return jdbcTemplate.queryForObject("SELECT COUNT(*) FROM arrangements", Map.of(), Integer.class);
     }
 
     private ImportBatch createImportBatch() {
