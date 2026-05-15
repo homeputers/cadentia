@@ -10,6 +10,8 @@ import com.cadentia.catalog.entity.ProposedDuplicateMatch;
 import com.cadentia.catalog.entity.ProvenanceRecord;
 import com.cadentia.catalog.entity.Song;
 import com.cadentia.catalog.entity.Tag;
+import com.cadentia.catalog.model.ApprovalStatus;
+import com.cadentia.catalog.model.ApprovalType;
 import com.cadentia.catalog.model.CreateApprovalRecordCommand;
 import com.cadentia.catalog.model.CreateArrangementCommand;
 import com.cadentia.catalog.model.CreateImportBatchCommand;
@@ -31,6 +33,7 @@ import com.cadentia.catalog.model.UpdateLyricsParseResultCommand;
 import com.cadentia.catalog.model.UpdateSongCommand;
 import com.cadentia.catalog.model.UpdateTagCommand;
 import com.cadentia.scraperadmin.CatalogSongCandidate;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -244,6 +247,23 @@ public class InMemorySongRepository implements SongRepository {
     @Override
     public List<ApprovalRecord> findApprovalRecordsForSong(UUID songId) {
         return List.of();
+    }
+
+    @Override
+    public Optional<ApprovalRecord> findApprovalRecord(
+            UUID songId, UUID arrangementId, UUID lyricsDocumentId, ApprovalType approvalType) {
+        return Optional.empty();
+    }
+
+    @Override
+    public List<ApprovalRecord> findApprovalRecordsByTypeAndStatuses(
+            ApprovalType approvalType, Collection<ApprovalStatus> statuses) {
+        return List.of();
+    }
+
+    @Override
+    public boolean isArrangementDoctrinallyApprovedForRecommendation(UUID arrangementId) {
+        return false;
     }
 
     @Override

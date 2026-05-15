@@ -423,6 +423,60 @@ class JdbcSongRepositoryIntegrationTest {
     }
 
     @Test
+    void doctrinalRejectionPreventsArrangementRecommendationEligibility() {
+        // Arrange
+        Song song = createSong();
+        Arrangement arrangement = createArrangement(song);
+        LyricsDocument lyricsDocument = createLyricsDocument(arrangement);
+        repository.createApprovalRecord(new CreateApprovalRecordCommand(
+                song.id(),
+                null,
+                null,
+                ApprovalType.DOCTRINAL,
+                ApprovalStatus.APPROVED,
+                "pastor@example.test",
+                "Song theology approved."));
+        repository.createApprovalRecord(new CreateApprovalRecordCommand(
+                null,
+                null,
+                lyricsDocument.id(),
+                ApprovalType.DOCTRINAL,
+                ApprovalStatus.REJECTED,
+                "pastor@example.test",
+                "Current lyrics document has doctrinal concerns."));
+
+        // Act / Assert
+        assertThat(repository.isArrangementDoctrinallyApprovedForRecommendation(arrangement.id())).isFalse();
+    }
+
+    @Test
+    void approvedSongAndCurrentLyricsDoctrinalRecordsAllowArrangementRecommendationEligibility() {
+        // Arrange
+        Song song = createSong();
+        Arrangement arrangement = createArrangement(song);
+        LyricsDocument lyricsDocument = createLyricsDocument(arrangement);
+        repository.createApprovalRecord(new CreateApprovalRecordCommand(
+                song.id(),
+                null,
+                null,
+                ApprovalType.DOCTRINAL,
+                ApprovalStatus.APPROVED,
+                "pastor@example.test",
+                "Song theology approved."));
+        repository.createApprovalRecord(new CreateApprovalRecordCommand(
+                null,
+                null,
+                lyricsDocument.id(),
+                ApprovalType.DOCTRINAL,
+                ApprovalStatus.APPROVED,
+                "pastor@example.test",
+                "Current lyrics document approved."));
+
+        // Act / Assert
+        assertThat(repository.isArrangementDoctrinallyApprovedForRecommendation(arrangement.id())).isTrue();
+    }
+
+    @Test
     void executesDeduplicationCandidateReadQueryAgainstPostgres() {
         // Arrange
         Song song = createSong();

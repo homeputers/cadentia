@@ -10,6 +10,8 @@ import com.cadentia.catalog.entity.ProposedDuplicateMatch;
 import com.cadentia.catalog.entity.ProvenanceRecord;
 import com.cadentia.catalog.entity.Song;
 import com.cadentia.catalog.entity.Tag;
+import com.cadentia.catalog.model.ApprovalStatus;
+import com.cadentia.catalog.model.ApprovalType;
 import com.cadentia.catalog.model.CreateApprovalRecordCommand;
 import com.cadentia.catalog.model.CreateArrangementCommand;
 import com.cadentia.catalog.model.CreateImportBatchCommand;
@@ -31,6 +33,7 @@ import com.cadentia.catalog.model.UpdateLyricsParseResultCommand;
 import com.cadentia.catalog.model.UpdateSongCommand;
 import com.cadentia.catalog.model.UpdateTagCommand;
 import com.cadentia.scraperadmin.CatalogSongCandidate;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -120,6 +123,14 @@ public interface SongRepository {
     Optional<ApprovalRecord> findApprovalRecordById(UUID id);
 
     List<ApprovalRecord> findApprovalRecordsForSong(UUID songId);
+
+    Optional<ApprovalRecord> findApprovalRecord(
+            UUID songId, UUID arrangementId, UUID lyricsDocumentId, ApprovalType approvalType);
+
+    List<ApprovalRecord> findApprovalRecordsByTypeAndStatuses(
+            ApprovalType approvalType, Collection<ApprovalStatus> statuses);
+
+    boolean isArrangementDoctrinallyApprovedForRecommendation(UUID arrangementId);
 
     Optional<ApprovalRecord> updateApprovalRecord(UUID id, UpdateApprovalRecordCommand command);
 }
