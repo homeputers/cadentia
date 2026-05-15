@@ -12,6 +12,17 @@ This directory contains the Architecture Decision Records for Cadentia.
 - [ADR-006: Arrangement Transposition Policy](./ADR-006-arrangement-transposition.md)
 - [ADR-007: Tag Taxonomy and Controlled Vocabulary Strategy](./ADR-007-tag-taxonomy.md)
 
+
+## Implemented schema artifacts
+
+- ADR-001 is implemented by the Flyway migration
+  `apps/api/src/main/resources/db/migration/V002__core_catalog_schema.sql`,
+  which creates the canonical PostgreSQL source-of-truth catalog tables.
+- The implemented ADR-001 ER diagram is maintained in `docs/diagrams/er-diagrams.md`.
+- Test-only fixture loading and reset instructions are documented in
+  `docs/seed-data.md`; these fixtures are not production catalog data and are
+  not recommendable unless a test deliberately opts into that behavior.
+
 ## Reading order
 
 Recommended reading order:
