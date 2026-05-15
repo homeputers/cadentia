@@ -31,6 +31,27 @@ Review the current lyrics document schema and identify required changes for raw 
 - Do not add parsers in this subtask.
 - Do not include full copyrighted lyrics in documentation examples.
 
+### Implementation note
+
+Current schema confirmation before ADR-004 migration work:
+
+- **Raw source storage:** `lyrics_documents.content` is a required `text` column and can preserve raw lyrics or chord-sheet source content without replacing it with a parsed representation. Keep this field as the authoritative raw source field; a future migration may rename or document it as `raw_content` only if the team wants the database name to make that responsibility explicit.
+- **Declared format:** `lyrics_documents.format` is required and indexed, but the current database check and Java enum allow `PLAIN_TEXT`, `CHORDPRO`, `OPENLYRICS`, `MARKDOWN`, and `PDF_REFERENCE`. This does not match ADR-004's initial supported set of `plain_text`, `chordpro`, `onsong`, and `markdown`; `ONSONG` is missing and `OPENLYRICS`/`PDF_REFERENCE` need removal, deferral, or explicit ADR follow-up before validation work.
+- **Source versioning:** the table already has `version_number`, `is_current`, `content_hash`, `created_by`, and `created_at`, with uniqueness per arrangement/version and arrangement/content hash. These fields provide internal revision tracking for stored lyric documents, but there is no separate external source version field such as source revision label, source ETag, source captured timestamp, parser version, or replacement lineage column. Add only the source-version fields required by importer/admin workflows during the versioning subtask.
+- **Provenance and catalog links:** each lyrics document is linked to an arrangement through `lyrics_documents.arrangement_id`, and the arrangement links back to the canonical song. `provenance_records.lyrics_document_id` can point at a lyrics document, while separate provenance rows can point at songs or arrangements because the provenance constraint permits exactly one target entity per row.
+- **Derived parse fields:** the current schema has coarse booleans `contains_chords` and `contains_sections`, but it does not store parse status, parse errors, parsed sections JSON, chord map JSON, structural markers JSON, parser name/version, or parsed timestamp. Add these as nullable derived fields or as a separate derived-parse table so failed parsing never blocks or mutates raw source storage.
+
+Schema-change checklist for the next migrations:
+
+- [ ] Align format values across PostgreSQL checks, Java enums, fixtures, and API/admin validation with ADR-004: `plain_text`, `chordpro`, `onsong`, and `markdown` as the accepted external values.
+- [ ] Decide whether to keep the database column name `content` or migrate to `raw_content`; in either case, document that this column stores the unmodified source text.
+- [ ] Add any importer-facing source-version metadata that cannot be represented by the current `version_number`, `content_hash`, `source_reference`, `created_by`, and `created_at` fields.
+- [ ] Add derived parse metadata: `parse_status`, `parse_error`, `parser_version` or parser identifier, and `parsed_at`.
+- [ ] Add derived parse payload storage for `parsed_sections`, `chord_map`, and `structural_markers` as JSONB columns or a one-to-one parse-results table.
+- [ ] Preserve the existing lyrics-to-arrangement relationship and `provenance_records.lyrics_document_id` linkage; add tests or constraints only if workflows require a lyrics document to have a provenance row before approval.
+- [ ] Update fixtures with synthetic, copyright-safe content only; do not include full copyrighted lyrics in migration or parser examples.
+
+
 ## Subtask 2: Enforce supported format validation
 
 ### Context
