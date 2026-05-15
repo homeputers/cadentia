@@ -28,6 +28,9 @@ Each plan is written as a sequence of AI-agent-ready subtasks. Every subtask inc
 - [Safe Lyrics Handling](../lyrics-handling.md) documents ADR-004 raw-versus-derived
   lyrics storage, format validation, versioning and provenance expectations,
   deterministic parser boundaries, and copyright-safe fixture rules.
+- [Approval Operations and Audit Expectations](../approval-operations.md) documents
+  ADR-005 approval types, statuses, audit metadata, transition rules,
+  recommendation gating, and LLM safety boundaries.
 
 ## Recommended implementation order
 
