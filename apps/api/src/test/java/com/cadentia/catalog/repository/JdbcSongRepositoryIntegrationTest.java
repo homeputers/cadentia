@@ -76,23 +76,22 @@ class JdbcSongRepositoryIntegrationTest {
     }
 
     @Test
-    void executesCatalogImportReviewAndMergeQueriesAgainstPostgres() {
+    void executesImportBatchQueriesAgainstPostgres() {
         // Arrange / Act
-        ImportBatch importBatch = repository.createImportBatch(new CreateImportBatchCommand(
-                "fixture-csv", "admin@example.test", ImportBatchStatus.RUNNING, "{}"));
+        ImportBatch importBatch = createImportBatch();
         ImportBatch completedBatch = repository.updateImportBatch(importBatch.id(), new UpdateImportBatchCommand(
                 ImportBatchStatus.COMPLETED, "{\"acceptedCandidates\":1}", true)).orElseThrow();
 
-        Song song = repository.createSong(new CreateSongCommand(
-                "Great Is Thy Faithfulness",
-                "great-is-thy-faithfulness",
-                "en",
-                "Fixture Artist",
-                "Fixture Writer",
-                "18723",
-                1923,
-                SongStatus.DRAFT,
-                "Initial import review needed."));
+        // Assert
+        assertThat(completedBatch.status()).isEqualTo(ImportBatchStatus.COMPLETED);
+        assertThat(completedBatch.completedAt()).isNotNull();
+        assertThat(repository.findImportBatchById(importBatch.id())).contains(completedBatch);
+    }
+
+    @Test
+    void executesSongQueriesAgainstPostgres() {
+        // Arrange / Act
+        Song song = createSong();
         Song updatedSong = repository.updateSong(song.id(), new UpdateSongCommand(
                 song.canonicalTitle(),
                 song.normalizedTitle(),
@@ -104,21 +103,18 @@ class JdbcSongRepositoryIntegrationTest {
                 SongStatus.IN_REVIEW,
                 "Updated doctrinal notes.")).orElseThrow();
 
-        Arrangement arrangement = repository.createArrangement(new CreateArrangementCommand(
-                song.id(),
-                "Default Arrangement",
-                "default-arrangement",
-                ArrangementSourceType.UNKNOWN,
-                "en",
-                "G",
-                KeyMode.MAJOR,
-                96,
-                "4/4",
-                240,
-                3,
-                2,
-                true,
-                true));
+        // Assert
+        assertThat(updatedSong.songStatus()).isEqualTo(SongStatus.IN_REVIEW);
+        assertThat(repository.findById(song.id())).contains(updatedSong);
+        assertThat(repository.findByNormalizedTitleAndLanguage(song.normalizedTitle(), song.primaryLanguage()))
+                .contains(updatedSong);
+    }
+
+    @Test
+    void executesArrangementLyricsAndTagQueriesAgainstPostgres() {
+        // Arrange / Act
+        Song song = createSong();
+        Arrangement arrangement = createArrangement(song);
         Arrangement updatedArrangement = repository.updateArrangement(arrangement.id(), new UpdateArrangementCommand(
                 arrangement.name(),
                 arrangement.normalizedName(),
@@ -133,19 +129,7 @@ class JdbcSongRepositoryIntegrationTest {
                 arrangement.difficultyLevel(),
                 true,
                 true)).orElseThrow();
-
-        LyricsDocument lyricsDocument = repository.createLyricsDocument(new CreateLyricsDocumentCommand(
-                arrangement.id(),
-                LyricsFormat.PLAIN_TEXT,
-                "Fixture lyric line for repository integration test.",
-                "fixture-lyrics-hash",
-                1,
-                true,
-                false,
-                false,
-                "Fixture lyrics source reference",
-                "integration-test"));
-
+        LyricsDocument lyricsDocument = createLyricsDocument(arrangement);
         Tag tag = repository.createTag(new CreateTagCommand(
                 TagType.THEME, "Faithfulness", "faithfulness", "Fixture taxonomy tag", true));
         Tag updatedTag = repository.updateTag(tag.id(), new UpdateTagCommand(
@@ -153,28 +137,26 @@ class JdbcSongRepositoryIntegrationTest {
         repository.addTagToSong(song.id(), updatedTag.id());
         repository.addTagToArrangement(arrangement.id(), updatedTag.id());
 
-        ImportCandidate importCandidate = repository.createImportCandidate(new CreateImportCandidateCommand(
-                importBatch.id(),
-                "row-1",
-                "Great Is Thy Faithfulness (Live)",
-                "great-is-thy-faithfulness",
-                "Fixture Artist",
-                "{\"sourceArtistId\":\"artist-1\"}",
-                "18723-live",
-                "fixture-import-lyrics-hash",
-                "{\"title\":\"Great Is Thy Faithfulness (Live)\"}",
-                ImportCandidateStatus.STAGED));
+        // Assert
+        assertThat(repository.findArrangementById(arrangement.id())).contains(updatedArrangement);
+        assertThat(repository.findArrangementsBySongId(song.id())).containsExactly(updatedArrangement);
+        assertThat(repository.findLyricsDocumentById(lyricsDocument.id())).contains(lyricsDocument);
+        assertThat(repository.findLyricsDocumentsByArrangementId(arrangement.id())).containsExactly(lyricsDocument);
+        assertThat(repository.findTagById(updatedTag.id())).contains(updatedTag);
+        assertThat(repository.findTagByTypeAndSlug(updatedTag.tagType(), updatedTag.slug())).contains(updatedTag);
+        assertThat(repository.findTagsBySongId(song.id())).containsExactly(updatedTag);
+        assertThat(repository.findTagsByArrangementId(arrangement.id())).containsExactly(updatedTag);
+    }
+
+    @Test
+    void executesImportCandidateMatchReviewAndMergeQueriesAgainstPostgres() {
+        // Arrange / Act
+        ImportBatch importBatch = createImportBatch();
+        Song song = createSong();
+        ImportCandidate importCandidate = createImportCandidate(importBatch);
         ImportCandidate candidateInReview = repository.updateImportCandidateStatus(
                 importCandidate.id(), ImportCandidateStatus.DEDUPLICATION_REVIEW).orElseThrow();
-
-        ProposedDuplicateMatch proposedDuplicateMatch = repository.createProposedDuplicateMatch(
-                new CreateProposedDuplicateMatchCommand(
-                        importCandidate.id(),
-                        song.id(),
-                        new BigDecimal("0.9500"),
-                        "{\"ccliNumber\":\"exact\"}",
-                        DuplicateMatchStatus.PROPOSED,
-                        "deterministic-song-deduper"));
+        ProposedDuplicateMatch proposedDuplicateMatch = createProposedDuplicateMatch(importCandidate, song);
         ProposedDuplicateMatch reviewedDuplicateMatch = repository.updateProposedDuplicateMatchStatus(
                 proposedDuplicateMatch.id(), DuplicateMatchStatus.REVIEWED).orElseThrow();
         ImportCandidateReview review = repository.createImportCandidateReview(new CreateImportCandidateReviewCommand(
@@ -183,19 +165,29 @@ class JdbcSongRepositoryIntegrationTest {
                 ImportCandidateReviewDecision.CONFIRM_MATCH,
                 "reviewer@example.test",
                 "Confirmed by CCLI and normalized title."));
+        ImportCandidate mergedCandidate = repository.markImportCandidateMerged(importCandidate.id(), song.id())
+                .orElseThrow();
 
-        ProvenanceRecord provenanceRecord = repository.createProvenanceRecord(new CreateProvenanceRecordCommand(
-                song.id(),
-                null,
-                null,
-                importBatch.id(),
-                "fixture-csv",
-                "https://example.test/imports/row-1",
-                "Fixture CSV row 1",
-                LicenseType.UNKNOWN,
-                "metadata-only fixture",
-                ImportMethod.CSV_IMPORT,
-                BigDecimal.ONE));
+        // Assert
+        assertThat(candidateInReview.status()).isEqualTo(ImportCandidateStatus.DEDUPLICATION_REVIEW);
+        assertThat(repository.findImportCandidatesByBatchId(importBatch.id())).containsExactly(mergedCandidate);
+        assertThat(repository.findImportCandidateById(importCandidate.id())).contains(mergedCandidate);
+        assertThat(repository.findProposedDuplicateMatchesByImportCandidateId(importCandidate.id()))
+                .containsExactly(reviewedDuplicateMatch);
+        assertThat(repository.findProposedDuplicateMatchById(proposedDuplicateMatch.id()))
+                .contains(reviewedDuplicateMatch);
+        assertThat(repository.findImportCandidateReviewsByImportCandidateId(importCandidate.id()))
+                .containsExactly(review);
+        assertThat(mergedCandidate.status()).isEqualTo(ImportCandidateStatus.MERGED);
+        assertThat(mergedCandidate.mergedSongId()).isEqualTo(song.id());
+    }
+
+    @Test
+    void executesProvenanceAndApprovalQueriesAgainstPostgres() {
+        // Arrange / Act
+        ImportBatch importBatch = createImportBatch();
+        Song song = createSong();
+        ProvenanceRecord provenanceRecord = createProvenanceRecord(importBatch, song);
         ApprovalRecord approvalRecord = repository.createApprovalRecord(new CreateApprovalRecordCommand(
                 song.id(),
                 null,
@@ -210,40 +202,113 @@ class JdbcSongRepositoryIntegrationTest {
                         ApprovalStatus.NEEDS_CHANGES,
                         "reviewer@example.test",
                         "Needs more review notes.")).orElseThrow();
-        ImportCandidate mergedCandidate = repository.markImportCandidateMerged(importCandidate.id(), song.id())
-                .orElseThrow();
 
         // Assert
-        assertThat(completedBatch.status()).isEqualTo(ImportBatchStatus.COMPLETED);
-        assertThat(repository.findImportBatchById(importBatch.id())).contains(completedBatch);
-        assertThat(repository.findById(song.id())).contains(updatedSong);
-        assertThat(repository.findByNormalizedTitleAndLanguage(song.normalizedTitle(), song.primaryLanguage()))
-                .contains(updatedSong);
-        assertThat(repository.findArrangementById(arrangement.id())).contains(updatedArrangement);
-        assertThat(repository.findArrangementsBySongId(song.id())).containsExactly(updatedArrangement);
-        assertThat(repository.findLyricsDocumentById(lyricsDocument.id())).contains(lyricsDocument);
-        assertThat(repository.findLyricsDocumentsByArrangementId(arrangement.id())).containsExactly(lyricsDocument);
-        assertThat(repository.findTagById(updatedTag.id())).contains(updatedTag);
-        assertThat(repository.findTagByTypeAndSlug(updatedTag.tagType(), updatedTag.slug())).contains(updatedTag);
-        assertThat(repository.findTagsBySongId(song.id())).containsExactly(updatedTag);
-        assertThat(repository.findTagsByArrangementId(arrangement.id())).containsExactly(updatedTag);
-        assertThat(repository.findImportCandidatesByBatchId(importBatch.id())).containsExactly(mergedCandidate);
-        assertThat(repository.findImportCandidateById(importCandidate.id())).contains(mergedCandidate);
-        assertThat(candidateInReview.status()).isEqualTo(ImportCandidateStatus.DEDUPLICATION_REVIEW);
-        assertThat(repository.findProposedDuplicateMatchesByImportCandidateId(importCandidate.id()))
-                .containsExactly(reviewedDuplicateMatch);
-        assertThat(repository.findProposedDuplicateMatchById(proposedDuplicateMatch.id()))
-                .contains(reviewedDuplicateMatch);
-        assertThat(repository.findImportCandidateReviewsByImportCandidateId(importCandidate.id()))
-                .containsExactly(review);
-        assertThat(repository.findCatalogSongCandidatesForDeduplication())
-                .extracting(CatalogSongCandidate::songId)
-                .contains(song.id());
         assertThat(repository.findProvenanceRecordById(provenanceRecord.id())).contains(provenanceRecord);
         assertThat(repository.findProvenanceRecordsForSong(song.id())).containsExactly(provenanceRecord);
         assertThat(repository.findApprovalRecordById(approvalRecord.id())).contains(updatedApprovalRecord);
         assertThat(repository.findApprovalRecordsForSong(song.id())).containsExactly(updatedApprovalRecord);
-        assertThat(mergedCandidate.status()).isEqualTo(ImportCandidateStatus.MERGED);
-        assertThat(mergedCandidate.mergedSongId()).isEqualTo(song.id());
+    }
+
+    @Test
+    void executesDeduplicationCandidateReadQueryAgainstPostgres() {
+        // Arrange
+        Song song = createSong();
+        Arrangement arrangement = createArrangement(song);
+        createLyricsDocument(arrangement);
+
+        // Act / Assert
+        assertThat(repository.findCatalogSongCandidatesForDeduplication())
+                .extracting(CatalogSongCandidate::songId)
+                .contains(song.id());
+    }
+
+    private ImportBatch createImportBatch() {
+        return repository.createImportBatch(new CreateImportBatchCommand(
+                "fixture-csv", "admin@example.test", ImportBatchStatus.RUNNING, "{}"));
+    }
+
+    private Song createSong() {
+        return repository.createSong(new CreateSongCommand(
+                "Great Is Thy Faithfulness",
+                "great-is-thy-faithfulness",
+                "en",
+                "Fixture Artist",
+                "Fixture Writer",
+                "18723",
+                1923,
+                SongStatus.DRAFT,
+                "Initial import review needed."));
+    }
+
+    private Arrangement createArrangement(Song song) {
+        return repository.createArrangement(new CreateArrangementCommand(
+                song.id(),
+                "Default Arrangement",
+                "default-arrangement",
+                ArrangementSourceType.UNKNOWN,
+                "en",
+                "G",
+                KeyMode.MAJOR,
+                96,
+                "4/4",
+                240,
+                3,
+                2,
+                true,
+                true));
+    }
+
+    private LyricsDocument createLyricsDocument(Arrangement arrangement) {
+        return repository.createLyricsDocument(new CreateLyricsDocumentCommand(
+                arrangement.id(),
+                LyricsFormat.PLAIN_TEXT,
+                "Fixture lyric line for repository integration test.",
+                "fixture-lyrics-hash",
+                1,
+                true,
+                false,
+                false,
+                "Fixture lyrics source reference",
+                "integration-test"));
+    }
+
+    private ImportCandidate createImportCandidate(ImportBatch importBatch) {
+        return repository.createImportCandidate(new CreateImportCandidateCommand(
+                importBatch.id(),
+                "row-1",
+                "Great Is Thy Faithfulness (Live)",
+                "great-is-thy-faithfulness",
+                "Fixture Artist",
+                "{\"sourceArtistId\":\"artist-1\"}",
+                "18723-live",
+                "fixture-import-lyrics-hash",
+                "{\"title\":\"Great Is Thy Faithfulness (Live)\"}",
+                ImportCandidateStatus.STAGED));
+    }
+
+    private ProposedDuplicateMatch createProposedDuplicateMatch(ImportCandidate importCandidate, Song song) {
+        return repository.createProposedDuplicateMatch(new CreateProposedDuplicateMatchCommand(
+                importCandidate.id(),
+                song.id(),
+                new BigDecimal("0.9500"),
+                "{\"ccliNumber\":\"exact\"}",
+                DuplicateMatchStatus.PROPOSED,
+                "deterministic-song-deduper"));
+    }
+
+    private ProvenanceRecord createProvenanceRecord(ImportBatch importBatch, Song song) {
+        return repository.createProvenanceRecord(new CreateProvenanceRecordCommand(
+                song.id(),
+                null,
+                null,
+                importBatch.id(),
+                "fixture-csv",
+                "https://example.test/imports/row-1",
+                "Fixture CSV row 1",
+                LicenseType.UNKNOWN,
+                "metadata-only fixture",
+                ImportMethod.CSV_IMPORT,
+                BigDecimal.ONE));
     }
 }
