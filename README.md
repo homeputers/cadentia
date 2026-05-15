@@ -140,21 +140,21 @@ This repository is scaffolded as a Java 21 / Spring Boot 3.1.12 backend with a T
 ### Key paths
 
 - `apps/api` - Spring Boot application and backend packages
+- `apps/api/src/main/openapi/cadentia-api.yaml` - OpenAPI source contract for generated API interfaces and models
 - `apps/api/src/main/resources/db/migration` - Flyway migrations
 - `packages/intent-contracts` - TypeScript schema for the LLM JSON contract
-- `infra/docker/docker-compose.yml` - local PostgreSQL service
+- `docker-compose.yml` - local PostgreSQL development dependency service
 - `scripts/check.sh` - combined backend and TypeScript checks
 
 ### Local development
 
 ```bash
-docker compose -f infra/docker/docker-compose.yml up -d
-mvn test
+make deps-up
 npm install
-npm test
+make check
 ```
 
-The Recommendation Engine scaffold intentionally returns no song selections until approved catalog retrieval is implemented.
+The API is contract-first: update `apps/api/src/main/openapi/cadentia-api.yaml`, then use Maven to regenerate Spring interfaces and models during the build. The Recommendation Engine scaffold intentionally returns no song selections until approved catalog retrieval is implemented.
 
 ------------------------------------------------------------------------
 

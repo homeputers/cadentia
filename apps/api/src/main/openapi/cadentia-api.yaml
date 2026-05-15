@@ -1,0 +1,136 @@
+openapi: 3.0.3
+info:
+  title: Cadentia API
+  version: 0.1.0
+  description: API-first contract for Cadentia setlist recommendation workflows.
+servers:
+  - url: http://localhost:8080
+    description: Local development server
+tags:
+  - name: Setlists
+    description: Deterministic setlist proposal operations
+paths:
+  /api/setlists/proposals:
+    post:
+      tags:
+        - Setlists
+      operationId: generateSetlistProposal
+      summary: Generate a setlist proposal from structured intent slots
+      description: >-
+        Accepts structured slots produced by the intent parser. Song selection remains
+        backend-only and must use approved catalog data.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenerateSetlistRequest'
+      responses:
+        '202':
+          description: Setlist proposal accepted or safely deferred until catalog support is available.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SetlistProposalResponse'
+        '400':
+          description: Request validation failed.
+components:
+  schemas:
+    GenerateSetlistRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - verseText
+        - counts
+        - keyPolicy
+        - tempoPolicy
+      properties:
+        verseText:
+          type: string
+          minLength: 1
+          description: Scripture text or reference that frames the setlist.
+          example: Psalm 100
+        themeHints:
+          type: array
+          description: Optional controlled or free-form theme hints extracted from the user prompt.
+          items:
+            type: string
+          default: []
+          example:
+            - thanksgiving
+        counts:
+          $ref: '#/components/schemas/SetlistCounts'
+        keyPolicy:
+          $ref: '#/components/schemas/KeyPolicy'
+        tempoPolicy:
+          $ref: '#/components/schemas/TempoPolicy'
+    SetlistCounts:
+      type: object
+      additionalProperties: false
+      required:
+        - praise
+        - worship
+      properties:
+        praise:
+          type: integer
+          format: int32
+          minimum: 0
+          maximum: 25
+          default: 10
+        worship:
+          type: integer
+          format: int32
+          minimum: 0
+          maximum: 25
+          default: 5
+    KeyPolicy:
+      type: object
+      additionalProperties: false
+      required:
+        - preferSameKey
+        - allowRelativeMajorMinor
+        - maxKeyCenters
+      properties:
+        preferSameKey:
+          type: boolean
+          default: true
+        allowRelativeMajorMinor:
+          type: boolean
+          default: true
+        maxKeyCenters:
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 12
+          default: 2
+    TempoPolicy:
+      type: object
+      additionalProperties: false
+      required:
+        - maxJumpBpm
+      properties:
+        maxJumpBpm:
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 60
+          default: 12
+    SetlistProposalResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - status
+        - auditMessages
+      properties:
+        status:
+          type: string
+          description: Machine-readable proposal status.
+          example: PENDING_CATALOG_IMPLEMENTATION
+        auditMessages:
+          type: array
+          description: Transparent safety and processing messages for the proposal.
+          items:
+            type: string
+          example:
+            - Recommendation Engine scaffold accepted the structured request.
+            - No songs were selected because catalog retrieval is not implemented yet.

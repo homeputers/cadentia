@@ -4,3 +4,4 @@ set -euo pipefail
 mvn test
 npm test
 npm run typecheck
+npm run build
