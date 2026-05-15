@@ -4,6 +4,7 @@ import com.cadentia.catalog.entity.ApprovalRecord;
 import com.cadentia.catalog.entity.Arrangement;
 import com.cadentia.catalog.entity.ImportBatch;
 import com.cadentia.catalog.entity.ImportCandidate;
+import com.cadentia.catalog.entity.ImportCandidateReview;
 import com.cadentia.catalog.entity.LyricsDocument;
 import com.cadentia.catalog.entity.ProposedDuplicateMatch;
 import com.cadentia.catalog.entity.ProvenanceRecord;
@@ -13,11 +14,13 @@ import com.cadentia.catalog.model.CreateApprovalRecordCommand;
 import com.cadentia.catalog.model.CreateArrangementCommand;
 import com.cadentia.catalog.model.CreateImportBatchCommand;
 import com.cadentia.catalog.model.CreateImportCandidateCommand;
+import com.cadentia.catalog.model.CreateImportCandidateReviewCommand;
 import com.cadentia.catalog.model.CreateLyricsDocumentCommand;
 import com.cadentia.catalog.model.CreateProposedDuplicateMatchCommand;
 import com.cadentia.catalog.model.CreateProvenanceRecordCommand;
 import com.cadentia.catalog.model.CreateSongCommand;
 import com.cadentia.catalog.model.CreateTagCommand;
+import com.cadentia.catalog.model.DuplicateMatchStatus;
 import com.cadentia.catalog.model.ImportCandidateStatus;
 import com.cadentia.catalog.model.TagType;
 import com.cadentia.catalog.model.UpdateApprovalRecordCommand;
@@ -152,7 +155,17 @@ public class InMemorySongRepository implements SongRepository {
     }
 
     @Override
+    public Optional<ImportCandidate> findImportCandidateById(UUID id) {
+        return Optional.empty();
+    }
+
+    @Override
     public Optional<ImportCandidate> updateImportCandidateStatus(UUID id, ImportCandidateStatus status) {
+        return Optional.empty();
+    }
+
+    @Override
+    public Optional<ImportCandidate> markImportCandidateMerged(UUID id, UUID mergedSongId) {
         return Optional.empty();
     }
 
@@ -163,6 +176,26 @@ public class InMemorySongRepository implements SongRepository {
 
     @Override
     public List<ProposedDuplicateMatch> findProposedDuplicateMatchesByImportCandidateId(UUID importCandidateId) {
+        return List.of();
+    }
+
+    @Override
+    public Optional<ProposedDuplicateMatch> findProposedDuplicateMatchById(UUID id) {
+        return Optional.empty();
+    }
+
+    @Override
+    public Optional<ProposedDuplicateMatch> updateProposedDuplicateMatchStatus(UUID id, DuplicateMatchStatus status) {
+        return Optional.empty();
+    }
+
+    @Override
+    public ImportCandidateReview createImportCandidateReview(CreateImportCandidateReviewCommand command) {
+        throw new UnsupportedOperationException("In-memory import candidate review writes are not supported");
+    }
+
+    @Override
+    public List<ImportCandidateReview> findImportCandidateReviewsByImportCandidateId(UUID importCandidateId) {
         return List.of();
     }
 

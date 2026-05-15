@@ -4,6 +4,7 @@ import com.cadentia.catalog.entity.ApprovalRecord;
 import com.cadentia.catalog.entity.Arrangement;
 import com.cadentia.catalog.entity.ImportBatch;
 import com.cadentia.catalog.entity.ImportCandidate;
+import com.cadentia.catalog.entity.ImportCandidateReview;
 import com.cadentia.catalog.entity.LyricsDocument;
 import com.cadentia.catalog.entity.ProposedDuplicateMatch;
 import com.cadentia.catalog.entity.ProvenanceRecord;
@@ -16,6 +17,7 @@ import com.cadentia.catalog.model.CreateApprovalRecordCommand;
 import com.cadentia.catalog.model.CreateArrangementCommand;
 import com.cadentia.catalog.model.CreateImportBatchCommand;
 import com.cadentia.catalog.model.CreateImportCandidateCommand;
+import com.cadentia.catalog.model.CreateImportCandidateReviewCommand;
 import com.cadentia.catalog.model.CreateLyricsDocumentCommand;
 import com.cadentia.catalog.model.CreateProposedDuplicateMatchCommand;
 import com.cadentia.catalog.model.CreateProvenanceRecordCommand;
@@ -23,6 +25,7 @@ import com.cadentia.catalog.model.CreateSongCommand;
 import com.cadentia.catalog.model.CreateTagCommand;
 import com.cadentia.catalog.model.DuplicateMatchStatus;
 import com.cadentia.catalog.model.ImportBatchStatus;
+import com.cadentia.catalog.model.ImportCandidateReviewDecision;
 import com.cadentia.catalog.model.ImportCandidateStatus;
 import com.cadentia.catalog.model.ImportMethod;
 import com.cadentia.catalog.model.KeyMode;
@@ -75,6 +78,8 @@ public class JdbcSongRepository implements SongRepository {
             + "created_at, updated_at";
     private static final String PROPOSED_DUPLICATE_MATCH_COLUMNS = "id, import_candidate_id, candidate_song_id, "
             + "match_score, match_signals::text AS match_signals_json, status, suggested_by, created_at, updated_at";
+    private static final String IMPORT_CANDIDATE_REVIEW_COLUMNS = "id, import_candidate_id, "
+            + "proposed_duplicate_match_id, decision, reviewer, review_notes, reviewed_at";
 
     private final NamedParameterJdbcTemplate jdbcTemplate;
 
@@ -328,6 +333,12 @@ public class JdbcSongRepository implements SongRepository {
     }
 
     @Override
+    public Optional<ImportCandidate> findImportCandidateById(UUID id) {
+        return queryOptional("SELECT " + IMPORT_CANDIDATE_COLUMNS + " FROM import_candidates WHERE id = :id",
+                Map.of("id", id), importCandidateMapper());
+    }
+
+    @Override
     public Optional<ImportCandidate> updateImportCandidateStatus(UUID id, ImportCandidateStatus status) {
         String sql = """
                 UPDATE import_candidates
@@ -337,6 +348,22 @@ public class JdbcSongRepository implements SongRepository {
                 RETURNING %s
                 """.formatted(IMPORT_CANDIDATE_COLUMNS);
         return queryOptional(sql, Map.of("id", id, "status", status.name()), importCandidateMapper());
+    }
+
+    @Override
+    public Optional<ImportCandidate> markImportCandidateMerged(UUID id, UUID mergedSongId) {
+        String sql = """
+                UPDATE import_candidates
+                SET status = :status,
+                    merged_song_id = :mergedSongId,
+                    updated_at = now()
+                WHERE id = :id
+                RETURNING %s
+                """.formatted(IMPORT_CANDIDATE_COLUMNS);
+        return queryOptional(sql, Map.of(
+                "id", id,
+                "status", ImportCandidateStatus.MERGED.name(),
+                "mergedSongId", mergedSongId), importCandidateMapper());
     }
 
     @Override
@@ -359,6 +386,46 @@ public class JdbcSongRepository implements SongRepository {
                         + " FROM proposed_duplicate_matches WHERE import_candidate_id = :importCandidateId "
                         + "ORDER BY match_score DESC, created_at, id",
                 Map.of("importCandidateId", importCandidateId), proposedDuplicateMatchMapper());
+    }
+
+    @Override
+    public Optional<ProposedDuplicateMatch> findProposedDuplicateMatchById(UUID id) {
+        return queryOptional("SELECT " + PROPOSED_DUPLICATE_MATCH_COLUMNS
+                        + " FROM proposed_duplicate_matches WHERE id = :id",
+                Map.of("id", id), proposedDuplicateMatchMapper());
+    }
+
+    @Override
+    public Optional<ProposedDuplicateMatch> updateProposedDuplicateMatchStatus(UUID id, DuplicateMatchStatus status) {
+        String sql = """
+                UPDATE proposed_duplicate_matches
+                SET status = :status,
+                    updated_at = now()
+                WHERE id = :id
+                RETURNING %s
+                """.formatted(PROPOSED_DUPLICATE_MATCH_COLUMNS);
+        return queryOptional(sql, Map.of("id", id, "status", status.name()), proposedDuplicateMatchMapper());
+    }
+
+    @Override
+    public ImportCandidateReview createImportCandidateReview(CreateImportCandidateReviewCommand command) {
+        String sql = """
+                INSERT INTO import_candidate_reviews (
+                    import_candidate_id, proposed_duplicate_match_id, decision, reviewer, review_notes
+                ) VALUES (
+                    :importCandidateId, :proposedDuplicateMatchId, :decision, :reviewer, :reviewNotes
+                )
+                RETURNING %s
+                """.formatted(IMPORT_CANDIDATE_REVIEW_COLUMNS);
+        return jdbcTemplate.queryForObject(sql, importCandidateReviewParams(command), importCandidateReviewMapper());
+    }
+
+    @Override
+    public List<ImportCandidateReview> findImportCandidateReviewsByImportCandidateId(UUID importCandidateId) {
+        return jdbcTemplate.query("SELECT " + IMPORT_CANDIDATE_REVIEW_COLUMNS
+                        + " FROM import_candidate_reviews WHERE import_candidate_id = :importCandidateId "
+                        + "ORDER BY reviewed_at DESC, id DESC",
+                Map.of("importCandidateId", importCandidateId), importCandidateReviewMapper());
     }
 
     @Override
@@ -606,6 +673,15 @@ public class JdbcSongRepository implements SongRepository {
                 .addValue("suggestedBy", command.suggestedBy());
     }
 
+    private static MapSqlParameterSource importCandidateReviewParams(CreateImportCandidateReviewCommand command) {
+        return new MapSqlParameterSource()
+                .addValue("importCandidateId", command.importCandidateId())
+                .addValue("proposedDuplicateMatchId", command.proposedDuplicateMatchId())
+                .addValue("decision", command.decision().name())
+                .addValue("reviewer", command.reviewer())
+                .addValue("reviewNotes", command.reviewNotes());
+    }
+
     private static MapSqlParameterSource provenanceParams(CreateProvenanceRecordCommand command) {
         return new MapSqlParameterSource()
                 .addValue("songId", command.songId())
@@ -744,6 +820,17 @@ public class JdbcSongRepository implements SongRepository {
                 rs.getString("suggested_by"),
                 instant(rs, "created_at"),
                 instant(rs, "updated_at"));
+    }
+
+    private static RowMapper<ImportCandidateReview> importCandidateReviewMapper() {
+        return (rs, rowNum) -> new ImportCandidateReview(
+                uuid(rs, "id"),
+                uuid(rs, "import_candidate_id"),
+                uuid(rs, "proposed_duplicate_match_id"),
+                ImportCandidateReviewDecision.valueOf(rs.getString("decision")),
+                rs.getString("reviewer"),
+                rs.getString("review_notes"),
+                instant(rs, "reviewed_at"));
     }
 
     private static RowMapper<CatalogSongCandidate> catalogSongCandidateMapper() {
