@@ -156,3 +156,8 @@ Document the lyrics storage, format validation, versioning, parser behavior, and
 
 - Do not publish copyrighted lyric examples beyond minimal fair-use-style snippets needed for tests.
 - Do not document parser features that are not implemented or tested.
+
+### Implementation note
+
+Subtask 5 safe-handling guidance is documented in `docs/lyrics-handling.md`. The document links ADR-004 to the schema migrations, validation enum, parse-status model, deterministic parser abstraction and implementation, parser registry, parser tests, and shared fixture policy. It clarifies that `lyrics_documents.content` remains authoritative raw source, lists the supported declared formats (`plain_text`, `chordpro`, `onsong`, and `markdown`), explains versioning and provenance expectations, describes current deterministic parser boundaries without claiming untested compatibility, and prohibits full copyrighted lyrics in docs, fixtures, logs, and examples.
+
