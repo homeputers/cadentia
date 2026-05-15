@@ -54,7 +54,7 @@ public class JdbcCandidateRetriever implements CandidateRetriever {
             params.addValue("maxBpm", criteria.maxBpm());
         }
         if (criteria.requiredTags() != null && !criteria.requiredTags().isEmpty()) {
-            sql.append(" AND tags @> :requiredTags");
+            sql.append(" AND tags @> CAST(:requiredTags AS text[])");
             params.addValue("requiredTags", new TextArrayValue(criteria.requiredTags()));
         }
 
