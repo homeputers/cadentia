@@ -2,15 +2,11 @@ package com.cadentia.reng;
 
 import com.cadentia.catalog.model.ApprovalStatus;
 import java.sql.Array;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
 import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.jdbc.core.RowMapper;
-import org.springframework.jdbc.core.SqlTypeValue;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
@@ -54,8 +50,8 @@ public class JdbcCandidateRetriever implements CandidateRetriever {
             params.addValue("maxBpm", criteria.maxBpm());
         }
         if (criteria.requiredTags() != null && !criteria.requiredTags().isEmpty()) {
-            sql.append(" AND tags @> CAST(:requiredTags AS text[])");
-            params.addValue("requiredTags", new TextArrayValue(criteria.requiredTags()));
+            sql.append(" AND tags @> ARRAY[:requiredTags]::text[]");
+            params.addValue("requiredTags", criteria.requiredTags());
         }
 
         sql.append(" ORDER BY title, arrangement_id");
@@ -91,22 +87,5 @@ public class JdbcCandidateRetriever implements CandidateRetriever {
         }
         String[] values = (String[]) sqlArray.getArray();
         return List.copyOf(Arrays.asList(values));
-    }
-
-    private static final class TextArrayValue implements SqlTypeValue {
-
-        private final List<String> values;
-
-        private TextArrayValue(List<String> values) {
-            this.values = List.copyOf(values);
-        }
-
-        @Override
-        public void setTypeValue(PreparedStatement ps, int paramIndex, int sqlType, String typeName)
-                throws SQLException {
-            Connection connection = ps.getConnection();
-            Array sqlArray = connection.createArrayOf("text", new ArrayList<>(values).toArray());
-            ps.setArray(paramIndex, sqlArray);
-        }
     }
 }
