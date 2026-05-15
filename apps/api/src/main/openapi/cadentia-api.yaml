@@ -10,7 +10,7 @@ tags:
   - name: Setlists
     description: Deterministic setlist proposal operations
 paths:
-  /api/setlists/proposals:
+  /setlists/proposals:
     post:
       tags:
         - Setlists
