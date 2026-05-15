@@ -2,7 +2,7 @@ package com.cadentia.catalog.model;
 
 import java.util.UUID;
 
-public record CreateApprovalRecordRequest(
+public record CreateApprovalRecordCommand(
         UUID songId,
         UUID arrangementId,
         UUID lyricsDocumentId,
@@ -11,7 +11,7 @@ public record CreateApprovalRecordRequest(
         String reviewer,
         String reviewNotes) {
 
-    public CreateApprovalRecordRequest {
+    public CreateApprovalRecordCommand {
         CatalogValidation.requireExactlyOneEntity(songId, arrangementId, lyricsDocumentId);
         approvalType = CatalogValidation.requireEnum(approvalType, "approvalType");
         status = CatalogValidation.requireEnum(status, "status");

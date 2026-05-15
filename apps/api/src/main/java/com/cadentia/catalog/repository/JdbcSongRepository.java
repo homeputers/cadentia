@@ -10,13 +10,13 @@ import com.cadentia.catalog.entity.Tag;
 import com.cadentia.catalog.model.ApprovalStatus;
 import com.cadentia.catalog.model.ApprovalType;
 import com.cadentia.catalog.model.ArrangementSourceType;
-import com.cadentia.catalog.model.CreateApprovalRecordRequest;
-import com.cadentia.catalog.model.CreateArrangementRequest;
-import com.cadentia.catalog.model.CreateImportBatchRequest;
-import com.cadentia.catalog.model.CreateLyricsDocumentRequest;
-import com.cadentia.catalog.model.CreateProvenanceRecordRequest;
-import com.cadentia.catalog.model.CreateSongRequest;
-import com.cadentia.catalog.model.CreateTagRequest;
+import com.cadentia.catalog.model.CreateApprovalRecordCommand;
+import com.cadentia.catalog.model.CreateArrangementCommand;
+import com.cadentia.catalog.model.CreateImportBatchCommand;
+import com.cadentia.catalog.model.CreateLyricsDocumentCommand;
+import com.cadentia.catalog.model.CreateProvenanceRecordCommand;
+import com.cadentia.catalog.model.CreateSongCommand;
+import com.cadentia.catalog.model.CreateTagCommand;
 import com.cadentia.catalog.model.ImportBatchStatus;
 import com.cadentia.catalog.model.ImportMethod;
 import com.cadentia.catalog.model.KeyMode;
@@ -24,11 +24,11 @@ import com.cadentia.catalog.model.LicenseType;
 import com.cadentia.catalog.model.LyricsFormat;
 import com.cadentia.catalog.model.SongStatus;
 import com.cadentia.catalog.model.TagType;
-import com.cadentia.catalog.model.UpdateApprovalRecordRequest;
-import com.cadentia.catalog.model.UpdateArrangementRequest;
-import com.cadentia.catalog.model.UpdateImportBatchRequest;
-import com.cadentia.catalog.model.UpdateSongRequest;
-import com.cadentia.catalog.model.UpdateTagRequest;
+import com.cadentia.catalog.model.UpdateApprovalRecordCommand;
+import com.cadentia.catalog.model.UpdateArrangementCommand;
+import com.cadentia.catalog.model.UpdateImportBatchCommand;
+import com.cadentia.catalog.model.UpdateSongCommand;
+import com.cadentia.catalog.model.UpdateTagCommand;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
@@ -69,7 +69,7 @@ public class JdbcSongRepository implements SongRepository {
     }
 
     @Override
-    public Song createSong(CreateSongRequest request) {
+    public Song createSong(CreateSongCommand command) {
         String sql = """
                 INSERT INTO songs (
                     canonical_title, normalized_title, primary_language, original_artist_display,
@@ -80,7 +80,7 @@ public class JdbcSongRepository implements SongRepository {
                 )
                 RETURNING %s
                 """.formatted(SONG_COLUMNS);
-        return jdbcTemplate.queryForObject(sql, songParams(request), songMapper());
+        return jdbcTemplate.queryForObject(sql, songParams(command), songMapper());
     }
 
     @Override
@@ -98,7 +98,7 @@ public class JdbcSongRepository implements SongRepository {
     }
 
     @Override
-    public Optional<Song> updateSong(UUID id, UpdateSongRequest request) {
+    public Optional<Song> updateSong(UUID id, UpdateSongCommand command) {
         String sql = """
                 UPDATE songs
                 SET canonical_title = :canonicalTitle,
@@ -114,12 +114,12 @@ public class JdbcSongRepository implements SongRepository {
                 WHERE id = :id
                 RETURNING %s
                 """.formatted(SONG_COLUMNS);
-        MapSqlParameterSource params = songParams(request).addValue("id", id);
+        MapSqlParameterSource params = songParams(command).addValue("id", id);
         return queryOptional(sql, params, songMapper());
     }
 
     @Override
-    public Arrangement createArrangement(CreateArrangementRequest request) {
+    public Arrangement createArrangement(CreateArrangementCommand command) {
         String sql = """
                 INSERT INTO arrangements (
                     song_id, name, normalized_name, source_type, language, musical_key, key_mode, tempo_bpm,
@@ -130,7 +130,7 @@ public class JdbcSongRepository implements SongRepository {
                 )
                 RETURNING %s
                 """.formatted(ARRANGEMENT_COLUMNS);
-        return jdbcTemplate.queryForObject(sql, arrangementParams(request), arrangementMapper());
+        return jdbcTemplate.queryForObject(sql, arrangementParams(command), arrangementMapper());
     }
 
     @Override
@@ -146,7 +146,7 @@ public class JdbcSongRepository implements SongRepository {
     }
 
     @Override
-    public Optional<Arrangement> updateArrangement(UUID id, UpdateArrangementRequest request) {
+    public Optional<Arrangement> updateArrangement(UUID id, UpdateArrangementCommand command) {
         String sql = """
                 UPDATE arrangements
                 SET name = :name,
@@ -166,11 +166,11 @@ public class JdbcSongRepository implements SongRepository {
                 WHERE id = :id
                 RETURNING %s
                 """.formatted(ARRANGEMENT_COLUMNS);
-        return queryOptional(sql, arrangementParams(request).addValue("id", id), arrangementMapper());
+        return queryOptional(sql, arrangementParams(command).addValue("id", id), arrangementMapper());
     }
 
     @Override
-    public LyricsDocument createLyricsDocument(CreateLyricsDocumentRequest request) {
+    public LyricsDocument createLyricsDocument(CreateLyricsDocumentCommand command) {
         String sql = """
                 INSERT INTO lyrics_documents (
                     arrangement_id, format, content, content_hash, version_number, is_current,
@@ -181,7 +181,7 @@ public class JdbcSongRepository implements SongRepository {
                 )
                 RETURNING %s
                 """.formatted(LYRICS_COLUMNS);
-        return jdbcTemplate.queryForObject(sql, lyricsParams(request), lyricsMapper());
+        return jdbcTemplate.queryForObject(sql, lyricsParams(command), lyricsMapper());
     }
 
     @Override
@@ -198,13 +198,13 @@ public class JdbcSongRepository implements SongRepository {
     }
 
     @Override
-    public Tag createTag(CreateTagRequest request) {
+    public Tag createTag(CreateTagCommand command) {
         String sql = """
                 INSERT INTO tags (tag_type, name, slug, description, is_active)
                 VALUES (:tagType, :name, :slug, :description, :active)
                 RETURNING %s
                 """.formatted(TAG_COLUMNS);
-        return jdbcTemplate.queryForObject(sql, tagParams(request), tagMapper());
+        return jdbcTemplate.queryForObject(sql, tagParams(command), tagMapper());
     }
 
     @Override
@@ -219,7 +219,7 @@ public class JdbcSongRepository implements SongRepository {
     }
 
     @Override
-    public Optional<Tag> updateTag(UUID id, UpdateTagRequest request) {
+    public Optional<Tag> updateTag(UUID id, UpdateTagCommand command) {
         String sql = """
                 UPDATE tags
                 SET name = :name,
@@ -230,7 +230,7 @@ public class JdbcSongRepository implements SongRepository {
                 WHERE id = :id
                 RETURNING %s
                 """.formatted(TAG_COLUMNS);
-        return queryOptional(sql, tagParams(request).addValue("id", id), tagMapper());
+        return queryOptional(sql, tagParams(command).addValue("id", id), tagMapper());
     }
 
     @Override
@@ -262,13 +262,13 @@ public class JdbcSongRepository implements SongRepository {
     }
 
     @Override
-    public ImportBatch createImportBatch(CreateImportBatchRequest request) {
+    public ImportBatch createImportBatch(CreateImportBatchCommand command) {
         String sql = """
                 INSERT INTO import_batches (source_system, initiated_by, status, summary_json)
                 VALUES (:sourceSystem, :initiatedBy, :status, CAST(:summaryJson AS jsonb))
                 RETURNING %s
                 """.formatted(IMPORT_COLUMNS);
-        return jdbcTemplate.queryForObject(sql, importBatchParams(request), importBatchMapper());
+        return jdbcTemplate.queryForObject(sql, importBatchParams(command), importBatchMapper());
     }
 
     @Override
@@ -278,7 +278,7 @@ public class JdbcSongRepository implements SongRepository {
     }
 
     @Override
-    public Optional<ImportBatch> updateImportBatch(UUID id, UpdateImportBatchRequest request) {
+    public Optional<ImportBatch> updateImportBatch(UUID id, UpdateImportBatchCommand command) {
         String sql = """
                 UPDATE import_batches
                 SET status = :status,
@@ -287,11 +287,11 @@ public class JdbcSongRepository implements SongRepository {
                 WHERE id = :id
                 RETURNING %s
                 """.formatted(IMPORT_COLUMNS);
-        return queryOptional(sql, importBatchParams(request).addValue("id", id), importBatchMapper());
+        return queryOptional(sql, importBatchParams(command).addValue("id", id), importBatchMapper());
     }
 
     @Override
-    public ProvenanceRecord createProvenanceRecord(CreateProvenanceRecordRequest request) {
+    public ProvenanceRecord createProvenanceRecord(CreateProvenanceRecordCommand command) {
         String sql = """
                 INSERT INTO provenance_records (
                     song_id, arrangement_id, lyrics_document_id, import_batch_id, source_system, source_uri,
@@ -302,7 +302,7 @@ public class JdbcSongRepository implements SongRepository {
                 )
                 RETURNING %s
                 """.formatted(PROVENANCE_COLUMNS);
-        return jdbcTemplate.queryForObject(sql, provenanceParams(request), provenanceMapper());
+        return jdbcTemplate.queryForObject(sql, provenanceParams(command), provenanceMapper());
     }
 
     @Override
@@ -318,7 +318,7 @@ public class JdbcSongRepository implements SongRepository {
     }
 
     @Override
-    public ApprovalRecord createApprovalRecord(CreateApprovalRecordRequest request) {
+    public ApprovalRecord createApprovalRecord(CreateApprovalRecordCommand command) {
         String sql = """
                 INSERT INTO approval_records (
                     song_id, arrangement_id, lyrics_document_id, approval_type, status, reviewer, review_notes
@@ -327,7 +327,7 @@ public class JdbcSongRepository implements SongRepository {
                 )
                 RETURNING %s
                 """.formatted(APPROVAL_COLUMNS);
-        return jdbcTemplate.queryForObject(sql, approvalParams(request), approvalMapper());
+        return jdbcTemplate.queryForObject(sql, approvalParams(command), approvalMapper());
     }
 
     @Override
@@ -343,7 +343,7 @@ public class JdbcSongRepository implements SongRepository {
     }
 
     @Override
-    public Optional<ApprovalRecord> updateApprovalRecord(UUID id, UpdateApprovalRecordRequest request) {
+    public Optional<ApprovalRecord> updateApprovalRecord(UUID id, UpdateApprovalRecordCommand command) {
         String sql = """
                 UPDATE approval_records
                 SET status = :status,
@@ -353,7 +353,7 @@ public class JdbcSongRepository implements SongRepository {
                 WHERE id = :id
                 RETURNING %s
                 """.formatted(APPROVAL_COLUMNS);
-        return queryOptional(sql, approvalParams(request).addValue("id", id), approvalMapper());
+        return queryOptional(sql, approvalParams(command).addValue("id", id), approvalMapper());
     }
 
     private <T> Optional<T> queryOptional(String sql, Map<String, ?> params, RowMapper<T> mapper) {
@@ -372,44 +372,44 @@ public class JdbcSongRepository implements SongRepository {
         }
     }
 
-    private static MapSqlParameterSource songParams(CreateSongRequest request) {
+    private static MapSqlParameterSource songParams(CreateSongCommand command) {
         return new MapSqlParameterSource()
-                .addValue("canonicalTitle", request.canonicalTitle())
-                .addValue("normalizedTitle", request.normalizedTitle())
-                .addValue("primaryLanguage", request.primaryLanguage())
-                .addValue("originalArtistDisplay", request.originalArtistDisplay())
-                .addValue("composerCredits", request.composerCredits())
-                .addValue("ccliNumber", request.ccliNumber())
-                .addValue("yearWritten", request.yearWritten())
-                .addValue("songStatus", request.songStatus().name())
-                .addValue("doctrinalNotes", request.doctrinalNotes());
+                .addValue("canonicalTitle", command.canonicalTitle())
+                .addValue("normalizedTitle", command.normalizedTitle())
+                .addValue("primaryLanguage", command.primaryLanguage())
+                .addValue("originalArtistDisplay", command.originalArtistDisplay())
+                .addValue("composerCredits", command.composerCredits())
+                .addValue("ccliNumber", command.ccliNumber())
+                .addValue("yearWritten", command.yearWritten())
+                .addValue("songStatus", command.songStatus().name())
+                .addValue("doctrinalNotes", command.doctrinalNotes());
     }
 
-    private static MapSqlParameterSource songParams(UpdateSongRequest request) {
+    private static MapSqlParameterSource songParams(UpdateSongCommand command) {
         return new MapSqlParameterSource()
-                .addValue("canonicalTitle", request.canonicalTitle())
-                .addValue("normalizedTitle", request.normalizedTitle())
-                .addValue("primaryLanguage", request.primaryLanguage())
-                .addValue("originalArtistDisplay", request.originalArtistDisplay())
-                .addValue("composerCredits", request.composerCredits())
-                .addValue("ccliNumber", request.ccliNumber())
-                .addValue("yearWritten", request.yearWritten())
-                .addValue("songStatus", request.songStatus().name())
-                .addValue("doctrinalNotes", request.doctrinalNotes());
+                .addValue("canonicalTitle", command.canonicalTitle())
+                .addValue("normalizedTitle", command.normalizedTitle())
+                .addValue("primaryLanguage", command.primaryLanguage())
+                .addValue("originalArtistDisplay", command.originalArtistDisplay())
+                .addValue("composerCredits", command.composerCredits())
+                .addValue("ccliNumber", command.ccliNumber())
+                .addValue("yearWritten", command.yearWritten())
+                .addValue("songStatus", command.songStatus().name())
+                .addValue("doctrinalNotes", command.doctrinalNotes());
     }
 
-    private static MapSqlParameterSource arrangementParams(CreateArrangementRequest request) {
-        return arrangementParams(request.name(), request.normalizedName(), request.sourceType(), request.language(),
-                request.musicalKey(), request.keyMode(), request.tempoBpm(), request.timeSignature(),
-                request.durationSeconds(), request.energyLevel(), request.difficultyLevel(), request.defaultForSong(),
-                request.active()).addValue("songId", request.songId());
+    private static MapSqlParameterSource arrangementParams(CreateArrangementCommand command) {
+        return arrangementParams(command.name(), command.normalizedName(), command.sourceType(), command.language(),
+                command.musicalKey(), command.keyMode(), command.tempoBpm(), command.timeSignature(),
+                command.durationSeconds(), command.energyLevel(), command.difficultyLevel(), command.defaultForSong(),
+                command.active()).addValue("songId", command.songId());
     }
 
-    private static MapSqlParameterSource arrangementParams(UpdateArrangementRequest request) {
-        return arrangementParams(request.name(), request.normalizedName(), request.sourceType(), request.language(),
-                request.musicalKey(), request.keyMode(), request.tempoBpm(), request.timeSignature(),
-                request.durationSeconds(), request.energyLevel(), request.difficultyLevel(), request.defaultForSong(),
-                request.active());
+    private static MapSqlParameterSource arrangementParams(UpdateArrangementCommand command) {
+        return arrangementParams(command.name(), command.normalizedName(), command.sourceType(), command.language(),
+                command.musicalKey(), command.keyMode(), command.tempoBpm(), command.timeSignature(),
+                command.durationSeconds(), command.energyLevel(), command.difficultyLevel(), command.defaultForSong(),
+                command.active());
     }
 
     private static MapSqlParameterSource arrangementParams(
@@ -442,83 +442,83 @@ public class JdbcSongRepository implements SongRepository {
                 .addValue("active", active);
     }
 
-    private static MapSqlParameterSource lyricsParams(CreateLyricsDocumentRequest request) {
+    private static MapSqlParameterSource lyricsParams(CreateLyricsDocumentCommand command) {
         return new MapSqlParameterSource()
-                .addValue("arrangementId", request.arrangementId())
-                .addValue("format", request.format().name())
-                .addValue("content", request.content())
-                .addValue("contentHash", request.contentHash())
-                .addValue("versionNumber", request.versionNumber())
-                .addValue("current", request.current())
-                .addValue("containsChords", request.containsChords())
-                .addValue("containsSections", request.containsSections())
-                .addValue("sourceReference", request.sourceReference())
-                .addValue("createdBy", request.createdBy());
+                .addValue("arrangementId", command.arrangementId())
+                .addValue("format", command.format().name())
+                .addValue("content", command.content())
+                .addValue("contentHash", command.contentHash())
+                .addValue("versionNumber", command.versionNumber())
+                .addValue("current", command.current())
+                .addValue("containsChords", command.containsChords())
+                .addValue("containsSections", command.containsSections())
+                .addValue("sourceReference", command.sourceReference())
+                .addValue("createdBy", command.createdBy());
     }
 
-    private static MapSqlParameterSource tagParams(CreateTagRequest request) {
+    private static MapSqlParameterSource tagParams(CreateTagCommand command) {
         return new MapSqlParameterSource()
-                .addValue("tagType", request.tagType().name())
-                .addValue("name", request.name())
-                .addValue("slug", request.slug())
-                .addValue("description", request.description())
-                .addValue("active", request.active());
+                .addValue("tagType", command.tagType().name())
+                .addValue("name", command.name())
+                .addValue("slug", command.slug())
+                .addValue("description", command.description())
+                .addValue("active", command.active());
     }
 
-    private static MapSqlParameterSource tagParams(UpdateTagRequest request) {
+    private static MapSqlParameterSource tagParams(UpdateTagCommand command) {
         return new MapSqlParameterSource()
-                .addValue("name", request.name())
-                .addValue("slug", request.slug())
-                .addValue("description", request.description())
-                .addValue("active", request.active());
+                .addValue("name", command.name())
+                .addValue("slug", command.slug())
+                .addValue("description", command.description())
+                .addValue("active", command.active());
     }
 
-    private static MapSqlParameterSource importBatchParams(CreateImportBatchRequest request) {
+    private static MapSqlParameterSource importBatchParams(CreateImportBatchCommand command) {
         return new MapSqlParameterSource()
-                .addValue("sourceSystem", request.sourceSystem())
-                .addValue("initiatedBy", request.initiatedBy())
-                .addValue("status", request.status().name())
-                .addValue("summaryJson", request.summaryJson());
+                .addValue("sourceSystem", command.sourceSystem())
+                .addValue("initiatedBy", command.initiatedBy())
+                .addValue("status", command.status().name())
+                .addValue("summaryJson", command.summaryJson());
     }
 
-    private static MapSqlParameterSource importBatchParams(UpdateImportBatchRequest request) {
+    private static MapSqlParameterSource importBatchParams(UpdateImportBatchCommand command) {
         return new MapSqlParameterSource()
-                .addValue("status", request.status().name())
-                .addValue("summaryJson", request.summaryJson())
-                .addValue("completed", request.completed());
+                .addValue("status", command.status().name())
+                .addValue("summaryJson", command.summaryJson())
+                .addValue("completed", command.completed());
     }
 
-    private static MapSqlParameterSource provenanceParams(CreateProvenanceRecordRequest request) {
+    private static MapSqlParameterSource provenanceParams(CreateProvenanceRecordCommand command) {
         return new MapSqlParameterSource()
-                .addValue("songId", request.songId())
-                .addValue("arrangementId", request.arrangementId())
-                .addValue("lyricsDocumentId", request.lyricsDocumentId())
-                .addValue("importBatchId", request.importBatchId())
-                .addValue("sourceSystem", request.sourceSystem())
-                .addValue("sourceUri", request.sourceUri())
-                .addValue("sourceLabel", request.sourceLabel())
-                .addValue("licenseType", request.licenseType().name())
-                .addValue("licenseNotes", request.licenseNotes())
-                .addValue("importMethod", request.importMethod().name())
-                .addValue("confidenceScore", request.confidenceScore());
+                .addValue("songId", command.songId())
+                .addValue("arrangementId", command.arrangementId())
+                .addValue("lyricsDocumentId", command.lyricsDocumentId())
+                .addValue("importBatchId", command.importBatchId())
+                .addValue("sourceSystem", command.sourceSystem())
+                .addValue("sourceUri", command.sourceUri())
+                .addValue("sourceLabel", command.sourceLabel())
+                .addValue("licenseType", command.licenseType().name())
+                .addValue("licenseNotes", command.licenseNotes())
+                .addValue("importMethod", command.importMethod().name())
+                .addValue("confidenceScore", command.confidenceScore());
     }
 
-    private static MapSqlParameterSource approvalParams(CreateApprovalRecordRequest request) {
+    private static MapSqlParameterSource approvalParams(CreateApprovalRecordCommand command) {
         return new MapSqlParameterSource()
-                .addValue("songId", request.songId())
-                .addValue("arrangementId", request.arrangementId())
-                .addValue("lyricsDocumentId", request.lyricsDocumentId())
-                .addValue("approvalType", request.approvalType().name())
-                .addValue("status", request.status().name())
-                .addValue("reviewer", request.reviewer())
-                .addValue("reviewNotes", request.reviewNotes());
+                .addValue("songId", command.songId())
+                .addValue("arrangementId", command.arrangementId())
+                .addValue("lyricsDocumentId", command.lyricsDocumentId())
+                .addValue("approvalType", command.approvalType().name())
+                .addValue("status", command.status().name())
+                .addValue("reviewer", command.reviewer())
+                .addValue("reviewNotes", command.reviewNotes());
     }
 
-    private static MapSqlParameterSource approvalParams(UpdateApprovalRecordRequest request) {
+    private static MapSqlParameterSource approvalParams(UpdateApprovalRecordCommand command) {
         return new MapSqlParameterSource()
-                .addValue("status", request.status().name())
-                .addValue("reviewer", request.reviewer())
-                .addValue("reviewNotes", request.reviewNotes());
+                .addValue("status", command.status().name())
+                .addValue("reviewer", command.reviewer())
+                .addValue("reviewNotes", command.reviewNotes());
     }
 
     private static RowMapper<Song> songMapper() {

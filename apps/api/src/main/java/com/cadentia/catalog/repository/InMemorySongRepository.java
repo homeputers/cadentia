@@ -7,19 +7,19 @@ import com.cadentia.catalog.entity.LyricsDocument;
 import com.cadentia.catalog.entity.ProvenanceRecord;
 import com.cadentia.catalog.entity.Song;
 import com.cadentia.catalog.entity.Tag;
-import com.cadentia.catalog.model.CreateApprovalRecordRequest;
-import com.cadentia.catalog.model.CreateArrangementRequest;
-import com.cadentia.catalog.model.CreateImportBatchRequest;
-import com.cadentia.catalog.model.CreateLyricsDocumentRequest;
-import com.cadentia.catalog.model.CreateProvenanceRecordRequest;
-import com.cadentia.catalog.model.CreateSongRequest;
-import com.cadentia.catalog.model.CreateTagRequest;
+import com.cadentia.catalog.model.CreateApprovalRecordCommand;
+import com.cadentia.catalog.model.CreateArrangementCommand;
+import com.cadentia.catalog.model.CreateImportBatchCommand;
+import com.cadentia.catalog.model.CreateLyricsDocumentCommand;
+import com.cadentia.catalog.model.CreateProvenanceRecordCommand;
+import com.cadentia.catalog.model.CreateSongCommand;
+import com.cadentia.catalog.model.CreateTagCommand;
 import com.cadentia.catalog.model.TagType;
-import com.cadentia.catalog.model.UpdateApprovalRecordRequest;
-import com.cadentia.catalog.model.UpdateArrangementRequest;
-import com.cadentia.catalog.model.UpdateImportBatchRequest;
-import com.cadentia.catalog.model.UpdateSongRequest;
-import com.cadentia.catalog.model.UpdateTagRequest;
+import com.cadentia.catalog.model.UpdateApprovalRecordCommand;
+import com.cadentia.catalog.model.UpdateArrangementCommand;
+import com.cadentia.catalog.model.UpdateImportBatchCommand;
+import com.cadentia.catalog.model.UpdateSongCommand;
+import com.cadentia.catalog.model.UpdateTagCommand;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -27,7 +27,7 @@ import java.util.UUID;
 public class InMemorySongRepository implements SongRepository {
 
     @Override
-    public Song createSong(CreateSongRequest request) {
+    public Song createSong(CreateSongCommand command) {
         throw new UnsupportedOperationException("In-memory catalog writes are not supported");
     }
 
@@ -42,12 +42,12 @@ public class InMemorySongRepository implements SongRepository {
     }
 
     @Override
-    public Optional<Song> updateSong(UUID id, UpdateSongRequest request) {
+    public Optional<Song> updateSong(UUID id, UpdateSongCommand command) {
         return Optional.empty();
     }
 
     @Override
-    public Arrangement createArrangement(CreateArrangementRequest request) {
+    public Arrangement createArrangement(CreateArrangementCommand command) {
         throw new UnsupportedOperationException("In-memory catalog writes are not supported");
     }
 
@@ -62,12 +62,12 @@ public class InMemorySongRepository implements SongRepository {
     }
 
     @Override
-    public Optional<Arrangement> updateArrangement(UUID id, UpdateArrangementRequest request) {
+    public Optional<Arrangement> updateArrangement(UUID id, UpdateArrangementCommand command) {
         return Optional.empty();
     }
 
     @Override
-    public LyricsDocument createLyricsDocument(CreateLyricsDocumentRequest request) {
+    public LyricsDocument createLyricsDocument(CreateLyricsDocumentCommand command) {
         throw new UnsupportedOperationException("In-memory catalog writes are not supported");
     }
 
@@ -82,7 +82,7 @@ public class InMemorySongRepository implements SongRepository {
     }
 
     @Override
-    public Tag createTag(CreateTagRequest request) {
+    public Tag createTag(CreateTagCommand command) {
         throw new UnsupportedOperationException("In-memory catalog writes are not supported");
     }
 
@@ -97,7 +97,7 @@ public class InMemorySongRepository implements SongRepository {
     }
 
     @Override
-    public Optional<Tag> updateTag(UUID id, UpdateTagRequest request) {
+    public Optional<Tag> updateTag(UUID id, UpdateTagCommand command) {
         return Optional.empty();
     }
 
@@ -120,7 +120,7 @@ public class InMemorySongRepository implements SongRepository {
     }
 
     @Override
-    public ImportBatch createImportBatch(CreateImportBatchRequest request) {
+    public ImportBatch createImportBatch(CreateImportBatchCommand command) {
         throw new UnsupportedOperationException("In-memory catalog writes are not supported");
     }
 
@@ -130,12 +130,12 @@ public class InMemorySongRepository implements SongRepository {
     }
 
     @Override
-    public Optional<ImportBatch> updateImportBatch(UUID id, UpdateImportBatchRequest request) {
+    public Optional<ImportBatch> updateImportBatch(UUID id, UpdateImportBatchCommand command) {
         return Optional.empty();
     }
 
     @Override
-    public ProvenanceRecord createProvenanceRecord(CreateProvenanceRecordRequest request) {
+    public ProvenanceRecord createProvenanceRecord(CreateProvenanceRecordCommand command) {
         throw new UnsupportedOperationException("In-memory catalog writes are not supported");
     }
 
@@ -150,7 +150,7 @@ public class InMemorySongRepository implements SongRepository {
     }
 
     @Override
-    public ApprovalRecord createApprovalRecord(CreateApprovalRecordRequest request) {
+    public ApprovalRecord createApprovalRecord(CreateApprovalRecordCommand command) {
         throw new UnsupportedOperationException("In-memory catalog writes are not supported");
     }
 
@@ -165,7 +165,7 @@ public class InMemorySongRepository implements SongRepository {
     }
 
     @Override
-    public Optional<ApprovalRecord> updateApprovalRecord(UUID id, UpdateApprovalRecordRequest request) {
+    public Optional<ApprovalRecord> updateApprovalRecord(UUID id, UpdateApprovalRecordCommand command) {
         return Optional.empty();
     }
 }

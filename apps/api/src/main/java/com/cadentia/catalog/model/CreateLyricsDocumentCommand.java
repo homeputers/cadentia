@@ -2,7 +2,7 @@ package com.cadentia.catalog.model;
 
 import java.util.UUID;
 
-public record CreateLyricsDocumentRequest(
+public record CreateLyricsDocumentCommand(
         UUID arrangementId,
         LyricsFormat format,
         String content,
@@ -14,7 +14,7 @@ public record CreateLyricsDocumentRequest(
         String sourceReference,
         String createdBy) {
 
-    public CreateLyricsDocumentRequest {
+    public CreateLyricsDocumentCommand {
         arrangementId = CatalogValidation.requireId(arrangementId, "arrangementId");
         format = CatalogValidation.requireEnum(format, "format");
         content = CatalogValidation.requireText(content, "content");

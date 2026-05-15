@@ -3,7 +3,7 @@ package com.cadentia.catalog.model;
 import java.math.BigDecimal;
 import java.util.UUID;
 
-public record CreateProvenanceRecordRequest(
+public record CreateProvenanceRecordCommand(
         UUID songId,
         UUID arrangementId,
         UUID lyricsDocumentId,
@@ -16,7 +16,7 @@ public record CreateProvenanceRecordRequest(
         ImportMethod importMethod,
         BigDecimal confidenceScore) {
 
-    public CreateProvenanceRecordRequest {
+    public CreateProvenanceRecordCommand {
         CatalogValidation.requireExactlyOneEntity(songId, arrangementId, lyricsDocumentId);
         importBatchId = CatalogValidation.requireId(importBatchId, "importBatchId");
         sourceSystem = CatalogValidation.requireText(sourceSystem, "sourceSystem");

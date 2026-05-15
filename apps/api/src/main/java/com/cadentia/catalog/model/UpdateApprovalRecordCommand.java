@@ -1,11 +1,11 @@
 package com.cadentia.catalog.model;
 
-public record UpdateApprovalRecordRequest(
+public record UpdateApprovalRecordCommand(
         ApprovalStatus status,
         String reviewer,
         String reviewNotes) {
 
-    public UpdateApprovalRecordRequest {
+    public UpdateApprovalRecordCommand {
         status = CatalogValidation.requireEnum(status, "status");
         reviewer = CatalogValidation.requireText(reviewer, "reviewer");
     }

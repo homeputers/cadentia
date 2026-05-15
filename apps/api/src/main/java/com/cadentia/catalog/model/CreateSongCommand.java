@@ -1,6 +1,6 @@
 package com.cadentia.catalog.model;
 
-public record CreateSongRequest(
+public record CreateSongCommand(
         String canonicalTitle,
         String normalizedTitle,
         String primaryLanguage,
@@ -11,7 +11,7 @@ public record CreateSongRequest(
         SongStatus songStatus,
         String doctrinalNotes) {
 
-    public CreateSongRequest {
+    public CreateSongCommand {
         canonicalTitle = CatalogValidation.requireText(canonicalTitle, "canonicalTitle");
         normalizedTitle = CatalogValidation.requireText(normalizedTitle, "normalizedTitle");
         primaryLanguage = CatalogValidation.requireText(primaryLanguage, "primaryLanguage");

@@ -1,12 +1,12 @@
 package com.cadentia.catalog.model;
 
-public record UpdateTagRequest(
+public record UpdateTagCommand(
         String name,
         String slug,
         String description,
         boolean active) {
 
-    public UpdateTagRequest {
+    public UpdateTagCommand {
         name = CatalogValidation.requireText(name, "name");
         slug = CatalogValidation.requireText(slug, "slug");
     }

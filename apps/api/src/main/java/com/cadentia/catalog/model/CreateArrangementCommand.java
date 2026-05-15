@@ -2,7 +2,7 @@ package com.cadentia.catalog.model;
 
 import java.util.UUID;
 
-public record CreateArrangementRequest(
+public record CreateArrangementCommand(
         UUID songId,
         String name,
         String normalizedName,
@@ -18,7 +18,7 @@ public record CreateArrangementRequest(
         boolean defaultForSong,
         boolean active) {
 
-    public CreateArrangementRequest {
+    public CreateArrangementCommand {
         songId = CatalogValidation.requireId(songId, "songId");
         name = CatalogValidation.requireText(name, "name");
         normalizedName = CatalogValidation.requireText(normalizedName, "normalizedName");

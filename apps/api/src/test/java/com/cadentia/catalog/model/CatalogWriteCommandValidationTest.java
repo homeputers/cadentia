@@ -7,12 +7,12 @@ import java.math.BigDecimal;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
-class CatalogWriteRequestValidationTest {
+class CatalogWriteCommandValidationTest {
 
     @Test
     void createSongRejectsBlankRequiredText() {
         // Arrange / Act / Assert
-        assertThatThrownBy(() -> new CreateSongRequest(
+        assertThatThrownBy(() -> new CreateSongCommand(
                         " ",
                         "fixture-song",
                         "en",
@@ -29,7 +29,7 @@ class CatalogWriteRequestValidationTest {
     @Test
     void createSongRejectsInvalidYearBeforeDatabaseWrite() {
         // Arrange / Act / Assert
-        assertThatThrownBy(() -> new CreateSongRequest(
+        assertThatThrownBy(() -> new CreateSongCommand(
                         "Fixture Song",
                         "fixture-song",
                         "en",
@@ -46,7 +46,7 @@ class CatalogWriteRequestValidationTest {
     @Test
     void createArrangementRejectsOutOfRangeMusicalMetadata() {
         // Arrange / Act / Assert
-        assertThatThrownBy(() -> new CreateArrangementRequest(
+        assertThatThrownBy(() -> new CreateArrangementCommand(
                         UUID.randomUUID(),
                         "Default",
                         "default",
@@ -68,7 +68,7 @@ class CatalogWriteRequestValidationTest {
     @Test
     void createLyricsDocumentRejectsNonPositiveVersion() {
         // Arrange / Act / Assert
-        assertThatThrownBy(() -> new CreateLyricsDocumentRequest(
+        assertThatThrownBy(() -> new CreateLyricsDocumentCommand(
                         UUID.randomUUID(),
                         LyricsFormat.PLAIN_TEXT,
                         "Fixture lyrics excerpt",
@@ -86,7 +86,7 @@ class CatalogWriteRequestValidationTest {
     @Test
     void createProvenanceRecordRejectsMultipleEntityTargets() {
         // Arrange / Act / Assert
-        assertThatThrownBy(() -> new CreateProvenanceRecordRequest(
+        assertThatThrownBy(() -> new CreateProvenanceRecordCommand(
                         UUID.randomUUID(),
                         UUID.randomUUID(),
                         null,
@@ -105,7 +105,7 @@ class CatalogWriteRequestValidationTest {
     @Test
     void createProvenanceRecordRejectsConfidenceScoreOutsideUnitRange() {
         // Arrange / Act / Assert
-        assertThatThrownBy(() -> new CreateProvenanceRecordRequest(
+        assertThatThrownBy(() -> new CreateProvenanceRecordCommand(
                         UUID.randomUUID(),
                         null,
                         null,
@@ -124,7 +124,7 @@ class CatalogWriteRequestValidationTest {
     @Test
     void createApprovalRecordRequiresReviewer() {
         // Arrange / Act / Assert
-        assertThatThrownBy(() -> new CreateApprovalRecordRequest(
+        assertThatThrownBy(() -> new CreateApprovalRecordCommand(
                         UUID.randomUUID(),
                         null,
                         null,
@@ -145,17 +145,17 @@ class CatalogWriteRequestValidationTest {
 
         // Act / Assert
         assertThatNoException().isThrownBy(() -> {
-            new CreateSongRequest("Fixture Song", "fixture-song", "en", null, null, null, 2024,
+            new CreateSongCommand("Fixture Song", "fixture-song", "en", null, null, null, 2024,
                     SongStatus.DRAFT, "fixture only");
-            new CreateArrangementRequest(songId, "Default", "default", ArrangementSourceType.CUSTOM, "en", "G",
+            new CreateArrangementCommand(songId, "Default", "default", ArrangementSourceType.CUSTOM, "en", "G",
                     KeyMode.MAJOR, 120, "4/4", 180, 3, 2, true, true);
-            new CreateLyricsDocumentRequest(arrangementId, LyricsFormat.PLAIN_TEXT, "Fixture lyrics excerpt",
+            new CreateLyricsDocumentCommand(arrangementId, LyricsFormat.PLAIN_TEXT, "Fixture lyrics excerpt",
                     "sha256:fixture", 1, true, false, false, "fixture://lyrics", "test");
-            new CreateTagRequest(TagType.THEME, "Praise", "praise", "Fixture tag", true);
-            new CreateImportBatchRequest("fixture", "test", ImportBatchStatus.PENDING, "{}");
-            new CreateProvenanceRecordRequest(songId, null, null, importBatchId, "fixture", "fixture://source",
+            new CreateTagCommand(TagType.THEME, "Praise", "praise", "Fixture tag", true);
+            new CreateImportBatchCommand("fixture", "test", ImportBatchStatus.PENDING, "{}");
+            new CreateProvenanceRecordCommand(songId, null, null, importBatchId, "fixture", "fixture://source",
                     "Fixture source", LicenseType.NOT_APPLICABLE, null, ImportMethod.TEST_FIXTURE, BigDecimal.ONE);
-            new CreateApprovalRecordRequest(songId, null, null, ApprovalType.CATALOG_INCLUSION,
+            new CreateApprovalRecordCommand(songId, null, null, ApprovalType.CATALOG_INCLUSION,
                     ApprovalStatus.PENDING, "test", "fixture review");
         });
     }

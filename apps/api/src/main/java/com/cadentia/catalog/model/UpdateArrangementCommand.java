@@ -1,6 +1,6 @@
 package com.cadentia.catalog.model;
 
-public record UpdateArrangementRequest(
+public record UpdateArrangementCommand(
         String name,
         String normalizedName,
         ArrangementSourceType sourceType,
@@ -15,7 +15,7 @@ public record UpdateArrangementRequest(
         boolean defaultForSong,
         boolean active) {
 
-    public UpdateArrangementRequest {
+    public UpdateArrangementCommand {
         name = CatalogValidation.requireText(name, "name");
         normalizedName = CatalogValidation.requireText(normalizedName, "normalizedName");
         sourceType = CatalogValidation.requireEnum(sourceType, "sourceType");
