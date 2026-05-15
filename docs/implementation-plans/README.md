@@ -25,6 +25,9 @@ Each plan is written as a sequence of AI-agent-ready subtasks. Every subtask inc
   ADR-003 staged import lifecycle, statuses, reviewer responsibilities,
   deterministic deduplication signals, merge behavior, failure handling, and
   fixture-driven verification commands.
+- [Safe Lyrics Handling](../lyrics-handling.md) documents ADR-004 raw-versus-derived
+  lyrics storage, format validation, versioning and provenance expectations,
+  deterministic parser boundaries, and copyright-safe fixture rules.
 
 ## Recommended implementation order
 
