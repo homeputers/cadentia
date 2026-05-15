@@ -10,7 +10,7 @@ SELECT
     arrangements.time_signature,
     arrangements.energy_level AS energy,
     COALESCE(
-        array_agg(DISTINCT tags.slug ORDER BY tags.slug) FILTER (WHERE tags.id IS NOT NULL),
+        array_agg(DISTINCT tags.slug::text ORDER BY tags.slug::text) FILTER (WHERE tags.id IS NOT NULL),
         ARRAY[]::text[]
     ) AS tags,
     song_doctrinal_approval.status AS song_doctrinal_status,

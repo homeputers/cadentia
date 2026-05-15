@@ -50,12 +50,25 @@ public class JdbcCandidateRetriever implements CandidateRetriever {
             params.addValue("maxBpm", criteria.maxBpm());
         }
         if (criteria.requiredTags() != null && !criteria.requiredTags().isEmpty()) {
-            sql.append(" AND tags @> ARRAY[:requiredTags]::text[]");
-            params.addValue("requiredTags", criteria.requiredTags());
+            appendRequiredTagFilter(sql, params, criteria.requiredTags());
         }
 
         sql.append(" ORDER BY title, arrangement_id");
         return jdbcTemplate.query(sql.toString(), params, candidateMapper());
+    }
+
+    private static void appendRequiredTagFilter(
+            StringBuilder sql, MapSqlParameterSource params, List<String> requiredTags) {
+        sql.append(" AND tags::text[] @> ARRAY[");
+        for (int i = 0; i < requiredTags.size(); i++) {
+            if (i > 0) {
+                sql.append(", ");
+            }
+            String paramName = "requiredTag" + i;
+            sql.append(':').append(paramName);
+            params.addValue(paramName, requiredTags.get(i));
+        }
+        sql.append("]::text[]");
     }
 
     private static RowMapper<RecommendableArrangement> candidateMapper() {
