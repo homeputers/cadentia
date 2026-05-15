@@ -8,6 +8,8 @@ Implement PostgreSQL as Cadentia's system of record with normalized tables for c
 
 ## Subtask 1: Map the existing data and persistence structure
 
+Implementation note: [ADR-001 Subtask 1: Existing Data and Persistence Map](../implementation-notes/ADR-001-subtask-1-existing-data-persistence-map.md)
+
 ### Context
 
 - Relevant ADR: `docs/adr/ADR-001-song-data-infrastructure.md`
