@@ -47,6 +47,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -565,6 +566,66 @@ public class JdbcSongRepository implements SongRepository {
     }
 
     @Override
+    public Optional<ApprovalRecord> findApprovalRecord(
+            UUID songId, UUID arrangementId, UUID lyricsDocumentId, ApprovalType approvalType) {
+        CatalogEntityTarget target = CatalogEntityTarget.of(songId, arrangementId, lyricsDocumentId);
+        String sql = """
+                SELECT %s
+                FROM approval_records
+                WHERE approval_type = :approvalType
+                  AND %s = :entityId
+                """.formatted(APPROVAL_COLUMNS, target.columnName());
+        return queryOptional(sql,
+                Map.of("approvalType", approvalType.name(), "entityId", target.entityId()),
+                approvalMapper());
+    }
+
+    @Override
+    public List<ApprovalRecord> findApprovalRecordsByTypeAndStatuses(
+            ApprovalType approvalType, Collection<ApprovalStatus> statuses) {
+        if (statuses.isEmpty()) {
+            return List.of();
+        }
+        String sql = """
+                SELECT %s
+                FROM approval_records
+                WHERE approval_type = :approvalType
+                  AND status IN (:statuses)
+                ORDER BY reviewed_at ASC, created_at ASC
+                """.formatted(APPROVAL_COLUMNS);
+        MapSqlParameterSource params = new MapSqlParameterSource()
+                .addValue("approvalType", approvalType.name())
+                .addValue("statuses", statuses.stream().map(ApprovalStatus::name).toList());
+        return jdbcTemplate.query(sql, params, approvalMapper());
+    }
+
+    @Override
+    public boolean isArrangementDoctrinallyApprovedForRecommendation(UUID arrangementId) {
+        String sql = """
+                SELECT EXISTS (
+                    SELECT 1
+                    FROM arrangements
+                    JOIN songs ON songs.id = arrangements.song_id
+                    JOIN lyrics_documents
+                      ON lyrics_documents.arrangement_id = arrangements.id
+                     AND lyrics_documents.is_current
+                    JOIN approval_records song_doctrinal_approval
+                      ON song_doctrinal_approval.song_id = songs.id
+                     AND song_doctrinal_approval.approval_type = 'DOCTRINAL'
+                     AND song_doctrinal_approval.status = 'APPROVED'
+                    JOIN approval_records lyrics_doctrinal_approval
+                      ON lyrics_doctrinal_approval.lyrics_document_id = lyrics_documents.id
+                     AND lyrics_doctrinal_approval.approval_type = 'DOCTRINAL'
+                     AND lyrics_doctrinal_approval.status = 'APPROVED'
+                    WHERE arrangements.id = :arrangementId
+                      AND arrangements.is_active
+                )
+                """;
+        return Boolean.TRUE.equals(jdbcTemplate.queryForObject(
+                sql, Map.of("arrangementId", arrangementId), Boolean.class));
+    }
+
+    @Override
     @Transactional
     public Optional<ApprovalRecord> updateApprovalRecord(UUID id, UpdateApprovalRecordCommand command) {
         Optional<ApprovalStatus> currentStatus = queryOptional(
@@ -981,6 +1042,25 @@ public class JdbcSongRepository implements SongRepository {
                 rs.getString("review_notes"),
                 instant(rs, "reviewed_at"),
                 instant(rs, "created_at"));
+    }
+
+    private record CatalogEntityTarget(String columnName, UUID entityId) {
+
+        private static CatalogEntityTarget of(UUID songId, UUID arrangementId, UUID lyricsDocumentId) {
+            int targetCount = (songId == null ? 0 : 1)
+                    + (arrangementId == null ? 0 : 1)
+                    + (lyricsDocumentId == null ? 0 : 1);
+            if (targetCount != 1) {
+                throw new IllegalArgumentException("exactly one approval target identifier is required");
+            }
+            if (songId != null) {
+                return new CatalogEntityTarget("song_id", songId);
+            }
+            if (arrangementId != null) {
+                return new CatalogEntityTarget("arrangement_id", arrangementId);
+            }
+            return new CatalogEntityTarget("lyrics_document_id", lyricsDocumentId);
+        }
     }
 
     private static UUID uuid(ResultSet rs, String column) throws SQLException {
