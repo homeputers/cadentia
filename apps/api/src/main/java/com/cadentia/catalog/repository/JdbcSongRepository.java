@@ -610,7 +610,7 @@ public class JdbcSongRepository implements SongRepository {
     private static MapSqlParameterSource lyricsParams(CreateLyricsDocumentCommand command) {
         return new MapSqlParameterSource()
                 .addValue("arrangementId", command.arrangementId())
-                .addValue("format", command.format().name())
+                .addValue("format", command.format().storageValue())
                 .addValue("content", command.content())
                 .addValue("contentHash", command.contentHash())
                 .addValue("versionNumber", command.versionNumber())
@@ -760,7 +760,7 @@ public class JdbcSongRepository implements SongRepository {
         return (rs, rowNum) -> new LyricsDocument(
                 uuid(rs, "id"),
                 uuid(rs, "arrangement_id"),
-                LyricsFormat.valueOf(rs.getString("format")),
+                LyricsFormat.fromDeclaredValue(rs.getString("format")),
                 rs.getString("content"),
                 rs.getString("content_hash"),
                 rs.getInt("version_number"),

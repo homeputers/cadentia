@@ -1,6 +1,7 @@
 package com.cadentia.catalog.repository;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.cadentia.catalog.entity.ApprovalRecord;
 import com.cadentia.catalog.entity.Arrangement;
@@ -42,6 +43,7 @@ import com.cadentia.catalog.model.UpdateSongCommand;
 import com.cadentia.catalog.model.UpdateTagCommand;
 import com.cadentia.scraperadmin.CatalogSongCandidate;
 import java.math.BigDecimal;
+import java.util.Map;
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -58,6 +60,7 @@ class JdbcSongRepositoryIntegrationTest {
     private static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine");
 
     private JdbcSongRepository repository;
+    private NamedParameterJdbcTemplate jdbcTemplate;
 
     @BeforeEach
     void setUp() {
@@ -72,7 +75,27 @@ class JdbcSongRepositoryIntegrationTest {
                 .dataSource(dataSource)
                 .load()
                 .migrate();
-        repository = new JdbcSongRepository(new NamedParameterJdbcTemplate(dataSource));
+        jdbcTemplate = new NamedParameterJdbcTemplate(dataSource);
+        repository = new JdbcSongRepository(jdbcTemplate);
+    }
+
+    @Test
+    void databaseRejectsUnsupportedLyricsFormat() {
+        // Arrange
+        Song song = createSong();
+        Arrangement arrangement = createArrangement(song);
+
+        // Act / Assert
+        assertThatThrownBy(() -> jdbcTemplate.update("""
+                INSERT INTO lyrics_documents (
+                    arrangement_id, format, content, content_hash, version_number, is_current,
+                    contains_chords, contains_sections, source_reference, created_by
+                ) VALUES (
+                    :arrangementId, 'openlyrics', 'Fixture lyrics excerpt', 'unsupported-format-hash', 1, true,
+                    false, false, 'fixture://lyrics', 'integration-test'
+                )
+                """, Map.of("arrangementId", arrangement.id())))
+                .hasMessageContaining("lyrics_documents_format_valid");
     }
 
     @Test

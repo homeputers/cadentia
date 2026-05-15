@@ -76,6 +76,10 @@ Add database and application validation so lyrics documents must declare one sup
 - Do not silently coerce unknown formats into `plain_text`.
 - Do not remove existing raw content during validation changes.
 
+### Implementation note
+
+Subtask 2 validation is implemented by narrowing `LyricsFormat` to ADR-004 values (`plain_text`, `chordpro`, `onsong`, and `markdown`), storing those declared values directly in PostgreSQL, and rejecting unknown values with messages that include the rejected input and accepted values. Flyway migration `V004__lyrics_supported_formats.sql` replaces the prior broader check constraint and normalizes existing supported uppercase values without altering raw lyric content.
+
 ## Subtask 3: Implement raw storage and version handling
 
 ### Context
