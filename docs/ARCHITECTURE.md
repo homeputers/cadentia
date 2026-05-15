@@ -2,14 +2,24 @@
 
 ## High-Level Architecture
 
+Cadentia separates intent parsing from catalog ownership and deterministic
+recommendation. The LLM layer may only turn user language into validated JSON
+slots; it cannot create catalog songs or select songs for a setlist. The backend
+API owns catalog writes and reads against PostgreSQL, and the Recommendation
+Engine (REng) uses only approved backend-provided catalog candidates.
+
 ``` mermaid
 graph TD
-    User --> TelegramBot
-    TelegramBot --> LLM
-    LLM --> BackendAPI
-    BackendAPI --> REng
-    REng --> SongDataset
-    BackendAPI --> TelegramBot
+    User --> Bot[Telegram / WhatsApp Bot]
+    Bot --> IntentParser[LLM Intent Parser]
+    IntentParser --> Bot
+    Bot --> BackendAPI[Backend API]
+    BackendAPI --> CatalogService[Catalog Service]
+    CatalogService --> PostgreSQL[(PostgreSQL Source of Truth)]
+    BackendAPI --> REng[Recommendation Engine]
+    REng --> CatalogService
+    REng --> BackendAPI
+    BackendAPI --> Bot
 ```
 
 ------------------------------------------------------------------------
@@ -24,28 +34,98 @@ graph LR
     end
 
     subgraph LLM Layer
-        IntentParser
+        IntentParser[Intent Parser]
+        JsonSchema[JSON Schema Validation]
     end
 
-    subgraph Backend
-        API
-        REng
-        Catalog
+    subgraph Backend[Java Spring Boot API]
+        API[Setlist API]
+        Catalog[Catalog Data Access]
+        REng[Deterministic Recommendation Engine]
     end
 
-    subgraph Data
-        PostgreSQL
-        pgvector
+    subgraph Data[PostgreSQL]
+        Songs[(songs)]
+        Arrangements[(arrangements)]
+        Lyrics[(lyrics_documents)]
+        Tags[(tags)]
+        Imports[(import_batches)]
+        Provenance[(provenance_records)]
+        Approvals[(approval_records)]
     end
 
     Telegram --> IntentParser
     WhatsApp --> IntentParser
-    IntentParser --> API
+    IntentParser --> JsonSchema
+    JsonSchema --> API
+    API --> Catalog
     API --> REng
     REng --> Catalog
-    Catalog --> PostgreSQL
-    PostgreSQL --> pgvector
+    Catalog --> Songs
+    Catalog --> Arrangements
+    Catalog --> Lyrics
+    Catalog --> Tags
+    Catalog --> Imports
+    Catalog --> Provenance
+    Catalog --> Approvals
 ```
+
+------------------------------------------------------------------------
+
+## ADR-001 Catalog Source of Truth
+
+ADR-001 is implemented by Flyway migration
+`apps/api/src/main/resources/db/migration/V002__core_catalog_schema.sql`.
+PostgreSQL is the source of truth for curated catalog data. The implemented
+canonical tables are:
+
+- `songs` — canonical song identities, normalized title lookup fields, optional
+  CCLI number, lifecycle status, and doctrinal notes.
+- `arrangements` — musical versions owned by a song, including source type,
+  language, key, mode, tempo, time signature, duration, energy, difficulty, and
+  active/default flags.
+- `lyrics_documents` — versioned lyrics/chord documents owned by an
+  arrangement, with content hashes, source references, and current-version
+  constraints.
+- `tags` — controlled taxonomy values for deterministic classification.
+- `song_tags` and `arrangement_tags` — many-to-many assignments from the
+  controlled tag taxonomy to songs and arrangements.
+- `import_batches` — auditable import or fixture load batches.
+- `provenance_records` — first-class evidence tied to exactly one song,
+  arrangement, or lyrics document and one import batch.
+- `approval_records` — first-class review decisions tied to exactly one song,
+  arrangement, or lyrics document.
+
+The schema intentionally does not store generated recommendations. It also does
+not include ADR-002 recommendation read models, ADR-003 import staging tables, or
+future semantic-search structures. Those later ADRs must build on the catalog
+model without weakening the rule that only persisted, curated, approved catalog
+records are eligible for deterministic recommendation.
+
+### Ownership Boundaries
+
+- **LLM Intent Parser:** extracts request intent and slots only. It must not
+  invent songs, write catalog records, or select setlist items.
+- **Catalog Data Access:** validates enum-like values and persists canonical
+  songs, arrangements, lyrics documents, tags, provenance, approval records, and
+  import batches through the PostgreSQL schema created by
+  `V002__core_catalog_schema.sql`.
+- **Recommendation Engine:** retrieves backend catalog candidates and applies
+  deterministic constraints such as counts, key centers, relative major/minor
+  transitions, and controlled tempo jumps. It must not rely on the LLM for song
+  selection.
+- **Data Integrity Workflow:** keeps provenance and approval state as auditable
+  data. Recommendation eligibility must be gated by approval requirements rather
+  than by unreviewed metadata.
+
+### pgvector Position
+
+`pgvector` is an optional future enrichment for semantic discovery or assisted
+review workflows. It is not implemented by ADR-001, is not required for local
+schema creation, and must not become the authority for deterministic song
+selection. If vector embeddings are added later, they must reference canonical
+catalog rows and remain subordinate to provenance, approval, and deterministic
+constraint checks.
 
 ------------------------------------------------------------------------
 
@@ -55,19 +135,23 @@ graph LR
 sequenceDiagram
     participant U as User
     participant B as Bot
-    participant L as LLM
+    participant L as LLM Intent Parser
     participant A as API
+    participant C as Catalog Service
     participant R as REng
-    participant D as Dataset
+    participant D as PostgreSQL Catalog
 
     U->>B: Guided inputs + free text
-    B->>L: Parse intent
-    L->>B: JSON slots
+    B->>L: Parse intent only
+    L->>B: Validated JSON slots
     B->>A: Generate setlist request
     A->>R: Apply constraints
-    R->>D: Retrieve candidates
-    R->>A: Ordered setlist
-    A->>B: Render result
+    R->>C: Request eligible catalog candidates
+    C->>D: Read curated songs, arrangements, tags, approvals
+    D->>C: Catalog rows with provenance/approval state
+    C->>R: Candidate arrangements
+    R->>A: Scored and ordered proposal
+    A->>B: Render result with dataset references
     B->>U: Display proposal
 ```
 
@@ -78,7 +162,8 @@ sequenceDiagram
 ``` mermaid
 graph TD
     Request --> CandidateRetrieval
-    CandidateRetrieval --> Scoring
+    CandidateRetrieval --> ApprovalGate
+    ApprovalGate --> Scoring
     Scoring --> KeyCenterSelection
     KeyCenterSelection --> Ordering
     Ordering --> ProposalOutput
@@ -88,16 +173,25 @@ graph TD
 
 ## Deployment Model
 
--   Single VPS (API + DB + Bot)
--   Docker containers
--   Reverse proxy (Nginx)
--   Daily DB backups
+- Single VPS (API + DB + Bot)
+- Docker containers
+- PostgreSQL managed through Flyway migrations in the API module
+- Reverse proxy (Nginx)
+- Daily DB backups
 
 ------------------------------------------------------------------------
 
 ## Future Extensions
 
--   Multi-church tenancy
--   Analytics (which songs used most)
--   Feedback-based learning adjustments
--   Planning Center integration
+- ADR-002 recommendation candidate read model derived from canonical catalog
+  tables.
+- ADR-003 import and deduplication staging built around `import_batches` and
+  provenance records.
+- ADR-004 lyrics parsing and format-specific validation for `lyrics_documents`.
+- ADR-005 approval workflows that update `approval_records` and gate
+  recommendation eligibility.
+- ADR-006 transposition policy over arrangement key and mode metadata.
+- ADR-007 taxonomy governance for `tags`, `song_tags`, and `arrangement_tags`.
+- Multi-church tenancy.
+- Analytics for song usage.
+- Planning Center integration.
