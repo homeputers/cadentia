@@ -230,3 +230,12 @@ Document approval types, statuses, transitions, required reviewer metadata, reco
 
 - Do not document unimplemented roles or permissions as available.
 - Do not expose sensitive reviewer notes in public docs.
+
+### Implementation note
+
+Approval operations and audit expectations are documented in
+[`docs/approval-operations.md`](../approval-operations.md). That operational
+reference lists the implemented approval types and statuses, allowed transitions,
+required reviewer/audit metadata, recommendation gating behavior for
+`v_recommendable_arrangements`, implementation file links, and the explicit
+warning that LLMs must neither approve content nor select songs.
