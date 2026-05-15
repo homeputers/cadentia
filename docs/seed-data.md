@@ -38,7 +38,7 @@ The records are deliberately labeled as test-only data:
 - Provenance uses `source_system = 'adr-001-minimal-test-fixture'` and
   `import_method = 'TEST_FIXTURE'`.
 - The song remains `DRAFT`.
-- Approval rows are `PENDING` or `NEEDS_CHANGES`, never `APPROVED`.
+- Approval rows are `PENDING` or `NEEDS_REVIEW`, never `APPROVED`.
 - The lyrics document contains two lines of synthetic fixture text, not imported
   catalog lyrics.
 

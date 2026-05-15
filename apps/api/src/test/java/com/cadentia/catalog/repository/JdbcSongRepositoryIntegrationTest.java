@@ -353,22 +353,73 @@ class JdbcSongRepositoryIntegrationTest {
                 song.id(),
                 null,
                 null,
-                ApprovalType.CATALOG_INCLUSION,
+                ApprovalType.EDITORIAL,
                 ApprovalStatus.PENDING,
                 "reviewer@example.test",
                 "Pending ADR-005 approval workflow."));
         ApprovalRecord updatedApprovalRecord = repository.updateApprovalRecord(
                 approvalRecord.id(),
                 new UpdateApprovalRecordCommand(
-                        ApprovalStatus.NEEDS_CHANGES,
+                        ApprovalStatus.APPROVED,
                         "reviewer@example.test",
-                        "Needs more review notes.")).orElseThrow();
+                        "Approved after ADR-005 review.")).orElseThrow();
 
         // Assert
         assertThat(repository.findProvenanceRecordById(provenanceRecord.id())).contains(provenanceRecord);
         assertThat(repository.findProvenanceRecordsForSong(song.id())).containsExactly(provenanceRecord);
         assertThat(repository.findApprovalRecordById(approvalRecord.id())).contains(updatedApprovalRecord);
         assertThat(repository.findApprovalRecordsForSong(song.id())).containsExactly(updatedApprovalRecord);
+    }
+
+    @Test
+    void rejectsDuplicateApprovalRecordForSameEntityAndType() {
+        // Arrange
+        Song song = createSong();
+        repository.createApprovalRecord(new CreateApprovalRecordCommand(
+                song.id(),
+                null,
+                null,
+                ApprovalType.DOCTRINAL,
+                ApprovalStatus.PENDING,
+                "reviewer@example.test",
+                "Initial doctrinal review request."));
+
+        // Act / Assert
+        assertThatThrownBy(() -> repository.createApprovalRecord(new CreateApprovalRecordCommand(
+                        song.id(),
+                        null,
+                        null,
+                        ApprovalType.DOCTRINAL,
+                        ApprovalStatus.PENDING,
+                        "second-reviewer@example.test",
+                        "Duplicate doctrinal review request.")))
+                .hasMessageContaining("approval_records_one_song_approval_type_idx");
+    }
+
+    @Test
+    void rejectsInvalidApprovalStatusTransitionAgainstPostgres() {
+        // Arrange
+        Song song = createSong();
+        ApprovalRecord approvalRecord = repository.createApprovalRecord(new CreateApprovalRecordCommand(
+                song.id(),
+                null,
+                null,
+                ApprovalType.LICENSING,
+                ApprovalStatus.PENDING,
+                "reviewer@example.test",
+                "Pending license review."));
+        repository.updateApprovalRecord(approvalRecord.id(), new UpdateApprovalRecordCommand(
+                ApprovalStatus.APPROVED,
+                "reviewer@example.test",
+                "License approved.")).orElseThrow();
+
+        // Act / Assert
+        assertThatThrownBy(() -> repository.updateApprovalRecord(approvalRecord.id(), new UpdateApprovalRecordCommand(
+                        ApprovalStatus.REJECTED,
+                        "reviewer@example.test",
+                        "Cannot jump directly from approved to rejected.")))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("not allowed");
     }
 
     @Test

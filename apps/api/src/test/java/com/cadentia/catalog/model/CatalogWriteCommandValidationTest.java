@@ -174,6 +174,29 @@ class CatalogWriteCommandValidationTest {
     }
 
     @Test
+    void approvalStatusTransitionAllowsReviewLifecycleTransitions() {
+        // Arrange / Act / Assert
+        assertThatNoException().isThrownBy(() -> {
+            ApprovalStatusTransition.requireAllowed(ApprovalStatus.PENDING, ApprovalStatus.APPROVED);
+            ApprovalStatusTransition.requireAllowed(ApprovalStatus.PENDING, ApprovalStatus.REJECTED);
+            ApprovalStatusTransition.requireAllowed(ApprovalStatus.APPROVED, ApprovalStatus.NEEDS_REVIEW);
+            ApprovalStatusTransition.requireAllowed(ApprovalStatus.REJECTED, ApprovalStatus.NEEDS_REVIEW);
+            ApprovalStatusTransition.requireAllowed(ApprovalStatus.NEEDS_REVIEW, ApprovalStatus.APPROVED);
+            ApprovalStatusTransition.requireAllowed(ApprovalStatus.NEEDS_REVIEW, ApprovalStatus.REJECTED);
+        });
+    }
+
+    @Test
+    void approvalStatusTransitionRejectsUnsupportedLifecycleJumps() {
+        // Arrange / Act / Assert
+        assertThatThrownBy(() -> ApprovalStatusTransition.requireAllowed(
+                        ApprovalStatus.APPROVED,
+                        ApprovalStatus.REJECTED))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("not allowed");
+    }
+
+    @Test
     void validFixtureFlowRequestsCanBeConstructedWithoutAuditFields() {
         // Arrange
         UUID songId = UUID.randomUUID();
@@ -194,7 +217,7 @@ class CatalogWriteCommandValidationTest {
             new CreateImportBatchCommand("fixture", "test", ImportBatchStatus.PENDING, "{}");
             new CreateProvenanceRecordCommand(songId, null, null, importBatchId, "fixture", "fixture://source",
                     "Fixture source", LicenseType.NOT_APPLICABLE, null, ImportMethod.TEST_FIXTURE, BigDecimal.ONE);
-            new CreateApprovalRecordCommand(songId, null, null, ApprovalType.CATALOG_INCLUSION,
+            new CreateApprovalRecordCommand(songId, null, null, ApprovalType.EDITORIAL,
                     ApprovalStatus.PENDING, "test", "fixture review");
         });
     }

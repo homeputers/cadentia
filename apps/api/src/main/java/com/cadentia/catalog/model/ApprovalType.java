@@ -4,6 +4,5 @@ public enum ApprovalType {
     DOCTRINAL,
     EDITORIAL,
     MUSICAL,
-    COPYRIGHT,
-    CATALOG_INCLUSION
+    LICENSING
 }

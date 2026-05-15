@@ -124,7 +124,7 @@ public class AdminImportReviewService {
                 song.id(),
                 null,
                 null,
-                ApprovalType.CATALOG_INCLUSION,
+                ApprovalType.EDITORIAL,
                 ApprovalStatus.PENDING,
                 command.reviewer(),
                 "Created from reviewed import candidate; approval remains pending."));
