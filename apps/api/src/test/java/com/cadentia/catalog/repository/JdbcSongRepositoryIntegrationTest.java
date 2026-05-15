@@ -34,8 +34,10 @@ import com.cadentia.catalog.model.ImportMethod;
 import com.cadentia.catalog.model.KeyMode;
 import com.cadentia.catalog.model.LicenseType;
 import com.cadentia.catalog.model.LyricsFormat;
+import com.cadentia.catalog.model.LyricsParseStatus;
 import com.cadentia.catalog.model.SongStatus;
 import com.cadentia.catalog.model.TagType;
+import com.cadentia.catalog.model.UpdateLyricsParseResultCommand;
 import com.cadentia.catalog.model.UpdateApprovalRecordCommand;
 import com.cadentia.catalog.model.UpdateArrangementCommand;
 import com.cadentia.catalog.model.UpdateImportBatchCommand;
@@ -203,6 +205,71 @@ class JdbcSongRepositoryIntegrationTest {
         assertThat(repository.findLyricsDocumentsByArrangementId(arrangement.id()))
                 .extracting(LyricsDocument::current)
                 .containsExactly(false, false, true);
+    }
+
+
+    @Test
+    void storesDerivedParseResultsWithoutMutatingRawLyricsContent() {
+        // Arrange
+        Song song = createSong();
+        Arrangement arrangement = createArrangement(song);
+        String rawContent = """
+                {start_of_chorus}
+                [G]Alpha fixture line
+                {end_of_chorus}""";
+        LyricsDocument lyricsDocument = repository.createLyricsDocument(new CreateLyricsDocumentCommand(
+                arrangement.id(), LyricsFormat.CHORDPRO, rawContent, "parse-storage-hash", 1, true,
+                true, true, "fixture://lyrics/parse-storage", "integration-test"));
+
+        // Act
+        LyricsDocument parsedDocument = repository.updateLyricsParseResult(lyricsDocument.id(),
+                new UpdateLyricsParseResultCommand(
+                        LyricsParseStatus.PARSED,
+                        null,
+                        "deterministic-chordpro-parser",
+                        "adr-004-v1",
+                        """
+                                [{"label":"chorus","startLine":1,"endLine":3,"lines":["[G]Alpha fixture line"]}]""",
+                        """
+                                [{"chord":"G","line":2,"characterOffset":0}]""",
+                        """
+                                [{"type":"section_start","label":"chorus","line":1}]"""))
+                .orElseThrow();
+
+        // Assert
+        assertThat(parsedDocument.content()).isEqualTo(rawContent);
+        assertThat(parsedDocument.parseStatus()).isEqualTo(LyricsParseStatus.PARSED);
+        assertThat(parsedDocument.parsedAt()).isNotNull();
+        assertThat(parsedDocument.parsedSectionsJson()).contains("chorus");
+        assertThat(repository.findLyricsDocumentById(lyricsDocument.id()).orElseThrow().content()).isEqualTo(rawContent);
+    }
+
+    @Test
+    void recordsParseFailuresWithoutBlockingRawDocumentStorage() {
+        // Arrange
+        Song song = createSong();
+        Arrangement arrangement = createArrangement(song);
+        LyricsDocument lyricsDocument = repository.createLyricsDocument(new CreateLyricsDocumentCommand(
+                arrangement.id(), LyricsFormat.ONSONG, "Fixture OnSong excerpt", "unsupported-parser-hash", 1, true,
+                false, false, "fixture://lyrics/onsong", "integration-test"));
+
+        // Act
+        LyricsDocument unsupportedDocument = repository.updateLyricsParseResult(lyricsDocument.id(),
+                new UpdateLyricsParseResultCommand(
+                        LyricsParseStatus.UNSUPPORTED,
+                        "No deterministic parser is currently implemented for format onsong",
+                        null,
+                        null,
+                        null,
+                        null,
+                        null))
+                .orElseThrow();
+
+        // Assert
+        assertThat(unsupportedDocument.content()).isEqualTo("Fixture OnSong excerpt");
+        assertThat(unsupportedDocument.parseStatus()).isEqualTo(LyricsParseStatus.UNSUPPORTED);
+        assertThat(unsupportedDocument.parseError()).contains("onsong");
+        assertThat(unsupportedDocument.parsedSectionsJson()).isNull();
     }
 
     @Test

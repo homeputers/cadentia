@@ -31,12 +31,14 @@ import com.cadentia.catalog.model.ImportMethod;
 import com.cadentia.catalog.model.KeyMode;
 import com.cadentia.catalog.model.LicenseType;
 import com.cadentia.catalog.model.LyricsFormat;
+import com.cadentia.catalog.model.LyricsParseStatus;
 import com.cadentia.catalog.model.SongStatus;
 import com.cadentia.catalog.model.TagType;
 import com.cadentia.catalog.model.UpdateApprovalRecordCommand;
 import com.cadentia.catalog.model.UpdateArrangementCommand;
 import com.cadentia.catalog.model.UpdateImportBatchCommand;
 import com.cadentia.catalog.model.UpdateLyricsDocumentCommand;
+import com.cadentia.catalog.model.UpdateLyricsParseResultCommand;
 import com.cadentia.catalog.model.UpdateSongCommand;
 import com.cadentia.catalog.model.UpdateTagCommand;
 import com.cadentia.scraperadmin.CatalogSongCandidate;
@@ -65,7 +67,10 @@ public class JdbcSongRepository implements SongRepository {
             + "musical_key, key_mode, tempo_bpm, time_signature, duration_seconds, energy_level, difficulty_level, "
             + "default_for_song, is_active, created_at, updated_at";
     private static final String LYRICS_COLUMNS = "id, arrangement_id, format, content, content_hash, version_number, "
-            + "is_current, contains_chords, contains_sections, source_reference, created_by, created_at";
+            + "is_current, contains_chords, contains_sections, source_reference, created_by, created_at, "
+            + "parse_status, parse_error, parser_name, parser_version, parsed_at, "
+            + "parsed_sections::text AS parsed_sections_json, chord_map::text AS chord_map_json, "
+            + "structural_markers::text AS structural_markers_json";
     private static final String TAG_COLUMNS = "id, tag_type, name, slug, description, is_active, created_at, updated_at";
     private static final String TAG_COLUMNS_QUALIFIED = "tags.id AS id, tags.tag_type AS tag_type, "
             + "tags.name AS name, tags.slug AS slug, tags.description AS description, tags.is_active AS is_active, "
@@ -243,6 +248,24 @@ public class JdbcSongRepository implements SongRepository {
                 """.formatted(LYRICS_COLUMNS);
         return Optional.ofNullable(jdbcTemplate.queryForObject(
                 sql, lyricsUpdateParams(arrangementId.get(), command), lyricsMapper()));
+    }
+
+    @Override
+    public Optional<LyricsDocument> updateLyricsParseResult(UUID id, UpdateLyricsParseResultCommand command) {
+        String sql = """
+                UPDATE lyrics_documents
+                SET parse_status = :parseStatus,
+                    parse_error = :parseError,
+                    parser_name = :parserName,
+                    parser_version = :parserVersion,
+                    parsed_at = CASE WHEN :parseStatus = 'PARSED' THEN now() ELSE null END,
+                    parsed_sections = CAST(:parsedSectionsJson AS jsonb),
+                    chord_map = CAST(:chordMapJson AS jsonb),
+                    structural_markers = CAST(:structuralMarkersJson AS jsonb)
+                WHERE id = :id
+                RETURNING %s
+                """.formatted(LYRICS_COLUMNS);
+        return queryOptional(sql, lyricsParseResultParams(id, command), lyricsMapper());
     }
 
     @Override
@@ -672,6 +695,18 @@ public class JdbcSongRepository implements SongRepository {
                 .addValue("createdBy", command.editedBy());
     }
 
+    private static MapSqlParameterSource lyricsParseResultParams(UUID id, UpdateLyricsParseResultCommand command) {
+        return new MapSqlParameterSource()
+                .addValue("id", id)
+                .addValue("parseStatus", command.parseStatus().name())
+                .addValue("parseError", command.parseError())
+                .addValue("parserName", command.parserName())
+                .addValue("parserVersion", command.parserVersion())
+                .addValue("parsedSectionsJson", command.parsedSectionsJson())
+                .addValue("chordMapJson", command.chordMapJson())
+                .addValue("structuralMarkersJson", command.structuralMarkersJson());
+    }
+
     private static MapSqlParameterSource tagParams(CreateTagCommand command) {
         return new MapSqlParameterSource()
                 .addValue("tagType", command.tagType().name())
@@ -820,7 +855,15 @@ public class JdbcSongRepository implements SongRepository {
                 rs.getBoolean("contains_sections"),
                 rs.getString("source_reference"),
                 rs.getString("created_by"),
-                instant(rs, "created_at"));
+                instant(rs, "created_at"),
+                LyricsParseStatus.valueOf(rs.getString("parse_status")),
+                rs.getString("parse_error"),
+                rs.getString("parser_name"),
+                rs.getString("parser_version"),
+                instant(rs, "parsed_at"),
+                rs.getString("parsed_sections_json"),
+                rs.getString("chord_map_json"),
+                rs.getString("structural_markers_json"));
     }
 
     private static RowMapper<Tag> tagMapper() {

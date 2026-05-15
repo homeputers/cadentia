@@ -27,6 +27,7 @@ import com.cadentia.catalog.model.UpdateApprovalRecordCommand;
 import com.cadentia.catalog.model.UpdateArrangementCommand;
 import com.cadentia.catalog.model.UpdateImportBatchCommand;
 import com.cadentia.catalog.model.UpdateLyricsDocumentCommand;
+import com.cadentia.catalog.model.UpdateLyricsParseResultCommand;
 import com.cadentia.catalog.model.UpdateSongCommand;
 import com.cadentia.catalog.model.UpdateTagCommand;
 import com.cadentia.scraperadmin.CatalogSongCandidate;
@@ -57,6 +58,8 @@ public interface SongRepository {
     Optional<LyricsDocument> findLyricsDocumentById(UUID id);
 
     Optional<LyricsDocument> updateLyricsDocument(UUID id, UpdateLyricsDocumentCommand command);
+
+    Optional<LyricsDocument> updateLyricsParseResult(UUID id, UpdateLyricsParseResultCommand command);
 
     List<LyricsDocument> findLyricsDocumentsByArrangementId(UUID arrangementId);
 

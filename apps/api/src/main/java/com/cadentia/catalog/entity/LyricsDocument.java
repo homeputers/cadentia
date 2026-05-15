@@ -1,6 +1,7 @@
 package com.cadentia.catalog.entity;
 
 import com.cadentia.catalog.model.LyricsFormat;
+import com.cadentia.catalog.model.LyricsParseStatus;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -16,5 +17,13 @@ public record LyricsDocument(
         boolean containsSections,
         String sourceReference,
         String createdBy,
-        Instant createdAt) {
+        Instant createdAt,
+        LyricsParseStatus parseStatus,
+        String parseError,
+        String parserName,
+        String parserVersion,
+        Instant parsedAt,
+        String parsedSectionsJson,
+        String chordMapJson,
+        String structuralMarkersJson) {
 }
