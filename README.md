@@ -123,6 +123,39 @@ prioritizing:
 -   Docker deployment
 -   Flyway migrations
 
+
+## Scaffolded Implementation
+
+This repository is scaffolded as a Java 21 / Spring Boot 3.1.12 backend with a TypeScript workspace for shared intent contracts.
+
+### Runtime and libraries
+
+- Java 21 with Maven multi-module build
+- Spring Boot 3.1.12 for the API service
+- Spring Web, Validation, Actuator, Spring Data JDBC, Flyway, and PostgreSQL driver
+- PostgreSQL 16 with the pgvector container image available for future semantic enrichment
+- TypeScript 5.5 with Zod for strict LLM intent contract validation
+- Vitest 4 for TypeScript contract tests
+
+### Key paths
+
+- `apps/api` - Spring Boot application and backend packages
+- `apps/api/src/main/resources/db/migration` - Flyway migrations
+- `packages/intent-contracts` - TypeScript schema for the LLM JSON contract
+- `infra/docker/docker-compose.yml` - local PostgreSQL service
+- `scripts/check.sh` - combined backend and TypeScript checks
+
+### Local development
+
+```bash
+docker compose -f infra/docker/docker-compose.yml up -d
+mvn test
+npm install
+npm test
+```
+
+The Recommendation Engine scaffold intentionally returns no song selections until approved catalog retrieval is implemented.
+
 ------------------------------------------------------------------------
 
 ## Design Philosophy

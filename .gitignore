@@ -1,0 +1,19 @@
+# Java / Maven
+target/
+*.class
+
+# Node / TypeScript
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+
+# Local environment
+.env
+.env.*
+!.env.example
