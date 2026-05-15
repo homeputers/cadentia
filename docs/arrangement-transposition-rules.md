@@ -133,6 +133,30 @@ The following parsed examples are supported:
 | `G/B` | `G` | empty string | `B` |
 | `Ebmaj7/G` | `Eb` | `maj7` | `G` |
 
+## Arrangement retrieval behavior
+
+Backend arrangement retrieval returns the stored arrangement metadata together
+with derived transposition metadata when a target key is requested. The response
+must include the canonical base key, requested target key, computed semitone
+interval, and whether the returned representation was dynamically transposed.
+Generated transpositions are derived output only: retrieval must not insert
+additional `arrangements` rows, mutate raw lyrics/chord-sheet content, or change
+approval/provenance records for the base arrangement.
+
+When a current lyrics document is available, retrieval uses the most structured
+representation it can support deterministically:
+
+1. If the document has a parsed chord map with `PARSED` status, transpose the
+   chord map entries and return the raw document content unchanged.
+2. If no parsed chord map is available but the document is marked as containing
+   chords, transpose supported bracketed chords and chord-only lines from the raw
+   chord sheet as a fallback representation.
+3. If neither parsed chords nor chord-sheet chords are available, return the raw
+   content unchanged with transposition metadata only.
+
+Unsupported keys or chord notation still fail with explicit transposition errors
+rather than silently returning a partial representation.
+
 ## Nashville-style notation
 
 Nashville numbers are not supported in the first implementation. Symbols such as
