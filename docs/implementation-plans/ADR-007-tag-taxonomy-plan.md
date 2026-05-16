@@ -26,6 +26,14 @@ Design or update schema support for controlled tags, tag types, tag aliases if n
 - Defines valid tag assignment targets and prevents orphaned assignments.
 - Includes indexes for tag type, tag name, and assignment lookup.
 
+### Implemented scope
+
+- Canonical tag types are `THEME`, `MOOD`, `OCCASION`, `SCRIPTURE`, `SEASON`, `MUSICAL_STYLE`, and `AUDIENCE`, matching the ADR-defined vocabulary categories.
+- Canonical tags keep `name`, stable `slug`, optional `description`, admin-managed `sort_order`, and `is_active` lifecycle state.
+- Canonical names and slugs are unique within each tag type; aliases are optional records that resolve to an existing canonical tag and are also unique within each tag type.
+- Initial assignment targets are canonical songs, arrangements, and lyrics documents through dedicated join tables with foreign keys; polymorphic free-form tag assignments are not supported.
+- The recommendation read model aggregates active tag slugs from song, arrangement, and current lyrics-document assignments in deterministic order.
+
 ### Restrictions
 
 - Do not allow free-form production tags outside the controlled vocabulary.

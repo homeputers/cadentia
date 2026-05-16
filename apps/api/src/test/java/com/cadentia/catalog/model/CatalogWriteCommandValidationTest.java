@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.math.BigDecimal;
 import java.util.UUID;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 
 class CatalogWriteCommandValidationTest {
@@ -194,6 +195,27 @@ class CatalogWriteCommandValidationTest {
                         ApprovalStatus.REJECTED))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("not allowed");
+    }
+
+    @Test
+    void tagTypeUsesAdr007ControlledVocabulary() {
+        // Arrange / Act / Assert
+        assertThat(Stream.of(TagType.values()).map(TagType::name))
+                .containsExactly("THEME", "MOOD", "OCCASION", "SCRIPTURE", "SEASON", "MUSICAL_STYLE", "AUDIENCE");
+    }
+
+    @Test
+    void createTagRejectsNegativeSortOrder() {
+        // Arrange / Act / Assert
+        assertThatThrownBy(() -> new CreateTagCommand(
+                        TagType.THEME,
+                        "Praise",
+                        "praise",
+                        "Fixture tag",
+                        -1,
+                        true))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("sortOrder");
     }
 
     @Test

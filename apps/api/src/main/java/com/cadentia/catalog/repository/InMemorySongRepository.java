@@ -134,12 +134,21 @@ public class InMemorySongRepository implements SongRepository {
     }
 
     @Override
+    public void addTagToLyricsDocument(UUID lyricsDocumentId, UUID tagId) {
+    }
+
+    @Override
     public List<Tag> findTagsBySongId(UUID songId) {
         return List.of();
     }
 
     @Override
     public List<Tag> findTagsByArrangementId(UUID arrangementId) {
+        return List.of();
+    }
+
+    @Override
+    public List<Tag> findTagsByLyricsDocumentId(UUID lyricsDocumentId) {
         return List.of();
     }
 

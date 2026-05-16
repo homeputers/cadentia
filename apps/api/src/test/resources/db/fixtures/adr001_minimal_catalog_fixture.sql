@@ -45,7 +45,7 @@ WHERE id IN (
     '15ea7f8d-014f-4d97-851d-64b1d33d6fab'
 )
    OR (tag_type = 'THEME' AND slug = 'adr-001-fixture-gratitude')
-   OR (tag_type = 'SONG_ROLE' AND slug = 'adr-001-fixture-worship');
+   OR (tag_type = 'AUDIENCE' AND slug = 'adr-001-fixture-congregational');
 
 DELETE FROM songs
 WHERE id = '681f8944-19c6-4b22-8c05-0babfaaac2fa'
@@ -162,10 +162,10 @@ VALUES
     ),
     (
         '15ea7f8d-014f-4d97-851d-64b1d33d6fab',
-        'SONG_ROLE',
-        '[TEST FIXTURE] Worship',
-        'adr-001-fixture-worship',
-        'Fixture-only song role tag for ADR-001 seed tests.',
+        'AUDIENCE',
+        '[TEST FIXTURE] Congregational',
+        'adr-001-fixture-congregational',
+        'Fixture-only audience tag for ADR-001 seed tests.',
         true
     );
 
