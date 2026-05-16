@@ -119,6 +119,10 @@ Update the Recommendation Engine interfaces so candidate arrangements can be eva
 
 Document transposition rules, supported notation, error behavior, API or service usage, and how transposition interacts with recommendation explanations.
 
+### Deliverable
+
+- Behavior documentation: [`docs/arrangement-transposition-rules.md`](../arrangement-transposition-rules.md)
+
 ### Acceptance criteria
 
 - Identifies canonical base key storage as the source of truth.
