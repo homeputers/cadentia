@@ -157,6 +157,81 @@ representation it can support deterministically:
 Unsupported keys or chord notation still fail with explicit transposition errors
 rather than silently returning a partial representation.
 
+### Service usage contract
+
+Application code requests generated transpositions through
+`CatalogService.retrieveArrangement(UUID arrangementId, Optional<MusicalKey>
+requestedTargetKey)`. Callers must pass `Optional.empty()` when they want the
+stored base-key representation and `Optional.of(new MusicalKey(targetTonic,
+targetMode))` when they want a derived target key. A target key equal to the base
+key validates transposition inputs but returns the stored content and reports no
+dynamic transposition.
+
+`ArrangementRetrievalResult` exposes both source-of-truth and derived fields:
+
+- `arrangement` and `lyricsDocument` are the persisted records.
+- `baseKey` is built from `arrangements.musical_key` and
+  `arrangements.key_mode`.
+- `requestedTargetKey` records the requested target or the base key when no
+  target is requested.
+- `transpositionInterval` is the deterministic semitone distance from base to
+  target.
+- `dynamicallyTransposed` is `true` only when a caller requested a different
+  supported target key.
+- `transpositionSource` explains whether derived chords came from a parsed chord
+  map, chord-sheet content fallback, or no transposable source.
+- `lyricsContent` and `chordMapJson` contain the returned representation. They
+  may be derived for the request, but they must not be written back as source
+  content unless a future explicit curation workflow creates a new canonical
+  arrangement.
+
+The deterministic utility surface is intentionally small: use
+`semitoneInterval(...)` for metadata, `transposeChord(...)` or
+`transposeChordSymbols(...)` for isolated symbols, `transposeChordMapJson(...)`
+for parsed chord maps, and `transposeChordSheet(...)` only for the documented
+bracketed-chord and chord-only-line fallback. Do not use an LLM, free-text
+scanner, or recommendation explanation to discover additional chord tokens.
+
+## Recommendation behavior and explanations
+
+Recommendation-key policy may evaluate a candidate arrangement in its stored
+base key and, when `RecommendationKeyPolicy.allowDynamicTransposition` is true,
+in deterministic target keys that satisfy active key-center policy. The evaluator
+must continue to filter candidates through approval and catalog eligibility
+rules before any key-policy scoring; dynamic transposition is not a reason to
+recommend an unapproved arrangement.
+
+Recommendation explanations must distinguish stored-key matches from dynamic
+transpositions. A stored-key explanation identifies the arrangement's canonical
+key as the key being used. A dynamic explanation must identify both the target
+key and the stored base key, for example: `Target key D major is a dynamic
+transposition from stored arrangement key C major ...`. Downstream API responses
+or UI labels should expose the same distinction through `TranspositionType` so
+users know whether the key is curated source data or generated output.
+
+Dynamic target keys are deterministic ranking candidates, not persisted
+arrangements. Selecting a dynamically transposed candidate for a recommendation
+may cause later arrangement retrieval to request that target key, but it must not
+insert duplicate arrangement rows, alter approval/provenance records, or rewrite
+lyrics documents.
+
+## Implementation reference files
+
+- Decision record: [`docs/adr/ADR-006-arrangement-transposition.md`](./adr/ADR-006-arrangement-transposition.md)
+- Implementation plan: [`docs/implementation-plans/ADR-006-arrangement-transposition-plan.md`](./implementation-plans/ADR-006-arrangement-transposition-plan.md)
+- Transposition utility: `apps/api/src/main/java/com/cadentia/catalog/transposition/DeterministicTransposer.java`
+- Key value object: `apps/api/src/main/java/com/cadentia/catalog/transposition/MusicalKey.java`
+- Transposition error type: `apps/api/src/main/java/com/cadentia/catalog/transposition/TranspositionException.java`
+- Arrangement retrieval result: `apps/api/src/main/java/com/cadentia/catalog/service/ArrangementRetrievalResult.java`
+- Arrangement retrieval service: `apps/api/src/main/java/com/cadentia/catalog/service/CatalogService.java`
+- Recommendation key policy: `apps/api/src/main/java/com/cadentia/reng/RecommendationKeyPolicy.java`
+- Recommendation key evaluation: `apps/api/src/main/java/com/cadentia/reng/KeyPolicyEvaluation.java`
+- Recommendation key-policy evaluator: `apps/api/src/main/java/com/cadentia/reng/KeyPolicyEvaluator.java`
+- Transposition type marker: `apps/api/src/main/java/com/cadentia/reng/TranspositionType.java`
+- Utility tests: `apps/api/src/test/java/com/cadentia/catalog/transposition/DeterministicTransposerTest.java`
+- Arrangement retrieval tests: `apps/api/src/test/java/com/cadentia/catalog/service/CatalogServiceTest.java`
+- Recommendation key-policy tests: `apps/api/src/test/java/com/cadentia/reng/KeyPolicyEvaluatorTest.java`
+
 ## Nashville-style notation
 
 Nashville numbers are not supported in the first implementation. Symbols such as
