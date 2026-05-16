@@ -74,11 +74,11 @@ public interface SongRepository {
 
     Optional<Tag> updateTag(UUID id, UpdateTagCommand command);
 
-    void addTagToSong(UUID songId, UUID tagId);
+    boolean addTagToSong(UUID songId, UUID tagId);
 
-    void addTagToArrangement(UUID arrangementId, UUID tagId);
+    boolean addTagToArrangement(UUID arrangementId, UUID tagId);
 
-    void addTagToLyricsDocument(UUID lyricsDocumentId, UUID tagId);
+    boolean addTagToLyricsDocument(UUID lyricsDocumentId, UUID tagId);
 
     List<Tag> findTagsBySongId(UUID songId);
 

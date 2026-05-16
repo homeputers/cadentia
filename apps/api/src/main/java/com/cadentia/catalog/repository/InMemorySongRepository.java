@@ -126,15 +126,18 @@ public class InMemorySongRepository implements SongRepository {
     }
 
     @Override
-    public void addTagToSong(UUID songId, UUID tagId) {
+    public boolean addTagToSong(UUID songId, UUID tagId) {
+        return false;
     }
 
     @Override
-    public void addTagToArrangement(UUID arrangementId, UUID tagId) {
+    public boolean addTagToArrangement(UUID arrangementId, UUID tagId) {
+        return false;
     }
 
     @Override
-    public void addTagToLyricsDocument(UUID lyricsDocumentId, UUID tagId) {
+    public boolean addTagToLyricsDocument(UUID lyricsDocumentId, UUID tagId) {
+        return false;
     }
 
     @Override
