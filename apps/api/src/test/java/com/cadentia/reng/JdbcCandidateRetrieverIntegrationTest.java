@@ -102,6 +102,7 @@ class JdbcCandidateRetrieverIntegrationTest {
         approveAllRequiredGates(content, ApprovalStatus.APPROVED);
         addArrangementTag(content.arrangement(), "theme", "thanksgiving");
         addArrangementTag(content.arrangement(), "liturgical", "gathering");
+        addArrangementTag(content.arrangement(), "inactive", "aaa-inactive", false);
 
         // Act
         List<RecommendableArrangement> candidates = candidateRetriever.findCandidates(new CandidateSearchCriteria(
@@ -218,12 +219,16 @@ class JdbcCandidateRetrieverIntegrationTest {
     }
 
     private void addArrangementTag(Arrangement arrangement, String slugPrefix, String slug) {
+        addArrangementTag(arrangement, slugPrefix, slug, true);
+    }
+
+    private void addArrangementTag(Arrangement arrangement, String slugPrefix, String slug, boolean active) {
         Tag tag = songRepository.createTag(new CreateTagCommand(
                 TagType.THEME,
                 slugPrefix + " " + slug,
                 slug,
                 "Fixture tag",
-                true));
+                active));
         songRepository.addTagToArrangement(arrangement.id(), tag.id());
     }
 

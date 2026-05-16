@@ -167,9 +167,9 @@ class JdbcSongRepositoryIntegrationTest {
                 TagType.THEME, "Faithfulness", "faithfulness", "Fixture taxonomy tag", true));
         Tag updatedTag = repository.updateTag(tag.id(), new UpdateTagCommand(
                 "Faithfulness Updated", "faithfulness-updated", "Updated fixture taxonomy tag", true)).orElseThrow();
-        repository.addTagToSong(song.id(), updatedTag.id());
-        repository.addTagToArrangement(arrangement.id(), updatedTag.id());
-        repository.addTagToLyricsDocument(lyricsDocument.id(), updatedTag.id());
+        assertThat(repository.addTagToSong(song.id(), updatedTag.id())).isTrue();
+        assertThat(repository.addTagToArrangement(arrangement.id(), updatedTag.id())).isTrue();
+        assertThat(repository.addTagToLyricsDocument(lyricsDocument.id(), updatedTag.id())).isTrue();
 
         // Assert
         assertThat(repository.findArrangementById(arrangement.id())).contains(updatedArrangement);
@@ -181,6 +181,23 @@ class JdbcSongRepositoryIntegrationTest {
         assertThat(repository.findTagsBySongId(song.id())).containsExactly(updatedTag);
         assertThat(repository.findTagsByArrangementId(arrangement.id())).containsExactly(updatedTag);
         assertThat(repository.findTagsByLyricsDocumentId(lyricsDocument.id())).containsExactly(updatedTag);
+    }
+
+    @Test
+    void tagAssignmentWritesReportDuplicateMappingsWithoutCreatingExtraRows() {
+        // Arrange
+        Song song = createSong();
+        Tag tag = repository.createTag(new CreateTagCommand(
+                TagType.MOOD,
+                "Joyful Duplicate Guard",
+                "joyful-duplicate-guard",
+                "Fixture taxonomy tag",
+                true));
+
+        // Act / Assert
+        assertThat(repository.addTagToSong(song.id(), tag.id())).isTrue();
+        assertThat(repository.addTagToSong(song.id(), tag.id())).isFalse();
+        assertThat(repository.findTagsBySongId(song.id())).containsExactly(tag);
     }
 
     @Test

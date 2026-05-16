@@ -317,23 +317,29 @@ public class JdbcSongRepository implements SongRepository {
     }
 
     @Override
-    public void addTagToSong(UUID songId, UUID tagId) {
-        jdbcTemplate.update("INSERT INTO song_tags (song_id, tag_id) VALUES (:songId, :tagId) ON CONFLICT DO NOTHING",
-                Map.of("songId", songId, "tagId", tagId));
+    public boolean addTagToSong(UUID songId, UUID tagId) {
+        return jdbcTemplate.update(
+                        "INSERT INTO song_tags (song_id, tag_id) VALUES (:songId, :tagId) ON CONFLICT DO NOTHING",
+                        Map.of("songId", songId, "tagId", tagId))
+                == 1;
     }
 
     @Override
-    public void addTagToArrangement(UUID arrangementId, UUID tagId) {
-        jdbcTemplate.update("INSERT INTO arrangement_tags (arrangement_id, tag_id) VALUES (:arrangementId, :tagId) "
-                        + "ON CONFLICT DO NOTHING",
-                Map.of("arrangementId", arrangementId, "tagId", tagId));
+    public boolean addTagToArrangement(UUID arrangementId, UUID tagId) {
+        return jdbcTemplate.update(
+                        "INSERT INTO arrangement_tags (arrangement_id, tag_id) VALUES (:arrangementId, :tagId) "
+                                + "ON CONFLICT DO NOTHING",
+                        Map.of("arrangementId", arrangementId, "tagId", tagId))
+                == 1;
     }
 
     @Override
-    public void addTagToLyricsDocument(UUID lyricsDocumentId, UUID tagId) {
-        jdbcTemplate.update("INSERT INTO lyrics_document_tags (lyrics_document_id, tag_id) "
-                        + "VALUES (:lyricsDocumentId, :tagId) ON CONFLICT DO NOTHING",
-                Map.of("lyricsDocumentId", lyricsDocumentId, "tagId", tagId));
+    public boolean addTagToLyricsDocument(UUID lyricsDocumentId, UUID tagId) {
+        return jdbcTemplate.update(
+                        "INSERT INTO lyrics_document_tags (lyrics_document_id, tag_id) "
+                                + "VALUES (:lyricsDocumentId, :tagId) ON CONFLICT DO NOTHING",
+                        Map.of("lyricsDocumentId", lyricsDocumentId, "tagId", tagId))
+                == 1;
     }
 
     @Override

@@ -121,6 +121,13 @@ Implement operations for assigning controlled tags to supported entities and val
 - Do not let tags bypass approval requirements.
 - Do not automatically assign tags based solely on LLM output.
 
+### Implemented scope
+
+- Added a typed `TagAssignmentTarget` boundary for supported assignment targets: songs, arrangements, and lyrics documents.
+- Added catalog-service validation that tag assignments require an existing active controlled tag and an existing supported target entity.
+- Updated repository assignment writes to report duplicate join-table mappings while retaining database primary-key enforcement.
+- Added tests covering assignment, duplicate prevention, inactive-tag rejection, invalid/missing target handling, and deterministic active-tag aggregation.
+
 ## Subtask 5: Integrate tags with recommendation filters and reporting
 
 ### Context

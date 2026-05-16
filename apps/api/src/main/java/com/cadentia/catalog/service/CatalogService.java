@@ -3,7 +3,9 @@ package com.cadentia.catalog.service;
 import com.cadentia.catalog.entity.Arrangement;
 import com.cadentia.catalog.entity.LyricsDocument;
 import com.cadentia.catalog.entity.Song;
+import com.cadentia.catalog.entity.Tag;
 import com.cadentia.catalog.model.LyricsParseStatus;
+import com.cadentia.catalog.model.TagAssignmentTarget;
 import com.cadentia.catalog.repository.SongRepository;
 import com.cadentia.catalog.transposition.DeterministicTransposer;
 import com.cadentia.catalog.transposition.MusicalKey;
@@ -29,6 +31,53 @@ public class CatalogService {
 
     public Optional<Song> findSong(UUID id) {
         return songRepository.findById(id);
+    }
+
+    public Tag assignTag(TagAssignmentTarget target, UUID targetId, UUID tagId) {
+        if (target == null) {
+            throw new IllegalArgumentException("target is required");
+        }
+        if (targetId == null) {
+            throw new IllegalArgumentException("targetId is required");
+        }
+        if (tagId == null) {
+            throw new IllegalArgumentException("tagId is required");
+        }
+        Tag tag = songRepository.findTagById(tagId)
+                .orElseThrow(() -> new IllegalArgumentException("tag does not exist: " + tagId));
+        if (!tag.active()) {
+            throw new IllegalArgumentException("tag is inactive: " + tagId);
+        }
+        boolean assigned = switch (target) {
+            case SONG -> assignTagToSong(targetId, tagId);
+            case ARRANGEMENT -> assignTagToArrangement(targetId, tagId);
+            case LYRICS_DOCUMENT -> assignTagToLyricsDocument(targetId, tagId);
+        };
+        if (!assigned) {
+            throw new IllegalArgumentException("tag is already assigned to target");
+        }
+        return tag;
+    }
+
+    private boolean assignTagToSong(UUID songId, UUID tagId) {
+        if (songRepository.findById(songId).isEmpty()) {
+            throw new IllegalArgumentException("song does not exist: " + songId);
+        }
+        return songRepository.addTagToSong(songId, tagId);
+    }
+
+    private boolean assignTagToArrangement(UUID arrangementId, UUID tagId) {
+        if (songRepository.findArrangementById(arrangementId).isEmpty()) {
+            throw new IllegalArgumentException("arrangement does not exist: " + arrangementId);
+        }
+        return songRepository.addTagToArrangement(arrangementId, tagId);
+    }
+
+    private boolean assignTagToLyricsDocument(UUID lyricsDocumentId, UUID tagId) {
+        if (songRepository.findLyricsDocumentById(lyricsDocumentId).isEmpty()) {
+            throw new IllegalArgumentException("lyrics document does not exist: " + lyricsDocumentId);
+        }
+        return songRepository.addTagToLyricsDocument(lyricsDocumentId, tagId);
     }
 
     public Optional<ArrangementRetrievalResult> retrieveArrangement(

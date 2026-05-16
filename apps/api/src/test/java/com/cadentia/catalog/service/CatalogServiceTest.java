@@ -1,6 +1,7 @@
 package com.cadentia.catalog.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -8,11 +9,16 @@ import static org.mockito.Mockito.when;
 
 import com.cadentia.catalog.entity.Arrangement;
 import com.cadentia.catalog.entity.LyricsDocument;
+import com.cadentia.catalog.entity.Song;
+import com.cadentia.catalog.entity.Tag;
 import com.cadentia.catalog.model.ArrangementSourceType;
 import com.cadentia.catalog.model.CreateArrangementCommand;
 import com.cadentia.catalog.model.KeyMode;
 import com.cadentia.catalog.model.LyricsFormat;
 import com.cadentia.catalog.model.LyricsParseStatus;
+import com.cadentia.catalog.model.SongStatus;
+import com.cadentia.catalog.model.TagAssignmentTarget;
+import com.cadentia.catalog.model.TagType;
 import com.cadentia.catalog.repository.SongRepository;
 import com.cadentia.catalog.transposition.MusicalKey;
 import java.time.Instant;
@@ -29,6 +35,83 @@ class CatalogServiceTest {
 
     @Mock
     private SongRepository songRepository;
+
+    @Test
+    void assignTagAddsActiveControlledTagToSong() {
+        // Arrange
+        Song song = song();
+        Tag tag = tag(true);
+        when(songRepository.findTagById(tag.id())).thenReturn(Optional.of(tag));
+        when(songRepository.findById(song.id())).thenReturn(Optional.of(song));
+        when(songRepository.addTagToSong(song.id(), tag.id())).thenReturn(true);
+        CatalogService service = new CatalogService(songRepository);
+
+        // Act
+        Tag assignedTag = service.assignTag(TagAssignmentTarget.SONG, song.id(), tag.id());
+
+        // Assert
+        assertThat(assignedTag).isEqualTo(tag);
+        verify(songRepository).addTagToSong(song.id(), tag.id());
+    }
+
+    @Test
+    void assignTagPreventsDuplicateAssignments() {
+        // Arrange
+        Arrangement arrangement = arrangement("C", KeyMode.MAJOR);
+        Tag tag = tag(true);
+        when(songRepository.findTagById(tag.id())).thenReturn(Optional.of(tag));
+        when(songRepository.findArrangementById(arrangement.id())).thenReturn(Optional.of(arrangement));
+        when(songRepository.addTagToArrangement(arrangement.id(), tag.id())).thenReturn(false);
+        CatalogService service = new CatalogService(songRepository);
+
+        // Act / Assert
+        assertThatThrownBy(() -> service.assignTag(TagAssignmentTarget.ARRANGEMENT, arrangement.id(), tag.id()))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("already assigned");
+    }
+
+    @Test
+    void assignTagRejectsInactiveTags() {
+        // Arrange
+        UUID lyricsDocumentId = UUID.randomUUID();
+        Tag tag = tag(false);
+        when(songRepository.findTagById(tag.id())).thenReturn(Optional.of(tag));
+        CatalogService service = new CatalogService(songRepository);
+
+        // Act / Assert
+        assertThatThrownBy(() -> service.assignTag(TagAssignmentTarget.LYRICS_DOCUMENT, lyricsDocumentId, tag.id()))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("inactive");
+        verify(songRepository, never()).addTagToLyricsDocument(lyricsDocumentId, tag.id());
+    }
+
+    @Test
+    void assignTagRejectsInvalidTarget() {
+        // Arrange
+        Tag tag = tag(true);
+        CatalogService service = new CatalogService(songRepository);
+
+        // Act / Assert
+        assertThatThrownBy(() -> service.assignTag(null, UUID.randomUUID(), tag.id()))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("target is required");
+    }
+
+    @Test
+    void assignTagRejectsMissingTargetEntity() {
+        // Arrange
+        UUID lyricsDocumentId = UUID.randomUUID();
+        Tag tag = tag(true);
+        when(songRepository.findTagById(tag.id())).thenReturn(Optional.of(tag));
+        when(songRepository.findLyricsDocumentById(lyricsDocumentId)).thenReturn(Optional.empty());
+        CatalogService service = new CatalogService(songRepository);
+
+        // Act / Assert
+        assertThatThrownBy(() -> service.assignTag(TagAssignmentTarget.LYRICS_DOCUMENT, lyricsDocumentId, tag.id()))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("lyrics document does not exist");
+        verify(songRepository, never()).addTagToLyricsDocument(lyricsDocumentId, tag.id());
+    }
 
     @Test
     void retrieveArrangementReturnsParsedChordMapTranspositionWithoutMutatingStoredDocument() {
@@ -106,6 +189,35 @@ class CatalogServiceTest {
         assertThat(result.transpositionSource()).isEqualTo(ArrangementTranspositionSource.NONE);
         assertThat(result.lyricsContent()).isEqualTo("[G]Alpha");
         verify(songRepository, never()).isArrangementDoctrinallyApprovedForRecommendation(arrangement.id());
+    }
+
+    private static Song song() {
+        return new Song(
+                UUID.randomUUID(),
+                "Fixture Song",
+                "fixture-song",
+                "en",
+                "Fixture Artist",
+                "Fixture Composer",
+                null,
+                2026,
+                SongStatus.APPROVED,
+                "Fixture doctrinal notes",
+                Instant.parse("2026-05-15T00:00:00Z"),
+                Instant.parse("2026-05-15T00:00:00Z"));
+    }
+
+    private static Tag tag(boolean active) {
+        return new Tag(
+                UUID.randomUUID(),
+                TagType.THEME,
+                "Gratitude",
+                "theme-gratitude",
+                "Fixture taxonomy tag",
+                10,
+                active,
+                Instant.parse("2026-05-15T00:00:00Z"),
+                Instant.parse("2026-05-15T00:00:00Z"));
     }
 
     private static Arrangement arrangement(String musicalKey, KeyMode keyMode) {
