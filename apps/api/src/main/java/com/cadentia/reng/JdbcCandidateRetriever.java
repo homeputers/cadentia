@@ -1,6 +1,7 @@
 package com.cadentia.reng;
 
 import com.cadentia.catalog.model.ApprovalStatus;
+import com.cadentia.catalog.model.KeyMode;
 import java.sql.Array;
 import java.sql.SQLException;
 import java.util.Arrays;
@@ -15,7 +16,7 @@ import org.springframework.stereotype.Repository;
 public class JdbcCandidateRetriever implements CandidateRetriever {
 
     private static final String CANDIDATE_COLUMNS = "arrangement_id, song_id, current_lyrics_document_id, title, "
-            + "language, musical_key, bpm, time_signature, energy, tags, song_doctrinal_status, "
+            + "language, musical_key, key_mode, bpm, time_signature, energy, tags, song_doctrinal_status, "
             + "song_editorial_status, song_licensing_status, arrangement_musical_status, "
             + "arrangement_editorial_status, lyrics_doctrinal_status, lyrics_editorial_status, "
             + "lyrics_licensing_status";
@@ -79,6 +80,7 @@ public class JdbcCandidateRetriever implements CandidateRetriever {
                 rs.getString("title"),
                 rs.getString("language"),
                 rs.getString("musical_key"),
+                KeyMode.valueOf(rs.getString("key_mode")),
                 rs.getInt("bpm"),
                 rs.getString("time_signature"),
                 rs.getInt("energy"),

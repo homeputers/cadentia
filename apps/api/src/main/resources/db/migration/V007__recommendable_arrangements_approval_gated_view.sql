@@ -6,6 +6,7 @@ SELECT
     songs.canonical_title AS title,
     arrangements.language,
     arrangements.musical_key,
+    arrangements.key_mode,
     arrangements.tempo_bpm AS bpm,
     arrangements.time_signature,
     arrangements.energy_level AS energy,
@@ -65,6 +66,7 @@ LEFT JOIN tags
 WHERE arrangements.is_active
   AND songs.song_status <> 'ARCHIVED'
   AND arrangements.musical_key IS NOT NULL
+  AND arrangements.key_mode IN ('MAJOR', 'MINOR')
   AND arrangements.tempo_bpm IS NOT NULL
   AND arrangements.time_signature IS NOT NULL
   AND arrangements.energy_level IS NOT NULL
@@ -85,6 +87,8 @@ COMMENT ON VIEW v_recommendable_arrangements IS
     'Approval-gated recommendation candidate read model. Rows exist only when all required song, arrangement, and current lyrics approvals are approved.';
 COMMENT ON COLUMN v_recommendable_arrangements.tags IS
     'Deterministically ordered active arrangement tag slugs for transparent candidate filtering.';
+COMMENT ON COLUMN v_recommendable_arrangements.key_mode IS
+    'Major/minor mode for deterministic recommendation key policy and relative-key evaluation.';
 COMMENT ON COLUMN v_recommendable_arrangements.song_doctrinal_status IS
     'Song-level doctrinal approval status exposed for explainability; private review notes are intentionally excluded.';
 COMMENT ON COLUMN v_recommendable_arrangements.song_editorial_status IS
