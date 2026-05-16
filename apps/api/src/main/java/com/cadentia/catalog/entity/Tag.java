@@ -10,6 +10,7 @@ public record Tag(
         String name,
         String slug,
         String description,
+        int sortOrder,
         boolean active,
         Instant createdAt,
         Instant updatedAt) {

@@ -43,6 +43,13 @@ final class CatalogValidation {
         return value;
     }
 
+    static int requireAtLeast(int value, int min, String fieldName) {
+        if (value < min) {
+            throw new IllegalArgumentException(fieldName + " must be at least " + min);
+        }
+        return value;
+    }
+
     static BigDecimal requireUnitRangeIfPresent(BigDecimal value, String fieldName) {
         if (value != null && (value.compareTo(BigDecimal.ZERO) < 0 || value.compareTo(BigDecimal.ONE) > 0)) {
             throw new IllegalArgumentException(fieldName + " must be between 0 and 1");

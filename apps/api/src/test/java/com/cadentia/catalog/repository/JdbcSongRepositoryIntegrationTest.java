@@ -168,6 +168,7 @@ class JdbcSongRepositoryIntegrationTest {
                 "Faithfulness Updated", "faithfulness-updated", "Updated fixture taxonomy tag", true)).orElseThrow();
         repository.addTagToSong(song.id(), updatedTag.id());
         repository.addTagToArrangement(arrangement.id(), updatedTag.id());
+        repository.addTagToLyricsDocument(lyricsDocument.id(), updatedTag.id());
 
         // Assert
         assertThat(repository.findArrangementById(arrangement.id())).contains(updatedArrangement);
@@ -178,6 +179,37 @@ class JdbcSongRepositoryIntegrationTest {
         assertThat(repository.findTagByTypeAndSlug(updatedTag.tagType(), updatedTag.slug())).contains(updatedTag);
         assertThat(repository.findTagsBySongId(song.id())).containsExactly(updatedTag);
         assertThat(repository.findTagsByArrangementId(arrangement.id())).containsExactly(updatedTag);
+        assertThat(repository.findTagsByLyricsDocumentId(lyricsDocument.id())).containsExactly(updatedTag);
+    }
+
+    @Test
+    void databaseRejectsDuplicateCanonicalTagNamesWithinSameType() {
+        // Arrange
+        repository.createTag(new CreateTagCommand(
+                TagType.MOOD,
+                "Reflective",
+                "reflective",
+                "Fixture taxonomy tag",
+                true));
+
+        // Act / Assert
+        assertThatThrownBy(() -> repository.createTag(new CreateTagCommand(
+                        TagType.MOOD,
+                        "reflective",
+                        "reflective-alias",
+                        "Duplicate canonical name",
+                        true)))
+                .hasMessageContaining("tags_tag_type_lower_name_unique_idx");
+    }
+
+    @Test
+    void databaseRejectsUnsupportedTagTypes() {
+        // Arrange / Act / Assert
+        assertThatThrownBy(() -> jdbcTemplate.update("""
+                INSERT INTO tags (tag_type, name, slug, description, is_active)
+                VALUES ('TOPIC', 'Unsupported', 'unsupported', 'Unsupported legacy type', true)
+                """, Map.of()))
+                .hasMessageContaining("tags_tag_type_valid");
     }
 
     @Test

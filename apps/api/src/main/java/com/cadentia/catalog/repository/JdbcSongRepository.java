@@ -73,9 +73,11 @@ public class JdbcSongRepository implements SongRepository {
             + "parse_status, parse_error, parser_name, parser_version, parsed_at, "
             + "parsed_sections::text AS parsed_sections_json, chord_map::text AS chord_map_json, "
             + "structural_markers::text AS structural_markers_json";
-    private static final String TAG_COLUMNS = "id, tag_type, name, slug, description, is_active, created_at, updated_at";
+    private static final String TAG_COLUMNS = "id, tag_type, name, slug, description, sort_order, is_active, "
+            + "created_at, updated_at";
     private static final String TAG_COLUMNS_QUALIFIED = "tags.id AS id, tags.tag_type AS tag_type, "
-            + "tags.name AS name, tags.slug AS slug, tags.description AS description, tags.is_active AS is_active, "
+            + "tags.name AS name, tags.slug AS slug, tags.description AS description, "
+            + "tags.sort_order AS sort_order, tags.is_active AS is_active, "
             + "tags.created_at AS created_at, tags.updated_at AS updated_at";
     private static final String IMPORT_COLUMNS = "id, source_system, initiated_by, status, summary_json::text AS summary_json, "
             + "started_at, completed_at";
@@ -280,8 +282,8 @@ public class JdbcSongRepository implements SongRepository {
     @Override
     public Tag createTag(CreateTagCommand command) {
         String sql = """
-                INSERT INTO tags (tag_type, name, slug, description, is_active)
-                VALUES (:tagType, :name, :slug, :description, :active)
+                INSERT INTO tags (tag_type, name, slug, description, sort_order, is_active)
+                VALUES (:tagType, :name, :slug, :description, :sortOrder, :active)
                 RETURNING %s
                 """.formatted(TAG_COLUMNS);
         return jdbcTemplate.queryForObject(sql, tagParams(command), tagMapper());
@@ -305,6 +307,7 @@ public class JdbcSongRepository implements SongRepository {
                 SET name = :name,
                     slug = :slug,
                     description = :description,
+                    sort_order = :sortOrder,
                     is_active = :active,
                     updated_at = now()
                 WHERE id = :id
@@ -327,10 +330,17 @@ public class JdbcSongRepository implements SongRepository {
     }
 
     @Override
+    public void addTagToLyricsDocument(UUID lyricsDocumentId, UUID tagId) {
+        jdbcTemplate.update("INSERT INTO lyrics_document_tags (lyrics_document_id, tag_id) "
+                        + "VALUES (:lyricsDocumentId, :tagId) ON CONFLICT DO NOTHING",
+                Map.of("lyricsDocumentId", lyricsDocumentId, "tagId", tagId));
+    }
+
+    @Override
     public List<Tag> findTagsBySongId(UUID songId) {
         return jdbcTemplate.query("SELECT " + TAG_COLUMNS_QUALIFIED
                         + " FROM tags INNER JOIN song_tags ON tags.id = song_tags.tag_id "
-                        + "WHERE song_tags.song_id = :songId ORDER BY tags.tag_type, tags.slug",
+                        + "WHERE song_tags.song_id = :songId ORDER BY tags.tag_type, tags.sort_order, tags.slug",
                 Map.of("songId", songId), tagMapper());
     }
 
@@ -338,8 +348,18 @@ public class JdbcSongRepository implements SongRepository {
     public List<Tag> findTagsByArrangementId(UUID arrangementId) {
         return jdbcTemplate.query("SELECT " + TAG_COLUMNS_QUALIFIED
                         + " FROM tags INNER JOIN arrangement_tags ON tags.id = arrangement_tags.tag_id "
-                        + "WHERE arrangement_tags.arrangement_id = :arrangementId ORDER BY tags.tag_type, tags.slug",
+                        + "WHERE arrangement_tags.arrangement_id = :arrangementId "
+                        + "ORDER BY tags.tag_type, tags.sort_order, tags.slug",
                 Map.of("arrangementId", arrangementId), tagMapper());
+    }
+
+    @Override
+    public List<Tag> findTagsByLyricsDocumentId(UUID lyricsDocumentId) {
+        return jdbcTemplate.query("SELECT " + TAG_COLUMNS_QUALIFIED
+                        + " FROM tags INNER JOIN lyrics_document_tags ON tags.id = lyrics_document_tags.tag_id "
+                        + "WHERE lyrics_document_tags.lyrics_document_id = :lyricsDocumentId "
+                        + "ORDER BY tags.tag_type, tags.sort_order, tags.slug",
+                Map.of("lyricsDocumentId", lyricsDocumentId), tagMapper());
     }
 
     @Override
@@ -785,6 +805,7 @@ public class JdbcSongRepository implements SongRepository {
                 .addValue("name", command.name())
                 .addValue("slug", command.slug())
                 .addValue("description", command.description())
+                .addValue("sortOrder", command.sortOrder())
                 .addValue("active", command.active());
     }
 
@@ -793,6 +814,7 @@ public class JdbcSongRepository implements SongRepository {
                 .addValue("name", command.name())
                 .addValue("slug", command.slug())
                 .addValue("description", command.description())
+                .addValue("sortOrder", command.sortOrder())
                 .addValue("active", command.active());
     }
 
@@ -945,6 +967,7 @@ public class JdbcSongRepository implements SongRepository {
                 rs.getString("name"),
                 rs.getString("slug"),
                 rs.getString("description"),
+                rs.getInt("sort_order"),
                 rs.getBoolean("is_active"),
                 instant(rs, "created_at"),
                 instant(rs, "updated_at"));

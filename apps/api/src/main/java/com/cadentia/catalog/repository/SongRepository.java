@@ -78,9 +78,13 @@ public interface SongRepository {
 
     void addTagToArrangement(UUID arrangementId, UUID tagId);
 
+    void addTagToLyricsDocument(UUID lyricsDocumentId, UUID tagId);
+
     List<Tag> findTagsBySongId(UUID songId);
 
     List<Tag> findTagsByArrangementId(UUID arrangementId);
+
+    List<Tag> findTagsByLyricsDocumentId(UUID lyricsDocumentId);
 
     ImportBatch createImportBatch(CreateImportBatchCommand command);
 

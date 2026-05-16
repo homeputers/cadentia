@@ -79,9 +79,19 @@ erDiagram
         varchar name
         varchar slug UK
         text description
+        int sort_order
         boolean is_active
         timestamptz created_at
         timestamptz updated_at
+    }
+
+    TAG_ALIASES {
+        uuid id PK
+        varchar tag_type UK
+        uuid tag_id FK
+        varchar alias_name
+        varchar alias_slug UK
+        timestamptz created_at
     }
 
     SONG_TAGS {
@@ -92,6 +102,12 @@ erDiagram
 
     ARRANGEMENT_TAGS {
         uuid arrangement_id PK,FK
+        uuid tag_id PK,FK
+        timestamptz created_at
+    }
+
+    LYRICS_DOCUMENT_TAGS {
+        uuid lyrics_document_id PK,FK
         uuid tag_id PK,FK
         timestamptz created_at
     }
@@ -142,8 +158,11 @@ erDiagram
   canonical song.
 - `lyrics_documents.arrangement_id` is required; ADR-001 stores lyrics versions
   at the arrangement level.
-- `song_tags` and `arrangement_tags` assign controlled `tags` values through
-  composite primary keys.
+- `tag_aliases` stores controlled alternate names for existing canonical tags;
+  aliases do not create canonical vocabulary automatically.
+- `song_tags`, `arrangement_tags`, and `lyrics_document_tags` assign controlled
+  `tags` values through composite primary keys and foreign keys that prevent
+  orphaned assignments.
 - `provenance_records` must reference exactly one of `song_id`,
   `arrangement_id`, or `lyrics_document_id`, and must reference an
   `import_batches` row.

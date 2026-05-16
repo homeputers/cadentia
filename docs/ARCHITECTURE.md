@@ -87,9 +87,13 @@ canonical tables are:
 - `lyrics_documents` — versioned lyrics/chord documents owned by an
   arrangement, with content hashes, source references, and current-version
   constraints.
-- `tags` — controlled taxonomy values for deterministic classification.
-- `song_tags` and `arrangement_tags` — many-to-many assignments from the
-  controlled tag taxonomy to songs and arrangements.
+- `tags` — controlled taxonomy values for deterministic classification, with
+  ADR-007 tag types, descriptions, sort order, and active/inactive lifecycle.
+- `tag_aliases` — controlled alternate names that resolve to existing canonical
+  tags without creating free-form production vocabulary.
+- `song_tags`, `arrangement_tags`, and `lyrics_document_tags` — many-to-many
+  assignments from the controlled tag taxonomy to songs, arrangements, and
+  lyrics documents.
 - `import_batches` — auditable import or fixture load batches.
 - `provenance_records` — first-class evidence tied to exactly one song,
   arrangement, or lyrics document and one import batch.
