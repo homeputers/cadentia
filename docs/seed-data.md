@@ -5,6 +5,41 @@ fixtures. Production schema changes live under `apps/api/src/main/resources/db/m
 while fixture data lives under `apps/api/src/test/resources/db/fixtures` so it is not
 loaded automatically by Flyway in deployed environments.
 
+## ADR-007 controlled tag vocabulary seeds
+
+The initial production controlled vocabulary is loaded by Flyway with the schema
+migrations, not from the test fixture directory:
+
+```text
+apps/api/src/main/resources/db/migration/V009__seed_controlled_tag_vocabulary.sql
+```
+
+This migration seeds one broad, noncontroversial starter tag for every ADR-007
+tag type using stable UUIDs and stable slugs for deterministic references:
+
+| Tag type | Name | Slug |
+| --- | --- | --- |
+| `THEME` | Gratitude | `theme-gratitude` |
+| `MOOD` | Celebratory | `mood-celebratory` |
+| `OCCASION` | Gathering | `occasion-gathering` |
+| `SCRIPTURE` | Psalms | `scripture-psalms` |
+| `SEASON` | Year Round | `season-year-round` |
+| `MUSICAL_STYLE` | Contemporary | `musical-style-contemporary` |
+| `AUDIENCE` | Congregation | `audience-congregation` |
+
+Load or update these seeds by applying Flyway migrations through the normal API
+startup or Maven test flow:
+
+```bash
+mvn -pl apps/api -am test
+```
+
+Future production vocabulary changes should be made through a new reviewed Flyway
+migration or through audited admin operations once ADR-007 admin management is
+implemented. Do not edit an already-applied Flyway migration, do not add
+user-specific local church vocabulary to the global defaults, and do not promote
+AI-suggested tags to canonical seed data without admin/product review.
+
 ## ADR-001 minimal catalog fixture
 
 The ADR-001 fixture is intentionally small and exercises the source-of-truth
