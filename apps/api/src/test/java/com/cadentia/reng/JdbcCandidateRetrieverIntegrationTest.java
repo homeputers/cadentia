@@ -111,6 +111,8 @@ class JdbcCandidateRetrieverIntegrationTest {
         assertThat(candidates).singleElement().satisfies(candidate -> {
             assertThat(candidate.arrangementId()).isEqualTo(content.arrangement().id());
             assertThat(candidate.currentLyricsDocumentId()).isEqualTo(content.lyricsDocument().id());
+            assertThat(candidate.musicalKey()).isEqualTo("G");
+            assertThat(candidate.keyMode()).isEqualTo(KeyMode.MAJOR);
             assertThat(candidate.tags()).containsExactly("gathering", "thanksgiving");
             assertThat(candidate.approvalGateSummary()).isEqualTo(new ApprovalGateSummary(
                     ApprovalStatus.APPROVED,
