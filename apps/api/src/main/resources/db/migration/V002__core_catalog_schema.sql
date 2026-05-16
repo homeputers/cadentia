@@ -114,45 +114,20 @@ CREATE TABLE tags (
     name varchar(128) NOT NULL,
     slug varchar(128) NOT NULL,
     description text,
-    sort_order integer NOT NULL DEFAULT 0,
     is_active boolean NOT NULL DEFAULT true,
     created_at timestamptz NOT NULL DEFAULT now(),
     updated_at timestamptz NOT NULL DEFAULT now(),
-    CONSTRAINT tags_tag_type_valid CHECK (tag_type IN ('THEME', 'MOOD', 'OCCASION', 'SCRIPTURE', 'SEASON', 'MUSICAL_STYLE', 'AUDIENCE')),
+    CONSTRAINT tags_tag_type_valid CHECK (tag_type IN ('THEME', 'SCRIPTURE', 'LITURGICAL_SEASON', 'SONG_ROLE', 'MOOD', 'STYLE', 'TOPIC')),
     CONSTRAINT tags_name_not_blank CHECK (btrim(name) <> ''),
     CONSTRAINT tags_slug_not_blank CHECK (btrim(slug) <> ''),
-    CONSTRAINT tags_sort_order_non_negative CHECK (sort_order >= 0),
     CONSTRAINT tags_updated_at_not_before_created_at CHECK (updated_at >= created_at),
-    CONSTRAINT tags_tag_type_slug_unique UNIQUE (tag_type, slug),
-    CONSTRAINT tags_tag_type_id_unique UNIQUE (tag_type, id)
+    CONSTRAINT tags_tag_type_slug_unique UNIQUE (tag_type, slug)
 );
 
-CREATE UNIQUE INDEX tags_tag_type_lower_name_unique_idx ON tags (tag_type, lower(name));
 CREATE INDEX tags_name_idx ON tags (name);
 CREATE INDEX tags_slug_idx ON tags (slug);
-CREATE INDEX tags_tag_type_name_idx ON tags (tag_type, name);
-CREATE INDEX tags_tag_type_slug_idx ON tags (tag_type, slug);
 CREATE INDEX tags_tag_type_idx ON tags (tag_type);
 CREATE INDEX tags_is_active_idx ON tags (is_active);
-
-CREATE TABLE tag_aliases (
-    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    tag_type varchar(32) NOT NULL,
-    tag_id uuid NOT NULL,
-    alias_name varchar(128) NOT NULL,
-    alias_slug varchar(128) NOT NULL,
-    created_at timestamptz NOT NULL DEFAULT now(),
-    CONSTRAINT tag_aliases_tag_type_valid CHECK (tag_type IN ('THEME', 'MOOD', 'OCCASION', 'SCRIPTURE', 'SEASON', 'MUSICAL_STYLE', 'AUDIENCE')),
-    CONSTRAINT tag_aliases_alias_name_not_blank CHECK (btrim(alias_name) <> ''),
-    CONSTRAINT tag_aliases_alias_slug_not_blank CHECK (btrim(alias_slug) <> ''),
-    CONSTRAINT tag_aliases_tag_type_tag_id_fkey FOREIGN KEY (tag_type, tag_id)
-        REFERENCES tags (tag_type, id) ON DELETE RESTRICT,
-    CONSTRAINT tag_aliases_tag_type_alias_slug_unique UNIQUE (tag_type, alias_slug)
-);
-
-CREATE UNIQUE INDEX tag_aliases_tag_type_lower_alias_name_unique_idx ON tag_aliases (tag_type, lower(alias_name));
-CREATE INDEX tag_aliases_tag_id_idx ON tag_aliases (tag_id);
-CREATE INDEX tag_aliases_tag_type_alias_slug_idx ON tag_aliases (tag_type, alias_slug);
 
 CREATE TABLE song_tags (
     song_id uuid NOT NULL REFERENCES songs (id) ON DELETE CASCADE,
@@ -173,16 +148,6 @@ CREATE TABLE arrangement_tags (
 
 CREATE INDEX arrangement_tags_arrangement_id_idx ON arrangement_tags (arrangement_id);
 CREATE INDEX arrangement_tags_tag_id_idx ON arrangement_tags (tag_id);
-
-CREATE TABLE lyrics_document_tags (
-    lyrics_document_id uuid NOT NULL REFERENCES lyrics_documents (id) ON DELETE CASCADE,
-    tag_id uuid NOT NULL REFERENCES tags (id) ON DELETE RESTRICT,
-    created_at timestamptz NOT NULL DEFAULT now(),
-    PRIMARY KEY (lyrics_document_id, tag_id)
-);
-
-CREATE INDEX lyrics_document_tags_lyrics_document_id_idx ON lyrics_document_tags (lyrics_document_id);
-CREATE INDEX lyrics_document_tags_tag_id_idx ON lyrics_document_tags (tag_id);
 
 CREATE TABLE import_batches (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -321,17 +286,9 @@ COMMENT ON COLUMN tags.tag_type IS 'Controlled taxonomy category for the tag.';
 COMMENT ON COLUMN tags.name IS 'Human-readable tag name.';
 COMMENT ON COLUMN tags.slug IS 'Stable normalized tag slug unique within the tag type.';
 COMMENT ON COLUMN tags.description IS 'Optional explanation of how the tag should be applied.';
-COMMENT ON COLUMN tags.sort_order IS 'Admin-managed display order within a tag type; lower values sort first.';
 COMMENT ON COLUMN tags.is_active IS 'Whether this tag is active for catalog workflows.';
 COMMENT ON COLUMN tags.created_at IS 'Database timestamp when the tag was created.';
 COMMENT ON COLUMN tags.updated_at IS 'Database timestamp when the tag was last updated.';
-
-COMMENT ON TABLE tag_aliases IS 'Controlled alternate names for canonical taxonomy tags; aliases resolve to existing tags and never create production tags automatically.';
-COMMENT ON COLUMN tag_aliases.tag_type IS 'Tag type copied from the canonical tag to enforce alias uniqueness within each type.';
-COMMENT ON COLUMN tag_aliases.tag_id IS 'Canonical tag represented by this alias.';
-COMMENT ON COLUMN tag_aliases.alias_name IS 'Human-readable alternate tag name accepted for lookup or admin review.';
-COMMENT ON COLUMN tag_aliases.alias_slug IS 'Stable normalized alias slug unique within the tag type.';
-COMMENT ON COLUMN tag_aliases.created_at IS 'Database timestamp when the alias was created.';
 
 COMMENT ON TABLE song_tags IS 'Many-to-many mapping between canonical songs and taxonomy tags.';
 COMMENT ON COLUMN song_tags.song_id IS 'Canonical song assigned to the tag.';
@@ -342,11 +299,6 @@ COMMENT ON TABLE arrangement_tags IS 'Many-to-many mapping between arrangements 
 COMMENT ON COLUMN arrangement_tags.arrangement_id IS 'Arrangement assigned to the tag.';
 COMMENT ON COLUMN arrangement_tags.tag_id IS 'Tag assigned to the arrangement.';
 COMMENT ON COLUMN arrangement_tags.created_at IS 'Database timestamp when the arrangement-tag mapping was created.';
-
-COMMENT ON TABLE lyrics_document_tags IS 'Many-to-many mapping between lyrics documents and taxonomy tags.';
-COMMENT ON COLUMN lyrics_document_tags.lyrics_document_id IS 'Lyrics document assigned to the tag.';
-COMMENT ON COLUMN lyrics_document_tags.tag_id IS 'Tag assigned to the lyrics document.';
-COMMENT ON COLUMN lyrics_document_tags.created_at IS 'Database timestamp when the lyrics-document-tag mapping was created.';
 
 COMMENT ON TABLE import_batches IS 'Auditable batches for catalog import or fixture loading workflows.';
 COMMENT ON COLUMN import_batches.id IS 'Database-generated import batch identifier.';

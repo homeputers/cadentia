@@ -11,8 +11,7 @@ SELECT
     arrangements.time_signature,
     arrangements.energy_level AS energy,
     COALESCE(
-        array_agg(DISTINCT assigned_tags.slug::text ORDER BY assigned_tags.slug::text)
-            FILTER (WHERE assigned_tags.slug IS NOT NULL),
+        array_agg(DISTINCT tags.slug::text ORDER BY tags.slug::text) FILTER (WHERE tags.id IS NOT NULL),
         ARRAY[]::text[]
     ) AS tags,
     song_doctrinal_approval.status AS song_doctrinal_status,
@@ -60,25 +59,10 @@ JOIN approval_records lyrics_licensing_approval
   ON lyrics_licensing_approval.lyrics_document_id = lyrics_documents.id
  AND lyrics_licensing_approval.approval_type = 'LICENSING'
  AND lyrics_licensing_approval.status = 'APPROVED'
-LEFT JOIN LATERAL (
-    SELECT tags.slug
-    FROM song_tags
-    JOIN tags ON tags.id = song_tags.tag_id
-    WHERE song_tags.song_id = songs.id
-      AND tags.is_active
-    UNION
-    SELECT tags.slug
-    FROM arrangement_tags
-    JOIN tags ON tags.id = arrangement_tags.tag_id
-    WHERE arrangement_tags.arrangement_id = arrangements.id
-      AND tags.is_active
-    UNION
-    SELECT tags.slug
-    FROM lyrics_document_tags
-    JOIN tags ON tags.id = lyrics_document_tags.tag_id
-    WHERE lyrics_document_tags.lyrics_document_id = lyrics_documents.id
-      AND tags.is_active
-) assigned_tags ON true
+LEFT JOIN arrangement_tags ON arrangement_tags.arrangement_id = arrangements.id
+LEFT JOIN tags
+  ON tags.id = arrangement_tags.tag_id
+ AND tags.is_active
 WHERE arrangements.is_active
   AND songs.song_status <> 'ARCHIVED'
   AND arrangements.musical_key IS NOT NULL
@@ -102,7 +86,7 @@ GROUP BY
 COMMENT ON VIEW v_recommendable_arrangements IS
     'Approval-gated recommendation candidate read model. Rows exist only when all required song, arrangement, and current lyrics approvals are approved.';
 COMMENT ON COLUMN v_recommendable_arrangements.tags IS
-    'Deterministically ordered active tag slugs assigned to the song, arrangement, or current lyrics document for transparent candidate filtering.';
+    'Deterministically ordered active arrangement tag slugs for transparent candidate filtering.';
 COMMENT ON COLUMN v_recommendable_arrangements.key_mode IS
     'Major/minor mode for deterministic recommendation key policy and relative-key evaluation.';
 COMMENT ON COLUMN v_recommendable_arrangements.song_doctrinal_status IS
