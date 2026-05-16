@@ -50,6 +50,7 @@ import com.cadentia.catalog.service.CatalogService;
 import com.cadentia.catalog.transposition.MusicalKey;
 import com.cadentia.scraperadmin.CatalogSongCandidate;
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.assertj.core.groups.Tuple;
@@ -200,6 +201,33 @@ class JdbcSongRepositoryIntegrationTest {
                         "Duplicate canonical name",
                         true)))
                 .hasMessageContaining("tags_tag_type_lower_name_unique_idx");
+    }
+
+    @Test
+    void migrationsSeedInitialControlledVocabularyForEveryTagType() {
+        // Arrange / Act
+        List<Map<String, Object>> seededTags = jdbcTemplate.queryForList("""
+                SELECT tag_type, name, slug, sort_order, is_active
+                FROM tags
+                WHERE id::text LIKE '0f0d9f53-9347-4d7e-a0a0-916571f6f00%'
+                ORDER BY tag_type, sort_order, slug
+                """, Map.of());
+
+        // Assert
+        assertThat(seededTags)
+                .extracting(
+                        row -> row.get("tag_type"),
+                        row -> row.get("name"),
+                        row -> row.get("slug"),
+                        row -> row.get("is_active"))
+                .containsExactlyInAnyOrder(
+                        Tuple.tuple("THEME", "Gratitude", "theme-gratitude", true),
+                        Tuple.tuple("MOOD", "Celebratory", "mood-celebratory", true),
+                        Tuple.tuple("OCCASION", "Gathering", "occasion-gathering", true),
+                        Tuple.tuple("SCRIPTURE", "Psalms", "scripture-psalms", true),
+                        Tuple.tuple("SEASON", "Year Round", "season-year-round", true),
+                        Tuple.tuple("MUSICAL_STYLE", "Contemporary", "musical-style-contemporary", true),
+                        Tuple.tuple("AUDIENCE", "Congregation", "audience-congregation", true));
     }
 
     @Test

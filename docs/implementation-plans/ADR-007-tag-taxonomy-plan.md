@@ -64,6 +64,13 @@ Create seed or fixture data for the initial controlled vocabulary, including rep
 - Do not include user-specific local church vocabulary as global defaults.
 - Do not mark AI-suggested tags as canonical without admin review.
 
+### Implemented scope
+
+- Added Flyway production seed migration `V009__seed_controlled_tag_vocabulary.sql` with one broad starter tag for every ADR-007 tag type.
+- Seed rows use fixed UUIDs, stable slugs, active lifecycle state, and sort order for deterministic references.
+- Production seeds remain under main Flyway migrations, while test-only catalog fixtures remain under `apps/api/src/test/resources/db/fixtures`.
+- Added migration coverage that verifies the starter vocabulary is present and the existing schema check rejects duplicate canonical names within the same tag type.
+
 ## Subtask 3: Implement admin tag management operations
 
 ### Context
