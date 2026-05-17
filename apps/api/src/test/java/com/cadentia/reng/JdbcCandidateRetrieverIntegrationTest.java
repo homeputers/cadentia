@@ -162,6 +162,45 @@ class JdbcCandidateRetrieverIntegrationTest {
                 .doesNotContain(excluded.arrangement().id());
     }
 
+    @Test
+    void findCandidatesSupportsEnergyAndApprovalStatusFilters() {
+        // Arrange
+        CatalogContent lowEnergy = createCatalogContent("energy-low", 2);
+        approveAllRequiredGates(lowEnergy, ApprovalStatus.APPROVED);
+        CatalogContent matchingEnergy = createCatalogContent("energy-match", 4);
+        approveAllRequiredGates(matchingEnergy, ApprovalStatus.APPROVED);
+
+        // Act
+        List<RecommendableArrangement> approvedCandidates = candidateRetriever.findCandidates(new CandidateSearchCriteria(
+                null,
+                List.of(),
+                null,
+                null,
+                4,
+                5,
+                List.of(),
+                List.of(),
+                ApprovalStatus.APPROVED));
+        List<RecommendableArrangement> pendingCandidates = candidateRetriever.findCandidates(new CandidateSearchCriteria(
+                null,
+                List.of(),
+                null,
+                null,
+                4,
+                5,
+                List.of(),
+                List.of(),
+                ApprovalStatus.PENDING));
+
+        // Assert
+        assertThat(approvedCandidates)
+                .extracting(RecommendableArrangement::arrangementId)
+                .contains(matchingEnergy.arrangement().id())
+                .doesNotContain(lowEnergy.arrangement().id());
+        assertThat(pendingCandidates)
+                .extracting(RecommendableArrangement::arrangementId)
+                .doesNotContain(matchingEnergy.arrangement().id(), lowEnergy.arrangement().id());
+    }
 
     @Test
     void findCandidatesSupportsIncludeAnyControlledTagFilters() {
@@ -261,6 +300,10 @@ class JdbcCandidateRetrieverIntegrationTest {
     }
 
     private CatalogContent createCatalogContent(String slug) {
+        return createCatalogContent(slug, 3);
+    }
+
+    private CatalogContent createCatalogContent(String slug, int energyLevel) {
         Song song = songRepository.createSong(new CreateSongCommand(
                 "Fixture Song " + slug,
                 "fixture-song-" + slug,
@@ -282,7 +325,7 @@ class JdbcCandidateRetrieverIntegrationTest {
                 96,
                 "4/4",
                 240,
-                3,
+                energyLevel,
                 2,
                 true,
                 true));

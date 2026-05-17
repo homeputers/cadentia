@@ -55,6 +55,17 @@ public class JdbcCandidateRetriever implements CandidateRetriever {
             sql.append(" AND bpm <= :maxBpm");
             params.addValue("maxBpm", criteria.maxBpm());
         }
+        if (criteria.minEnergy() != null) {
+            sql.append(" AND energy >= :minEnergy");
+            params.addValue("minEnergy", criteria.minEnergy());
+        }
+        if (criteria.maxEnergy() != null) {
+            sql.append(" AND energy <= :maxEnergy");
+            params.addValue("maxEnergy", criteria.maxEnergy());
+        }
+        if (criteria.requiredApprovalStatus() != null) {
+            appendApprovalStatusFilter(sql, params, criteria.requiredApprovalStatus());
+        }
         if (!criteria.includeAnyTags().isEmpty()) {
             appendIncludeAnyTagFilter(sql, params, criteria.includeAnyTags());
         }
@@ -65,6 +76,19 @@ public class JdbcCandidateRetriever implements CandidateRetriever {
         sql.append(" ORDER BY title, arrangement_id");
         List<RecommendableArrangement> candidates = jdbcTemplate.query(sql.toString(), params, candidateMapper());
         return enrichWithControlledTags(candidates, criteria);
+    }
+
+    private static void appendApprovalStatusFilter(
+            StringBuilder sql, MapSqlParameterSource params, ApprovalStatus requiredApprovalStatus) {
+        sql.append(" AND song_doctrinal_status = :requiredApprovalStatus")
+                .append(" AND song_editorial_status = :requiredApprovalStatus")
+                .append(" AND song_licensing_status = :requiredApprovalStatus")
+                .append(" AND arrangement_musical_status = :requiredApprovalStatus")
+                .append(" AND arrangement_editorial_status = :requiredApprovalStatus")
+                .append(" AND lyrics_doctrinal_status = :requiredApprovalStatus")
+                .append(" AND lyrics_editorial_status = :requiredApprovalStatus")
+                .append(" AND lyrics_licensing_status = :requiredApprovalStatus");
+        params.addValue("requiredApprovalStatus", requiredApprovalStatus.name());
     }
 
     private static void appendIncludeAnyTagFilter(
