@@ -102,8 +102,10 @@ class JdbcCandidateRetrieverIntegrationTest {
         // Arrange
         CatalogContent content = createCatalogContent("approved-detail");
         approveAllRequiredGates(content, ApprovalStatus.APPROVED);
+        addSongTag(content.song(), TagType.THEME, "Adoration", "adoration", true);
         addArrangementTag(content.arrangement(), "theme", "thanksgiving");
         addArrangementTag(content.arrangement(), "liturgical", "gathering");
+        addLyricsDocumentTag(content.lyricsDocument(), TagType.THEME, "Grace", "grace", true);
         addArrangementTag(content.arrangement(), "inactive", "aaa-inactive", false);
 
         // Act
@@ -116,11 +118,13 @@ class JdbcCandidateRetrieverIntegrationTest {
             assertThat(candidate.currentLyricsDocumentId()).isEqualTo(content.lyricsDocument().id());
             assertThat(candidate.musicalKey()).isEqualTo("G");
             assertThat(candidate.keyMode()).isEqualTo(KeyMode.MAJOR);
-            assertThat(candidate.tags()).containsExactly("gathering", "thanksgiving");
+            assertThat(candidate.tags()).containsExactly("adoration", "gathering", "grace", "thanksgiving");
             assertThat(candidate.controlledTags())
                     .extracting(RecommendationTag::tagType, RecommendationTag::slug, RecommendationTag::name)
                     .containsExactly(
+                            org.assertj.core.groups.Tuple.tuple(TagType.THEME, "adoration", "Adoration"),
                             org.assertj.core.groups.Tuple.tuple(TagType.THEME, "gathering", "liturgical gathering"),
+                            org.assertj.core.groups.Tuple.tuple(TagType.THEME, "grace", "Grace"),
                             org.assertj.core.groups.Tuple.tuple(TagType.THEME, "thanksgiving", "theme thanksgiving"));
             assertThat(candidate.matchedTags())
                     .extracting(RecommendationTag::tagType, RecommendationTag::slug, RecommendationTag::name)
@@ -323,6 +327,19 @@ class JdbcCandidateRetrieverIntegrationTest {
                 "Private approval note must not be exposed by v_recommendable_arrangements."));
     }
 
+    private Tag addSongTag(Song song, TagType tagType, String name, String slug, boolean active) {
+        Tag tag = createTag(tagType, name, slug, active);
+        songRepository.addTagToSong(song.id(), tag.id());
+        return tag;
+    }
+
+    private Tag addLyricsDocumentTag(
+            LyricsDocument lyricsDocument, TagType tagType, String name, String slug, boolean active) {
+        Tag tag = createTag(tagType, name, slug, active);
+        songRepository.addTagToLyricsDocument(lyricsDocument.id(), tag.id());
+        return tag;
+    }
+
     private Tag addArrangementTag(Arrangement arrangement, String slugPrefix, String slug) {
         return addArrangementTag(arrangement, slugPrefix, slug, true);
     }
@@ -333,14 +350,18 @@ class JdbcCandidateRetrieverIntegrationTest {
 
     private Tag addArrangementTag(
             Arrangement arrangement, TagType tagType, String name, String slug, boolean active) {
-        Tag tag = songRepository.createTag(new CreateTagCommand(
+        Tag tag = createTag(tagType, name, slug, active);
+        songRepository.addTagToArrangement(arrangement.id(), tag.id());
+        return tag;
+    }
+
+    private Tag createTag(TagType tagType, String name, String slug, boolean active) {
+        return songRepository.createTag(new CreateTagCommand(
                 tagType,
                 name,
                 slug,
                 "Fixture tag",
                 active));
-        songRepository.addTagToArrangement(arrangement.id(), tag.id());
-        return tag;
     }
 
     private record CatalogContent(Song song, Arrangement arrangement, LyricsDocument lyricsDocument) {
