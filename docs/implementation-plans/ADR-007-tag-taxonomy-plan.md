@@ -152,6 +152,14 @@ Update candidate retrieval and reporting queries to use controlled tag assignmen
 - Do not use semantic similarity as a substitute for controlled tag matching in the initial implementation.
 - Do not include unapproved arrangements in tag-filtered recommendation candidates.
 
+### Implemented scope
+
+- Added typed recommendation tag filters that require a controlled tag type plus either canonical tag ID or canonical slug.
+- Updated candidate retrieval to apply include-any and include-all filters through approved `v_recommendable_arrangement_tags` rows instead of raw tag strings.
+- Enriched recommendation candidates with controlled tag details and matched tag details for explainable output.
+- Added a reporting repository that groups approved recommendation candidates by canonical tag type, slug, and name.
+- Added migration and integration coverage for tag filtering, explainable matched tags, and approved-only tag usage reporting.
+
 ## Subtask 6: Document taxonomy governance
 
 ### Context
