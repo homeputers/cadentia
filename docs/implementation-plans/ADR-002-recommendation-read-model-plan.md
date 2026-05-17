@@ -144,3 +144,27 @@ Add tests, explain-plan notes, or benchmark scripts that validate the read model
 
 - Do not prematurely introduce cache invalidation or materialized refresh jobs.
 - Do not optimize by removing required approval or provenance data.
+
+### Subtask 4 implementation notes
+
+Implemented performance and correctness checks for the recommendation read model:
+
+- Correctness coverage lives in `JdbcCandidateRetrieverIntegrationTest` and verifies:
+  - unapproved or incompletely approved arrangements remain excluded from candidate retrieval;
+  - non-`APPROVED` approval statuses do not pass the approval gate;
+  - tag aggregation and controlled tag expansion stay deterministic;
+  - rows with matching titles use the stable `ORDER BY title, arrangement_id` tie-breaker.
+- Performance support lives in migration `V011__recommendable_read_model_performance_indexes.sql` and documents the source-table indexes needed by common candidate filters:
+  - active arrangement filters by language, key, BPM, and energy;
+  - approved song, arrangement, and current lyrics gates;
+  - active controlled tag type/slug filtering;
+  - reverse tag mapping lookups for song, arrangement, and lyrics tag filters/reports.
+- The existing `v_recommendable_arrangements` migration remains a normal SQL view. No materialized view, cache invalidation, or refresh job was introduced.
+
+Repeatable correctness command:
+
+```bash
+mvn -pl apps/api -Dtest=JdbcCandidateRetrieverIntegrationTest test
+```
+
+The integration test class uses Testcontainers PostgreSQL and is annotated with `@Testcontainers(disabledWithoutDocker = true)`, so the command runs the full read-model correctness checks when Docker is available and reports the checks as skipped in Docker-less environments.

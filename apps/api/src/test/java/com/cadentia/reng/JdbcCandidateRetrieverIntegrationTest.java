@@ -19,7 +19,10 @@ import com.cadentia.catalog.model.LyricsFormat;
 import com.cadentia.catalog.model.SongStatus;
 import com.cadentia.catalog.model.TagType;
 import com.cadentia.catalog.repository.JdbcSongRepository;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.BeforeEach;
@@ -41,6 +44,7 @@ class JdbcCandidateRetrieverIntegrationTest {
     private JdbcCandidateRetriever candidateRetriever;
     private JdbcTagReportingRepository tagReportingRepository;
     private JdbcSongRepository songRepository;
+    private NamedParameterJdbcTemplate jdbcTemplate;
 
     @BeforeEach
     void setUp() {
@@ -55,7 +59,7 @@ class JdbcCandidateRetrieverIntegrationTest {
                 .dataSource(dataSource)
                 .load()
                 .migrate();
-        NamedParameterJdbcTemplate jdbcTemplate = new NamedParameterJdbcTemplate(dataSource);
+        jdbcTemplate = new NamedParameterJdbcTemplate(dataSource);
         candidateRetriever = new JdbcCandidateRetriever(jdbcTemplate);
         tagReportingRepository = new JdbcTagReportingRepository(jdbcTemplate);
         songRepository = new JdbcSongRepository(jdbcTemplate);
@@ -269,6 +273,58 @@ class JdbcCandidateRetrieverIntegrationTest {
     }
 
     @Test
+    void findCandidatesUsesStableArrangementIdTieBreakerForMatchingTitles() {
+        // Arrange
+        CatalogContent first = createCatalogContent("stable-order-first", "Shared Fixture Title", 3);
+        approveAllRequiredGates(first, ApprovalStatus.APPROVED);
+        CatalogContent second = createCatalogContent("stable-order-second", "Shared Fixture Title", 3);
+        approveAllRequiredGates(second, ApprovalStatus.APPROVED);
+        List<UUID> expectedArrangementIds = List.of(first.arrangement().id(), second.arrangement().id())
+                .stream()
+                .sorted(Comparator.comparing(UUID::toString))
+                .toList();
+
+        // Act
+        List<RecommendableArrangement> candidates = candidateRetriever.findCandidates(defaultCriteria());
+
+        // Assert
+        assertThat(candidates)
+                .extracting(RecommendableArrangement::title)
+                .containsExactly("Shared Fixture Title", "Shared Fixture Title");
+        assertThat(candidates)
+                .extracting(RecommendableArrangement::arrangementId)
+                .containsExactlyElementsOf(expectedArrangementIds);
+    }
+
+    @Test
+    void recommendableReadModelPerformanceIndexesExist() {
+        // Arrange
+        Set<String> expectedIndexNames = Set.of(
+                "arrangements_recommendable_filter_idx",
+                "approval_records_song_approved_gate_idx",
+                "approval_records_arrangement_approved_gate_idx",
+                "approval_records_lyrics_approved_gate_idx",
+                "tags_active_type_slug_idx",
+                "song_tags_tag_song_idx",
+                "arrangement_tags_tag_arrangement_idx",
+                "lyrics_document_tags_tag_lyrics_document_idx");
+
+        // Act
+        Set<String> actualIndexNames = Set.copyOf(jdbcTemplate.queryForList(
+                """
+                        SELECT indexname
+                        FROM pg_indexes
+                        WHERE schemaname = 'public'
+                          AND indexname IN (:indexNames)
+                        """,
+                Map.of("indexNames", expectedIndexNames),
+                String.class));
+
+        // Assert
+        assertThat(actualIndexNames).containsExactlyInAnyOrderElementsOf(expectedIndexNames);
+    }
+
+    @Test
     void tagUsageReportGroupsApprovedRecommendationCandidatesByControlledTag() {
         // Arrange
         CatalogContent first = createCatalogContent("tag-report-first");
@@ -304,8 +360,12 @@ class JdbcCandidateRetrieverIntegrationTest {
     }
 
     private CatalogContent createCatalogContent(String slug, int energyLevel) {
+        return createCatalogContent(slug, "Fixture Song " + slug, energyLevel);
+    }
+
+    private CatalogContent createCatalogContent(String slug, String canonicalTitle, int energyLevel) {
         Song song = songRepository.createSong(new CreateSongCommand(
-                "Fixture Song " + slug,
+                canonicalTitle,
                 "fixture-song-" + slug,
                 "en",
                 "Fixture Artist",
