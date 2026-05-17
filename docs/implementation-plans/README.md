@@ -31,6 +31,10 @@ Each plan is written as a sequence of AI-agent-ready subtasks. Every subtask inc
 - [Approval Operations and Audit Expectations](../approval-operations.md) documents
   ADR-005 approval types, statuses, audit metadata, transition rules,
   recommendation gating, and LLM safety boundaries.
+- [Tag Taxonomy Governance](../tag-taxonomy-governance.md) documents
+  ADR-007 tag types, controlled-vocabulary lifecycle, assignment rules,
+  admin workflows, import handling, recommendation/reporting usage, and
+  LLM boundaries.
 
 ## Recommended implementation order
 
