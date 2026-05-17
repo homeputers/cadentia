@@ -25,6 +25,46 @@ Inspect the implemented source-of-truth schema and identify the exact tables and
 - Opens follow-up schema tasks for missing fields instead of working around them with nullable placeholders.
 - Documents approval gating requirements for the read model.
 
+### Source schema dependency confirmation
+
+Confirmed against implemented migrations `V002__core_catalog_schema.sql`,
+`V006__approval_schema_constraints_and_transitions.sql`, and
+`V008__controlled_tag_taxonomy_schema.sql`. The source-of-truth dependencies for
+`v_recommendable_arrangements` are:
+
+| Read-model concern | Source table(s) | Required column(s) | Notes |
+| --- | --- | --- | --- |
+| Arrangement identity | `arrangements` | `id` | Exposed as `arrangement_id`. |
+| Canonical song identity | `arrangements`, `songs` | `arrangements.song_id`, `songs.id` | Join `songs.id = arrangements.song_id`; expose `songs.id` as `song_id`. |
+| Current lyrics identity | `lyrics_documents` | `id`, `arrangement_id`, `is_current` | Required for lyrics approval gating and lyrics-level tag aggregation; expose `id` as `current_lyrics_document_id`. |
+| Display title | `songs` | `canonical_title` | Useful for candidate explainability and deterministic display; not used for song invention. |
+| Language | `arrangements` | `language` | ADR field is present on arrangements; `songs.primary_language` remains canonical-song metadata but should not replace arrangement language for translations. |
+| Key and mode | `arrangements` | `musical_key`, `key_mode` | ADR requires key; `key_mode` is also needed for relative major/minor policy. Recommendable rows must require non-null key and `MAJOR`/`MINOR` mode. |
+| BPM | `arrangements` | `tempo_bpm` | Expose as `bpm`; recommendable rows must require non-null BPM. |
+| Time signature | `arrangements` | `time_signature` | Recommendable rows must require non-null time signature. |
+| Energy | `arrangements` | `energy_level` | Expose as `energy`; recommendable rows must require non-null energy. |
+| Active catalog filtering | `arrangements`, `songs` | `arrangements.is_active`, `songs.song_status` | Recommendable rows must include only active arrangements and exclude archived songs. |
+| Aggregated tags | `song_tags`, `arrangement_tags`, `lyrics_document_tags`, `tags` | `*_tags.*_id`, `*_tags.tag_id`, `tags.id`, `tags.slug`, `tags.is_active` | Aggregate active tag slugs from song, arrangement, and current lyrics document scopes in stable slug order. |
+| Approval flags | `approval_records` | `song_id`, `arrangement_id`, `lyrics_document_id`, `approval_type`, `status` | Expose approval statuses for the required approval joins. |
+
+All ADR-required fields are present in the implemented source schema. No
+follow-up schema task is required before creating or maintaining the view, and
+no nullable placeholders are needed for ADR-required fields.
+
+Approval gating requirements:
+
+- Join `approval_records` once per required approval type and entity scope; do
+  not derive eligibility from `songs.song_status` alone.
+- Song-level approvals required: `DOCTRINAL`, `EDITORIAL`, and `LICENSING`,
+  each with `status = 'APPROVED'`.
+- Arrangement-level approvals required: `MUSICAL` and `EDITORIAL`, each with
+  `status = 'APPROVED'`.
+- Current lyrics-document approvals required: `DOCTRINAL`, `EDITORIAL`, and
+  `LICENSING`, each with `status = 'APPROVED'`.
+- The source schema constrains approval records to exactly one entity scope and
+  has one approval row per entity/type, so the view should use explicit joins
+  rather than selecting an arbitrary approval record.
+
 ### Restrictions
 
 - Do not create the view against incomplete or guessed column names.
