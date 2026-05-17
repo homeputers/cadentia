@@ -182,3 +182,10 @@ Document tag types, vocabulary governance, assignment rules, admin workflows, im
 
 - Do not document free-form production tagging as supported.
 - Do not describe unimplemented semantic tagging as active behavior.
+
+### Implemented scope
+
+- Added `docs/tag-taxonomy-governance.md` as the operator-facing governance guide for ADR-007.
+- The guide lists the seven implemented tag types exactly as the Java enum and database checks define them.
+- Documented the proposal, review, creation, edit, deactivation, assignment, import, LLM, recommendation, and reporting rules for controlled taxonomy changes.
+- Linked schema migrations, seed data, repository/service/admin-operation boundaries, recommendation/reporting code, and tests that enforce taxonomy behavior.
