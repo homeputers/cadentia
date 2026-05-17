@@ -2,11 +2,16 @@ package com.cadentia.reng;
 
 import com.cadentia.catalog.model.ApprovalStatus;
 import com.cadentia.catalog.model.KeyMode;
+import com.cadentia.catalog.model.TagType;
 import java.sql.Array;
 import java.sql.SQLException;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -50,26 +55,100 @@ public class JdbcCandidateRetriever implements CandidateRetriever {
             sql.append(" AND bpm <= :maxBpm");
             params.addValue("maxBpm", criteria.maxBpm());
         }
-        if (criteria.requiredTags() != null && !criteria.requiredTags().isEmpty()) {
-            appendRequiredTagFilter(sql, params, criteria.requiredTags());
+        if (!criteria.includeAnyTags().isEmpty()) {
+            appendIncludeAnyTagFilter(sql, params, criteria.includeAnyTags());
+        }
+        if (!criteria.includeAllTags().isEmpty()) {
+            appendIncludeAllTagFilters(sql, params, criteria.includeAllTags());
         }
 
         sql.append(" ORDER BY title, arrangement_id");
-        return jdbcTemplate.query(sql.toString(), params, candidateMapper());
+        List<RecommendableArrangement> candidates = jdbcTemplate.query(sql.toString(), params, candidateMapper());
+        return enrichWithControlledTags(candidates, criteria);
     }
 
-    private static void appendRequiredTagFilter(
-            StringBuilder sql, MapSqlParameterSource params, List<String> requiredTags) {
-        sql.append(" AND tags::text[] @> ARRAY[");
-        for (int i = 0; i < requiredTags.size(); i++) {
+    private static void appendIncludeAnyTagFilter(
+            StringBuilder sql, MapSqlParameterSource params, List<TagFilter> tagFilters) {
+        sql.append(" AND EXISTS (SELECT 1 FROM v_recommendable_arrangement_tags candidate_tags ")
+                .append("WHERE candidate_tags.arrangement_id = v_recommendable_arrangements.arrangement_id AND (");
+        for (int i = 0; i < tagFilters.size(); i++) {
             if (i > 0) {
-                sql.append(", ");
+                sql.append(" OR ");
             }
-            String paramName = "requiredTag" + i;
-            sql.append(':').append(paramName);
-            params.addValue(paramName, requiredTags.get(i));
+            appendTagPredicate(sql, params, tagFilters.get(i), "includeAnyTag" + i);
         }
-        sql.append("]::text[]");
+        sql.append("))");
+    }
+
+    private static void appendIncludeAllTagFilters(
+            StringBuilder sql, MapSqlParameterSource params, List<TagFilter> tagFilters) {
+        for (int i = 0; i < tagFilters.size(); i++) {
+            sql.append(" AND EXISTS (SELECT 1 FROM v_recommendable_arrangement_tags candidate_tags ")
+                    .append("WHERE candidate_tags.arrangement_id = v_recommendable_arrangements.arrangement_id AND ");
+            appendTagPredicate(sql, params, tagFilters.get(i), "includeAllTag" + i);
+            sql.append(')');
+        }
+    }
+
+    private static void appendTagPredicate(
+            StringBuilder sql, MapSqlParameterSource params, TagFilter tagFilter, String prefix) {
+        String typeParam = prefix + "Type";
+        sql.append("candidate_tags.tag_type = :").append(typeParam);
+        params.addValue(typeParam, tagFilter.tagType().name());
+        if (tagFilter.tagId() != null) {
+            String idParam = prefix + "Id";
+            sql.append(" AND candidate_tags.tag_id = :").append(idParam);
+            params.addValue(idParam, tagFilter.tagId());
+        } else {
+            String slugParam = prefix + "Slug";
+            sql.append(" AND candidate_tags.tag_slug = :").append(slugParam);
+            params.addValue(slugParam, tagFilter.slug());
+        }
+    }
+
+    private List<RecommendableArrangement> enrichWithControlledTags(
+            List<RecommendableArrangement> candidates,
+            CandidateSearchCriteria criteria) {
+        if (candidates.isEmpty()) {
+            return List.of();
+        }
+        List<UUID> arrangementIds = candidates.stream()
+                .map(RecommendableArrangement::arrangementId)
+                .toList();
+        Map<UUID, List<RecommendationTag>> tagsByArrangementId = jdbcTemplate.query(
+                        "SELECT arrangement_id, tag_id, tag_type, tag_name, tag_slug "
+                                + "FROM v_recommendable_arrangement_tags "
+                                + "WHERE arrangement_id IN (:arrangementIds) "
+                                + "ORDER BY arrangement_id, tag_type, sort_order, tag_slug, tag_id",
+                        new MapSqlParameterSource("arrangementIds", arrangementIds),
+                        recommendationTagRowMapper())
+                .stream()
+                .collect(Collectors.groupingBy(
+                        RecommendationTagRow::arrangementId,
+                        Collectors.mapping(RecommendationTagRow::tag, Collectors.toList())));
+        List<TagFilter> requestedTagFilters = requestedTagFilters(criteria);
+        return candidates.stream()
+                .map(candidate -> {
+                    List<RecommendationTag> controlledTags = tagsByArrangementId.getOrDefault(
+                            candidate.arrangementId(), List.of());
+                    List<RecommendationTag> matchedTags = controlledTags.stream()
+                            .filter(tag -> requestedTagFilters.stream().anyMatch(filter -> filter.matches(tag)))
+                            .toList();
+                    return candidate.withRecommendationTags(controlledTags, matchedTags);
+                })
+                .toList();
+    }
+
+    private static List<TagFilter> requestedTagFilters(CandidateSearchCriteria criteria) {
+        return java.util.stream.Stream.of(criteria.includeAnyTags(), criteria.includeAllTags())
+                .flatMap(Collection::stream)
+                .collect(Collectors.toMap(
+                        filter -> filter.tagType() + ":" + (filter.tagId() == null ? filter.slug() : filter.tagId()),
+                        Function.identity(),
+                        (first, ignored) -> first))
+                .values()
+                .stream()
+                .toList();
     }
 
     private static RowMapper<RecommendableArrangement> candidateMapper() {
@@ -96,11 +175,24 @@ public class JdbcCandidateRetriever implements CandidateRetriever {
                         ApprovalStatus.valueOf(rs.getString("lyrics_licensing_status"))));
     }
 
+    private static RowMapper<RecommendationTagRow> recommendationTagRowMapper() {
+        return (rs, rowNum) -> new RecommendationTagRow(
+                rs.getObject("arrangement_id", UUID.class),
+                new RecommendationTag(
+                        rs.getObject("tag_id", UUID.class),
+                        TagType.valueOf(rs.getString("tag_type")),
+                        rs.getString("tag_name"),
+                        rs.getString("tag_slug")));
+    }
+
     private static List<String> textArray(Array sqlArray) throws SQLException {
         if (sqlArray == null) {
             return List.of();
         }
         String[] values = (String[]) sqlArray.getArray();
         return List.copyOf(Arrays.asList(values));
+    }
+
+    private record RecommendationTagRow(UUID arrangementId, RecommendationTag tag) {
     }
 }

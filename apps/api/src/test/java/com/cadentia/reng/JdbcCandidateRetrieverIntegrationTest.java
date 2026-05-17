@@ -39,6 +39,7 @@ class JdbcCandidateRetrieverIntegrationTest {
     private static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine");
 
     private JdbcCandidateRetriever candidateRetriever;
+    private JdbcTagReportingRepository tagReportingRepository;
     private JdbcSongRepository songRepository;
 
     @BeforeEach
@@ -56,6 +57,7 @@ class JdbcCandidateRetrieverIntegrationTest {
                 .migrate();
         NamedParameterJdbcTemplate jdbcTemplate = new NamedParameterJdbcTemplate(dataSource);
         candidateRetriever = new JdbcCandidateRetriever(jdbcTemplate);
+        tagReportingRepository = new JdbcTagReportingRepository(jdbcTemplate);
         songRepository = new JdbcSongRepository(jdbcTemplate);
     }
 
@@ -106,7 +108,7 @@ class JdbcCandidateRetrieverIntegrationTest {
 
         // Act
         List<RecommendableArrangement> candidates = candidateRetriever.findCandidates(new CandidateSearchCriteria(
-                "en", List.of("G"), 90, 100, List.of("thanksgiving")));
+                "en", List.of("G"), 90, 100, List.of(), List.of(TagFilter.bySlug(TagType.THEME, "thanksgiving"))));
 
         // Assert
         assertThat(candidates).singleElement().satisfies(candidate -> {
@@ -115,6 +117,15 @@ class JdbcCandidateRetrieverIntegrationTest {
             assertThat(candidate.musicalKey()).isEqualTo("G");
             assertThat(candidate.keyMode()).isEqualTo(KeyMode.MAJOR);
             assertThat(candidate.tags()).containsExactly("gathering", "thanksgiving");
+            assertThat(candidate.controlledTags())
+                    .extracting(RecommendationTag::tagType, RecommendationTag::slug, RecommendationTag::name)
+                    .containsExactly(
+                            org.assertj.core.groups.Tuple.tuple(TagType.THEME, "gathering", "liturgical gathering"),
+                            org.assertj.core.groups.Tuple.tuple(TagType.THEME, "thanksgiving", "theme thanksgiving"));
+            assertThat(candidate.matchedTags())
+                    .extracting(RecommendationTag::tagType, RecommendationTag::slug, RecommendationTag::name)
+                    .containsExactly(org.assertj.core.groups.Tuple.tuple(
+                            TagType.THEME, "thanksgiving", "theme thanksgiving"));
             assertThat(candidate.approvalGateSummary()).isEqualTo(new ApprovalGateSummary(
                     ApprovalStatus.APPROVED,
                     ApprovalStatus.APPROVED,
@@ -138,7 +149,7 @@ class JdbcCandidateRetrieverIntegrationTest {
 
         // Act
         List<RecommendableArrangement> candidates = candidateRetriever.findCandidates(new CandidateSearchCriteria(
-                "en", List.of("G"), 94, 96, List.of("joy")));
+                "en", List.of("G"), 94, 96, List.of(), List.of(TagFilter.bySlug(TagType.THEME, "joy"))));
 
         // Assert
         assertThat(candidates)
@@ -147,8 +158,102 @@ class JdbcCandidateRetrieverIntegrationTest {
                 .doesNotContain(excluded.arrangement().id());
     }
 
+
+    @Test
+    void findCandidatesSupportsIncludeAnyControlledTagFilters() {
+        // Arrange
+        CatalogContent joy = createCatalogContent("include-any-joy");
+        approveAllRequiredGates(joy, ApprovalStatus.APPROVED);
+        addArrangementTag(joy.arrangement(), TagType.THEME, "Joy", "joy", true);
+        CatalogContent advent = createCatalogContent("include-any-advent");
+        approveAllRequiredGates(advent, ApprovalStatus.APPROVED);
+        addArrangementTag(advent.arrangement(), TagType.SEASON, "Advent", "advent", true);
+        CatalogContent excluded = createCatalogContent("include-any-excluded");
+        approveAllRequiredGates(excluded, ApprovalStatus.APPROVED);
+
+        // Act
+        List<RecommendableArrangement> candidates = candidateRetriever.findCandidates(new CandidateSearchCriteria(
+                null,
+                List.of(),
+                null,
+                null,
+                List.of(TagFilter.bySlug(TagType.THEME, "joy"), TagFilter.bySlug(TagType.SEASON, "advent")),
+                List.of()));
+
+        // Assert
+        assertThat(candidates)
+                .extracting(RecommendableArrangement::arrangementId)
+                .contains(joy.arrangement().id(), advent.arrangement().id())
+                .doesNotContain(excluded.arrangement().id());
+        assertThat(candidates)
+                .filteredOn(candidate -> candidate.arrangementId().equals(joy.arrangement().id()))
+                .singleElement()
+                .satisfies(candidate -> assertThat(candidate.matchedTags())
+                        .extracting(RecommendationTag::tagType, RecommendationTag::slug)
+                        .containsExactly(org.assertj.core.groups.Tuple.tuple(TagType.THEME, "joy")));
+    }
+
+    @Test
+    void findCandidatesSupportsIncludeAllControlledTagFiltersBySlugAndId() {
+        // Arrange
+        CatalogContent matching = createCatalogContent("include-all-match");
+        approveAllRequiredGates(matching, ApprovalStatus.APPROVED);
+        addArrangementTag(matching.arrangement(), TagType.THEME, "Joy", "joy", true);
+        Tag advent = addArrangementTag(matching.arrangement(), TagType.SEASON, "Advent", "advent", true);
+        CatalogContent missingSeason = createCatalogContent("include-all-missing-season");
+        approveAllRequiredGates(missingSeason, ApprovalStatus.APPROVED);
+        addArrangementTag(missingSeason.arrangement(), TagType.THEME, "Hope", "hope", true);
+
+        // Act
+        List<RecommendableArrangement> candidates = candidateRetriever.findCandidates(new CandidateSearchCriteria(
+                null,
+                List.of(),
+                null,
+                null,
+                List.of(),
+                List.of(TagFilter.bySlug(TagType.THEME, "joy"), TagFilter.byId(TagType.SEASON, advent.id()))));
+
+        // Assert
+        assertThat(candidates)
+                .extracting(RecommendableArrangement::arrangementId)
+                .contains(matching.arrangement().id())
+                .doesNotContain(missingSeason.arrangement().id());
+        assertThat(candidates).singleElement().satisfies(candidate -> assertThat(candidate.matchedTags())
+                .extracting(RecommendationTag::tagType, RecommendationTag::slug)
+                .containsExactly(
+                        org.assertj.core.groups.Tuple.tuple(TagType.SEASON, "advent"),
+                        org.assertj.core.groups.Tuple.tuple(TagType.THEME, "joy")));
+    }
+
+    @Test
+    void tagUsageReportGroupsApprovedRecommendationCandidatesByControlledTag() {
+        // Arrange
+        CatalogContent first = createCatalogContent("tag-report-first");
+        approveAllRequiredGates(first, ApprovalStatus.APPROVED);
+        Tag joy = addArrangementTag(first.arrangement(), TagType.THEME, "Joy", "joy", true);
+        addArrangementTag(first.arrangement(), TagType.SEASON, "Advent", "advent", true);
+        CatalogContent second = createCatalogContent("tag-report-second");
+        approveAllRequiredGates(second, ApprovalStatus.APPROVED);
+        songRepository.addTagToArrangement(second.arrangement().id(), joy.id());
+        CatalogContent unapproved = createCatalogContent("tag-report-unapproved");
+        songRepository.addTagToArrangement(unapproved.arrangement().id(), joy.id());
+
+        // Act
+        List<TagUsageReportRow> reportRows = tagReportingRepository.findRecommendableArrangementTagUsage();
+
+        // Assert
+        assertThat(reportRows)
+                .filteredOn(row -> row.tagType() == TagType.THEME && row.slug().equals("joy"))
+                .singleElement()
+                .satisfies(row -> {
+                    assertThat(row.tagId()).isEqualTo(joy.id());
+                    assertThat(row.name()).isEqualTo("Joy");
+                    assertThat(row.arrangementCount()).isEqualTo(2);
+                });
+    }
+
     private static CandidateSearchCriteria defaultCriteria() {
-        return new CandidateSearchCriteria(null, List.of(), null, null, List.of());
+        return new CandidateSearchCriteria(null, List.of(), null, null, List.of(), List.of());
     }
 
     private CatalogContent createCatalogContent(String slug) {
@@ -218,18 +323,24 @@ class JdbcCandidateRetrieverIntegrationTest {
                 "Private approval note must not be exposed by v_recommendable_arrangements."));
     }
 
-    private void addArrangementTag(Arrangement arrangement, String slugPrefix, String slug) {
-        addArrangementTag(arrangement, slugPrefix, slug, true);
+    private Tag addArrangementTag(Arrangement arrangement, String slugPrefix, String slug) {
+        return addArrangementTag(arrangement, slugPrefix, slug, true);
     }
 
-    private void addArrangementTag(Arrangement arrangement, String slugPrefix, String slug, boolean active) {
+    private Tag addArrangementTag(Arrangement arrangement, String slugPrefix, String slug, boolean active) {
+        return addArrangementTag(arrangement, TagType.THEME, slugPrefix + " " + slug, slug, active);
+    }
+
+    private Tag addArrangementTag(
+            Arrangement arrangement, TagType tagType, String name, String slug, boolean active) {
         Tag tag = songRepository.createTag(new CreateTagCommand(
-                TagType.THEME,
-                slugPrefix + " " + slug,
+                tagType,
+                name,
                 slug,
                 "Fixture tag",
                 active));
         songRepository.addTagToArrangement(arrangement.id(), tag.id());
+        return tag;
     }
 
     private record CatalogContent(Song song, Arrangement arrangement, LyricsDocument lyricsDocument) {
