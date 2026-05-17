@@ -47,6 +47,53 @@ Recommended reading order:
 12. ADR-012 — LLM intent extraction contract
 13. ADR-013 — recommendation explanation system
 
+## Phase 2 implementation order plan
+
+The proposed Phase 2 implementation order starts with the safety contracts and
+data flow foundations, then layers import, parsing, review, recommendation, and
+explanation features on top. The flow intentionally keeps unreviewed imported
+content out of recommendation paths until provenance, parser output, and
+approval gates are in place.
+
+```mermaid
+flowchart TD
+    P2([Phase 2 start]) --> S1[1. ADR-012\nIntent contract and schema validation]
+    S1 --> S2[2. ADR-008\nImport connector interfaces, jobs, and provenance gates]
+    S2 --> S3[3. ADR-009\nLyrics parsing and musical analysis pipeline]
+    S3 --> S4[4. ADR-011\nAdmin review, merge, approval, and rollback UI]
+    S4 --> S5[5. ADR-010\nRecommendation scoring phases and deterministic tie-breaking]
+    S5 --> S6[6. ADR-013\nStructured recommendation explanations]
+    S6 --> P2Done([Phase 2 exit criteria])
+
+    S2 -. depends on .-> A3[ADR-003\nStaged import and deduplication]
+    S3 -. depends on .-> A4[ADR-004\nLyrics storage format]
+    S4 -. depends on .-> A5[ADR-005\nApproval workflow]
+    S5 -. reads from .-> A2[ADR-002\nRecommendation read model]
+    S5 -. uses .-> A7[ADR-007\nControlled vocabulary]
+    S6 -. explains .-> S5
+```
+
+### Phase 2 milestones
+
+1. **Intent boundary first:** implement ADR-012 schemas, validation, defaults,
+   and retry/fallback behavior before exposing any recommendation endpoint to
+   natural-language requests.
+2. **Safe acquisition foundation:** implement ADR-008 connector abstractions,
+   import batches, job states, provenance requirements, and policy-blocked
+   connector behavior before adding provider-specific automation.
+3. **Recalculable musical metadata:** implement ADR-009 parser outputs as
+   versioned derived data so import review can display chord, section, key, BPM,
+   and confidence evidence without overwriting raw source documents.
+4. **Governance before eligibility:** implement ADR-011 review queues, merge
+   decisions, approval actions, audit trails, and rollback before any Phase 2
+   imported content can become recommendable.
+5. **Deterministic recommendation core:** implement ADR-010 scoring profiles,
+   hard filters, transition scoring, energy arc evaluation, and stable
+   tie-breaking only against approved read-model candidates.
+6. **Explainability last:** implement ADR-013 explanation facts after scoring
+   emits stable component scores and transition evidence, so user-facing
+   explanations remain grounded in deterministic engine output.
+
 ## Cross-cutting principles
 
 Across all ADRs, Cadentia follows these rules:
