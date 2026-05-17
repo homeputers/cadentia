@@ -11,6 +11,12 @@ This directory contains the Architecture Decision Records for Cadentia.
 - [ADR-005: Approval and Doctrinal Review Workflow](./ADR-005-approval-doctrinal-review.md)
 - [ADR-006: Arrangement Transposition Policy](./ADR-006-arrangement-transposition.md)
 - [ADR-007: Tag Taxonomy and Controlled Vocabulary Strategy](./ADR-007-tag-taxonomy.md)
+- [ADR-008: Song Acquisition and Import Connector Architecture](./ADR-008-song-acquisition-import-connector-architecture.md)
+- [ADR-009: Lyrics Parsing and Musical Analysis Pipeline](./ADR-009-lyrics-parsing-musical-analysis-pipeline.md)
+- [ADR-010: Recommendation Engine Scoring Architecture](./ADR-010-recommendation-engine-scoring-architecture.md)
+- [ADR-011: Admin Review and Catalog Governance UI](./ADR-011-admin-review-catalog-governance-ui.md)
+- [ADR-012: LLM Intent Extraction Contract](./ADR-012-llm-intent-extraction-contract.md)
+- [ADR-013: Recommendation Explanation System](./ADR-013-recommendation-explanation-system.md)
 
 
 ## Implemented schema artifacts
@@ -34,6 +40,12 @@ Recommended reading order:
 5. ADR-005 — approval and doctrinal review
 6. ADR-006 — arrangement transposition policy
 7. ADR-007 — taxonomy and controlled vocabulary
+8. ADR-008 — acquisition connectors and import lifecycle
+9. ADR-009 — lyrics parsing and musical analysis
+10. ADR-010 — recommendation scoring architecture
+11. ADR-011 — admin review and catalog governance UI
+12. ADR-012 — LLM intent extraction contract
+13. ADR-013 — recommendation explanation system
 
 ## Cross-cutting principles
 
