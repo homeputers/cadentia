@@ -49,28 +49,34 @@ Recommended reading order:
 
 ## Phase 2 implementation order plan
 
-The proposed Phase 2 implementation order starts with the safety contracts and
-data flow foundations, then layers import, parsing, review, recommendation, and
-explanation features on top. The flow intentionally keeps unreviewed imported
-content out of recommendation paths until provenance, parser output, and
-approval gates are in place.
+The Phase 2 implementation order starts with the safety contracts and data flow
+foundations, then layers import, parsing, deterministic recommendation,
+governance UI, and explanation features on top. The only adjustment from the
+initial proposal is to implement ADR-010 before the full ADR-011 UI: the scoring
+core can be built and tested safely against already-approved read-model
+candidates, while ADR-011 remains the mandatory gate before any newly imported
+Phase 2 content can become recommendable.
+
+Detailed task breakdowns live in
+[`docs/implementation-plans`](../implementation-plans/README.md).
 
 ```mermaid
 flowchart TD
     P2([Phase 2 start]) --> S1[1. ADR-012\nIntent contract and schema validation]
     S1 --> S2[2. ADR-008\nImport connector interfaces, jobs, and provenance gates]
     S2 --> S3[3. ADR-009\nLyrics parsing and musical analysis pipeline]
-    S3 --> S4[4. ADR-011\nAdmin review, merge, approval, and rollback UI]
-    S4 --> S5[5. ADR-010\nRecommendation scoring phases and deterministic tie-breaking]
+    S3 --> S4[4. ADR-010\nRecommendation scoring phases and deterministic tie-breaking]
+    S4 --> S5[5. ADR-011\nAdmin review, merge, approval, and rollback UI]
     S5 --> S6[6. ADR-013\nStructured recommendation explanations]
     S6 --> P2Done([Phase 2 exit criteria])
 
     S2 -. depends on .-> A3[ADR-003\nStaged import and deduplication]
     S3 -. depends on .-> A4[ADR-004\nLyrics storage format]
-    S4 -. depends on .-> A5[ADR-005\nApproval workflow]
-    S5 -. reads from .-> A2[ADR-002\nRecommendation read model]
-    S5 -. uses .-> A7[ADR-007\nControlled vocabulary]
-    S6 -. explains .-> S5
+    S4 -. reads from .-> A2[ADR-002\nRecommendation read model]
+    S4 -. uses .-> A7[ADR-007\nControlled vocabulary]
+    S5 -. depends on .-> A5[ADR-005\nApproval workflow]
+    S5 -. gates newly imported candidates entering .-> S4
+    S6 -. explains .-> S4
 ```
 
 ### Phase 2 milestones
@@ -84,12 +90,12 @@ flowchart TD
 3. **Recalculable musical metadata:** implement ADR-009 parser outputs as
    versioned derived data so import review can display chord, section, key, BPM,
    and confidence evidence without overwriting raw source documents.
-4. **Governance before eligibility:** implement ADR-011 review queues, merge
-   decisions, approval actions, audit trails, and rollback before any Phase 2
-   imported content can become recommendable.
-5. **Deterministic recommendation core:** implement ADR-010 scoring profiles,
+4. **Deterministic recommendation core:** implement ADR-010 scoring profiles,
    hard filters, transition scoring, energy arc evaluation, and stable
-   tie-breaking only against approved read-model candidates.
+   tie-breaking only against already-approved read-model candidates.
+5. **Governance before new-import eligibility:** implement ADR-011 review queues,
+   merge decisions, approval actions, audit trails, and rollback before any Phase
+   2 imported content can become recommendable.
 6. **Explainability last:** implement ADR-013 explanation facts after scoring
    emits stable component scores and transition evidence, so user-facing
    explanations remain grounded in deterministic engine output.

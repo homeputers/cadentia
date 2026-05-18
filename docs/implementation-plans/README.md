@@ -1,15 +1,19 @@
 # Implementation Plans Index
 
-This directory contains implementation plans for Cadentia Architecture Decision Records (ADRs).
+This directory contains implementation plans for Cadentia Architecture Decision
+Records (ADRs).
 
-Each plan is written as a sequence of AI-agent-ready subtasks. Every subtask includes:
+Each plan is written as a sequence of AI-agent-ready subtasks. Every subtask
+includes:
 
 - Context
 - Prompt
 - Acceptance criteria
 - Restrictions
 
-## Plan List
+## Plan list
+
+### Foundation plans
 
 - [ADR-001 Implementation Plan: Song Data Infrastructure and Storage Architecture](./ADR-001-song-data-infrastructure-plan.md)
 - [ADR-002 Implementation Plan: Recommendation Candidate Read Model Design](./ADR-002-recommendation-read-model-plan.md)
@@ -18,6 +22,15 @@ Each plan is written as a sequence of AI-agent-ready subtasks. Every subtask inc
 - [ADR-005 Implementation Plan: Approval and Doctrinal Review Workflow](./ADR-005-approval-doctrinal-review-plan.md)
 - [ADR-006 Implementation Plan: Arrangement Transposition Policy](./ADR-006-arrangement-transposition-plan.md)
 - [ADR-007 Implementation Plan: Tag Taxonomy and Controlled Vocabulary Strategy](./ADR-007-tag-taxonomy-plan.md)
+
+### Phase 2 plans
+
+- [ADR-012 Implementation Plan: LLM Intent Extraction Contract](./ADR-012-llm-intent-extraction-contract-plan.md)
+- [ADR-008 Implementation Plan: Song Acquisition and Import Connector Architecture](./ADR-008-song-acquisition-import-connector-architecture-plan.md)
+- [ADR-009 Implementation Plan: Lyrics Parsing and Musical Analysis Pipeline](./ADR-009-lyrics-parsing-musical-analysis-pipeline-plan.md)
+- [ADR-010 Implementation Plan: Recommendation Engine Scoring Architecture](./ADR-010-recommendation-engine-scoring-architecture-plan.md)
+- [ADR-011 Implementation Plan: Admin Review and Catalog Governance UI](./ADR-011-admin-review-catalog-governance-ui-plan.md)
+- [ADR-013 Implementation Plan: Recommendation Explanation System](./ADR-013-recommendation-explanation-system-plan.md)
 
 ## Operational workflow docs
 
@@ -36,9 +49,12 @@ Each plan is written as a sequence of AI-agent-ready subtasks. Every subtask inc
   admin workflows, import handling, recommendation/reporting usage, and
   LLM boundaries.
 
-## Recommended implementation order
+## Recommended foundation implementation order
 
-The plans should generally be implemented from the source-of-truth catalog outward. ADR-001 establishes the normalized data foundation, while ADR-002, ADR-003, ADR-004, ADR-005, ADR-006, and ADR-007 can then build on that foundation with the dependency order shown below.
+The foundation plans should generally be implemented from the source-of-truth
+catalog outward. ADR-001 establishes the normalized data foundation, while
+ADR-002, ADR-003, ADR-004, ADR-005, ADR-006, and ADR-007 can then build on that
+foundation with the dependency order shown below.
 
 ```mermaid
 flowchart TD
@@ -52,6 +68,21 @@ flowchart TD
     E --> C
     F --> G
 ```
+
+## Recommended Phase 2 implementation order
+
+1. [ADR-012: LLM Intent Extraction Contract](./ADR-012-llm-intent-extraction-contract-plan.md)
+2. [ADR-008: Song Acquisition and Import Connector Architecture](./ADR-008-song-acquisition-import-connector-architecture-plan.md)
+3. [ADR-009: Lyrics Parsing and Musical Analysis Pipeline](./ADR-009-lyrics-parsing-musical-analysis-pipeline-plan.md)
+4. [ADR-010: Recommendation Engine Scoring Architecture](./ADR-010-recommendation-engine-scoring-architecture-plan.md)
+5. [ADR-011: Admin Review and Catalog Governance UI](./ADR-011-admin-review-catalog-governance-ui-plan.md)
+6. [ADR-013: Recommendation Explanation System](./ADR-013-recommendation-explanation-system-plan.md)
+
+ADR-010 is intentionally placed before the full ADR-011 governance UI because the
+deterministic scoring core can be built and tested against already-approved
+read-model data without making newly imported content recommendable. ADR-011
+still remains the mandatory gate before Phase 2 imported content can become
+eligible for recommendation.
 
 ## Cross-plan guardrails
 
