@@ -1,5 +1,8 @@
 package com.cadentia.llm;
 
+import org.springframework.stereotype.Component;
+
+@Component
 public class OpenRouterClient implements LlmClient {
 
     @Override
