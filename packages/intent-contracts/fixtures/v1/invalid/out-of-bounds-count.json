@@ -1,0 +1,6 @@
+{
+  "intent": "GENERATE_SETLIST",
+  "slots": {
+    "counts": { "praise": 26, "worship": 5 }
+  }
+}

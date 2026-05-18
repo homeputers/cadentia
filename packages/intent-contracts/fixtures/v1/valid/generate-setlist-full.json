@@ -1,0 +1,19 @@
+{
+  "intent": "GENERATE_SETLIST",
+  "slots": {
+    "verseText": "Psalm 100",
+    "scriptureReferences": ["Psalm 100"],
+    "themeHints": ["thanksgiving", "joy"],
+    "counts": { "praise": 10, "worship": 5 },
+    "keyPolicy": {
+      "preferSameKey": true,
+      "allowRelativeMajorMinor": true,
+      "maxKeyCenters": 2
+    },
+    "tempoPolicy": { "maxJumpBpm": 12 },
+    "language": "en-US",
+    "energyArc": "rising",
+    "excludedSongs": ["Example Song To Exclude"],
+    "serviceMoment": "opening"
+  }
+}

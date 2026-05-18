@@ -12,5 +12,20 @@
   },
   "dependencies": {
     "zod": "3.23.8"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./schemas/v1/intent.schema.json": "./schemas/v1/intent.schema.json"
+  },
+  "files": [
+    "dist",
+    "schemas",
+    "fixtures"
+  ],
+  "devDependencies": {
+    "ajv": "^8.17.1"
   }
 }
