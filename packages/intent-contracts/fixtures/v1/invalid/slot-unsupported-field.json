@@ -1,0 +1,7 @@
+{
+  "intent": "GENERATE_SETLIST",
+  "slots": {
+    "verseText": "Psalm 100",
+    "selectedSongs": ["Invented Song"]
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "intent": "CLARIFY_REQUEST",
+  "reasonCode": "MISSING_REQUIRED_INFORMATION",
+  "clarificationQuestion": "Which scripture or theme should the setlist focus on?",
+  "missingSlots": ["verseText", "scriptureReferences"]
+}

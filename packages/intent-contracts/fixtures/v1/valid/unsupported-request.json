@@ -1,0 +1,5 @@
+{
+  "intent": "UNSUPPORTED_REQUEST",
+  "reasonCode": "UNSUPPORTED_ACTION",
+  "safeMessage": "I can extract setlist intent, but I cannot approve songs or update catalog records."
+}
