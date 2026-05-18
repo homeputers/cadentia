@@ -10,6 +10,31 @@ tags:
   - name: Setlists
     description: Deterministic setlist proposal operations
 paths:
+  /setlists/proposals/natural-language:
+    post:
+      tags:
+        - Setlists
+      operationId: generateSetlistProposalFromNaturalLanguage
+      summary: Generate a setlist proposal from natural-language text
+      description: >-
+        Accepts raw user text, invokes the LLM intent boundary, validates the
+        resulting contract payload, applies backend defaults, and invokes
+        recommendation only for valid GENERATE_SETLIST intents.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NaturalLanguageSetlistRequest'
+      responses:
+        '202':
+          description: Setlist proposal accepted, clarification requested, or safely rejected.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SetlistProposalResponse'
+        '400':
+          description: Request validation failed.
   /setlists/proposals:
     post:
       tags:
@@ -36,6 +61,18 @@ paths:
           description: Request validation failed.
 components:
   schemas:
+    NaturalLanguageSetlistRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - text
+      properties:
+        text:
+          type: string
+          minLength: 1
+          maxLength: 5000
+          description: Raw natural-language user request to extract into the intent contract.
+          example: Build a thanksgiving set around Psalm 100 with 4 praise songs and 2 worship songs.
     GenerateSetlistRequest:
       type: object
       additionalProperties: false
@@ -50,6 +87,14 @@ components:
           minLength: 1
           description: Scripture text or reference that frames the setlist.
           example: Psalm 100
+        scriptureReferences:
+          type: array
+          description: Optional normalized scripture references explicitly provided or confidently extracted.
+          items:
+            type: string
+          default: []
+          example:
+            - Psalm 100
         themeHints:
           type: array
           description: Optional controlled or free-form theme hints extracted from the user prompt.
@@ -64,6 +109,40 @@ components:
           $ref: '#/components/schemas/KeyPolicy'
         tempoPolicy:
           $ref: '#/components/schemas/TempoPolicy'
+        language:
+          type: string
+          nullable: true
+          description: Requested language when supplied by the user.
+          example: Spanish
+        energyArc:
+          type: string
+          nullable: true
+          enum:
+            - steady
+            - rising
+            - falling
+            - low_to_high
+            - high_to_low
+          description: Requested energy shape when supplied by the user.
+        excludedSongs:
+          type: array
+          description: User-provided exclusions by title or catalog reference; never selected by the LLM.
+          items:
+            type: string
+          default: []
+          example:
+            - Example Song To Avoid
+        serviceMoment:
+          type: string
+          nullable: true
+          enum:
+            - opening
+            - communion
+            - response
+            - altar_call
+            - sending
+            - other
+          description: Controlled service moment when supplied by the user.
     SetlistCounts:
       type: object
       additionalProperties: false
