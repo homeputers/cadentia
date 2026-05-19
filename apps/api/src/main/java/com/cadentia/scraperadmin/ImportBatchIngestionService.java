@@ -13,6 +13,10 @@ import com.cadentia.catalog.model.UpdateImportBatchCommand;
 import com.cadentia.catalog.repository.SongRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -68,7 +72,7 @@ public class ImportBatchIngestionService {
                     candidateRecord.sourceArtistName(),
                     candidateRecord.sourceArtistMetadataJson(),
                     candidateRecord.ccliNumber(),
-                    candidateRecord.lyricsHash(),
+                    validatedCandidate.rawContentHash(),
                     candidateRecord.sourcePayloadJson(),
                     ImportCandidateStatus.STAGED));
 
@@ -122,14 +126,78 @@ public class ImportBatchIngestionService {
                     candidateIdentifier, "sourcePayloadJson", "sourcePayloadJson must be a JSON object"));
             valid = false;
         }
+        if (record.importMethod() == null) {
+            validationErrors.add(new ImportCandidateValidationError(
+                    candidateIdentifier, "importMethod", "importMethod is required"));
+            valid = false;
+        }
+        if (record.sourceReference() == null) {
+            validationErrors.add(new ImportCandidateValidationError(
+                    candidateIdentifier, "sourceReference", "sourceReference is required"));
+            valid = false;
+        }
+        if (record.sourceCollectedAt() == null) {
+            validationErrors.add(new ImportCandidateValidationError(
+                    candidateIdentifier, "sourceCollectedAt", "sourceCollectedAt is required"));
+            valid = false;
+        } else {
+            try {
+                Instant.parse(record.sourceCollectedAt());
+            } catch (RuntimeException ex) {
+                validationErrors.add(new ImportCandidateValidationError(
+                        candidateIdentifier, "sourceCollectedAt", "sourceCollectedAt must be an ISO-8601 timestamp"));
+                valid = false;
+            }
+        }
+        if (record.operatorIdentity() == null) {
+            validationErrors.add(new ImportCandidateValidationError(
+                    candidateIdentifier, "operatorIdentity", "operatorIdentity is required"));
+            valid = false;
+        }
+        LicenseGateResult licenseGateResult = evaluateLicenseGate(record);
+        if (!licenseGateResult.allowed()) {
+            validationErrors.add(new ImportCandidateValidationError(
+                    candidateIdentifier, "licenseType", licenseGateResult.message()));
+            valid = false;
+        }
         if (!valid) {
             return null;
         }
         try {
-            return new ValidatedCandidate(titleNormalizer.normalize(record.rawTitle()));
+            String normalizedTitle = titleNormalizer.normalize(record.rawTitle());
+            String rawContentHash = hashHex(record.sourcePayloadJson());
+            hashHex(normalizedTitle + "|" + record.sourceArtistName() + "|" + record.ccliNumber());
+            return new ValidatedCandidate(normalizedTitle, rawContentHash);
         } catch (IllegalArgumentException ex) {
             validationErrors.add(new ImportCandidateValidationError(candidateIdentifier, "rawTitle", ex.getMessage()));
             return null;
+        }
+    }
+
+    private LicenseGateResult evaluateLicenseGate(ImportCandidateRecord record) {
+        if (record.licenseType() == null) {
+            return new LicenseGateResult(false, "licenseType is required");
+        }
+        return switch (record.licenseType()) {
+            case "PUBLIC_DOMAIN", "CCLI", "DIRECT_PERMISSION", "NOT_APPLICABLE" -> new LicenseGateResult(true, null);
+            case "UNKNOWN", "FAIR_USE_REFERENCE" -> new LicenseGateResult(
+                    false, "licenseType requires manual review before review-ready state");
+            case "PROHIBITED" -> new LicenseGateResult(false, "licenseType is prohibited");
+            default -> new LicenseGateResult(false, "licenseType is not recognized");
+        };
+    }
+
+    private String hashHex(String payload) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] bytes = digest.digest(payload.getBytes(StandardCharsets.UTF_8));
+            StringBuilder hex = new StringBuilder(bytes.length * 2);
+            for (byte b : bytes) {
+                hex.append(String.format("%02x", b));
+            }
+            return hex.toString();
+        } catch (NoSuchAlgorithmException ex) {
+            throw new IllegalStateException("SHA-256 not available", ex);
         }
     }
 
@@ -162,7 +230,10 @@ public class ImportBatchIngestionService {
                 .orElse(importBatch);
     }
 
-    private record ValidatedCandidate(String normalizedTitle) {
+    private record ValidatedCandidate(String normalizedTitle, String rawContentHash) {
+    }
+
+    private record LicenseGateResult(boolean allowed, String message) {
     }
 
     private record ImportBatchSummary(

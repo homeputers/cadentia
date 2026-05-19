@@ -8,7 +8,13 @@ public record ImportCandidateRecord(
         String sourceArtistMetadataJson,
         String ccliNumber,
         String lyricsHash,
-        String sourcePayloadJson) {
+        String sourcePayloadJson,
+        String importMethod,
+        String sourceReference,
+        String sourceCollectedAt,
+        String operatorIdentity,
+        String licenseType,
+        String licenseEvidence) {
 
     public ImportCandidateRecord {
         rowIdentifier = blankToNull(rowIdentifier);
@@ -19,6 +25,12 @@ public record ImportCandidateRecord(
         ccliNumber = blankToNull(ccliNumber);
         lyricsHash = blankToNull(lyricsHash);
         sourcePayloadJson = sourcePayloadJson == null ? "{}" : sourcePayloadJson.trim();
+        importMethod = blankToNull(importMethod);
+        sourceReference = blankToNull(sourceReference);
+        sourceCollectedAt = blankToNull(sourceCollectedAt);
+        operatorIdentity = blankToNull(operatorIdentity);
+        licenseType = blankToNull(licenseType);
+        licenseEvidence = blankToNull(licenseEvidence);
     }
 
     public String displayIdentifier(int index) {
