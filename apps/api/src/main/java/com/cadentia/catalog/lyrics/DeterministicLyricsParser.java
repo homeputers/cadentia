@@ -3,9 +3,15 @@ package com.cadentia.catalog.lyrics;
 import com.cadentia.catalog.model.LyricsFormat;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
+import java.util.Locale;
+import java.util.StringJoiner;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -320,6 +326,140 @@ public final class DeterministicLyricsParser implements LyricsParser {
             addKeyAnalysis();
             addBpmAnalysis();
             addMeterAnalysis();
+            addFingerprints();
+        }
+
+        private void addFingerprints() {
+            String rawFingerprint = hash("raw-source", joinLyricLines(false));
+            String lyricsFingerprint = hash("lyrics-normalized", joinLyricLines(true));
+            String chordFingerprint = hash("chord-progression", joinedNormalizedChords());
+            String sectionFingerprint = hash("section-sequence", joinedSectionLabels());
+            String relativeMovementFingerprint = hash("chord-movement", keyIndependentChordMovement());
+
+            markers.add(Map.of(
+                    "type", "fingerprint",
+                    "field", "raw_source",
+                    "value", rawFingerprint,
+                    "signal", "hash(raw-content)"));
+            markers.add(Map.of(
+                    "type", "fingerprint",
+                    "field", "lyrics_normalized",
+                    "value", lyricsFingerprint,
+                    "signal", "hash(normalized-lyrics)"));
+            markers.add(Map.of(
+                    "type", "fingerprint",
+                    "field", "chord_progression",
+                    "value", chordFingerprint,
+                    "signal", "hash(normalized-chord-sequence)"));
+            markers.add(Map.of(
+                    "type", "fingerprint",
+                    "field", "section_sequence",
+                    "value", sectionFingerprint,
+                    "signal", "hash(section-label-order)"));
+            markers.add(Map.of(
+                    "type", "fingerprint",
+                    "field", "key_independent_chord_movement",
+                    "value", relativeMovementFingerprint,
+                    "signal", "hash(relative-semitone-movement)"));
+            markers.add(Map.of(
+                    "type", "duplicate_support",
+                    "field", "fingerprint_bundle",
+                    "value", Map.of(
+                            "rawSource", rawFingerprint,
+                            "lyricsNormalized", lyricsFingerprint,
+                            "chordProgression", chordFingerprint,
+                            "sectionSequence", sectionFingerprint,
+                            "keyIndependentChordMovement", relativeMovementFingerprint),
+                    "evidence", "deterministic_parser_signals"));
+        }
+
+        private String joinedNormalizedChords() {
+            StringJoiner joiner = new StringJoiner("|");
+            for (Map<String, Object> chord : chords) {
+                joiner.add(String.valueOf(chord.get("normalizedChord")));
+            }
+            return joiner.toString();
+        }
+
+        private String joinedSectionLabels() {
+            StringJoiner joiner = new StringJoiner("|");
+            for (Map<String, Object> section : sections) {
+                joiner.add(String.valueOf(section.get("label")).toLowerCase(Locale.ROOT).trim());
+            }
+            return joiner.toString();
+        }
+
+        private String joinLyricLines(boolean normalize) {
+            StringJoiner joiner = new StringJoiner("\n");
+            for (Map<String, Object> section : sections) {
+                @SuppressWarnings("unchecked")
+                List<String> lines = (List<String>) section.get("lines");
+                for (String line : lines) {
+                    if (normalize) {
+                        String normalizedLine = line
+                                .replaceAll("\\[[^\\]\\r\\n]+]", "")
+                                .replaceAll("\\s+", " ")
+                                .trim()
+                                .toLowerCase(Locale.ROOT);
+                        joiner.add(normalizedLine);
+                    } else {
+                        joiner.add(line);
+                    }
+                }
+            }
+            return joiner.toString();
+        }
+
+        private String keyIndependentChordMovement() {
+            List<Integer> notes = new ArrayList<>();
+            for (Map<String, Object> chord : chords) {
+                String normalizedChord = String.valueOf(chord.get("normalizedChord"));
+                Integer note = rootToSemitone(normalizedChord);
+                if (note != null) {
+                    notes.add(note);
+                }
+            }
+            if (notes.size() < 2) {
+                return "none";
+            }
+            StringJoiner joiner = new StringJoiner("|");
+            for (int index = 1; index < notes.size(); index++) {
+                int interval = Math.floorMod(notes.get(index) - notes.get(index - 1), 12);
+                joiner.add(Integer.toString(interval));
+            }
+            return joiner.toString();
+        }
+
+        private Integer rootToSemitone(String normalizedChord) {
+            Matcher root = CHORD_ROOT.matcher(normalizedChord);
+            if (!root.find()) {
+                return null;
+            }
+            return switch (root.group(1)) {
+                case "C" -> 0;
+                case "C#", "Db" -> 1;
+                case "D" -> 2;
+                case "D#", "Eb" -> 3;
+                case "E" -> 4;
+                case "F" -> 5;
+                case "F#", "Gb" -> 6;
+                case "G" -> 7;
+                case "G#", "Ab" -> 8;
+                case "A" -> 9;
+                case "A#", "Bb" -> 10;
+                case "B" -> 11;
+                default -> null;
+            };
+        }
+
+        private String hash(String prefix, String value) {
+            try {
+                MessageDigest digest = MessageDigest.getInstance("SHA-256");
+                String hashed = HexFormat.of().formatHex(digest.digest(value.getBytes(StandardCharsets.UTF_8)));
+                return prefix + ":sha256:" + hashed;
+            } catch (NoSuchAlgorithmException exception) {
+                throw new IllegalStateException("SHA-256 hashing unavailable", exception);
+            }
         }
 
         private void addKeyAnalysis() {

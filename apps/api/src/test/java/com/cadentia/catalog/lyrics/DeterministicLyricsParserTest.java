@@ -31,6 +31,13 @@ class DeterministicLyricsParserTest {
                 .contains("\"type\":\"directive\"")
                 .contains("\"type\":\"section_start\"")
                 .contains("\"type\":\"section_end\"")
+                .contains("\"type\":\"fingerprint\"")
+                .contains("\"field\":\"raw_source\"")
+                .contains("\"field\":\"lyrics_normalized\"")
+                .contains("\"field\":\"chord_progression\"")
+                .contains("\"field\":\"section_sequence\"")
+                .contains("\"field\":\"key_independent_chord_movement\"")
+                .contains("\"type\":\"duplicate_support\"")
                 .contains("\"field\":\"key\"")
                 .contains("\"value\":\"E\"")
                 .contains("\"field\":\"bpm\"")
@@ -120,5 +127,29 @@ class DeterministicLyricsParserTest {
         assertThat(result.structuralMarkersJson())
                 .contains("\"type\":\"warning_conflicting_key_metadata\"")
                 .contains("\"type\":\"warning_conflicting_bpm_metadata\"");
+    }
+
+    @Test
+    void fingerprintSignalsAreStableForEquivalentNormalizedInput() {
+        LyricsParser parser = DeterministicLyricsParser.forFormat(LyricsFormat.MARKDOWN);
+
+        LyricsParseResult first = parser.parse("## Verse\n[A]Alpha   line\n## Chorus\n[D]Beta");
+        LyricsParseResult second = parser.parse("## Verse\n[A]alpha line\n## Chorus\n[D]beta");
+
+        assertThat(first.structuralMarkersJson()).contains("\"field\":\"lyrics_normalized\"");
+        assertThat(extractFingerprint(first.structuralMarkersJson(), "lyrics_normalized"))
+                .isEqualTo(extractFingerprint(second.structuralMarkersJson(), "lyrics_normalized"));
+        assertThat(extractFingerprint(first.structuralMarkersJson(), "section_sequence"))
+                .isEqualTo(extractFingerprint(second.structuralMarkersJson(), "section_sequence"));
+    }
+
+    private String extractFingerprint(String markerJson, String field) {
+        String fieldToken = "\"field\":\"" + field + "\"";
+        int fieldIndex = markerJson.indexOf(fieldToken);
+        assertThat(fieldIndex).isGreaterThanOrEqualTo(0);
+        int hashIndex = markerJson.indexOf("sha256:", fieldIndex);
+        assertThat(hashIndex).isGreaterThanOrEqualTo(0);
+        int hashEnd = markerJson.indexOf('"', hashIndex);
+        return markerJson.substring(hashIndex, hashEnd);
     }
 }
