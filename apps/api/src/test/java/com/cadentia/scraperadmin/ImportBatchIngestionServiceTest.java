@@ -86,7 +86,13 @@ class ImportBatchIngestionServiceTest {
                         "{\"sourceArtistId\":\"artist-1\"}",
                         "18723",
                         null,
-                        "{\"title\":\"Great Is Thy Faithfulness (Live)\"}"))));
+                        "{\"title\":\"Great Is Thy Faithfulness (Live)\"}",
+                        "CSV_UPLOAD",
+                        "file://imports/setlist.csv#row-1",
+                        "2026-05-18T10:15:30Z",
+                        "admin@example.test",
+                        "CCLI",
+                        "Church CCLI license export"))));
 
         // Assert
         assertThat(result.importBatch()).isEqualTo(completedBatch);
@@ -164,7 +170,13 @@ class ImportBatchIngestionServiceTest {
                         "{}",
                         null,
                         null,
-                        "{\"title\":\"Missing Raw Title\"}"))));
+                        "{\"title\":\"Missing Raw Title\"}",
+                        "CSV_UPLOAD",
+                        "file://imports/setlist.csv#row-2",
+                        "2026-05-18T10:15:30Z",
+                        "admin@example.test",
+                        "CCLI",
+                        "Church CCLI license export"))));
 
         // Assert
         assertThat(result.importBatch()).isEqualTo(failedBatch);
@@ -179,6 +191,83 @@ class ImportBatchIngestionServiceTest {
                 });
         verify(songRepository, never()).createImportCandidate(any(CreateImportCandidateCommand.class));
         verify(songRepository, never()).createProposedDuplicateMatch(any(CreateProposedDuplicateMatchCommand.class));
+    }
+
+    @Test
+    void ingestRejectsCandidateWhenLicenseIsMissing() {
+        UUID batchId = UUID.randomUUID();
+        ImportBatch runningBatch = batch(batchId, ImportBatchStatus.RUNNING, "{}");
+        ImportBatch failedBatch = batch(batchId, ImportBatchStatus.FAILED, "{\"validationErrors\":1}");
+        when(songRepository.createImportBatch(any(CreateImportBatchCommand.class))).thenReturn(runningBatch);
+        when(songRepository.findCatalogSongCandidatesForDeduplication()).thenReturn(List.of());
+        when(songRepository.updateImportBatch(any(UUID.class), any(UpdateImportBatchCommand.class)))
+                .thenReturn(Optional.of(failedBatch));
+        ImportBatchIngestionService service = new ImportBatchIngestionService(songRepository, new ObjectMapper());
+
+        ImportBatchIngestionResult result = service.ingest(new ImportBatchIngestionCommand(
+                "fixture-csv",
+                "admin@example.test",
+                List.of(new ImportCandidateRecord(
+                        "row-3",
+                        "source-3",
+                        "Build My Life",
+                        "Fixture Artist",
+                        "{}",
+                        null,
+                        null,
+                        "{\"title\":\"Build My Life\"}",
+                        "CSV_UPLOAD",
+                        "file://imports/setlist.csv#row-3",
+                        "2026-05-18T10:15:30Z",
+                        "admin@example.test",
+                        null,
+                        null))));
+
+        assertThat(result.acceptedCandidates()).isEmpty();
+        assertThat(result.validationErrors()).anySatisfy(error -> {
+            assertThat(error.field()).isEqualTo("licenseType");
+            assertThat(error.message()).isEqualTo("licenseType is required");
+        });
+        verify(songRepository, never()).createImportCandidate(any(CreateImportCandidateCommand.class));
+    }
+
+    @Test
+    void ingestRejectsCandidateWhenLicenseIsProhibitedOrSourceIsMissing() {
+        UUID batchId = UUID.randomUUID();
+        ImportBatch runningBatch = batch(batchId, ImportBatchStatus.RUNNING, "{}");
+        ImportBatch failedBatch = batch(batchId, ImportBatchStatus.FAILED, "{\"validationErrors\":1}");
+        when(songRepository.createImportBatch(any(CreateImportBatchCommand.class))).thenReturn(runningBatch);
+        when(songRepository.findCatalogSongCandidatesForDeduplication()).thenReturn(List.of());
+        when(songRepository.updateImportBatch(any(UUID.class), any(UpdateImportBatchCommand.class)))
+                .thenReturn(Optional.of(failedBatch));
+        ImportBatchIngestionService service = new ImportBatchIngestionService(songRepository, new ObjectMapper());
+
+        ImportBatchIngestionResult result = service.ingest(new ImportBatchIngestionCommand(
+                "fixture-csv",
+                "admin@example.test",
+                List.of(new ImportCandidateRecord(
+                        "row-4",
+                        "source-4",
+                        "House Of The Lord",
+                        "Fixture Artist",
+                        "{}",
+                        null,
+                        null,
+                        "{\"title\":\"House Of The Lord\"}",
+                        "CSV_UPLOAD",
+                        null,
+                        "2026-05-18T10:15:30Z",
+                        "admin@example.test",
+                        "PROHIBITED",
+                        "Provider terms deny storage"))));
+
+        assertThat(result.acceptedCandidates()).isEmpty();
+        assertThat(result.validationErrors()).anySatisfy(error -> assertThat(error.field()).isEqualTo("sourceReference"));
+        assertThat(result.validationErrors()).anySatisfy(error -> {
+            assertThat(error.field()).isEqualTo("licenseType");
+            assertThat(error.message()).isEqualTo("licenseType is prohibited");
+        });
+        verify(songRepository, never()).createImportCandidate(any(CreateImportCandidateCommand.class));
     }
 
     private static ImportBatch batch(UUID id, ImportBatchStatus status, String summaryJson) {
