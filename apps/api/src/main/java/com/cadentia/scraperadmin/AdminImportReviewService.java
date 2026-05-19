@@ -26,6 +26,7 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,6 +38,7 @@ public class AdminImportReviewService {
     private final SongRepository songRepository;
     private final TitleNormalizer titleNormalizer;
 
+    @Autowired
     public AdminImportReviewService(SongRepository songRepository) {
         this(songRepository, new TitleNormalizer());
     }
