@@ -12,7 +12,7 @@ class DeterministicLyricsParserTest {
     void parsesChordProSectionsChordsAndMarkersDeterministically() {
         // Arrange
         LyricsParser parser = DeterministicLyricsParser.forFormat(LyricsFormat.CHORDPRO);
-        String content = "{title: Fixture}\n{start_of_verse: Verse 1}\n[A]Alpha [D/F#]Beta\n{end_of_verse}\n";
+        String content = "{title: Fixture}\n{key: E}\n{tempo: 74}\n{time: 4/4}\n{start_of_verse: Verse 1}\n[A]Alpha [D/F#]Beta\n{end_of_verse}\n";
 
         // Act
         LyricsParseResult result = parser.parse(content);
@@ -30,7 +30,14 @@ class DeterministicLyricsParserTest {
         assertThat(result.structuralMarkersJson())
                 .contains("\"type\":\"directive\"")
                 .contains("\"type\":\"section_start\"")
-                .contains("\"type\":\"section_end\"");
+                .contains("\"type\":\"section_end\"")
+                .contains("\"field\":\"key\"")
+                .contains("\"value\":\"E\"")
+                .contains("\"field\":\"bpm\"")
+                .contains("\"value\":74")
+                .contains("\"field\":\"meter\"")
+                .contains("\"value\":\"4/4\"")
+                .contains("\"evidence\":\"explicit_metadata\"");
     }
 
     @Test
@@ -86,5 +93,32 @@ class DeterministicLyricsParserTest {
                 .contains("\"type\":\"repeat_hint\"")
                 .contains("\"type\":\"warning_malformed_marker\"")
                 .contains("\"type\":\"warning_unknown_chord\"");
+    }
+
+    @Test
+    void infersKeyFromChordsWithLowerConfidenceWhenMetadataMissing() {
+        LyricsParser parser = DeterministicLyricsParser.forFormat(LyricsFormat.MARKDOWN);
+
+        LyricsParseResult result = parser.parse("## Verse\n[C]One [G]Two [Am]Three");
+
+        assertThat(result.status()).isEqualTo(LyricsParseStatus.PARSED);
+        assertThat(result.structuralMarkersJson())
+                .contains("\"field\":\"key\"")
+                .contains("\"value\":\"C\"")
+                .contains("\"evidence\":\"ambiguous_chord_distribution\"")
+                .contains("\"field\":\"bpm\"")
+                .contains("\"value\":\"unknown\"");
+    }
+
+    @Test
+    void emitsWarningsForConflictingMetadataValues() {
+        LyricsParser parser = DeterministicLyricsParser.forFormat(LyricsFormat.CHORDPRO);
+
+        LyricsParseResult result = parser.parse("{key: C}\n{key: D}\n{tempo: 68}\n{tempo: 120}\n[A]Line");
+
+        assertThat(result.status()).isEqualTo(LyricsParseStatus.PARSED);
+        assertThat(result.structuralMarkersJson())
+                .contains("\"type\":\"warning_conflicting_key_metadata\"")
+                .contains("\"type\":\"warning_conflicting_bpm_metadata\"");
     }
 }

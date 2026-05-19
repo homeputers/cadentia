@@ -23,6 +23,7 @@ public final class DeterministicLyricsParser implements LyricsParser {
     private static final Pattern ONSONG_SECTION_LABEL = Pattern.compile("^\\[(.+)]\\s*$");
     private static final Pattern PLAIN_REPEAT_MARKER = Pattern.compile("^(x\\d+|repeat(?:\\s+x?\\d+)?)\\s*$", Pattern.CASE_INSENSITIVE);
     private static final Pattern CHORD = Pattern.compile("\\[([^]\\r\\n]+)]");
+    private static final Pattern CHORD_ROOT = Pattern.compile("^([A-G](?:#|b)?)");
     private static final Pattern NORMALIZED_CHORD = Pattern.compile(
             "^[A-G](?:#|b)?(?:m|maj|min|dim|aug|sus|add)?\\d*(?:\\([^)]*\\))?(?:/[A-G](?:#|b)?)?$");
 
@@ -62,6 +63,7 @@ public final class DeterministicLyricsParser implements LyricsParser {
         ParsedAccumulator accumulator = new ParsedAccumulator();
         parseLines(content, accumulator);
         accumulator.closeSection(accumulator.lineNumber());
+        accumulator.finalizeMusicalAnalysis();
         return LyricsParseResult.parsed(
                 parserName(),
                 parserVersion(),
@@ -77,11 +79,33 @@ public final class DeterministicLyricsParser implements LyricsParser {
             String line = lines[index];
             accumulator.lineNumber(lineNumber);
             parseStructuralMarker(line, lineNumber, accumulator);
+            parseMusicalMetadata(line, lineNumber, accumulator);
             parseChords(line, lineNumber, accumulator);
             if (!isMarkerOnlyLine(line)) {
                 accumulator.addLyricLine(line, lineNumber);
             }
         }
+    }
+
+    private void parseMusicalMetadata(String line, int lineNumber, ParsedAccumulator accumulator) {
+        String trimmed = line.trim();
+        if (trimmed.isBlank()) {
+            return;
+        }
+        if (format == LyricsFormat.CHORDPRO) {
+            Matcher directive = CHORDPRO_DIRECTIVE.matcher(trimmed);
+            if (directive.matches()) {
+                accumulator.recordMetadata(directive.group(1), directive.group(2), lineNumber);
+            }
+            return;
+        }
+        int separator = trimmed.indexOf(':');
+        if (separator <= 0 || separator == trimmed.length() - 1) {
+            return;
+        }
+        String key = trimmed.substring(0, separator).trim();
+        String value = trimmed.substring(separator + 1).trim();
+        accumulator.recordMetadata(key, value, lineNumber);
     }
 
     private void parseStructuralMarker(String line, int lineNumber, ParsedAccumulator accumulator) {
@@ -143,6 +167,9 @@ public final class DeterministicLyricsParser implements LyricsParser {
             String rawChord = matcher.group(1).trim();
             String normalizedChord = normalizeChord(rawChord);
             accumulator.addChord(rawChord, normalizedChord, lineNumber, matcher.start());
+            if (normalizedChord != null) {
+                accumulator.recordChordRoot(normalizedChord);
+            }
             if (normalizedChord == null) {
                 accumulator.addMarker("warning_unknown_chord", rawChord, lineNumber);
             }
@@ -185,6 +212,10 @@ public final class DeterministicLyricsParser implements LyricsParser {
         private final List<Map<String, Object>> sections = new ArrayList<>();
         private final List<Map<String, Object>> chords = new ArrayList<>();
         private final List<Map<String, Object>> markers = new ArrayList<>();
+        private final List<String> declaredKeys = new ArrayList<>();
+        private final List<Integer> declaredBpms = new ArrayList<>();
+        private final List<String> declaredMeters = new ArrayList<>();
+        private final List<String> chordRoots = new ArrayList<>();
         private String currentLabel;
         private int currentStartLine;
         private final List<String> currentLines = new ArrayList<>();
@@ -255,6 +286,80 @@ public final class DeterministicLyricsParser implements LyricsParser {
 
         void addMarker(String type, String label, int lineNumber) {
             markers.add(Map.of("type", type, "label", label, "line", lineNumber));
+        }
+
+        void recordMetadata(String fieldName, String value, int lineNumber) {
+            if (fieldName == null || value == null || value.isBlank()) {
+                return;
+            }
+            String normalizedField = fieldName.trim().toLowerCase();
+            if (normalizedField.equals("key")) {
+                declaredKeys.add(value);
+                return;
+            }
+            if (normalizedField.equals("tempo") || normalizedField.equals("bpm")) {
+                String digits = value.replaceAll("[^0-9]", "");
+                if (!digits.isBlank()) {
+                    declaredBpms.add(Integer.parseInt(digits));
+                }
+                return;
+            }
+            if (normalizedField.equals("time") || normalizedField.equals("meter") || normalizedField.equals("timesig")) {
+                declaredMeters.add(value);
+            }
+        }
+
+        void recordChordRoot(String normalizedChord) {
+            Matcher root = CHORD_ROOT.matcher(normalizedChord);
+            if (root.find()) {
+                chordRoots.add(root.group(1));
+            }
+        }
+
+        void finalizeMusicalAnalysis() {
+            addKeyAnalysis();
+            addBpmAnalysis();
+            addMeterAnalysis();
+        }
+
+        private void addKeyAnalysis() {
+            if (!declaredKeys.isEmpty()) {
+                String first = declaredKeys.get(0);
+                markers.add(Map.of("type", "analysis", "field", "key", "value", first, "confidence", 0.98, "evidence", "explicit_metadata"));
+                if (declaredKeys.stream().distinct().count() > 1) {
+                    markers.add(Map.of("type", "warning_conflicting_key_metadata", "label", String.join(", ", declaredKeys), "line", 0));
+                }
+                return;
+            }
+            if (chordRoots.isEmpty()) {
+                markers.add(Map.of("type", "analysis", "field", "key", "value", "unknown", "confidence", 0.0, "evidence", "missing_data"));
+                return;
+            }
+            String inferred = chordRoots.get(0);
+            long distinctRoots = chordRoots.stream().distinct().count();
+            double confidence = distinctRoots <= 2 ? 0.55 : 0.32;
+            String evidence = distinctRoots <= 2 ? "inferred_from_chords" : "ambiguous_chord_distribution";
+            markers.add(Map.of("type", "analysis", "field", "key", "value", inferred, "confidence", confidence, "evidence", evidence));
+        }
+
+        private void addBpmAnalysis() {
+            if (!declaredBpms.isEmpty()) {
+                int bpm = declaredBpms.get(0);
+                markers.add(Map.of("type", "analysis", "field", "bpm", "value", bpm, "confidence", 0.95, "evidence", "explicit_metadata"));
+                if (declaredBpms.stream().distinct().count() > 1) {
+                    markers.add(Map.of("type", "warning_conflicting_bpm_metadata", "label", declaredBpms.toString(), "line", 0));
+                }
+                return;
+            }
+            markers.add(Map.of("type", "analysis", "field", "bpm", "value", "unknown", "confidence", 0.0, "evidence", "missing_data"));
+        }
+
+        private void addMeterAnalysis() {
+            if (!declaredMeters.isEmpty()) {
+                markers.add(Map.of("type", "analysis", "field", "meter", "value", declaredMeters.get(0), "confidence", 0.92, "evidence", "explicit_metadata"));
+                return;
+            }
+            markers.add(Map.of("type", "analysis", "field", "meter", "value", "unknown", "confidence", 0.0, "evidence", "missing_data"));
         }
     }
 }
