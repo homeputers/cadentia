@@ -1,7 +1,6 @@
 package com.cadentia.catalog.lyrics;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.cadentia.catalog.model.LyricsFormat;
 import com.cadentia.catalog.model.LyricsParseStatus;
@@ -25,8 +24,9 @@ class DeterministicLyricsParserTest {
                 .contains("\"label\":\"Verse 1\"")
                 .contains("[A]Alpha [D/F#]Beta");
         assertThat(result.chordMapJson())
-                .contains("\"chord\":\"A\"")
-                .contains("\"chord\":\"D/F#\"");
+                .contains("\"sourceChord\":\"A\"")
+                .contains("\"normalizedChord\":\"A\"")
+                .contains("\"sourceChord\":\"D/F#\"");
         assertThat(result.structuralMarkersJson())
                 .contains("\"type\":\"directive\"")
                 .contains("\"type\":\"section_start\"")
@@ -47,7 +47,7 @@ class DeterministicLyricsParserTest {
         assertThat(result.parsedSectionsJson())
                 .contains("\"label\":\"Verse 1\"")
                 .contains("\"label\":\"Chorus\"");
-        assertThat(result.chordMapJson()).contains("\"chord\":\"G\"");
+        assertThat(result.chordMapJson()).contains("\"sourceChord\":\"G\"");
         assertThat(result.structuralMarkersJson()).contains("\"type\":\"heading\"");
     }
 
@@ -66,10 +66,25 @@ class DeterministicLyricsParserTest {
     }
 
     @Test
-    void leavesOnSongUnsupportedUntilCompatibilityIsTested() {
-        // Act / Assert
-        assertThatThrownBy(() -> DeterministicLyricsParser.forFormat(LyricsFormat.ONSONG))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("OnSong parser is not implemented");
+    void parsesOnSongSectionLabelsRepeatsAndMalformedMarkersWithWarnings() {
+        // Arrange
+        LyricsParser parser = DeterministicLyricsParser.forFormat(LyricsFormat.ONSONG);
+        String content = "[Verse 1]\n[A]Alpha\nx2\n[NotAChord lyric\n[Chorus]\n[Q13]Beta";
+
+        // Act
+        LyricsParseResult result = parser.parse(content);
+
+        // Assert
+        assertThat(result.status()).isEqualTo(LyricsParseStatus.PARSED);
+        assertThat(result.parsedSectionsJson()).contains("\"label\":\"Verse 1\"").contains("\"label\":\"Chorus\"");
+        assertThat(result.chordMapJson())
+                .contains("\"sourceChord\":\"A\"")
+                .contains("\"isNormalized\":true")
+                .contains("\"sourceChord\":\"Q13\"")
+                .contains("\"isNormalized\":false");
+        assertThat(result.structuralMarkersJson())
+                .contains("\"type\":\"repeat_hint\"")
+                .contains("\"type\":\"warning_malformed_marker\"")
+                .contains("\"type\":\"warning_unknown_chord\"");
     }
 }

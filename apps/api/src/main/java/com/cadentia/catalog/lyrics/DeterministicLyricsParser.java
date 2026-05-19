@@ -12,7 +12,7 @@ import java.util.regex.Pattern;
 public final class DeterministicLyricsParser implements LyricsParser {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
-    private static final String PARSER_VERSION = "adr-004-v1";
+    private static final String PARSER_VERSION = "adr-009-v1";
     private static final Pattern CHORDPRO_SECTION_DIRECTIVE = Pattern.compile(
             "^\\{start_of_(verse|chorus|bridge|tag|pre_chorus)(?::\\s*([^}]+))?}$");
     private static final Pattern CHORDPRO_END_DIRECTIVE = Pattern.compile("^\\{end_of_[^}]+}$");
@@ -20,7 +20,11 @@ public final class DeterministicLyricsParser implements LyricsParser {
     private static final Pattern MARKDOWN_HEADER = Pattern.compile("^(#{1,6})\\s+(.+)$");
     private static final Pattern PLAIN_SECTION_LABEL = Pattern.compile(
             "^(verse|chorus|bridge|tag|pre[- ]?chorus)(?:\\s+\\d+)?\\s*:?$", Pattern.CASE_INSENSITIVE);
+    private static final Pattern ONSONG_SECTION_LABEL = Pattern.compile("^\\[(.+)]\\s*$");
+    private static final Pattern PLAIN_REPEAT_MARKER = Pattern.compile("^(x\\d+|repeat(?:\\s+x?\\d+)?)\\s*$", Pattern.CASE_INSENSITIVE);
     private static final Pattern CHORD = Pattern.compile("\\[([^]\\r\\n]+)]");
+    private static final Pattern NORMALIZED_CHORD = Pattern.compile(
+            "^[A-G](?:#|b)?(?:m|maj|min|dim|aug|sus|add)?\\d*(?:\\([^)]*\\))?(?:/[A-G](?:#|b)?)?$");
 
     private final LyricsFormat format;
 
@@ -32,9 +36,6 @@ public final class DeterministicLyricsParser implements LyricsParser {
     }
 
     public static DeterministicLyricsParser forFormat(LyricsFormat format) {
-        if (format == LyricsFormat.ONSONG) {
-            throw new IllegalArgumentException("OnSong parser is not implemented");
-        }
         return new DeterministicLyricsParser(format);
     }
 
@@ -113,16 +114,38 @@ public final class DeterministicLyricsParser implements LyricsParser {
             String label = line.trim().replaceAll(":$", "");
             accumulator.addMarker("section_label", label, lineNumber);
             accumulator.startSection(label, lineNumber);
+            return;
+        }
+        Matcher onSongLabel = ONSONG_SECTION_LABEL.matcher(line.trim());
+        if (format == LyricsFormat.ONSONG && onSongLabel.matches()) {
+            String label = onSongLabel.group(1).trim();
+            accumulator.addMarker("section_label", label, lineNumber);
+            accumulator.startSection(label, lineNumber);
+            return;
+        }
+        if ((format == LyricsFormat.PLAIN_TEXT || format == LyricsFormat.ONSONG)
+                && PLAIN_REPEAT_MARKER.matcher(line.trim()).matches()) {
+            accumulator.addMarker("repeat_hint", line.trim(), lineNumber);
+            return;
+        }
+        if ((format == LyricsFormat.CHORDPRO || format == LyricsFormat.MARKDOWN || format == LyricsFormat.ONSONG)
+                && line.contains("[") && !line.contains("]")) {
+            accumulator.addMarker("warning_malformed_marker", line.trim(), lineNumber);
         }
     }
 
     private void parseChords(String line, int lineNumber, ParsedAccumulator accumulator) {
-        if (format != LyricsFormat.CHORDPRO && format != LyricsFormat.MARKDOWN) {
+        if (format != LyricsFormat.CHORDPRO && format != LyricsFormat.MARKDOWN && format != LyricsFormat.ONSONG) {
             return;
         }
         Matcher matcher = CHORD.matcher(line);
         while (matcher.find()) {
-            accumulator.addChord(matcher.group(1), lineNumber, matcher.start());
+            String rawChord = matcher.group(1).trim();
+            String normalizedChord = normalizeChord(rawChord);
+            accumulator.addChord(rawChord, normalizedChord, lineNumber, matcher.start());
+            if (normalizedChord == null) {
+                accumulator.addMarker("warning_unknown_chord", rawChord, lineNumber);
+            }
         }
     }
 
@@ -134,6 +157,13 @@ public final class DeterministicLyricsParser implements LyricsParser {
                     || CHORDPRO_DIRECTIVE.matcher(trimmed).matches();
         }
         return format == LyricsFormat.MARKDOWN && MARKDOWN_HEADER.matcher(trimmed).matches();
+    }
+
+    private String normalizeChord(String source) {
+        if (!NORMALIZED_CHORD.matcher(source).matches()) {
+            return null;
+        }
+        return source.replace("min", "m").replace("maj", "M");
     }
 
     private String sectionLabel(String directiveName, String explicitLabel) {
@@ -209,8 +239,18 @@ public final class DeterministicLyricsParser implements LyricsParser {
             currentLines.clear();
         }
 
-        void addChord(String chord, int lineNumber, int characterOffset) {
-            chords.add(Map.of("chord", chord, "line", lineNumber, "characterOffset", characterOffset));
+        void addChord(String sourceChord, String normalizedChord, int lineNumber, int characterOffset) {
+            chords.add(Map.of(
+                    "sourceChord",
+                    sourceChord,
+                    "normalizedChord",
+                    normalizedChord == null ? sourceChord : normalizedChord,
+                    "isNormalized",
+                    normalizedChord != null,
+                    "line",
+                    lineNumber,
+                    "characterOffset",
+                    characterOffset));
         }
 
         void addMarker(String type, String label, int lineNumber) {
