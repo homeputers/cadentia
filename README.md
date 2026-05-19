@@ -155,6 +155,46 @@ npm install
 make check
 ```
 
+If you want to run only the API locally:
+
+```bash
+docker compose up -d postgres
+cd apps/api
+mvn spring-boot:run
+```
+
+### PostgreSQL connection troubleshooting
+
+If `mvn spring-boot:run` fails with `Connection to localhost:5432 refused`, verify the database is actually reachable before starting Spring Boot:
+
+```bash
+docker compose ps postgres
+docker compose logs --tail=100 postgres
+docker compose exec postgres pg_isready -U cadentia -d cadentia
+```
+
+Expected `pg_isready` output is `accepting connections`.
+
+Common causes and fixes:
+
+1. **Container is not running/healthy yet**
+   - Wait until `docker compose ps postgres` shows `running (healthy)`.
+   - Then retry `mvn spring-boot:run`.
+
+2. **Port `5432` is already used by another local Postgres**
+   - Check host port usage:
+     ```bash
+     lsof -iTCP:5432 -sTCP:LISTEN
+     ```
+   - If a non-Docker Postgres is already bound to `5432`, either stop it or remap Cadentia's compose port and set `CADENTIA_DB_URL` accordingly.
+
+3. **Wrong datasource environment values**
+   - API defaults are:
+     - `CADENTIA_DB_URL=jdbc:postgresql://localhost:5432/cadentia`
+     - `CADENTIA_DB_USERNAME=cadentia`
+     - `CADENTIA_DB_PASSWORD=cadentia`
+   - Confirm your shell exports match those values (or your intended overrides) before starting Spring.
+
 The API is contract-first: update `apps/api/src/main/openapi/cadentia-api.yaml`, then use Maven to regenerate Spring interfaces and models during the build. The Recommendation Engine scaffold intentionally returns no song selections until approved catalog retrieval is implemented.
 
 ------------------------------------------------------------------------
