@@ -130,6 +130,46 @@ class DeterministicLyricsParserTest {
     }
 
     @Test
+    void addsNashvilleNumbersForKnownMajorAndSlashChords() {
+        LyricsParser parser = DeterministicLyricsParser.forFormat(LyricsFormat.CHORDPRO);
+
+        LyricsParseResult result = parser.parse("{key: C}\n[C]One [G/B]Two [Am]Three");
+
+        assertThat(result.chordMapJson())
+                .contains("\"sourceChord\":\"C\"")
+                .contains("\"nashvilleNumber\":\"1\"")
+                .contains("\"sourceChord\":\"G/B\"")
+                .contains("\"nashvilleNumber\":\"5/7\"")
+                .contains("\"sourceChord\":\"Am\"")
+                .contains("\"nashvilleNumber\":\"6\"");
+    }
+
+    @Test
+    void addsNashvilleNumbersForMinorRelativeKey() {
+        LyricsParser parser = DeterministicLyricsParser.forFormat(LyricsFormat.CHORDPRO);
+
+        LyricsParseResult result = parser.parse("{key: Am}\n[Am]One [C]Two [G]Three");
+
+        assertThat(result.chordMapJson())
+                .contains("\"nashvilleNumber\":\"1m\"")
+                .contains("\"nashvilleNumber\":\"b3\"")
+                .contains("\"nashvilleNumber\":\"b7\"");
+    }
+
+    @Test
+    void skipsNashvilleWhenKeyIsAmbiguousAndWarnsForUnsupportedChords() {
+        LyricsParser parser = DeterministicLyricsParser.forFormat(LyricsFormat.MARKDOWN);
+        LyricsParser chordProParser = DeterministicLyricsParser.forFormat(LyricsFormat.CHORDPRO);
+
+        LyricsParseResult ambiguous = parser.parse("## Verse\n[C]One [G]Two [Am]Three");
+        LyricsParseResult unsupported = chordProParser.parse("{key: C}\n[F#]Sharp");
+
+        assertThat(ambiguous.structuralMarkersJson()).contains("\"type\":\"warning_nashville_conversion_skipped\"");
+        assertThat(unsupported.structuralMarkersJson()).contains("\"type\":\"warning_unsupported_nashville_chord\"");
+        assertThat(unsupported.chordMapJson()).contains("\"sourceChord\":\"F#\"").doesNotContain("\"nashvilleNumber\"");
+    }
+
+    @Test
     void fingerprintSignalsAreStableForEquivalentNormalizedInput() {
         LyricsParser parser = DeterministicLyricsParser.forFormat(LyricsFormat.MARKDOWN);
 
