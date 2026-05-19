@@ -85,6 +85,43 @@ class ConnectorLifecycleRunnerTest {
                         ConnectorCapability.NORMALIZE);
     }
 
+    @Test
+    void policyBlockedConnectorReturnsFailureWithoutDiscoverOrFetch() {
+        // Arrange
+        UUID runId = UUID.randomUUID();
+        UUID importBatchId = UUID.randomUUID();
+        ConnectorExecutionContext context = new ConnectorExecutionContext(
+                runId, importBatchId, "operator@example.test", Instant.parse("2026-05-19T12:00:00Z"));
+        PolicyBlockedProviderAdapter providerAdapter = new PolicyBlockedProviderAdapter();
+        RecordingImportPipeline importPipeline = new RecordingImportPipeline();
+        ConnectorLifecycleRunner runner = new ConnectorLifecycleRunner(
+                importPipeline, new DefaultConnectorErrorTranslator());
+
+        // Act
+        ConnectorLifecycleResult result = runner.run(
+                providerAdapter,
+                context,
+                new ConnectorConfiguration("ultimate-guitar", "blocked", Map.of(), Map.of()));
+
+        // Assert
+        assertThat(result.events())
+                .singleElement()
+                .extracting(ConnectorLifecycleEvent::stage)
+                .isEqualTo(ConnectorLifecycleStage.CONFIGURE);
+        assertThat(result.stagedCandidates()).isEmpty();
+        assertThat(result.failures())
+                .singleElement()
+                .satisfies(failure -> {
+                    assertThat(failure.stage()).isEqualTo(ConnectorLifecycleStage.CONFIGURE);
+                    assertThat(failure.errorCode()).isEqualTo(ConnectorErrorCode.POLICY_BLOCKED);
+                    assertThat(failure.retryable()).isFalse();
+                });
+        assertThat(providerAdapter.discoverCalls).isZero();
+        assertThat(providerAdapter.fetchCalls).isZero();
+        assertThat(importPipeline.validatedCandidates).isEmpty();
+        assertThat(importPipeline.stagedCandidates).isEmpty();
+    }
+
     private static final class FakeProviderAdapter implements ProviderAdapter {
 
         @Override
@@ -152,6 +189,62 @@ class ConnectorLifecycleRunnerTest {
                     null,
                     "{\"title\":\"Amazing Grace\"}",
                     Map.of());
+        }
+    }
+
+    private static final class PolicyBlockedProviderAdapter implements ProviderAdapter {
+
+        private int discoverCalls;
+        private int fetchCalls;
+
+        @Override
+        public ConnectorDescriptor descriptor() {
+            return new ConnectorDescriptor(
+                    "ultimate-guitar",
+                    "Ultimate Guitar",
+                    "Policy-blocked placeholder adapter",
+                    ImportMethod.API_IMPORT,
+                    LegalMode.DISABLED_POLICY_BLOCKED,
+                    CredentialRequirement.REQUIRED_OPERATOR_PROVIDED,
+                    Set.of(PayloadType.PROVIDER_API_RECORD),
+                    new RateLimitPolicy(RateLimitBehavior.PROVIDER_ENFORCED, 10, true),
+                    AutomationLevel.AUTHORIZED_API,
+                    Set.of(
+                            ConnectorCapability.DISCOVER,
+                            ConnectorCapability.FETCH,
+                            ConnectorCapability.PARSE,
+                            ConnectorCapability.NORMALIZE));
+        }
+
+        @Override
+        public ConnectorConfiguration configure(ConnectorConfiguration configuration) {
+            return configuration;
+        }
+
+        @Override
+        public List<DiscoveredSource> discover(
+                ConnectorExecutionContext context,
+                ConnectorConfiguration configuration) {
+            discoverCalls++;
+            throw new AssertionError("discover should not be called for policy-blocked connectors");
+        }
+
+        @Override
+        public SourcePayload fetch(ConnectorExecutionContext context, DiscoveredSource source) {
+            fetchCalls++;
+            throw new AssertionError("fetch should not be called for policy-blocked connectors");
+        }
+
+        @Override
+        public ConnectorNativeRecord parse(ConnectorExecutionContext context, SourcePayload payload) {
+            throw new AssertionError("parse should not be called for policy-blocked connectors");
+        }
+
+        @Override
+        public NormalizedImportCandidate normalize(
+                ConnectorExecutionContext context,
+                ConnectorNativeRecord nativeRecord) {
+            throw new AssertionError("normalize should not be called for policy-blocked connectors");
         }
     }
 
