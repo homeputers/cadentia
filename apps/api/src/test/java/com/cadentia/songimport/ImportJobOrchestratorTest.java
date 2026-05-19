@@ -30,6 +30,10 @@ class ImportJobOrchestratorTest {
         // Then
         assertThat(result.job().status()).isEqualTo(ImportJobStatus.SUCCEEDED);
         assertThat(result.job().stagedCandidates()).hasSize(1);
+        assertThat(result.metrics().stagedCandidates()).isEqualTo(1);
+        assertThat(result.job().auditEvents())
+                .extracting(ImportJobAuditEvent::actor)
+                .containsOnly("op@test");
     }
 
     @Test
@@ -45,6 +49,7 @@ class ImportJobOrchestratorTest {
         assertThat(result.job().status()).isEqualTo(ImportJobStatus.PARTIALLY_SUCCEEDED);
         assertThat(result.job().stagedCandidates()).hasSize(1);
         assertThat(result.job().sourceFailures()).hasSize(1);
+        assertThat(result.metrics().failedCandidates()).isEqualTo(1);
     }
 
     @Test
@@ -91,6 +96,7 @@ class ImportJobOrchestratorTest {
         assertThat(result.job().auditEvents())
                 .extracting(ImportJobAuditEvent::status)
                 .contains(ImportJobStatus.RETRY_SCHEDULED);
+        assertThat(result.metrics().failedCandidates()).isEqualTo(1);
     }
 
     private static ImportJobOrchestrator orchestrator(int maxAttempts) {
