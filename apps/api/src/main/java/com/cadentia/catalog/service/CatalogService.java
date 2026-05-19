@@ -12,6 +12,7 @@ import com.cadentia.catalog.transposition.MusicalKey;
 import java.util.Comparator;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -20,6 +21,7 @@ public class CatalogService {
     private final SongRepository songRepository;
     private final DeterministicTransposer transposer;
 
+    @Autowired
     public CatalogService(SongRepository songRepository) {
         this(songRepository, new DeterministicTransposer());
     }

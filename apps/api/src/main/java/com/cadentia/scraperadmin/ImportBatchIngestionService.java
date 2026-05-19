@@ -15,6 +15,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
 import java.util.List;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,6 +27,7 @@ public class ImportBatchIngestionService {
     private final TitleNormalizer titleNormalizer;
     private final ObjectMapper objectMapper;
 
+    @Autowired
     public ImportBatchIngestionService(SongRepository songRepository, ObjectMapper objectMapper) {
         this(songRepository, new DeterministicSongDeduper(), new TitleNormalizer(), objectMapper);
     }
