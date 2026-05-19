@@ -3,6 +3,7 @@ package com.cadentia.songimport.safe;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.cadentia.catalog.model.ImportMethod;
 import com.cadentia.songimport.ConnectorExecutionContext;
 import com.cadentia.songimport.DiscoveredSource;
 import com.cadentia.songimport.PayloadType;
@@ -15,6 +16,15 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 class SafeConnectorsTest {
+
+    @Test
+    void connectorImportMethodsMatchTheirFormats() {
+        assertThat(new CsvImportConnector().descriptor().importMethod()).isEqualTo(ImportMethod.CSV_IMPORT);
+        assertThat(new ChordProImportConnector().descriptor().importMethod()).isEqualTo(ImportMethod.CHORDPRO_IMPORT);
+        assertThat(new OpenSongImportConnector().descriptor().importMethod()).isEqualTo(ImportMethod.OPENSONG_IMPORT);
+        assertThat(new MarkdownImportConnector().descriptor().importMethod()).isEqualTo(ImportMethod.MARKDOWN_IMPORT);
+        assertThat(new ManualEntryConnector().descriptor().importMethod()).isEqualTo(ImportMethod.MANUAL_ENTRY);
+    }
 
     @Test
     void csvConnectorParsesValidFixture() throws Exception {

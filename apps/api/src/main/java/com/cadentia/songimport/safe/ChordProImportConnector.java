@@ -17,6 +17,6 @@ public final class ChordProImportConnector extends SafeFileConnector {
 
     @Override
     protected ImportMethod importMethod() {
-        return ImportMethod.CSV_IMPORT;
+        return ImportMethod.CHORDPRO_IMPORT;
     }
 }

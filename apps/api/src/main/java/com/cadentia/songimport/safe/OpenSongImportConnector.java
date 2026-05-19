@@ -17,6 +17,6 @@ public final class OpenSongImportConnector extends SafeFileConnector {
 
     @Override
     protected ImportMethod importMethod() {
-        return ImportMethod.CSV_IMPORT;
+        return ImportMethod.OPENSONG_IMPORT;
     }
 }

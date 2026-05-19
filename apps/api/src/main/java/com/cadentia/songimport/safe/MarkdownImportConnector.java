@@ -17,6 +17,6 @@ public final class MarkdownImportConnector extends SafeFileConnector {
 
     @Override
     protected ImportMethod importMethod() {
-        return ImportMethod.CSV_IMPORT;
+        return ImportMethod.MARKDOWN_IMPORT;
     }
 }
