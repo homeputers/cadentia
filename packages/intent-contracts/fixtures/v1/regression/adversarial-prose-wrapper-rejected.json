@@ -1,0 +1,10 @@
+{
+  "scenario": "Adversarial LLM wraps a JSON object in prose and Markdown instead of returning JSON only.",
+  "userRequest": "Plan an opening set around Psalm 150.",
+  "llmOutput": "Here is the extracted JSON:\n```json\n{\n  \"intent\": \"GENERATE_SETLIST\",\n  \"slots\": { \"scriptureReferences\": [\"Psalm 150\"], \"serviceMoment\": \"opening\" }\n}\n```",
+  "expected": {
+    "accepted": false,
+    "errorCodes": ["MALFORMED_JSON"],
+    "errorPaths": ["$"]
+  }
+}

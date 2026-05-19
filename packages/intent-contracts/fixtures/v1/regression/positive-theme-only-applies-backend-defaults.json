@@ -1,0 +1,9 @@
+{
+  "scenario": "User provides only an Advent hope theme; backend defaults must fill counts, policies, and optional slots.",
+  "userRequest": "Make a setlist for Advent about hope.",
+  "llmOutput": "{\n  \"intent\": \"GENERATE_SETLIST\",\n  \"slots\": {\n    \"themeHints\": [\"Advent\", \"hope\"]\n  }\n}",
+  "expected": {
+    "accepted": true,
+    "intent": "GENERATE_SETLIST"
+  }
+}
