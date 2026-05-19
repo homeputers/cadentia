@@ -7,7 +7,9 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HexFormat;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Locale;
@@ -222,6 +224,8 @@ public final class DeterministicLyricsParser implements LyricsParser {
         private final List<Integer> declaredBpms = new ArrayList<>();
         private final List<String> declaredMeters = new ArrayList<>();
         private final List<String> chordRoots = new ArrayList<>();
+        private static final double NASHVILLE_KEY_CONFIDENCE_THRESHOLD = 0.5;
+        private static final Map<String, Integer> NOTE_TO_SEMITONE = buildNoteToSemitone();
         private String currentLabel;
         private int currentStartLine;
         private final List<String> currentLines = new ArrayList<>();
@@ -277,17 +281,13 @@ public final class DeterministicLyricsParser implements LyricsParser {
         }
 
         void addChord(String sourceChord, String normalizedChord, int lineNumber, int characterOffset) {
-            chords.add(Map.of(
-                    "sourceChord",
-                    sourceChord,
-                    "normalizedChord",
-                    normalizedChord == null ? sourceChord : normalizedChord,
-                    "isNormalized",
-                    normalizedChord != null,
-                    "line",
-                    lineNumber,
-                    "characterOffset",
-                    characterOffset));
+            Map<String, Object> chord = new HashMap<>();
+            chord.put("sourceChord", sourceChord);
+            chord.put("normalizedChord", normalizedChord == null ? sourceChord : normalizedChord);
+            chord.put("isNormalized", normalizedChord != null);
+            chord.put("line", lineNumber);
+            chord.put("characterOffset", characterOffset);
+            chords.add(chord);
         }
 
         void addMarker(String type, String label, int lineNumber) {
@@ -323,10 +323,39 @@ public final class DeterministicLyricsParser implements LyricsParser {
         }
 
         void finalizeMusicalAnalysis() {
-            addKeyAnalysis();
+            KeyAnalysis keyAnalysis = addKeyAnalysis();
             addBpmAnalysis();
             addMeterAnalysis();
+            addNashvilleNumbers(keyAnalysis);
             addFingerprints();
+        }
+
+        private void addNashvilleNumbers(KeyAnalysis keyAnalysis) {
+            if (!keyAnalysis.supportedForNashville()) {
+                markers.add(Map.of(
+                        "type", "warning_nashville_conversion_skipped",
+                        "label", "key unavailable or low confidence",
+                        "line", 0,
+                        "confidence", keyAnalysis.confidence,
+                        "keyEvidence", keyAnalysis.evidence));
+                return;
+            }
+            chords.sort(Comparator.<Map<String, Object>>comparingInt(chord -> (Integer) chord.get("line"))
+                    .thenComparingInt(chord -> (Integer) chord.get("characterOffset")));
+            for (Map<String, Object> chord : chords) {
+                String normalizedChord = String.valueOf(chord.get("normalizedChord"));
+                String nashville = toNashville(normalizedChord, keyAnalysis);
+                if (nashville == null) {
+                    markers.add(Map.of(
+                            "type", "warning_unsupported_nashville_chord",
+                            "label", String.valueOf(chord.get("sourceChord")),
+                            "line", chord.get("line"),
+                            "characterOffset", chord.get("characterOffset")));
+                } else {
+                    chord.put("nashvilleNumber", nashville);
+                    chord.put("nashvilleConfidence", keyAnalysis.confidence);
+                }
+            }
         }
 
         private void addFingerprints() {
@@ -430,26 +459,64 @@ public final class DeterministicLyricsParser implements LyricsParser {
             return joiner.toString();
         }
 
+        private String toNashville(String normalizedChord, KeyAnalysis keyAnalysis) {
+            Matcher rootMatcher = CHORD_ROOT.matcher(normalizedChord);
+            if (!rootMatcher.find()) {
+                return null;
+            }
+            Integer chordRoot = NOTE_TO_SEMITONE.get(rootMatcher.group(1));
+            if (chordRoot == null) {
+                return null;
+            }
+            int interval = Math.floorMod(chordRoot - keyAnalysis.tonicSemitone, 12);
+            String degree = degreeForInterval(interval, keyAnalysis.minorMode);
+            if (degree == null) {
+                return null;
+            }
+            int slashIndex = normalizedChord.indexOf('/');
+            if (slashIndex < 0 || slashIndex >= normalizedChord.length() - 1) {
+                return degree;
+            }
+            String bass = normalizedChord.substring(slashIndex + 1);
+            Integer bassRoot = NOTE_TO_SEMITONE.get(bass);
+            if (bassRoot == null) {
+                return null;
+            }
+            String bassDegree = degreeForInterval(Math.floorMod(bassRoot - keyAnalysis.tonicSemitone, 12), keyAnalysis.minorMode);
+            return bassDegree == null ? null : degree + "/" + bassDegree;
+        }
+
+        private String degreeForInterval(int interval, boolean minorMode) {
+            if (minorMode) {
+                return switch (interval) {
+                    case 0 -> "1m";
+                    case 2 -> "2";
+                    case 3 -> "b3";
+                    case 5 -> "4";
+                    case 7 -> "5";
+                    case 8 -> "b6";
+                    case 10 -> "b7";
+                    default -> null;
+                };
+            }
+            return switch (interval) {
+                case 0 -> "1";
+                case 2 -> "2";
+                case 4 -> "3";
+                case 5 -> "4";
+                case 7 -> "5";
+                case 9 -> "6";
+                case 11 -> "7";
+                default -> null;
+            };
+        }
+
         private Integer rootToSemitone(String normalizedChord) {
             Matcher root = CHORD_ROOT.matcher(normalizedChord);
             if (!root.find()) {
                 return null;
             }
-            return switch (root.group(1)) {
-                case "C" -> 0;
-                case "C#", "Db" -> 1;
-                case "D" -> 2;
-                case "D#", "Eb" -> 3;
-                case "E" -> 4;
-                case "F" -> 5;
-                case "F#", "Gb" -> 6;
-                case "G" -> 7;
-                case "G#", "Ab" -> 8;
-                case "A" -> 9;
-                case "A#", "Bb" -> 10;
-                case "B" -> 11;
-                default -> null;
-            };
+            return NOTE_TO_SEMITONE.get(root.group(1));
         }
 
         private String hash(String prefix, String value) {
@@ -462,24 +529,25 @@ public final class DeterministicLyricsParser implements LyricsParser {
             }
         }
 
-        private void addKeyAnalysis() {
+        private KeyAnalysis addKeyAnalysis() {
             if (!declaredKeys.isEmpty()) {
                 String first = declaredKeys.get(0);
                 markers.add(Map.of("type", "analysis", "field", "key", "value", first, "confidence", 0.98, "evidence", "explicit_metadata"));
                 if (declaredKeys.stream().distinct().count() > 1) {
                     markers.add(Map.of("type", "warning_conflicting_key_metadata", "label", String.join(", ", declaredKeys), "line", 0));
                 }
-                return;
+                return KeyAnalysis.from(first, 0.98, "explicit_metadata");
             }
             if (chordRoots.isEmpty()) {
                 markers.add(Map.of("type", "analysis", "field", "key", "value", "unknown", "confidence", 0.0, "evidence", "missing_data"));
-                return;
+                return KeyAnalysis.unknown(0.0, "missing_data");
             }
             String inferred = chordRoots.get(0);
             long distinctRoots = chordRoots.stream().distinct().count();
             double confidence = distinctRoots <= 2 ? 0.55 : 0.32;
             String evidence = distinctRoots <= 2 ? "inferred_from_chords" : "ambiguous_chord_distribution";
             markers.add(Map.of("type", "analysis", "field", "key", "value", inferred, "confidence", confidence, "evidence", evidence));
+            return KeyAnalysis.from(inferred, confidence, evidence);
         }
 
         private void addBpmAnalysis() {
@@ -500,6 +568,49 @@ public final class DeterministicLyricsParser implements LyricsParser {
                 return;
             }
             markers.add(Map.of("type", "analysis", "field", "meter", "value", "unknown", "confidence", 0.0, "evidence", "missing_data"));
+        }
+
+        private static Map<String, Integer> buildNoteToSemitone() {
+            Map<String, Integer> notes = new HashMap<>();
+            notes.put("C", 0);
+            notes.put("C#", 1);
+            notes.put("Db", 1);
+            notes.put("D", 2);
+            notes.put("D#", 3);
+            notes.put("Eb", 3);
+            notes.put("E", 4);
+            notes.put("F", 5);
+            notes.put("F#", 6);
+            notes.put("Gb", 6);
+            notes.put("G", 7);
+            notes.put("G#", 8);
+            notes.put("Ab", 8);
+            notes.put("A", 9);
+            notes.put("A#", 10);
+            notes.put("Bb", 10);
+            notes.put("B", 11);
+            return Map.copyOf(notes);
+        }
+
+        private record KeyAnalysis(int tonicSemitone, boolean minorMode, double confidence, String evidence, boolean known) {
+            static KeyAnalysis from(String key, double confidence, String evidence) {
+                if (key == null || key.isBlank()) {
+                    return unknown(confidence, evidence);
+                }
+                String normalized = key.trim();
+                boolean minor = normalized.endsWith("m");
+                String tonic = minor ? normalized.substring(0, normalized.length() - 1) : normalized;
+                Integer semitone = NOTE_TO_SEMITONE.get(tonic);
+                return semitone == null ? unknown(confidence, evidence) : new KeyAnalysis(semitone, minor, confidence, evidence, true);
+            }
+
+            static KeyAnalysis unknown(double confidence, String evidence) {
+                return new KeyAnalysis(-1, false, confidence, evidence, false);
+            }
+
+            boolean supportedForNashville() {
+                return known && confidence >= NASHVILLE_KEY_CONFIDENCE_THRESHOLD;
+            }
         }
     }
 }
