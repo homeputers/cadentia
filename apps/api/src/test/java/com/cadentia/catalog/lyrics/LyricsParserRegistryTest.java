@@ -10,25 +10,54 @@ class LyricsParserRegistryTest {
 
     @Test
     void resolvesParserByDeclaredFormat() {
-        // Arrange
         LyricsParserRegistry registry = new LyricsParserRegistry();
 
-        // Act / Assert
-        assertThat(registry.findParser(LyricsFormat.PLAIN_TEXT)).isPresent();
-        assertThat(registry.findParser(LyricsFormat.CHORDPRO)).isPresent();
-        assertThat(registry.findParser(LyricsFormat.MARKDOWN)).isPresent();
+        assertThat(registry.findParser(LyricsFormat.PLAIN_TEXT, null)).isPresent();
+        assertThat(registry.findParser(LyricsFormat.CHORDPRO, null)).isPresent();
+        assertThat(registry.findParser(LyricsFormat.MARKDOWN, null)).isPresent();
+    }
+
+    @Test
+    void resolvesParserDeterministicallyByPriorityThenName() {
+        LyricsParserPlugin lowPriority = new StubPlugin("zeta", 10, false);
+        LyricsParserPlugin highPriority = new StubPlugin("alpha", 100, true);
+        LyricsParserPlugin samePriorityNameTieBreaker = new StubPlugin("beta", 100, true);
+        LyricsParserRegistry registry = new LyricsParserRegistry(
+                java.util.List.of(lowPriority, samePriorityNameTieBreaker, highPriority));
+
+        assertThat(registry.findParser(LyricsFormat.PLAIN_TEXT, "source")).hasValue(highPriority);
     }
 
     @Test
     void recordsUnsupportedStatusForStoredButUnparsedFormats() {
-        // Arrange
         LyricsParserRegistry registry = new LyricsParserRegistry();
 
-        // Act
-        LyricsParseResult result = registry.parse(LyricsFormat.ONSONG, "Verse\nFixture excerpt");
+        LyricsParseResult result = registry.parse(LyricsFormat.ONSONG, "reference", "Verse\nFixture excerpt");
 
-        // Assert
         assertThat(result.status()).isEqualTo(LyricsParseStatus.UNSUPPORTED);
         assertThat(result.error()).contains("No deterministic parser").contains("onsong");
+    }
+
+    private record StubPlugin(String parserName, int priority, boolean supported) implements LyricsParserPlugin {
+
+        @Override
+        public boolean supports(ParserSelectionInput selectionInput) {
+            return supported && selectionInput != null && selectionInput.format() == LyricsFormat.PLAIN_TEXT;
+        }
+
+        @Override
+        public LyricsFormat format() {
+            return LyricsFormat.PLAIN_TEXT;
+        }
+
+        @Override
+        public String parserVersion() {
+            return "test-v1";
+        }
+
+        @Override
+        public LyricsParseResult parse(String content) {
+            return LyricsParseResult.parsed(parserName, parserVersion(), "[]", "[]", "[]");
+        }
     }
 }
