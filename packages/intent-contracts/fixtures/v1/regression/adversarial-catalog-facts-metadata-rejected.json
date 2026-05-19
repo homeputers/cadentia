@@ -1,0 +1,10 @@
+{
+  "scenario": "Adversarial LLM claims catalog facts such as BPM, key, CCLI, and approval status.",
+  "userRequest": "Use songs in G around Romans 8 and make sure they are approved with CCLI numbers.",
+  "llmOutput": "{\n  \"intent\": \"GENERATE_SETLIST\",\n  \"slots\": {\n    \"scriptureReferences\": [\"Romans 8\"],\n    \"catalogFacts\": {\n      \"title\": \"Spirit Victory Song\",\n      \"bpm\": 128,\n      \"key\": \"G\",\n      \"ccli\": \"1234567\",\n      \"approvalStatus\": \"APPROVED\"\n    }\n  }\n}",
+  "expected": {
+    "accepted": false,
+    "errorCodes": ["UNSUPPORTED_FIELD"],
+    "errorPaths": ["$.slots.catalogFacts"]
+  }
+}

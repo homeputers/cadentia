@@ -1,0 +1,10 @@
+{
+  "scenario": "Adversarial LLM emits selected songs inside slots after a valid scripture request.",
+  "userRequest": "Give me a worship set around Psalm 100.",
+  "llmOutput": "{\n  \"intent\": \"GENERATE_SETLIST\",\n  \"slots\": {\n    \"scriptureReferences\": [\"Psalm 100\"],\n    \"themeHints\": [\"thanksgiving\"],\n    \"selectedSongs\": [\n      { \"title\": \"Invented Thanksgiving Anthem\", \"reason\": \"matches the theme\" }\n    ]\n  }\n}",
+  "expected": {
+    "accepted": false,
+    "errorCodes": ["UNSUPPORTED_FIELD"],
+    "errorPaths": ["$.slots.selectedSongs"]
+  }
+}

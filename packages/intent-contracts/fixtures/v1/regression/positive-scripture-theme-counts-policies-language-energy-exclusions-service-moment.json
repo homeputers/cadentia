@@ -1,0 +1,9 @@
+{
+  "scenario": "User requests a communion setlist from John 4 with themes, explicit counts, policies, language, energy arc, and one exclusion.",
+  "userRequest": "For communion, build a Spanish setlist around John 4:23-24 focused on spirit, truth, and surrender. Use 6 praise songs and 3 worship songs, keep key centers to 2, avoid tempo jumps over 10 BPM, rise from low to high energy, and exclude Do Not Use This Week.",
+  "llmOutput": "{\n  \"intent\": \"GENERATE_SETLIST\",\n  \"slots\": {\n    \"verseText\": \"John 4:23-24\",\n    \"scriptureReferences\": [\"John 4:23-24\"],\n    \"themeHints\": [\"spirit\", \"truth\", \"surrender\"],\n    \"counts\": { \"praise\": 6, \"worship\": 3 },\n    \"keyPolicy\": {\n      \"preferSameKey\": true,\n      \"allowRelativeMajorMinor\": true,\n      \"maxKeyCenters\": 2\n    },\n    \"tempoPolicy\": { \"maxJumpBpm\": 10 },\n    \"language\": \"es\",\n    \"energyArc\": \"low_to_high\",\n    \"excludedSongs\": [\"Do Not Use This Week\"],\n    \"serviceMoment\": \"communion\"\n  }\n}",
+  "expected": {
+    "accepted": true,
+    "intent": "GENERATE_SETLIST"
+  }
+}

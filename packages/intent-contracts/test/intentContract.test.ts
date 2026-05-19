@@ -9,6 +9,7 @@ import {
 } from "../src/index.js";
 
 const fixturesRoot = new URL("../fixtures/v1/", import.meta.url);
+const regressionFixturesRoot = new URL("regression/", fixturesRoot);
 const schema = JSON.parse(readFileSync(intentContractV1SchemaPath, "utf8"));
 const ajv = new Ajv({ allErrors: true, strict: false });
 const validate = ajv.compile(schema);
@@ -19,6 +20,32 @@ function readFixture(kind: "valid" | "invalid", name: string): string {
 
 function parseFixture(kind: "valid" | "invalid", name: string): unknown {
   return JSON.parse(readFixture(kind, name));
+}
+
+
+type RegressionFixture = {
+  scenario: string;
+  userRequest: string;
+  llmOutput: string;
+  expected: {
+    accepted: boolean;
+    intent?: string;
+    errorCodes?: string[];
+    errorPaths?: string[];
+  };
+};
+
+function parseRegressionFixture(name: string): RegressionFixture {
+  return JSON.parse(readFileSync(new URL(name, regressionFixturesRoot), "utf8"));
+}
+
+function isJsonParseable(value: string): boolean {
+  try {
+    JSON.parse(value);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 describe("intent contract v1 schema artifact", () => {
@@ -123,3 +150,55 @@ describe("intent contract v1 schema artifact", () => {
     ]);
   });
 });
+
+describe("intent contract v1 regression fixtures", () => {
+  it.each(readdirSync(regressionFixturesRoot))
+    ("documents scenario and backend outcome for %s", (fixtureName) => {
+      const fixture = parseRegressionFixture(fixtureName);
+
+      expect(fixture.scenario).toContain(" ");
+      expect(fixture.userRequest).toContain(" ");
+      expect(fixture.llmOutput.length).toBeGreaterThan(0);
+
+      if (fixture.expected.accepted) {
+        const payload = JSON.parse(fixture.llmOutput);
+
+        expect(validate(payload), JSON.stringify(validate.errors, null, 2)).toBe(true);
+        const parsed = parseIntentOutput(payload);
+
+        expect(parsed.intent).toBe(fixture.expected.intent);
+        expect(JSON.stringify(parsed)).not.toContain("selectedSongs");
+        expect(JSON.stringify(parsed)).not.toContain("catalogFacts");
+        return;
+      }
+
+      if (!isJsonParseable(fixture.llmOutput)) {
+        expect(() => JSON.parse(fixture.llmOutput)).toThrow();
+        expect(fixture.expected.errorCodes).toContain("MALFORMED_JSON");
+        return;
+      }
+
+      const payload = JSON.parse(fixture.llmOutput);
+      expect(validate(payload)).toBe(false);
+      expect(() => parseIntentOutput(payload)).toThrow();
+    });
+
+  it("keeps positive regression fixtures limited to extraction slots instead of recommendations", () => {
+    const positiveFixtures = readdirSync(regressionFixturesRoot)
+      .filter((fixtureName) => fixtureName.startsWith("positive-"))
+      .map(parseRegressionFixture);
+
+    expect(positiveFixtures).toHaveLength(2);
+    for (const fixture of positiveFixtures) {
+      const payload = JSON.parse(fixture.llmOutput);
+      const serializedPayload = JSON.stringify(payload);
+
+      expect(payload).toMatchObject({ intent: "GENERATE_SETLIST" });
+      expect(serializedPayload).not.toContain("selectedSongs");
+      expect(serializedPayload).not.toContain("approvalDecision");
+      expect(serializedPayload).not.toContain("catalogFacts");
+      expect(serializedPayload).not.toContain("arrangementIds");
+    }
+  });
+});
+
