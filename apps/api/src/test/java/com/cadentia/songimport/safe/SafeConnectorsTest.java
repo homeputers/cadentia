@@ -3,7 +3,10 @@ package com.cadentia.songimport.safe;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.cadentia.songimport.*;
+import com.cadentia.songimport.ConnectorExecutionContext;
+import com.cadentia.songimport.DiscoveredSource;
+import com.cadentia.songimport.PayloadType;
+import com.cadentia.songimport.SourcePayload;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
