@@ -1,43 +1,44 @@
 package com.cadentia.catalog.lyrics;
 
 import com.cadentia.catalog.model.LyricsFormat;
-import java.util.EnumMap;
+import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import org.springframework.stereotype.Component;
 
 @Component
 public class LyricsParserRegistry {
 
-    private final Map<LyricsFormat, LyricsParser> parsersByFormat;
+    private final List<LyricsParserPlugin> parserPlugins;
 
     public LyricsParserRegistry() {
         this(List.of(
-                DeterministicLyricsParser.forFormat(LyricsFormat.PLAIN_TEXT),
-                DeterministicLyricsParser.forFormat(LyricsFormat.CHORDPRO),
-                DeterministicLyricsParser.forFormat(LyricsFormat.MARKDOWN)));
+                new DeterministicLyricsParserPlugin(DeterministicLyricsParser.forFormat(LyricsFormat.PLAIN_TEXT), 100),
+                new DeterministicLyricsParserPlugin(DeterministicLyricsParser.forFormat(LyricsFormat.CHORDPRO), 100),
+                new DeterministicLyricsParserPlugin(DeterministicLyricsParser.forFormat(LyricsFormat.MARKDOWN), 100)));
     }
 
-    LyricsParserRegistry(List<LyricsParser> parsers) {
-        Map<LyricsFormat, LyricsParser> mutableParsers = new EnumMap<>(LyricsFormat.class);
-        for (LyricsParser parser : parsers) {
-            mutableParsers.put(parser.format(), parser);
-        }
-        parsersByFormat = Map.copyOf(mutableParsers);
+    LyricsParserRegistry(List<LyricsParserPlugin> parserPlugins) {
+        this.parserPlugins = parserPlugins.stream()
+                .sorted(Comparator.comparingInt(LyricsParserPlugin::priority).reversed()
+                        .thenComparing(LyricsParserPlugin::parserName)
+                        .thenComparing(plugin -> plugin.format().name()))
+                .toList();
     }
 
-    public Optional<LyricsParser> findParser(LyricsFormat format) {
-        if (format == null) {
-            throw new IllegalArgumentException("format is required");
-        }
-        return Optional.ofNullable(parsersByFormat.get(format));
+    public Optional<LyricsParserPlugin> findParser(LyricsFormat format, String sourceReference) {
+        ParserSelectionInput selectionInput = new ParserSelectionInput(format, sourceReference);
+        return parserPlugins.stream().filter(plugin -> plugin.supports(selectionInput)).findFirst();
     }
 
-    public LyricsParseResult parse(LyricsFormat format, String content) {
-        return findParser(format)
+    public LyricsParseResult parse(LyricsFormat format, String sourceReference, String content) {
+        return findParser(format, sourceReference)
                 .map(parser -> parser.parse(content))
                 .orElseGet(() -> LyricsParseResult.unsupported(
                         "No deterministic parser is currently implemented for format " + format.storageValue()));
+    }
+
+    public LyricsParseResult parse(LyricsFormat format, String content) {
+        return parse(format, null, content);
     }
 }
