@@ -162,6 +162,17 @@ Invoke deterministic duplicate detection after candidate staging and persist
 proposed duplicate matches for admin review. Include match signals and confidence
 without automatically merging.
 
+### Implementation notes
+
+- Run deterministic deduplication immediately after each candidate is staged so
+  duplicate suggestions are available before any review decision.
+- Compare each staged candidate against both canonical catalog records and
+  currently active staged import candidates before setting review state.
+- Persist deterministic match signals (title, artist, lyrics hash, source
+  identifier, and confidence breakdown) for reviewer transparency.
+- Keep deduplication side-effect free with respect to merge/promotion; reviewers
+  remain the only gate for merge decisions.
+
 ### Acceptance criteria
 
 - Deduplication compares staged candidates to canonical songs and active staged
