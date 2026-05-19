@@ -14,21 +14,14 @@ public record VersionedParserOutput(
         List<ParserConfidence> confidence) {
 
     public VersionedParserOutput {
-        parserName = requireText(parserName, "parserName");
-        parserVersion = requireText(parserVersion, "parserVersion");
-        outputSchemaVersion = requireText(outputSchemaVersion, "outputSchemaVersion");
-        sourceContentHash = requireText(sourceContentHash, "sourceContentHash");
-        sectionsJson = requireText(sectionsJson, "sectionsJson");
-        chordMapJson = requireText(chordMapJson, "chordMapJson");
-        structuralMarkersJson = requireText(structuralMarkersJson, "structuralMarkersJson");
+        parserName = ParserOutputValidation.requireText(parserName, "parserName");
+        parserVersion = ParserOutputValidation.requireText(parserVersion, "parserVersion");
+        outputSchemaVersion = ParserOutputValidation.requireText(outputSchemaVersion, "outputSchemaVersion");
+        sourceContentHash = ParserOutputValidation.requireText(sourceContentHash, "sourceContentHash");
+        sectionsJson = ParserOutputValidation.requireText(sectionsJson, "sectionsJson");
+        chordMapJson = ParserOutputValidation.requireText(chordMapJson, "chordMapJson");
+        structuralMarkersJson = ParserOutputValidation.requireText(structuralMarkersJson, "structuralMarkersJson");
         warnings = List.copyOf(warnings == null ? List.of() : warnings);
         confidence = List.copyOf(confidence == null ? List.of() : confidence);
-    }
-
-    private static String requireText(String value, String field) {
-        if (value == null || value.isBlank()) {
-            throw new IllegalArgumentException(field + " is required");
-        }
-        return value;
     }
 }
