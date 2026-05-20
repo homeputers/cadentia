@@ -56,6 +56,15 @@ public class AdminImportReviewService {
     }
 
     @Transactional(readOnly = true)
+    public List<ImportCandidate> findCandidatesForBatch(UUID importBatchId, ImportCandidateStatus status) {
+        List<ImportCandidate> candidates = songRepository.findImportCandidatesByBatchId(importBatchId);
+        if (status == null) {
+            return candidates;
+        }
+        return candidates.stream().filter(candidate -> candidate.status() == status).toList();
+    }
+
+    @Transactional(readOnly = true)
     public AdminImportCandidateDetail getCandidateDetail(UUID importCandidateId) {
         ImportCandidate candidate = requireCandidate(importCandidateId);
         Map<String, Object> payload = parseJsonObject(candidate.sourcePayloadJson());
