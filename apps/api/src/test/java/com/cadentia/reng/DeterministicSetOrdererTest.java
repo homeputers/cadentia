@@ -44,6 +44,28 @@ class DeterministicSetOrdererTest {
                 .containsExactly(cKey.candidate().arrangementId(), dKey.candidate().arrangementId());
     }
 
+    @Test
+    void tieBreakingUsesNormalizedTitleThenStableIdentifiers() {
+        CandidateFeatureScorer.CandidateFeatureScore zeta = score(candidate("zeta", "C", 120), 0.9d);
+        CandidateFeatureScorer.CandidateFeatureScore alpha = score(candidate("Alpha", "C", 120), 0.9d);
+
+        OrderedSetResponse ordered = orderer.order(List.of(zeta, alpha), request(3), profile(), "snap");
+
+        assertThat(ordered.items()).extracting(item -> item.arrangementId())
+                .containsExactly(alpha.candidate().arrangementId(), zeta.candidate().arrangementId());
+    }
+
+    @Test
+    void nearTieWithinEpsilonUsesTieBreakersInsteadOfRawTotalScore() {
+        CandidateFeatureScorer.CandidateFeatureScore alphaLower = score(candidate("Alpha", "C", 120), 0.90000d);
+        CandidateFeatureScorer.CandidateFeatureScore zetaHigher = score(candidate("zeta", "C", 120), 0.90005d);
+
+        OrderedSetResponse ordered = orderer.order(List.of(zetaHigher, alphaLower), request(3), profile(), "snap");
+
+        assertThat(ordered.items()).extracting(item -> item.arrangementId())
+                .containsExactly(alphaLower.candidate().arrangementId(), zetaHigher.candidate().arrangementId());
+    }
+
     private static CandidateFeatureScorer.CandidateFeatureScore score(RecommendableArrangement candidate, double total) {
         return new CandidateFeatureScorer.CandidateFeatureScore(
                 candidate,
@@ -69,7 +91,7 @@ class DeterministicSetOrdererTest {
         return new ScoringProfile(
                 "v1",
                 Map.of(TransitionScorer.BPM_JUMP, 0.2d, TransitionScorer.KEY_SAME, 0.3d),
-                List.of("total_score", "song_id", "arrangement_id"));
+                List.of("total_score(desc,epsilon=0.0001)", "approval_confidence(desc)", "normalized_title(asc)", "song_id(asc)", "arrangement_id(asc)"));
     }
 
     private static RecommendableArrangement candidate(String titleSuffix, String key, int bpm) {
