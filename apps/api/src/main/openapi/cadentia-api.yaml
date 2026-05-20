@@ -9,7 +9,79 @@ servers:
 tags:
   - name: Setlists
     description: Deterministic setlist proposal operations
+  - name: AdminReview
+    description: Admin import-governance review operations
 paths:
+  /api/admin/import-candidates:
+    get:
+      tags:
+        - AdminReview
+      operationId: listAdminImportCandidates
+      summary: List import candidates for admin triage queue
+      parameters:
+        - in: query
+          name: batchId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: status
+          schema:
+            $ref: '#/components/schemas/ImportCandidateStatus'
+      responses:
+        '200':
+          description: Candidate queue page.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AdminImportCandidateQueueItem'
+  /api/admin/import-candidates/{candidateId}:
+    get:
+      tags:
+        - AdminReview
+      operationId: getAdminImportCandidateDetail
+      summary: Fetch admin candidate detail with parser evidence
+      parameters:
+        - in: path
+          name: candidateId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Candidate detail.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminImportCandidateDetailResponse'
+        '404':
+          description: Candidate not found.
+  /api/admin/import-candidates/{candidateId}/duplicates:
+    get:
+      tags:
+        - AdminReview
+      operationId: getAdminImportCandidateDuplicates
+      summary: Fetch ranked duplicate matches for a candidate
+      parameters:
+        - in: path
+          name: candidateId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Duplicate matches.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AdminDuplicateMatch'
   /setlists/proposals/natural-language:
     post:
       tags:
@@ -213,3 +285,115 @@ components:
           example:
             - Recommendation Engine scaffold accepted the structured request.
             - No songs were selected because catalog retrieval is not implemented yet.
+    ImportCandidateStatus:
+      type: string
+      enum: [STAGED, DEDUPLICATION_REVIEW, READY_TO_MERGE, MERGED, REJECTED, FAILED]
+    AdminImportCandidateQueueItem:
+      type: object
+      required: [candidateId, importBatchId, rawTitle, status, updatedAt]
+      properties:
+        candidateId:
+          type: string
+          format: uuid
+        importBatchId:
+          type: string
+          format: uuid
+        rawTitle:
+          type: string
+        normalizedTitle:
+          type: string
+          nullable: true
+        sourceArtistName:
+          type: string
+          nullable: true
+        status:
+          $ref: '#/components/schemas/ImportCandidateStatus'
+        updatedAt:
+          type: string
+          format: date-time
+    AdminDuplicateMatch:
+      type: object
+      required: [id, candidateSongId, matchScore, status]
+      properties:
+        id:
+          type: string
+          format: uuid
+        candidateSongId:
+          type: string
+          format: uuid
+        matchScore:
+          type: number
+          format: double
+        matchSignalsJson:
+          type: string
+          nullable: true
+        status:
+          type: string
+    AdminImportCandidateDetailResponse:
+      type: object
+      required: [candidateId, importBatchId, rawTitle, status, duplicateMatches, reviewHistory]
+      properties:
+        candidateId:
+          type: string
+          format: uuid
+        importBatchId:
+          type: string
+          format: uuid
+        rawTitle:
+          type: string
+        normalizedTitle:
+          type: string
+          nullable: true
+        sourceArtistName:
+          type: string
+          nullable: true
+        sourcePayloadJson:
+          type: string
+          nullable: true
+        rawSourceReference:
+          type: string
+          nullable: true
+        parserName:
+          type: string
+          nullable: true
+        parserVersion:
+          type: string
+          nullable: true
+        parserConfidence:
+          type: string
+          nullable: true
+        parserWarnings:
+          type: array
+          items:
+            type: string
+        status:
+          $ref: '#/components/schemas/ImportCandidateStatus'
+        duplicateMatches:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminDuplicateMatch'
+        reviewHistory:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminReviewHistoryItem'
+    AdminReviewHistoryItem:
+      type: object
+      required: [id, decision, reviewer, reviewedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        proposedDuplicateMatchId:
+          type: string
+          format: uuid
+          nullable: true
+        decision:
+          type: string
+        reviewer:
+          type: string
+        reviewNotes:
+          type: string
+          nullable: true
+        reviewedAt:
+          type: string
+          format: date-time

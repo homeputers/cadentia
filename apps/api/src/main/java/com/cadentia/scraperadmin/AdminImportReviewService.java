@@ -22,8 +22,13 @@ import com.cadentia.catalog.model.ImportMethod;
 import com.cadentia.catalog.model.LicenseType;
 import com.cadentia.catalog.model.SongStatus;
 import com.cadentia.catalog.repository.SongRepository;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,15 +42,60 @@ public class AdminImportReviewService {
 
     private final SongRepository songRepository;
     private final TitleNormalizer titleNormalizer;
+    private final ObjectMapper objectMapper;
 
     @Autowired
     public AdminImportReviewService(SongRepository songRepository) {
-        this(songRepository, new TitleNormalizer());
+        this(songRepository, new TitleNormalizer(), new ObjectMapper());
     }
 
-    AdminImportReviewService(SongRepository songRepository, TitleNormalizer titleNormalizer) {
+    AdminImportReviewService(SongRepository songRepository, TitleNormalizer titleNormalizer, ObjectMapper objectMapper) {
         this.songRepository = songRepository;
         this.titleNormalizer = titleNormalizer;
+        this.objectMapper = objectMapper;
+    }
+
+    @Transactional(readOnly = true)
+    public List<ImportCandidate> findCandidatesForBatch(UUID importBatchId, ImportCandidateStatus status) {
+        List<ImportCandidate> candidates = songRepository.findImportCandidatesByBatchId(importBatchId);
+        if (status == null) {
+            return candidates;
+        }
+        return candidates.stream().filter(candidate -> candidate.status() == status).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public AdminImportCandidateDetail getCandidateDetail(UUID importCandidateId) {
+        ImportCandidate candidate = requireCandidate(importCandidateId);
+        Map<String, Object> payload = parseJsonObject(candidate.sourcePayloadJson());
+        Map<String, Object> parserEvidence = nestedMap(payload, "parserEvidence");
+        List<String> warnings = parserWarnings(payload, parserEvidence);
+        List<ProposedDuplicateMatch> duplicateMatches = songRepository.findProposedDuplicateMatchesByImportCandidateId(importCandidateId);
+        List<ImportCandidateReview> reviews = songRepository.findImportCandidateReviewsByImportCandidateId(importCandidateId);
+        return new AdminImportCandidateDetail(
+                candidate,
+                asString(payload.get("sourceReference")),
+                asString(parserEvidence.get("parserName")),
+                asString(parserEvidence.get("parserVersion")),
+                asString(parserEvidence.get("confidence")),
+                warnings,
+                duplicateMatches,
+                reviews);
+    }
+
+    @Transactional
+    public ImportCandidateReview addStructuredNote(UUID importCandidateId, String reviewer, StructuredReviewNote note) {
+        ImportCandidate candidate = requireCandidate(importCandidateId);
+        String notesJson = toJson(Map.of(
+                "category", note.category(),
+                "body", note.body(),
+                "followUpAction", note.followUpAction()));
+        return songRepository.createImportCandidateReview(new CreateImportCandidateReviewCommand(
+                candidate.id(),
+                null,
+                ImportCandidateReviewDecision.NEEDS_MORE_INFO,
+                reviewer,
+                notesJson));
     }
 
     @Transactional
@@ -232,5 +282,59 @@ public class AdminImportReviewService {
     private static String sourceLabel(ImportCandidate candidate, String sourceLabel) {
         String externalIdentifier = candidate.externalCandidateId() == null ? "no external id" : candidate.externalCandidateId();
         return sourceLabel + " (importCandidateId=" + candidate.id() + ", externalCandidateId=" + externalIdentifier + ")";
+    }
+
+    private Map<String, Object> parseJsonObject(String json) {
+        try {
+            return objectMapper.readValue(json == null ? "{}" : json, new TypeReference<>() {});
+        } catch (Exception ignored) {
+            return Map.of();
+        }
+    }
+
+    private static Map<String, Object> nestedMap(Map<String, Object> root, String key) {
+        Object value = root.get(key);
+        if (value instanceof Map<?, ?> map) {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> casted = (Map<String, Object>) map;
+            return casted;
+        }
+        return Map.of();
+    }
+
+    private List<String> parserWarnings(Map<String, Object> payload, Map<String, Object> parserEvidence) {
+        List<String> warnings = new ArrayList<>();
+        warnings.addAll(stringList(parserEvidence.get("warnings")));
+        warnings.addAll(stringList(payload.get("parserWarnings")));
+        return warnings;
+    }
+
+    private List<String> stringList(Object value) {
+        if (value == null) {
+            return List.of();
+        }
+        JsonNode node = objectMapper.valueToTree(value);
+        if (!node.isArray()) {
+            return List.of();
+        }
+        List<String> results = new ArrayList<>();
+        node.forEach(item -> {
+            if (item.isTextual()) {
+                results.add(item.asText());
+            }
+        });
+        return results;
+    }
+
+    private static String asString(Object value) {
+        return value == null ? null : String.valueOf(value);
+    }
+
+    private String toJson(Map<String, Object> value) {
+        try {
+            return objectMapper.writeValueAsString(value);
+        } catch (Exception exception) {
+            throw new IllegalStateException("Unable to serialize structured review note", exception);
+        }
     }
 }
