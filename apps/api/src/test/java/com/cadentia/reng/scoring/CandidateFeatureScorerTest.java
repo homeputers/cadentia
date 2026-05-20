@@ -127,6 +127,7 @@ class CandidateFeatureScorerTest {
                 5,
                 new ScoringRequest.KeyPolicy(true, true, 2),
                 new ScoringRequest.TempoPolicy(12),
+                null,
                 "en",
                 List.of(),
                 new ScoringRequest.DefaultsApplied(false, false, false, false));

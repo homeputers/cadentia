@@ -59,6 +59,7 @@ class DeterministicSetOrdererTest {
                 0,
                 new ScoringRequest.KeyPolicy(true, true, maxKeyCenters),
                 new ScoringRequest.TempoPolicy(12),
+                null,
                 "en",
                 List.of(),
                 new ScoringRequest.DefaultsApplied(false, false, false, false));

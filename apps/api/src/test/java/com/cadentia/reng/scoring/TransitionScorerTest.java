@@ -45,6 +45,7 @@ class TransitionScorerTest {
                 1,
                 new ScoringRequest.KeyPolicy(true, allowRelative, 2),
                 new ScoringRequest.TempoPolicy(12),
+                null,
                 "en",
                 List.of(),
                 new ScoringRequest.DefaultsApplied(false, false, false, false));
