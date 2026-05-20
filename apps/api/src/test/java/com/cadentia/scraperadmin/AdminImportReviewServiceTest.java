@@ -28,6 +28,7 @@ import com.cadentia.catalog.model.ImportMethod;
 import com.cadentia.catalog.model.LicenseType;
 import com.cadentia.catalog.model.SongStatus;
 import com.cadentia.catalog.repository.SongRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
@@ -266,6 +267,58 @@ class AdminImportReviewServiceTest {
         verify(songRepository, never()).markImportCandidateMerged(any(UUID.class), any(UUID.class));
     }
 
+    @Test
+    void getCandidateDetailIncludesParserEvidenceWarningsDuplicatesAndHistory() {
+        // Arrange
+        UUID candidateId = UUID.randomUUID();
+        ImportCandidate candidate = candidate(candidateId, ImportCandidateStatus.READY_TO_MERGE, null);
+        ProposedDuplicateMatch duplicateMatch = proposedMatch(UUID.randomUUID(), candidateId, UUID.randomUUID());
+        ImportCandidateReview review = review(candidateId, null, ImportCandidateReviewDecision.NEEDS_MORE_INFO);
+        when(songRepository.findImportCandidateById(candidateId)).thenReturn(Optional.of(candidate));
+        when(songRepository.findProposedDuplicateMatchesByImportCandidateId(candidateId)).thenReturn(List.of(duplicateMatch));
+        when(songRepository.findImportCandidateReviewsByImportCandidateId(candidateId)).thenReturn(List.of(review));
+        AdminImportReviewService service = new AdminImportReviewService(songRepository, new TitleNormalizer(), new ObjectMapper());
+
+        // Act
+        AdminImportCandidateDetail detail = service.getCandidateDetail(candidateId);
+
+        // Assert
+        assertThat(detail.candidate().id()).isEqualTo(candidateId);
+        assertThat(detail.rawSourceReference()).isEqualTo("fixture://sources/1");
+        assertThat(detail.parserName()).isEqualTo("fixture-parser");
+        assertThat(detail.parserVersion()).isEqualTo("1.2.3");
+        assertThat(detail.parserConfidence()).isEqualTo("0.72");
+        assertThat(detail.parserWarnings()).containsExactly("low-ccli-confidence", "unresolved-bridge-boundary");
+        assertThat(detail.duplicateMatches()).containsExactly(duplicateMatch);
+        assertThat(detail.reviewHistory()).containsExactly(review);
+    }
+
+    @Test
+    void addStructuredNotePersistsNeedsMoreInfoReviewWithoutMutatingCandidate() {
+        // Arrange
+        UUID candidateId = UUID.randomUUID();
+        ImportCandidate candidate = candidate(candidateId, ImportCandidateStatus.FAILED, null);
+        ImportCandidateReview saved = review(candidateId, null, ImportCandidateReviewDecision.NEEDS_MORE_INFO);
+        when(songRepository.findImportCandidateById(candidateId)).thenReturn(Optional.of(candidate));
+        when(songRepository.createImportCandidateReview(any(CreateImportCandidateReviewCommand.class))).thenReturn(saved);
+        AdminImportReviewService service = new AdminImportReviewService(songRepository, new TitleNormalizer(), new ObjectMapper());
+
+        // Act
+        ImportCandidateReview result = service.addStructuredNote(
+                candidateId,
+                "reviewer@example.test",
+                new StructuredReviewNote("parser-warning", "Parser confidence below threshold", "request-reparse"));
+
+        // Assert
+        assertThat(result).isEqualTo(saved);
+        verify(songRepository).createImportCandidateReview(reviewCommandCaptor.capture());
+        assertThat(reviewCommandCaptor.getValue().decision()).isEqualTo(ImportCandidateReviewDecision.NEEDS_MORE_INFO);
+        assertThat(reviewCommandCaptor.getValue().reviewNotes())
+                .contains("\"category\":\"parser-warning\"")
+                .contains("\"body\":\"Parser confidence below threshold\"");
+        verify(songRepository, never()).updateImportCandidateStatus(any(UUID.class), any(ImportCandidateStatus.class));
+    }
+
     private static ImportCandidate candidate(UUID id, ImportCandidateStatus status, UUID mergedSongId) {
         return new ImportCandidate(
                 id,
@@ -277,7 +330,11 @@ class AdminImportReviewServiceTest {
                 "{\"sourceArtistId\":\"artist-1\"}",
                 "18723",
                 null,
-                "{\"title\":\"Great Is Thy Faithfulness (Live)\"}",
+                "{\"title\":\"Great Is Thy Faithfulness (Live)\","
+                        + "\"sourceReference\":\"fixture://sources/1\","
+                        + "\"parserEvidence\":{\"parserName\":\"fixture-parser\",\"parserVersion\":\"1.2.3\","
+                        + "\"confidence\":0.72,\"warnings\":[\"low-ccli-confidence\"]},"
+                        + "\"parserWarnings\":[\"unresolved-bridge-boundary\"]}",
                 status,
                 mergedSongId,
                 Instant.EPOCH,
