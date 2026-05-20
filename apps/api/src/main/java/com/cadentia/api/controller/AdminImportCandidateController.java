@@ -1,23 +1,26 @@
 package com.cadentia.api.controller;
 
-import com.cadentia.catalog.entity.ImportCandidate;
 import com.cadentia.catalog.entity.ImportCandidateReview;
 import com.cadentia.catalog.entity.ProposedDuplicateMatch;
-import com.cadentia.catalog.model.ImportCandidateStatus;
+import com.cadentia.generated.api.AdminReviewApi;
+import com.cadentia.generated.model.AdminDuplicateMatch;
+import com.cadentia.generated.model.AdminImportCandidateDetailResponse;
+import com.cadentia.generated.model.AdminImportCandidateQueueItem;
+import com.cadentia.generated.model.AdminReviewHistoryItem;
+import com.cadentia.generated.model.ImportCandidateStatus;
 import com.cadentia.scraperadmin.AdminImportCandidateDetail;
 import com.cadentia.scraperadmin.AdminImportReviewService;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/admin/import-candidates")
-public class AdminImportCandidateController {
+public class AdminImportCandidateController implements AdminReviewApi {
 
     private final AdminImportReviewService reviewService;
 
@@ -25,109 +28,72 @@ public class AdminImportCandidateController {
         this.reviewService = reviewService;
     }
 
-    @GetMapping
-    public ResponseEntity<List<AdminImportCandidateQueueItemResponse>> list(
+    @Override
+    public ResponseEntity<List<AdminImportCandidateQueueItem>> listAdminImportCandidates(
             @RequestParam UUID batchId,
             @RequestParam(required = false) ImportCandidateStatus status) {
-        List<AdminImportCandidateQueueItemResponse> response = reviewService.findCandidatesForBatch(batchId, status).stream()
-                .map(AdminImportCandidateQueueItemResponse::from)
+        List<AdminImportCandidateQueueItem> response = reviewService.findCandidatesForBatch(
+                        batchId,
+                        status == null ? null : com.cadentia.catalog.model.ImportCandidateStatus.valueOf(status.getValue()))
+                .stream()
+                .map(candidate -> new AdminImportCandidateQueueItem()
+                        .candidateId(candidate.id())
+                        .importBatchId(candidate.importBatchId())
+                        .rawTitle(candidate.rawTitle())
+                        .normalizedTitle(candidate.normalizedTitle())
+                        .sourceArtistName(candidate.sourceArtistName())
+                        .status(ImportCandidateStatus.fromValue(candidate.status().name()))
+                        .updatedAt(OffsetDateTime.ofInstant(candidate.updatedAt(), ZoneOffset.UTC)))
                 .toList();
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/{candidateId}")
-    public ResponseEntity<AdminImportCandidateDetailResponse> detail(@PathVariable UUID candidateId) {
+    @Override
+    public ResponseEntity<AdminImportCandidateDetailResponse> getAdminImportCandidateDetail(@PathVariable UUID candidateId) {
         AdminImportCandidateDetail detail = reviewService.getCandidateDetail(candidateId);
-        return ResponseEntity.ok(AdminImportCandidateDetailResponse.from(detail));
+        return ResponseEntity.ok(toDetail(detail));
     }
 
-    @GetMapping("/{candidateId}/duplicates")
-    public ResponseEntity<List<AdminDuplicateMatchResponse>> duplicates(@PathVariable UUID candidateId) {
+    @Override
+    public ResponseEntity<List<AdminDuplicateMatch>> getAdminImportCandidateDuplicates(@PathVariable UUID candidateId) {
         AdminImportCandidateDetail detail = reviewService.getCandidateDetail(candidateId);
-        return ResponseEntity.ok(detail.duplicateMatches().stream().map(AdminDuplicateMatchResponse::from).toList());
+        return ResponseEntity.ok(detail.duplicateMatches().stream().map(AdminImportCandidateController::toDuplicate).toList());
     }
 
-    public static record AdminImportCandidateQueueItemResponse(
-            UUID candidateId,
-            UUID importBatchId,
-            String rawTitle,
-            String normalizedTitle,
-            String sourceArtistName,
-            ImportCandidateStatus status) {
-
-        private static AdminImportCandidateQueueItemResponse from(ImportCandidate candidate) {
-            return new AdminImportCandidateQueueItemResponse(
-                    candidate.id(),
-                    candidate.importBatchId(),
-                    candidate.rawTitle(),
-                    candidate.normalizedTitle(),
-                    candidate.sourceArtistName(),
-                    candidate.status());
-        }
+    private static AdminImportCandidateDetailResponse toDetail(AdminImportCandidateDetail detail) {
+        return new AdminImportCandidateDetailResponse()
+                .candidateId(detail.candidate().id())
+                .importBatchId(detail.candidate().importBatchId())
+                .rawTitle(detail.candidate().rawTitle())
+                .normalizedTitle(detail.candidate().normalizedTitle())
+                .sourceArtistName(detail.candidate().sourceArtistName())
+                .sourcePayloadJson(detail.candidate().sourcePayloadJson())
+                .rawSourceReference(detail.rawSourceReference())
+                .parserName(detail.parserName())
+                .parserVersion(detail.parserVersion())
+                .parserConfidence(detail.parserConfidence())
+                .parserWarnings(detail.parserWarnings())
+                .status(ImportCandidateStatus.fromValue(detail.candidate().status().name()))
+                .duplicateMatches(detail.duplicateMatches().stream().map(AdminImportCandidateController::toDuplicate).toList())
+                .reviewHistory(detail.reviewHistory().stream().map(AdminImportCandidateController::toHistory).toList());
     }
 
-    public static record AdminImportCandidateDetailResponse(
-            UUID candidateId,
-            UUID importBatchId,
-            String rawTitle,
-            String normalizedTitle,
-            String sourceArtistName,
-            String sourcePayloadJson,
-            String rawSourceReference,
-            String parserName,
-            String parserVersion,
-            String parserConfidence,
-            List<String> parserWarnings,
-            ImportCandidateStatus status,
-            List<AdminDuplicateMatchResponse> duplicateMatches,
-            List<AdminReviewHistoryItemResponse> reviewHistory) {
-
-        private static AdminImportCandidateDetailResponse from(AdminImportCandidateDetail detail) {
-            ImportCandidate candidate = detail.candidate();
-            return new AdminImportCandidateDetailResponse(
-                    candidate.id(),
-                    candidate.importBatchId(),
-                    candidate.rawTitle(),
-                    candidate.normalizedTitle(),
-                    candidate.sourceArtistName(),
-                    candidate.sourcePayloadJson(),
-                    detail.rawSourceReference(),
-                    detail.parserName(),
-                    detail.parserVersion(),
-                    detail.parserConfidence(),
-                    detail.parserWarnings(),
-                    candidate.status(),
-                    detail.duplicateMatches().stream().map(AdminDuplicateMatchResponse::from).toList(),
-                    detail.reviewHistory().stream().map(AdminReviewHistoryItemResponse::from).toList());
-        }
+    private static AdminDuplicateMatch toDuplicate(ProposedDuplicateMatch match) {
+        return new AdminDuplicateMatch()
+                .id(match.id())
+                .candidateSongId(match.candidateSongId())
+                .matchScore(match.matchScore() == null ? null : match.matchScore().doubleValue())
+                .matchSignalsJson(match.matchSignalsJson())
+                .status(match.status().name());
     }
 
-    public static record AdminDuplicateMatchResponse(UUID id, UUID candidateSongId, String matchScore, String matchSignalsJson, String status) {
-        private static AdminDuplicateMatchResponse from(ProposedDuplicateMatch match) {
-            return new AdminDuplicateMatchResponse(
-                    match.id(),
-                    match.candidateSongId(),
-                    match.matchScore().toPlainString(),
-                    match.matchSignalsJson(),
-                    match.status().name());
-        }
-    }
-
-    public static record AdminReviewHistoryItemResponse(
-            UUID id,
-            UUID proposedDuplicateMatchId,
-            String decision,
-            String reviewer,
-            String reviewNotes,
-            String reviewedAt) {
-        private static AdminReviewHistoryItemResponse from(ImportCandidateReview review) {
-            return new AdminReviewHistoryItemResponse(
-                    review.id(),
-                    review.proposedDuplicateMatchId(),
-                    review.decision().name(),
-                    review.reviewer(),
-                    review.reviewNotes(),
-                    review.reviewedAt().toString());
-        }
+    private static AdminReviewHistoryItem toHistory(ImportCandidateReview review) {
+        return new AdminReviewHistoryItem()
+                .id(review.id())
+                .proposedDuplicateMatchId(review.proposedDuplicateMatchId())
+                .decision(review.decision().name())
+                .reviewer(review.reviewer())
+                .reviewNotes(review.reviewNotes())
+                .reviewedAt(OffsetDateTime.ofInstant(review.reviewedAt(), ZoneOffset.UTC));
     }
 }
