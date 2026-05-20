@@ -21,6 +21,7 @@ import com.cadentia.catalog.model.ImportCandidateStatus;
 import com.cadentia.catalog.model.ImportMethod;
 import com.cadentia.catalog.model.LicenseType;
 import com.cadentia.catalog.model.SongStatus;
+import com.cadentia.catalog.model.UpdateSongCommand;
 import com.cadentia.catalog.repository.SongRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -125,12 +126,47 @@ public class AdminImportReviewService {
         Song targetSong = requireSong(command.targetSongId());
         requirePermittingReview(candidate.id(), ImportCandidateReviewDecision.CONFIRM_MATCH, targetSong.id());
 
+        Song mergedSong = mergeSelectedCandidateFields(candidate, targetSong, command);
         ProvenanceRecord provenanceRecord = createSongProvenance(candidate, targetSong.id(), command.sourceSystem(),
                 command.sourceUri(), command.sourceLabel(), command.licenseType(), command.licenseNotes(),
                 command.importMethod());
         songRepository.markImportCandidateMerged(candidate.id(), targetSong.id())
                 .orElseThrow(() -> new IllegalStateException("Import candidate disappeared during merge"));
-        return new AdminMergeResult(targetSong, null, List.of(provenanceRecord), List.of(), false);
+        return new AdminMergeResult(mergedSong, null, List.of(provenanceRecord), List.of(), false);
+    }
+
+    private Song mergeSelectedCandidateFields(ImportCandidate candidate, Song targetSong, MergeIntoExistingSongCommand command) {
+        if (command.selectedFields().isEmpty()) {
+            return targetSong;
+        }
+        Map<String, Object> payload = parseJsonObject(candidate.sourcePayloadJson());
+        boolean approvedSong = songRepository.findApprovalRecordsForSong(targetSong.id()).stream()
+                .anyMatch(record -> record.status() == ApprovalStatus.APPROVED);
+        String importedTitle = stringOrNull(payload.get("title"));
+        if (approvedSong && importedTitle != null
+                && !importedTitle.equals(targetSong.canonicalTitle())
+                && !command.selectedFields().contains(MergeIntoExistingSongCommand.MergeField.CANONICAL_TITLE)) {
+            throw new IllegalStateException("Conflict on canonicalTitle requires explicit reviewer field selection");
+        }
+        UpdateSongCommand update = new UpdateSongCommand(
+                command.selectedFields().contains(MergeIntoExistingSongCommand.MergeField.CANONICAL_TITLE) && importedTitle != null
+                        ? importedTitle
+                        : targetSong.canonicalTitle(),
+                command.selectedFields().contains(MergeIntoExistingSongCommand.MergeField.CANONICAL_TITLE) && importedTitle != null
+                        ? titleNormalizer.normalize(importedTitle)
+                        : targetSong.normalizedTitle(),
+                targetSong.primaryLanguage(),
+                targetSong.originalArtistDisplay(),
+                targetSong.composerCredits(),
+                targetSong.ccliNumber(),
+                targetSong.yearWritten(),
+                targetSong.songStatus(),
+                targetSong.doctrinalNotes());
+        return songRepository.updateSong(targetSong.id(), update).orElse(targetSong);
+    }
+
+    private static String stringOrNull(Object value) {
+        return value == null ? null : String.valueOf(value);
     }
 
     @Transactional

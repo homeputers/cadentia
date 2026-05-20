@@ -2,6 +2,8 @@ package com.cadentia.scraperadmin;
 
 import com.cadentia.catalog.model.ImportMethod;
 import com.cadentia.catalog.model.LicenseType;
+import java.util.EnumSet;
+import java.util.Set;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -14,7 +16,8 @@ public record MergeIntoExistingSongCommand(
         String sourceLabel,
         LicenseType licenseType,
         String licenseNotes,
-        ImportMethod importMethod) {
+        ImportMethod importMethod,
+        Set<MergeField> selectedFields) {
 
     public MergeIntoExistingSongCommand {
         importCandidateId = Objects.requireNonNull(importCandidateId, "importCandidateId is required");
@@ -24,6 +27,18 @@ public record MergeIntoExistingSongCommand(
         sourceLabel = requireText(sourceLabel, "sourceLabel");
         licenseType = Objects.requireNonNull(licenseType, "licenseType is required");
         importMethod = Objects.requireNonNull(importMethod, "importMethod is required");
+        selectedFields = selectedFields == null || selectedFields.isEmpty()
+                ? Set.of()
+                : EnumSet.copyOf(selectedFields);
+    }
+
+    public enum MergeField {
+        CANONICAL_TITLE,
+        ORIGINAL_ARTIST_DISPLAY,
+        COMPOSER_CREDITS,
+        CCLI_NUMBER,
+        YEAR_WRITTEN,
+        DOCTRINAL_NOTES
     }
 
     private static String requireText(String value, String fieldName) {

@@ -27,12 +27,14 @@ import com.cadentia.catalog.model.ImportCandidateStatus;
 import com.cadentia.catalog.model.ImportMethod;
 import com.cadentia.catalog.model.LicenseType;
 import com.cadentia.catalog.model.SongStatus;
+import com.cadentia.catalog.model.UpdateSongCommand;
 import com.cadentia.catalog.repository.SongRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -149,7 +151,8 @@ class AdminImportReviewServiceTest {
                 "Fixture CSV row 1",
                 LicenseType.UNKNOWN,
                 "reviewed import metadata only",
-                ImportMethod.CSV_IMPORT));
+                ImportMethod.CSV_IMPORT,
+                java.util.Set.of()));
 
         // Assert
         assertThat(result.song()).isEqualTo(song);
@@ -255,7 +258,8 @@ class AdminImportReviewServiceTest {
                 "Fixture CSV row 3",
                 LicenseType.UNKNOWN,
                 null,
-                ImportMethod.CSV_IMPORT));
+                ImportMethod.CSV_IMPORT,
+                java.util.Set.of()));
 
         // Assert
         assertThat(result.song()).isEqualTo(song);
@@ -265,6 +269,47 @@ class AdminImportReviewServiceTest {
         verify(songRepository, never()).createArrangement(any(CreateArrangementCommand.class));
         verify(songRepository, never()).createProvenanceRecord(any(CreateProvenanceRecordCommand.class));
         verify(songRepository, never()).markImportCandidateMerged(any(UUID.class), any(UUID.class));
+    }
+
+    @Test
+    void mergeIntoExistingSongCanApplyExplicitFieldSelectionBeforeMerge() {
+        UUID songId = UUID.randomUUID();
+        ImportCandidate candidate = candidate(UUID.randomUUID(), ImportCandidateStatus.READY_TO_MERGE, null);
+        Song song = song(songId, "great-is-thy-faithfulness", SongStatus.IN_REVIEW);
+        Song updatedSong = new Song(
+                song.id(),
+                "Great Is Thy Faithfulness (Live)",
+                "great-is-thy-faithfulness-live",
+                song.primaryLanguage(),
+                song.originalArtistDisplay(),
+                song.composerCredits(),
+                song.ccliNumber(),
+                song.yearWritten(),
+                song.songStatus(),
+                song.doctrinalNotes(),
+                song.createdAt(),
+                song.updatedAt());
+        ProposedDuplicateMatch match = proposedMatch(UUID.randomUUID(), candidate.id(), songId);
+        ImportCandidateReview review = review(candidate.id(), match.id(), ImportCandidateReviewDecision.CONFIRM_MATCH);
+        ProvenanceRecord provenanceRecord = provenanceRecord(UUID.randomUUID(), songId, null, candidate.importBatchId());
+        when(songRepository.findImportCandidateById(candidate.id())).thenReturn(Optional.of(candidate));
+        when(songRepository.findById(songId)).thenReturn(Optional.of(song));
+        when(songRepository.findImportCandidateReviewsByImportCandidateId(candidate.id())).thenReturn(List.of(review));
+        when(songRepository.findProposedDuplicateMatchById(match.id())).thenReturn(Optional.of(match));
+        when(songRepository.findApprovalRecordsForSong(songId)).thenReturn(List.of());
+        when(songRepository.updateSong(any(UUID.class), any(UpdateSongCommand.class))).thenReturn(Optional.of(updatedSong));
+        when(songRepository.createProvenanceRecord(any(CreateProvenanceRecordCommand.class))).thenReturn(provenanceRecord);
+        when(songRepository.markImportCandidateMerged(candidate.id(), songId))
+                .thenReturn(Optional.of(candidate(candidate.id(), ImportCandidateStatus.MERGED, songId)));
+        AdminImportReviewService service = new AdminImportReviewService(songRepository);
+
+        AdminMergeResult result = service.mergeIntoExistingSong(new MergeIntoExistingSongCommand(
+                candidate.id(), songId, "reviewer@example.test", "fixture-csv", null, "Fixture CSV row 4",
+                LicenseType.UNKNOWN, null, ImportMethod.CSV_IMPORT,
+                Set.of(MergeIntoExistingSongCommand.MergeField.CANONICAL_TITLE)));
+
+        assertThat(result.song().canonicalTitle()).isEqualTo("Great Is Thy Faithfulness (Live)");
+        verify(songRepository).updateSong(any(UUID.class), any(UpdateSongCommand.class));
     }
 
     @Test
