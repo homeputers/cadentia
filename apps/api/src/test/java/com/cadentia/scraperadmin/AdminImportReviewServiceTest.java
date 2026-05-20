@@ -1,6 +1,7 @@
 package com.cadentia.scraperadmin;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -236,6 +237,52 @@ class AdminImportReviewServiceTest {
                 .extracting(CreateApprovalRecordCommand::approvalType, CreateApprovalRecordCommand::status)
                 .containsExactly(ApprovalType.EDITORIAL, ApprovalStatus.PENDING);
         verify(songRepository).markImportCandidateMerged(candidate.id(), song.id());
+    }
+
+
+    @Test
+    void applyApprovalActionApprovesExistingReviewRecord() {
+        UUID songId = UUID.randomUUID();
+        ApprovalRecord pending = approvalRecord(UUID.randomUUID(), songId, ApprovalStatus.PENDING);
+        ApprovalRecord approved = approvalRecord(UUID.randomUUID(), songId, ApprovalStatus.APPROVED);
+        when(songRepository.findApprovalRecord(songId, null, null, ApprovalType.DOCTRINAL)).thenReturn(Optional.of(pending));
+        when(songRepository.updateApprovalRecord(any(UUID.class), any())).thenReturn(Optional.of(approved));
+        AdminImportReviewService service = new AdminImportReviewService(songRepository);
+
+        ApprovalRecord result = service.applyApprovalAction(new ApplyApprovalActionCommand(
+                songId, null, null, ApprovalType.DOCTRINAL, ApprovalReviewAction.APPROVE,
+                "elder@example.test", "Approved after doctrinal review"));
+
+        assertThat(result.status()).isEqualTo(ApprovalStatus.APPROVED);
+    }
+
+    @Test
+    void applyApprovalActionRejectsUnsupportedStatusTransition() {
+        UUID songId = UUID.randomUUID();
+        ApprovalRecord approved = approvalRecord(UUID.randomUUID(), songId, ApprovalStatus.APPROVED);
+        when(songRepository.findApprovalRecord(songId, null, null, ApprovalType.DOCTRINAL)).thenReturn(Optional.of(approved));
+        AdminImportReviewService service = new AdminImportReviewService(songRepository);
+
+        assertThatThrownBy(() -> service.applyApprovalAction(new ApplyApprovalActionCommand(
+                songId, null, null, ApprovalType.DOCTRINAL, ApprovalReviewAction.REJECT,
+                "elder@example.test", "Attempted invalid direct rejection")))
+                .hasMessageContaining("not allowed");
+    }
+
+    @Test
+    void applyApprovalActionMapsNeedsChangesAndRevokeToNeedsReview() {
+        UUID songId = UUID.randomUUID();
+        ApprovalRecord approved = approvalRecord(UUID.randomUUID(), songId, ApprovalStatus.APPROVED);
+        ApprovalRecord needsReview = approvalRecord(UUID.randomUUID(), songId, ApprovalStatus.NEEDS_REVIEW);
+        when(songRepository.findApprovalRecord(songId, null, null, ApprovalType.EDITORIAL)).thenReturn(Optional.of(approved));
+        when(songRepository.updateApprovalRecord(any(UUID.class), any())).thenReturn(Optional.of(needsReview));
+        AdminImportReviewService service = new AdminImportReviewService(songRepository);
+
+        ApprovalRecord revokeResult = service.applyApprovalAction(new ApplyApprovalActionCommand(
+                songId, null, null, ApprovalType.EDITORIAL, ApprovalReviewAction.REVOKE,
+                "editor@example.test", "Metadata changed; re-review required"));
+
+        assertThat(revokeResult.status()).isEqualTo(ApprovalStatus.NEEDS_REVIEW);
     }
 
     @Test
