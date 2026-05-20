@@ -1,5 +1,6 @@
 package com.cadentia.reng;
 
+import com.cadentia.catalog.model.ApprovalStatus;
 import com.cadentia.reng.scoring.CandidateFeatureScorer;
 import com.cadentia.reng.scoring.OrderedSetItem;
 import com.cadentia.reng.scoring.OrderedSetResponse;
@@ -15,6 +16,8 @@ import java.util.Locale;
 import java.util.Set;
 
 public class DeterministicSetOrderer implements SetOrderer {
+
+    static final double SCORE_TIE_EPSILON = 0.0001d;
 
     private final TransitionScorer transitionScorer;
 
@@ -34,11 +37,7 @@ public class DeterministicSetOrderer implements SetOrderer {
             String candidateSnapshotVersion) {
         int targetSize = request.praiseCount() + request.worshipCount();
         List<CandidateFeatureScorer.CandidateFeatureScore> sorted = candidateScores.stream()
-                .sorted(Comparator
-                        .comparingDouble(CandidateFeatureScorer.CandidateFeatureScore::totalScore)
-                        .reversed()
-                        .thenComparing(score -> score.candidate().songId())
-                        .thenComparing(score -> score.candidate().arrangementId()))
+                .sorted(deterministicCandidateComparator())
                 .toList();
 
         List<CandidateFeatureScorer.CandidateFeatureScore> selected = new ArrayList<>();
@@ -85,5 +84,68 @@ public class DeterministicSetOrderer implements SetOrderer {
 
     private static String normalize(String value) {
         return value == null ? "" : value.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private static Comparator<CandidateFeatureScorer.CandidateFeatureScore> deterministicCandidateComparator() {
+        return (left, right) -> {
+            int totalScoreComparison = compareDescendingWithTolerance(left.totalScore(), right.totalScore());
+            if (totalScoreComparison != 0) {
+                return totalScoreComparison;
+            }
+
+            int approvalConfidenceComparison = Integer.compare(
+                    approvalConfidence(right.candidate().approvalGateSummary()),
+                    approvalConfidence(left.candidate().approvalGateSummary()));
+            if (approvalConfidenceComparison != 0) {
+                return approvalConfidenceComparison;
+            }
+
+            int titleComparison = normalize(left.candidate().title()).compareTo(normalize(right.candidate().title()));
+            if (titleComparison != 0) {
+                return titleComparison;
+            }
+
+            int songIdComparison = left.candidate().songId().compareTo(right.candidate().songId());
+            if (songIdComparison != 0) {
+                return songIdComparison;
+            }
+
+            return left.candidate().arrangementId().compareTo(right.candidate().arrangementId());
+        };
+    }
+
+    private static int compareDescendingWithTolerance(double left, double right) {
+        if (Math.abs(left - right) < SCORE_TIE_EPSILON) {
+            return 0;
+        }
+        return Double.compare(right, left);
+    }
+
+    private static int approvalConfidence(ApprovalGateSummary summary) {
+        if (summary == null) {
+            return 0;
+        }
+        int confidence = 0;
+        confidence += approvalWeight(summary.songDoctrinalStatus());
+        confidence += approvalWeight(summary.songEditorialStatus());
+        confidence += approvalWeight(summary.songLicensingStatus());
+        confidence += approvalWeight(summary.arrangementMusicalStatus());
+        confidence += approvalWeight(summary.arrangementEditorialStatus());
+        confidence += approvalWeight(summary.lyricsDoctrinalStatus());
+        confidence += approvalWeight(summary.lyricsEditorialStatus());
+        confidence += approvalWeight(summary.lyricsLicensingStatus());
+        return confidence;
+    }
+
+    private static int approvalWeight(ApprovalStatus status) {
+        if (status == null) {
+            return 0;
+        }
+        return switch (status) {
+            case APPROVED -> 3;
+            case PENDING -> 2;
+            case NEEDS_REVIEW -> 1;
+            case REJECTED -> 0;
+        };
     }
 }
