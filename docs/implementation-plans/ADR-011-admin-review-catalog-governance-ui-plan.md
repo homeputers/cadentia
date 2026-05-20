@@ -33,6 +33,84 @@ audit history, moderation flags, and rollback previews.
 - Do not let UI-only checks replace backend authorization.
 - Do not allow admin APIs to bypass provenance or approval constraints.
 
+### Proposed API surface
+
+- `GET /api/admin/import-candidates`: paginated queue endpoint for triage.
+  Filters: `status`, `approvalType`, `connectorId`, `batchId`,
+  `duplicateConfidenceMin`, `warningSeverity`, `assignee`, `updatedBefore`.
+- `GET /api/admin/import-candidates/{candidateId}`: candidate detail including
+  normalized metadata, parser evidence summary, duplicate candidates, and linked
+  audit references.
+- `GET /api/admin/import-candidates/{candidateId}/provenance`: immutable source
+  references, connector payload fingerprints, and ingestion lineage.
+- `GET /api/admin/import-candidates/{candidateId}/duplicates`: ranked duplicate
+  matches and confidence features used for reviewer decision support.
+- `POST /api/admin/import-candidates/{candidateId}/merge-decisions`: create a
+  merge decision (`CREATE_NEW`, `MERGE_EXISTING`, `REJECT_DUPLICATE`,
+  `REJECT_NOT_PERMITTED`, `DEFER`) with explicit reviewer reason.
+- `POST /api/admin/import-candidates/{candidateId}/approvals/{approvalType}`:
+  submit approval transition (`APPROVE`, `REJECT`, `NEEDS_CHANGES`, `REVOKE`).
+- `GET /api/admin/audit-events`: query append-only audit history by entity,
+  actor, time range, action type, and import batch.
+- `POST /api/admin/moderation-flags`: create moderation flag with scope and
+  eligibility impact policy.
+- `POST /api/admin/rollback-previews`: dry-run preview returning impacted
+  records, eligibility changes, and conflict blockers.
+- `POST /api/admin/rollbacks`: execute approved rollback request.
+
+### Permission boundary model
+
+Define permission boundaries in backend policy checks, not in the UI:
+
+- **Viewer** (`catalog.admin.read`)
+  - Can read queues, candidate details, parser evidence, provenance, duplicates,
+    and audit history.
+  - Cannot approve, merge, moderate, or rollback.
+- **Reviewer** (`catalog.admin.review`)
+  - Inherits Viewer permissions.
+  - Can add notes, assign candidates, and create merge decisions that remain
+    pending approval where policy requires two-person review.
+- **Approver** (`catalog.admin.approve`)
+  - Inherits Reviewer permissions.
+  - Can apply approval status transitions and finalize publication eligibility
+    only when required approval types are satisfied.
+- **Rollback Admin** (`catalog.admin.rollback`)
+  - Inherits Approver permissions.
+  - Can request rollback previews and execute rollback.
+
+### Authorization and state-transition rules
+
+- Enforce endpoint-level authorization in controller/service layers plus
+  row-level checks for connector or team scope.
+- Every mutating action must validate current state and allowed transition.
+  Example: cannot `APPROVE` if parser-blocking severity exists; cannot rollback
+  if dependent published versions are locked by newer irreversible changes.
+- Merge and approval actions must fail closed when provenance is incomplete or
+  required approvals are missing.
+- Emit audit events for authorization-denied attempts (without leaking sensitive
+  payload fields).
+- Use stable IDs (`candidateId`, `songId`, `arrangementId`, `approvalId`,
+  `auditEventId`, `rollbackRequestId`) across all responses.
+
+### API contract notes
+
+- Return machine-readable status codes (`PENDING_REVIEW`, `BLOCKED_PARSER`,
+  `BLOCKED_PROVENANCE`, `READY_FOR_APPROVAL`, `APPROVED`, `REJECTED`,
+  `ROLLED_BACK`) and explicit `allowedActions` for current actor.
+- Include `auditRefs` arrays on mutable resource responses so UI can deep-link
+  to the exact event trail.
+- Use optimistic concurrency (`version` or `etag`) on merge, approval,
+  moderation, and rollback execution endpoints.
+
+### Test strategy for this subtask
+
+- Controller authorization tests for each role against each endpoint.
+- Service-level transition tests for valid and invalid state changes.
+- Integration tests proving public recommendation APIs cannot access admin-only
+  resources and admin APIs cannot bypass approval/provenance guards.
+- Audit tests verifying successful and denied admin actions both emit traceable
+  events.
+
 ## Subtask 2: Build import review queue views
 
 ### Context
