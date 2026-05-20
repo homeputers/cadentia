@@ -40,6 +40,7 @@ public class ScoringRequestFactory {
                 tempoPolicyDefaulted
                         ? DEFAULT_TEMPO_POLICY
                         : new ScoringRequest.TempoPolicy(tempoPolicy.getMaxJumpBpm()),
+                request.getEnergyArc() == null ? null : request.getEnergyArc().getValue(),
                 languageDefaulted ? DEFAULT_LANGUAGE : request.getLanguage(),
                 request.getExcludedSongs() == null ? List.of() : request.getExcludedSongs(),
                 new ScoringRequest.DefaultsApplied(

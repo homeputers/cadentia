@@ -9,6 +9,7 @@ public record ScoringRequest(
         int worshipCount,
         KeyPolicy keyPolicy,
         TempoPolicy tempoPolicy,
+        String energyArc,
         String language,
         List<String> excludedSongIds,
         DefaultsApplied defaultsApplied) {
