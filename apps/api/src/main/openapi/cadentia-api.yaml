@@ -82,6 +82,133 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/AdminDuplicateMatch'
+
+  /api/admin/import-candidates/{candidateId}/audit-history:
+    get:
+      tags:
+        - AdminReview
+      operationId: getAdminImportCandidateAuditHistory
+      summary: Fetch append-only audit history for an import candidate
+      parameters:
+        - in: path
+          name: candidateId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Audit history entries.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AdminAuditHistoryItem'
+  /api/admin/import-candidates/{candidateId}/moderation-flags:
+    post:
+      tags:
+        - AdminReview
+      operationId: openAdminModerationFlag
+      summary: Open a moderation flag for an import candidate
+      parameters:
+        - in: path
+          name: candidateId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OpenModerationFlagRequest'
+      responses:
+        '200':
+          description: Created moderation flag.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationFlagResponse'
+  /api/admin/moderation-flags/{flagId}/assign:
+    post:
+      tags:
+        - AdminReview
+      operationId: assignAdminModerationFlag
+      summary: Assign a moderation flag to a reviewer
+      parameters:
+        - in: path
+          name: flagId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssignModerationFlagRequest'
+      responses:
+        '200':
+          description: Updated moderation flag.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationFlagResponse'
+  /api/admin/moderation-flags/{flagId}/resolve:
+    post:
+      tags:
+        - AdminReview
+      operationId: resolveAdminModerationFlag
+      summary: Resolve a moderation flag
+      parameters:
+        - in: path
+          name: flagId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResolveModerationFlagRequest'
+      responses:
+        '200':
+          description: Updated moderation flag.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationFlagResponse'
+  /api/admin/moderation-flags/{flagId}/escalate:
+    post:
+      tags:
+        - AdminReview
+      operationId: escalateAdminModerationFlag
+      summary: Escalate a moderation flag
+      parameters:
+        - in: path
+          name: flagId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EscalateModerationFlagRequest'
+      responses:
+        '200':
+          description: Updated moderation flag.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationFlagResponse'
   /setlists/proposals/natural-language:
     post:
       tags:
@@ -397,3 +524,112 @@ components:
         reviewedAt:
           type: string
           format: date-time
+
+    ModerationFlagType:
+      type: string
+      enum: [BAD_SOURCE, LICENSING_CONCERN, INCORRECT_LYRICS, METADATA_CONFLICT, DOCTRINAL_CONCERN, PARSER_ISSUE]
+    ModerationFlagStatus:
+      type: string
+      enum: [OPEN, ASSIGNED, RESOLVED, ESCALATED]
+    OpenModerationFlagRequest:
+      type: object
+      additionalProperties: false
+      required: [type, openedBy, reason, excludeFromRecommendation]
+      properties:
+        type:
+          $ref: '#/components/schemas/ModerationFlagType'
+        openedBy:
+          type: string
+        reason:
+          type: string
+        excludeFromRecommendation:
+          type: boolean
+    AssignModerationFlagRequest:
+      type: object
+      additionalProperties: false
+      required: [assignedTo, actor, reason]
+      properties:
+        assignedTo:
+          type: string
+        actor:
+          type: string
+        reason:
+          type: string
+    ResolveModerationFlagRequest:
+      type: object
+      additionalProperties: false
+      required: [actor, resolutionNotes]
+      properties:
+        actor:
+          type: string
+        resolutionNotes:
+          type: string
+    EscalateModerationFlagRequest:
+      type: object
+      additionalProperties: false
+      required: [actor, reason]
+      properties:
+        actor:
+          type: string
+        reason:
+          type: string
+    ModerationFlagResponse:
+      type: object
+      required: [id, importCandidateId, type, status, openedBy, excludeFromRecommendation, openedAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        importCandidateId:
+          type: string
+          format: uuid
+        type:
+          $ref: '#/components/schemas/ModerationFlagType'
+        status:
+          $ref: '#/components/schemas/ModerationFlagStatus'
+        openedBy:
+          type: string
+        assignedTo:
+          type: string
+          nullable: true
+        resolutionNotes:
+          type: string
+          nullable: true
+        excludeFromRecommendation:
+          type: boolean
+        openedAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    AdminAuditHistoryItem:
+      type: object
+      required: [id, entityId, entityType, action, actor, occurredAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        entityId:
+          type: string
+          format: uuid
+        entityType:
+          type: string
+        action:
+          type: string
+        actor:
+          type: string
+        occurredAt:
+          type: string
+          format: date-time
+        reason:
+          type: string
+          nullable: true
+        beforeState:
+          type: object
+          nullable: true
+          additionalProperties: true
+        afterState:
+          type: object
+          nullable: true
+          additionalProperties: true
