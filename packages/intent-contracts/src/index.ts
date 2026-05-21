@@ -123,3 +123,5 @@ export const intentContractV1SchemaPath = new URL(
 export function parseIntentOutput(payload: unknown): IntentOutput {
   return intentOutputSchema.parse(payload);
 }
+
+export * from "./explanations.js";
