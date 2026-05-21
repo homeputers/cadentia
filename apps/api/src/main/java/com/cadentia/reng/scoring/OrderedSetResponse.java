@@ -30,4 +30,12 @@ public record OrderedSetResponse(
                 profile.deterministicTieBreakOrder(),
                 totalScore);
     }
+
+    public static OrderedSetResponse of(
+            ScoringProfile profile,
+            String candidateSnapshotVersion,
+            List<OrderedSetItem> items,
+            double totalScore) {
+        return of(profile, candidateSnapshotVersion, items, List.of(), totalScore);
+    }
 }
