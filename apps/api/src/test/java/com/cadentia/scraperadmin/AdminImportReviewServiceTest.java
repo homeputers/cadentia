@@ -514,6 +514,64 @@ class AdminImportReviewServiceTest {
                 Instant.EPOCH);
     }
 
+    @Test
+    void moderationFlagLifecycleCreatesAuditTrailAndResolves() {
+        ImportCandidate candidate = candidate(UUID.randomUUID(), ImportCandidateStatus.STAGED, null);
+        when(songRepository.findImportCandidateById(candidate.id())).thenReturn(Optional.of(candidate));
+        AdminImportReviewService service = new AdminImportReviewService(songRepository);
+
+        ModerationFlag opened = service.openModerationFlag(
+                candidate.id(),
+                ModerationFlagType.LICENSING_CONCERN,
+                "reviewer@example.test",
+                "License source is incomplete",
+                false);
+        ModerationFlag assigned = service.assignModerationFlag(
+                opened.id(),
+                "approver@example.test",
+                "reviewer@example.test",
+                "Assigning to licensing approver");
+        ModerationFlag resolved = service.resolveModerationFlag(
+                opened.id(),
+                "approver@example.test",
+                "Verified license document");
+
+        assertThat(opened.status()).isEqualTo(ModerationFlagStatus.OPEN);
+        assertThat(assigned.status()).isEqualTo(ModerationFlagStatus.ASSIGNED);
+        assertThat(resolved.status()).isEqualTo(ModerationFlagStatus.RESOLVED);
+        List<AdminAuditEvent> auditEvents = service.getAuditHistory(candidate.id());
+        assertThat(auditEvents).hasSize(3);
+        assertThat(auditEvents)
+                .extracting(AdminAuditEvent::action)
+                .containsExactly("MODERATION_FLAG_OPENED", "MODERATION_FLAG_ASSIGNED", "MODERATION_FLAG_RESOLVED");
+    }
+
+    @Test
+    void escalatingModerationFlagExcludesCandidateFromRecommendationEligibility() {
+        ImportCandidate candidate = candidate(UUID.randomUUID(), ImportCandidateStatus.READY_TO_MERGE, null);
+        when(songRepository.findImportCandidateById(candidate.id())).thenReturn(Optional.of(candidate));
+        AdminImportReviewService service = new AdminImportReviewService(songRepository);
+
+        ModerationFlag opened = service.openModerationFlag(
+                candidate.id(),
+                ModerationFlagType.DOCTRINAL_CONCERN,
+                "reviewer@example.test",
+                "Potential doctrinal mismatch",
+                false);
+        ModerationFlag escalated = service.escalateModerationFlag(
+                opened.id(),
+                "reviewer@example.test",
+                "Escalated to doctrinal board");
+
+        assertThat(escalated.status()).isEqualTo(ModerationFlagStatus.ESCALATED);
+        assertThat(escalated.excludeFromRecommendation()).isTrue();
+        verify(songRepository).updateImportCandidateStatus(candidate.id(), ImportCandidateStatus.REJECTED);
+        assertThat(service.getAuditHistory(candidate.id()))
+                .extracting(AdminAuditEvent::action)
+                .contains("MODERATION_FLAG_ESCALATED");
+    }
+
+
     private static ApprovalRecord approvalRecord(UUID id, UUID songId, ApprovalStatus status) {
         return new ApprovalRecord(
                 id,

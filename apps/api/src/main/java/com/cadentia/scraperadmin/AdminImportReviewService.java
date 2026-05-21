@@ -30,10 +30,12 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -47,6 +49,8 @@ public class AdminImportReviewService {
     private final SongRepository songRepository;
     private final TitleNormalizer titleNormalizer;
     private final ObjectMapper objectMapper;
+    private final Map<UUID, ModerationFlag> moderationFlagsById = new ConcurrentHashMap<>();
+    private final Map<UUID, List<AdminAuditEvent>> auditEventsByEntityId = new ConcurrentHashMap<>();
 
     @Autowired
     public AdminImportReviewService(SongRepository songRepository) {
@@ -85,6 +89,108 @@ public class AdminImportReviewService {
                 warnings,
                 duplicateMatches,
                 reviews);
+    }
+
+
+    @Transactional(readOnly = true)
+    public List<AdminAuditEvent> getAuditHistory(UUID entityId) {
+        return List.copyOf(auditEventsByEntityId.getOrDefault(entityId, List.of()));
+    }
+
+    @Transactional
+    public ModerationFlag openModerationFlag(
+            UUID importCandidateId,
+            ModerationFlagType type,
+            String openedBy,
+            String reason,
+            boolean excludeFromRecommendation) {
+        requireCandidate(importCandidateId);
+        Instant now = Instant.now();
+        ModerationFlag flag = new ModerationFlag(
+                UUID.randomUUID(),
+                importCandidateId,
+                type,
+                ModerationFlagStatus.OPEN,
+                openedBy,
+                null,
+                null,
+                excludeFromRecommendation,
+                now,
+                now);
+        moderationFlagsById.put(flag.id(), flag);
+        addAuditEvent(importCandidateId, "IMPORT_CANDIDATE", "MODERATION_FLAG_OPENED", openedBy, reason, Map.of(), Map.of(
+                "flagId", flag.id().toString(),
+                "type", flag.type().name(),
+                "status", flag.status().name(),
+                "excludeFromRecommendation", flag.excludeFromRecommendation()));
+        if (excludeFromRecommendation) {
+            songRepository.updateImportCandidateStatus(importCandidateId, ImportCandidateStatus.REJECTED);
+        }
+        return flag;
+    }
+
+    @Transactional
+    public ModerationFlag assignModerationFlag(UUID flagId, String assignedTo, String actor, String reason) {
+        ModerationFlag flag = requireFlag(flagId);
+        ModerationFlag updated = new ModerationFlag(
+                flag.id(),
+                flag.importCandidateId(),
+                flag.type(),
+                ModerationFlagStatus.ASSIGNED,
+                flag.openedBy(),
+                assignedTo,
+                flag.resolutionNotes(),
+                flag.excludeFromRecommendation(),
+                flag.openedAt(),
+                Instant.now());
+        moderationFlagsById.put(flagId, updated);
+        addAuditEvent(flag.importCandidateId(), "IMPORT_CANDIDATE", "MODERATION_FLAG_ASSIGNED", actor, reason,
+                Map.of("status", flag.status().name(), "assignedTo", String.valueOf(flag.assignedTo())),
+                Map.of("status", updated.status().name(), "assignedTo", assignedTo));
+        return updated;
+    }
+
+    @Transactional
+    public ModerationFlag resolveModerationFlag(UUID flagId, String actor, String resolutionNotes) {
+        ModerationFlag flag = requireFlag(flagId);
+        ModerationFlag updated = new ModerationFlag(
+                flag.id(),
+                flag.importCandidateId(),
+                flag.type(),
+                ModerationFlagStatus.RESOLVED,
+                flag.openedBy(),
+                flag.assignedTo(),
+                resolutionNotes,
+                flag.excludeFromRecommendation(),
+                flag.openedAt(),
+                Instant.now());
+        moderationFlagsById.put(flagId, updated);
+        addAuditEvent(flag.importCandidateId(), "IMPORT_CANDIDATE", "MODERATION_FLAG_RESOLVED", actor, resolutionNotes,
+                Map.of("status", flag.status().name()),
+                Map.of("status", updated.status().name(), "resolutionNotes", resolutionNotes));
+        return updated;
+    }
+
+    @Transactional
+    public ModerationFlag escalateModerationFlag(UUID flagId, String actor, String reason) {
+        ModerationFlag flag = requireFlag(flagId);
+        ModerationFlag updated = new ModerationFlag(
+                flag.id(),
+                flag.importCandidateId(),
+                flag.type(),
+                ModerationFlagStatus.ESCALATED,
+                flag.openedBy(),
+                flag.assignedTo(),
+                flag.resolutionNotes(),
+                true,
+                flag.openedAt(),
+                Instant.now());
+        moderationFlagsById.put(flagId, updated);
+        songRepository.updateImportCandidateStatus(flag.importCandidateId(), ImportCandidateStatus.REJECTED);
+        addAuditEvent(flag.importCandidateId(), "IMPORT_CANDIDATE", "MODERATION_FLAG_ESCALATED", actor, reason,
+                Map.of("status", flag.status().name(), "excludeFromRecommendation", flag.excludeFromRecommendation()),
+                Map.of("status", updated.status().name(), "excludeFromRecommendation", true));
+        return updated;
     }
 
     @Transactional
@@ -300,6 +406,35 @@ public class AdminImportReviewService {
                 licenseNotes,
                 importMethod,
                 REVIEWED_IMPORT_CONFIDENCE));
+    }
+
+    private ModerationFlag requireFlag(UUID flagId) {
+        ModerationFlag flag = moderationFlagsById.get(flagId);
+        if (flag == null) {
+            throw new IllegalArgumentException("Moderation flag not found: " + flagId);
+        }
+        return flag;
+    }
+
+    private void addAuditEvent(
+            UUID entityId,
+            String entityType,
+            String action,
+            String actor,
+            String reason,
+            Map<String, Object> beforeState,
+            Map<String, Object> afterState) {
+        AdminAuditEvent event = new AdminAuditEvent(
+                UUID.randomUUID(),
+                entityId,
+                entityType,
+                action,
+                actor,
+                Instant.now(),
+                reason,
+                beforeState,
+                afterState);
+        auditEventsByEntityId.computeIfAbsent(entityId, ignored -> new ArrayList<>()).add(event);
     }
 
     private void requirePermittingReview(
