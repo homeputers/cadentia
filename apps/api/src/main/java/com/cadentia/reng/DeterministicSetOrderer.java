@@ -9,6 +9,7 @@ import com.cadentia.reng.scoring.RecommendationExplanationFact;
 import com.cadentia.reng.scoring.TransitionExplanationFactory;
 import com.cadentia.reng.scoring.ScoringProfile;
 import com.cadentia.reng.scoring.ScoringRequest;
+import com.cadentia.reng.scoring.SetExplanationFactory;
 import com.cadentia.reng.scoring.TransitionScore;
 import com.cadentia.reng.scoring.TransitionScorer;
 import java.util.ArrayList;
@@ -25,22 +26,25 @@ public class DeterministicSetOrderer implements SetOrderer {
     private final TransitionScorer transitionScorer;
     private final ItemExplanationFactory itemExplanationFactory;
     private final TransitionExplanationFactory transitionExplanationFactory;
+    private final SetExplanationFactory setExplanationFactory;
 
     public DeterministicSetOrderer() {
-        this(new TransitionScorer(), new ItemExplanationFactory(), new TransitionExplanationFactory());
+        this(new TransitionScorer(), new ItemExplanationFactory(), new TransitionExplanationFactory(), new SetExplanationFactory());
     }
 
     DeterministicSetOrderer(TransitionScorer transitionScorer) {
-        this(transitionScorer, new ItemExplanationFactory(), new TransitionExplanationFactory());
+        this(transitionScorer, new ItemExplanationFactory(), new TransitionExplanationFactory(), new SetExplanationFactory());
     }
 
     DeterministicSetOrderer(
             TransitionScorer transitionScorer,
             ItemExplanationFactory itemExplanationFactory,
-            TransitionExplanationFactory transitionExplanationFactory) {
+            TransitionExplanationFactory transitionExplanationFactory,
+            SetExplanationFactory setExplanationFactory) {
         this.transitionScorer = transitionScorer;
         this.itemExplanationFactory = itemExplanationFactory;
         this.transitionExplanationFactory = transitionExplanationFactory;
+        this.setExplanationFactory = setExplanationFactory;
     }
 
     @Override
@@ -101,7 +105,9 @@ public class DeterministicSetOrderer implements SetOrderer {
             previous = current;
         }
 
-        return OrderedSetResponse.of(profile, candidateSnapshotVersion, items, totalScore);
+        List<RecommendationExplanationFact> setExplanationFacts = setExplanationFactory.build(request, selected, sorted, items);
+
+        return OrderedSetResponse.of(profile, candidateSnapshotVersion, items, setExplanationFacts, totalScore);
     }
 
     private static String normalize(String value) {
