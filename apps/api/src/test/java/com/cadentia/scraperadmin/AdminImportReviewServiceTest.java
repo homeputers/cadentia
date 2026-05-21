@@ -571,6 +571,47 @@ class AdminImportReviewServiceTest {
                 .contains("MODERATION_FLAG_ESCALATED");
     }
 
+    @Test
+    void rollbackPreviewAndExecutionForImportCandidateResetsStatusAndAudits() {
+        ImportCandidate candidate = candidate(UUID.randomUUID(), ImportCandidateStatus.REJECTED, null);
+        when(songRepository.findImportCandidateById(candidate.id())).thenReturn(Optional.of(candidate));
+        AdminImportReviewService service = new AdminImportReviewService(songRepository);
+
+        RollbackPreview preview = service.previewRollback(
+                RollbackTargetType.IMPORT_CANDIDATE,
+                candidate.id(),
+                "rollback-admin@example.test",
+                candidate.importBatchId());
+
+        assertThat(preview.blockers()).isEmpty();
+        RollbackExecutionResult result = service.executeRollback(
+                preview.rollbackRequestId(),
+                "rollback-admin@example.test",
+                "Mistaken moderation rejection");
+
+        verify(songRepository).updateImportCandidateStatus(candidate.id(), ImportCandidateStatus.DEDUPLICATION_REVIEW);
+        assertThat(result.action()).isEqualTo("ROLLBACK_IMPORT_CANDIDATE_STATUS");
+        assertThat(service.getAuditHistory(candidate.id()))
+                .extracting(AdminAuditEvent::action)
+                .contains("ROLLBACK_IMPORT_CANDIDATE_STATUS");
+    }
+
+    @Test
+    void rollbackExecutionRejectsBlockedPreview() {
+        ImportCandidate candidate = candidate(UUID.randomUUID(), ImportCandidateStatus.STAGED, null);
+        when(songRepository.findImportCandidateById(candidate.id())).thenReturn(Optional.of(candidate));
+        AdminImportReviewService service = new AdminImportReviewService(songRepository);
+
+        RollbackPreview preview = service.previewRollback(
+                RollbackTargetType.IMPORT_CANDIDATE,
+                candidate.id(),
+                "rollback-admin@example.test",
+                UUID.randomUUID());
+
+        assertThat(preview.blockers()).isNotEmpty();
+        assertThatThrownBy(() -> service.executeRollback(preview.rollbackRequestId(), "rollback-admin@example.test", "Wrong batch"))
+                .hasMessageContaining("Rollback blocked");
+    }
 
     private static ApprovalRecord approvalRecord(UUID id, UUID songId, ApprovalStatus status) {
         return new ApprovalRecord(

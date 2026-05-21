@@ -51,6 +51,7 @@ public class AdminImportReviewService {
     private final ObjectMapper objectMapper;
     private final Map<UUID, ModerationFlag> moderationFlagsById = new ConcurrentHashMap<>();
     private final Map<UUID, List<AdminAuditEvent>> auditEventsByEntityId = new ConcurrentHashMap<>();
+    private final Map<UUID, RollbackPreview> rollbackPreviewsById = new ConcurrentHashMap<>();
 
     @Autowired
     public AdminImportReviewService(SongRepository songRepository) {
@@ -92,7 +93,83 @@ public class AdminImportReviewService {
     }
 
 
+    
+
     @Transactional(readOnly = true)
+    public RollbackPreview previewRollback(RollbackTargetType targetType, UUID targetId, String actor, UUID importBatchId) {
+        List<String> blockers = new ArrayList<>();
+        List<Map<String, Object>> impacted = new ArrayList<>();
+        boolean eligibilityImpacted = false;
+
+        if (targetType == RollbackTargetType.IMPORT_CANDIDATE) {
+            ImportCandidate candidate = requireCandidate(targetId);
+            if (importBatchId != null && !importBatchId.equals(candidate.importBatchId())) {
+                blockers.add("target candidate does not belong to selected import batch");
+            }
+            impacted.add(Map.of("entityType", "IMPORT_CANDIDATE", "entityId", candidate.id().toString(), "status", candidate.status().name()));
+            eligibilityImpacted = candidate.status() == ImportCandidateStatus.REJECTED || candidate.status() == ImportCandidateStatus.MERGED;
+        } else if (targetType == RollbackTargetType.MODERATION_FLAG) {
+            ModerationFlag flag = requireFlag(targetId);
+            ImportCandidate candidate = requireCandidate(flag.importCandidateId());
+            if (importBatchId != null && !importBatchId.equals(candidate.importBatchId())) {
+                blockers.add("moderation flag candidate does not belong to selected import batch");
+            }
+            impacted.add(Map.of("entityType", "MODERATION_FLAG", "entityId", flag.id().toString(), "status", flag.status().name()));
+            impacted.add(Map.of("entityType", "IMPORT_CANDIDATE", "entityId", candidate.id().toString(), "status", candidate.status().name()));
+            eligibilityImpacted = flag.excludeFromRecommendation();
+        } else {
+            blockers.add("approval rollback preview is not yet supported");
+        }
+
+        RollbackPreview preview = new RollbackPreview(UUID.randomUUID(), targetType, targetId, importBatchId, eligibilityImpacted, impacted, blockers);
+        rollbackPreviewsById.put(preview.rollbackRequestId(), preview);
+        return preview;
+    }
+
+    @Transactional
+    public RollbackExecutionResult executeRollback(UUID rollbackRequestId, String actor, String reason) {
+        RollbackPreview preview = rollbackPreviewsById.get(rollbackRequestId);
+        if (preview == null) {
+            throw new IllegalArgumentException("Unknown rollback request: " + rollbackRequestId);
+        }
+        if (!preview.blockers().isEmpty()) {
+            throw new IllegalStateException("Rollback blocked: " + String.join("; ", preview.blockers()));
+        }
+
+        String action;
+        UUID entityId;
+        if (preview.targetType() == RollbackTargetType.IMPORT_CANDIDATE) {
+            ImportCandidate candidate = requireCandidate(preview.targetId());
+            songRepository.updateImportCandidateStatus(candidate.id(), ImportCandidateStatus.DEDUPLICATION_REVIEW);
+            action = "ROLLBACK_IMPORT_CANDIDATE_STATUS";
+            entityId = candidate.id();
+        } else if (preview.targetType() == RollbackTargetType.MODERATION_FLAG) {
+            ModerationFlag flag = requireFlag(preview.targetId());
+            ModerationFlag updated = new ModerationFlag(
+                    flag.id(),
+                    flag.importCandidateId(),
+                    flag.type(),
+                    ModerationFlagStatus.OPEN,
+                    flag.openedBy(),
+                    flag.assignedTo(),
+                    flag.resolutionNotes(),
+                    false,
+                    flag.openedAt(),
+                    Instant.now());
+            moderationFlagsById.put(flag.id(), updated);
+            songRepository.updateImportCandidateStatus(flag.importCandidateId(), ImportCandidateStatus.DEDUPLICATION_REVIEW);
+            action = "ROLLBACK_MODERATION_FLAG";
+            entityId = flag.importCandidateId();
+        } else {
+            throw new IllegalStateException("Rollback target type not supported: " + preview.targetType());
+        }
+
+        AdminAuditEvent event = addAuditEvent(entityId, "IMPORT_CANDIDATE", action, actor, reason,
+                Map.of("rollbackRequestId", rollbackRequestId.toString()),
+                Map.of("rollbackExecuted", true, "targetType", preview.targetType().name(), "targetId", preview.targetId().toString()));
+        return new RollbackExecutionResult(rollbackRequestId, action, event.id());
+    }
+@Transactional(readOnly = true)
     public List<AdminAuditEvent> getAuditHistory(UUID entityId) {
         return List.copyOf(auditEventsByEntityId.getOrDefault(entityId, List.of()));
     }
@@ -416,7 +493,7 @@ public class AdminImportReviewService {
         return flag;
     }
 
-    private void addAuditEvent(
+    private AdminAuditEvent addAuditEvent(
             UUID entityId,
             String entityType,
             String action,
@@ -435,6 +512,7 @@ public class AdminImportReviewService {
                 beforeState,
                 afterState);
         auditEventsByEntityId.computeIfAbsent(entityId, ignored -> new ArrayList<>()).add(event);
+        return event;
     }
 
     private void requirePermittingReview(

@@ -209,6 +209,46 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ModerationFlagResponse'
+
+  /api/admin/rollback-previews:
+    post:
+      tags:
+        - AdminReview
+      operationId: createAdminRollbackPreview
+      summary: Create rollback preview for a target entity
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRollbackPreviewRequest'
+      responses:
+        '200':
+          description: Rollback preview.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RollbackPreviewResponse'
+  /api/admin/rollbacks:
+    post:
+      tags:
+        - AdminReview
+      operationId: executeAdminRollback
+      summary: Execute a previously previewed rollback
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExecuteRollbackRequest'
+      responses:
+        '200':
+          description: Rollback execution result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RollbackExecutionResponse'
+
   /setlists/proposals/natural-language:
     post:
       tags:
@@ -603,6 +643,80 @@ components:
         updatedAt:
           type: string
           format: date-time
+
+    RollbackTargetType:
+      type: string
+      enum: [IMPORT_CANDIDATE, APPROVAL, MODERATION_FLAG]
+    CreateRollbackPreviewRequest:
+      type: object
+      required: [targetType, targetId, actor]
+      properties:
+        targetType:
+          $ref: '#/components/schemas/RollbackTargetType'
+        targetId:
+          type: string
+          format: uuid
+        actor:
+          type: string
+        importBatchId:
+          type: string
+          format: uuid
+    RollbackImpactedRecord:
+      type: object
+      properties:
+        entityType:
+          type: string
+        entityId:
+          type: string
+        status:
+          type: string
+    RollbackPreviewResponse:
+      type: object
+      properties:
+        rollbackRequestId:
+          type: string
+          format: uuid
+        targetType:
+          $ref: '#/components/schemas/RollbackTargetType'
+        targetId:
+          type: string
+          format: uuid
+        importBatchId:
+          type: string
+          format: uuid
+        eligibilityImpacted:
+          type: boolean
+        impactedRecords:
+          type: array
+          items:
+            $ref: '#/components/schemas/RollbackImpactedRecord'
+        blockers:
+          type: array
+          items:
+            type: string
+    ExecuteRollbackRequest:
+      type: object
+      required: [rollbackRequestId, actor]
+      properties:
+        rollbackRequestId:
+          type: string
+          format: uuid
+        actor:
+          type: string
+        reason:
+          type: string
+    RollbackExecutionResponse:
+      type: object
+      properties:
+        rollbackRequestId:
+          type: string
+          format: uuid
+        action:
+          type: string
+        auditEventId:
+          type: string
+          format: uuid
+
     AdminAuditHistoryItem:
       type: object
       required: [id, entityId, entityType, action, actor, occurredAt]
