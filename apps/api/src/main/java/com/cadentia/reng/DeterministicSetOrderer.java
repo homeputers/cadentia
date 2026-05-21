@@ -5,6 +5,8 @@ import com.cadentia.reng.scoring.CandidateFeatureScorer;
 import com.cadentia.reng.scoring.OrderedSetItem;
 import com.cadentia.reng.scoring.OrderedSetResponse;
 import com.cadentia.reng.scoring.ItemExplanationFactory;
+import com.cadentia.reng.scoring.RecommendationExplanationFact;
+import com.cadentia.reng.scoring.TransitionExplanationFactory;
 import com.cadentia.reng.scoring.ScoringProfile;
 import com.cadentia.reng.scoring.ScoringRequest;
 import com.cadentia.reng.scoring.TransitionScore;
@@ -22,18 +24,23 @@ public class DeterministicSetOrderer implements SetOrderer {
 
     private final TransitionScorer transitionScorer;
     private final ItemExplanationFactory itemExplanationFactory;
+    private final TransitionExplanationFactory transitionExplanationFactory;
 
     public DeterministicSetOrderer() {
-        this(new TransitionScorer(), new ItemExplanationFactory());
+        this(new TransitionScorer(), new ItemExplanationFactory(), new TransitionExplanationFactory());
     }
 
     DeterministicSetOrderer(TransitionScorer transitionScorer) {
-        this(transitionScorer, new ItemExplanationFactory());
+        this(transitionScorer, new ItemExplanationFactory(), new TransitionExplanationFactory());
     }
 
-    DeterministicSetOrderer(TransitionScorer transitionScorer, ItemExplanationFactory itemExplanationFactory) {
+    DeterministicSetOrderer(
+            TransitionScorer transitionScorer,
+            ItemExplanationFactory itemExplanationFactory,
+            TransitionExplanationFactory transitionExplanationFactory) {
         this.transitionScorer = transitionScorer;
         this.itemExplanationFactory = itemExplanationFactory;
+        this.transitionExplanationFactory = transitionExplanationFactory;
     }
 
     @Override
@@ -76,11 +83,18 @@ public class DeterministicSetOrderer implements SetOrderer {
                 itemScore += transition.totalScore();
             }
             totalScore += itemScore;
+            List<RecommendationExplanationFact> explanationFacts = new ArrayList<>(
+                    itemExplanationFactory.build(current.candidate(), request, current.componentScores()));
+            if (previous != null && transition != null) {
+                explanationFacts.addAll(transitionExplanationFactory.build(
+                        previous.candidate(), current.candidate(), transition, request));
+            }
+
             items.add(new OrderedSetItem(
                     current.candidate().arrangementId(),
                     current.candidate().songId(),
                     index + 1,
-                    itemExplanationFactory.build(current.candidate(), request, current.componentScores()),
+                    explanationFacts,
                     current.componentScores(),
                     current.totalScore(),
                     transition));

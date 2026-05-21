@@ -78,6 +78,34 @@ class DeterministicSetOrdererTest {
                 .contains("ROLE_FIT", "APPROVAL_ELIGIBLE");
     }
 
+
+    @Test
+    void emitsTransitionExplanationFactsForAdjacentItems() {
+        CandidateFeatureScorer.CandidateFeatureScore first = score(candidate("A", "C", 120), 1.0d);
+        CandidateFeatureScorer.CandidateFeatureScore second = score(candidate("B", "G", 150), 0.9d);
+
+        OrderedSetResponse ordered = orderer.order(List.of(first, second), request(3), profile(), "snap");
+
+        assertThat(ordered.items()).hasSize(2);
+        assertThat(ordered.items().get(1).explanationFacts())
+                .filteredOn(fact -> "transition".equals(fact.scope()))
+                .extracting(fact -> fact.code())
+                .contains(
+                        "SAME_KEY_TRANSITION",
+                        "RELATIVE_KEY_TRANSITION",
+                        "CLOSE_KEY_TRANSITION",
+                        "MODULATION_PENALTY",
+                        "TEMPO_POLICY_OK",
+                        "METER_COMPATIBLE",
+                        "ENERGY_ARC_MATCH");
+        assertThat(ordered.items().get(1).explanationFacts())
+                .filteredOn(fact -> "transition".equals(fact.scope()))
+                .allSatisfy(fact -> {
+                    assertThat(fact.subject().sourceId()).isEqualTo(ordered.items().get(0).arrangementId().toString());
+                    assertThat(fact.subject().targetId()).isEqualTo(ordered.items().get(1).arrangementId().toString());
+                });
+    }
+
     private static CandidateFeatureScorer.CandidateFeatureScore score(RecommendableArrangement candidate, double total) {
         return new CandidateFeatureScorer.CandidateFeatureScore(
                 candidate,
