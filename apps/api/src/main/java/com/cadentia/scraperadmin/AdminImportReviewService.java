@@ -8,6 +8,9 @@ import com.cadentia.catalog.entity.ProposedDuplicateMatch;
 import com.cadentia.catalog.entity.ProvenanceRecord;
 import com.cadentia.catalog.entity.Song;
 import com.cadentia.catalog.model.ApprovalStatus;
+
+import com.cadentia.catalog.model.ApprovalStatusTransition;
+import com.cadentia.catalog.model.UpdateApprovalRecordCommand;
 import com.cadentia.catalog.model.ApprovalType;
 import com.cadentia.catalog.model.ArrangementSourceType;
 import com.cadentia.catalog.model.CreateApprovalRecordCommand;
@@ -170,6 +173,35 @@ public class AdminImportReviewService {
     }
 
     @Transactional
+    public ApprovalRecord applyApprovalAction(ApplyApprovalActionCommand command) {
+        ApprovalStatus nextStatus = statusFor(command.action());
+        return songRepository
+                .findApprovalRecord(command.songId(), command.arrangementId(), command.lyricsDocumentId(), command.approvalType())
+                .map(existingRecord -> {
+                    ApprovalStatusTransition.requireAllowed(existingRecord.status(), nextStatus);
+                    return songRepository.updateApprovalRecord(
+                                    existingRecord.id(),
+                                    new UpdateApprovalRecordCommand(nextStatus, command.reviewer(), command.reviewNotes()))
+                            .orElseThrow(() -> new IllegalStateException(
+                                    "Approval record disappeared during update: " + existingRecord.id()));
+                })
+                .orElseGet(() -> {
+                    if (nextStatus != ApprovalStatus.PENDING) {
+                        throw new IllegalArgumentException(
+                                "Cannot apply " + command.action() + " without an existing approval record");
+                    }
+                    return songRepository.createApprovalRecord(new CreateApprovalRecordCommand(
+                            command.songId(),
+                            command.arrangementId(),
+                            command.lyricsDocumentId(),
+                            command.approvalType(),
+                            nextStatus,
+                            command.reviewer(),
+                            command.reviewNotes()));
+                });
+    }
+
+    @Transactional
     public AdminMergeResult createNewCanonicalSong(CreateCanonicalSongFromImportCandidateCommand command) {
         ImportCandidate candidate = requireCandidate(command.importCandidateId());
         if (candidate.status() == ImportCandidateStatus.MERGED) {
@@ -305,6 +337,15 @@ public class AdminImportReviewService {
             throw new IllegalArgumentException("Proposed duplicate match does not belong to import candidate");
         }
         return proposedMatch;
+    }
+
+
+    private static ApprovalStatus statusFor(ApprovalReviewAction action) {
+        return switch (action) {
+            case APPROVE -> ApprovalStatus.APPROVED;
+            case REJECT -> ApprovalStatus.REJECTED;
+            case NEEDS_CHANGES, REVOKE -> ApprovalStatus.NEEDS_REVIEW;
+        };
     }
 
     private static ImportCandidateStatus statusFor(ImportCandidateReviewDecision decision) {
