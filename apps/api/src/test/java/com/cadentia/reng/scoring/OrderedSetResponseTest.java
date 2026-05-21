@@ -20,6 +20,7 @@ class OrderedSetResponseTest {
                 UUID.randomUUID(),
                 UUID.randomUUID(),
                 1,
+                List.of(),
                 List.of(new ScoringComponentScore("theme_match", 0.9, 0.36)),
                 0.36,
                 null);
