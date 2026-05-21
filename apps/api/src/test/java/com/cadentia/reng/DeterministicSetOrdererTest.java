@@ -66,10 +66,25 @@ class DeterministicSetOrdererTest {
                 .containsExactly(alphaLower.candidate().arrangementId(), zetaHigher.candidate().arrangementId());
     }
 
+    @Test
+    void emitsRoleFitAndEligibilityExplanationsForSelectedItems() {
+        CandidateFeatureScorer.CandidateFeatureScore candidate = score(candidate("A", "C", 120), 0.9d);
+
+        OrderedSetResponse ordered = orderer.order(List.of(candidate), request(2), profile(), "snap");
+
+        assertThat(ordered.items()).hasSize(1);
+        assertThat(ordered.items().get(0).explanationFacts())
+                .extracting(fact -> fact.code())
+                .contains("ROLE_FIT", "APPROVAL_ELIGIBLE");
+    }
+
     private static CandidateFeatureScorer.CandidateFeatureScore score(RecommendableArrangement candidate, double total) {
         return new CandidateFeatureScorer.CandidateFeatureScore(
                 candidate,
-                List.of(new ScoringComponentScore("theme_match", total, total)),
+                List.of(
+                        new ScoringComponentScore("theme_match", total, total),
+                        new ScoringComponentScore("role_fit", 1.0d, 0.2d),
+                        new ScoringComponentScore("metadata_confidence", 1.0d, 0.1d)),
                 total);
     }
 

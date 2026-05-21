@@ -4,6 +4,7 @@ import com.cadentia.catalog.model.ApprovalStatus;
 import com.cadentia.reng.scoring.CandidateFeatureScorer;
 import com.cadentia.reng.scoring.OrderedSetItem;
 import com.cadentia.reng.scoring.OrderedSetResponse;
+import com.cadentia.reng.scoring.ItemExplanationFactory;
 import com.cadentia.reng.scoring.ScoringProfile;
 import com.cadentia.reng.scoring.ScoringRequest;
 import com.cadentia.reng.scoring.TransitionScore;
@@ -20,13 +21,19 @@ public class DeterministicSetOrderer implements SetOrderer {
     static final double SCORE_TIE_EPSILON = 0.0001d;
 
     private final TransitionScorer transitionScorer;
+    private final ItemExplanationFactory itemExplanationFactory;
 
     public DeterministicSetOrderer() {
-        this(new TransitionScorer());
+        this(new TransitionScorer(), new ItemExplanationFactory());
     }
 
     DeterministicSetOrderer(TransitionScorer transitionScorer) {
+        this(transitionScorer, new ItemExplanationFactory());
+    }
+
+    DeterministicSetOrderer(TransitionScorer transitionScorer, ItemExplanationFactory itemExplanationFactory) {
         this.transitionScorer = transitionScorer;
+        this.itemExplanationFactory = itemExplanationFactory;
     }
 
     @Override
@@ -73,6 +80,7 @@ public class DeterministicSetOrderer implements SetOrderer {
                     current.candidate().arrangementId(),
                     current.candidate().songId(),
                     index + 1,
+                    itemExplanationFactory.build(current.candidate(), request, current.componentScores()),
                     current.componentScores(),
                     current.totalScore(),
                     transition));
