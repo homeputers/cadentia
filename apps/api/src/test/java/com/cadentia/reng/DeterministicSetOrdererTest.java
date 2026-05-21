@@ -80,6 +80,38 @@ class DeterministicSetOrdererTest {
 
 
     @Test
+    void emitsSetLevelFactsForSatisfiedScenario() {
+        CandidateFeatureScorer.CandidateFeatureScore first = score(candidate("A", "C", 120), 1.0d);
+        CandidateFeatureScorer.CandidateFeatureScore second = score(candidate("B", "G", 118), 0.9d);
+
+        OrderedSetResponse ordered = orderer.order(List.of(first, second), request(2), profile(), "snap");
+
+        assertThat(ordered.setExplanationFacts())
+                .extracting(fact -> fact.code())
+                .contains("COUNT_TARGET_MET", "KEY_CENTER_POLICY_MET");
+        assertThat(ordered.setExplanationFacts())
+                .filteredOn(fact -> "COUNT_TARGET_MET".equals(fact.code()))
+                .allSatisfy(fact -> assertThat(fact.severity()).isEqualTo("info"));
+    }
+
+    @Test
+    void emitsSetLevelWarningsWhenCatalogIsInsufficient() {
+        CandidateFeatureScorer.CandidateFeatureScore onlyCandidate = score(candidate("A", "C", 120), 1.0d);
+
+        OrderedSetResponse ordered = orderer.order(List.of(onlyCandidate), request(2), profile(), "snap");
+
+        assertThat(ordered.setExplanationFacts())
+                .extracting(fact -> fact.code())
+                .contains("COUNT_TARGET_MET", "INSUFFICIENT_CANDIDATES");
+        assertThat(ordered.setExplanationFacts())
+                .filteredOn(fact -> "INSUFFICIENT_CANDIDATES".equals(fact.code()))
+                .allSatisfy(fact -> {
+                    assertThat(fact.severity()).isEqualTo("warning");
+                    assertThat(fact.scope()).isEqualTo("warning");
+                });
+    }
+
+    @Test
     void emitsTransitionExplanationFactsForAdjacentItems() {
         CandidateFeatureScorer.CandidateFeatureScore first = score(candidate("A", "C", 120), 1.0d);
         CandidateFeatureScorer.CandidateFeatureScore second = score(candidate("B", "G", 150), 0.9d);
