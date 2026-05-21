@@ -13,13 +13,13 @@ import com.cadentia.generated.model.EscalateModerationFlagRequest;
 import com.cadentia.generated.model.ImportCandidateStatus;
 import com.cadentia.generated.model.ModerationFlagResponse;
 import com.cadentia.generated.model.ModerationFlagStatus;
-import com.cadentia.generated.model.ModerationFlagType;
 import com.cadentia.generated.model.OpenModerationFlagRequest;
 import com.cadentia.generated.model.ResolveModerationFlagRequest;
 import com.cadentia.scraperadmin.AdminAuditEvent;
 import com.cadentia.scraperadmin.AdminImportCandidateDetail;
 import com.cadentia.scraperadmin.AdminImportReviewService;
 import com.cadentia.scraperadmin.ModerationFlag;
+import com.cadentia.scraperadmin.ModerationFlagType;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
@@ -84,7 +84,7 @@ public class AdminImportCandidateController implements AdminReviewApi {
             @RequestBody OpenModerationFlagRequest request) {
         ModerationFlag flag = reviewService.openModerationFlag(
                 candidateId,
-                com.cadentia.scraperadmin.ModerationFlagType.valueOf(request.getType().getValue()),
+                ModerationFlagType.valueOf(request.getType().getValue()),
                 request.getOpenedBy(),
                 request.getReason(),
                 request.getExcludeFromRecommendation());
@@ -169,7 +169,7 @@ public class AdminImportCandidateController implements AdminReviewApi {
         return new ModerationFlagResponse()
                 .id(flag.id())
                 .importCandidateId(flag.importCandidateId())
-                .type(ModerationFlagType.fromValue(flag.type().name()))
+                .type(com.cadentia.generated.model.ModerationFlagType.fromValue(flag.type().name()))
                 .status(ModerationFlagStatus.fromValue(flag.status().name()))
                 .openedBy(flag.openedBy())
                 .assignedTo(flag.assignedTo())
