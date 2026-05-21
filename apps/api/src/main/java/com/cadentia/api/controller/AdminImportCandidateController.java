@@ -3,9 +3,19 @@ package com.cadentia.api.controller;
 import com.cadentia.catalog.entity.ImportCandidateReview;
 import com.cadentia.catalog.entity.ProposedDuplicateMatch;
 import com.cadentia.generated.api.AdminReviewApi;
+import com.cadentia.generated.model.AdminAuditHistoryItem;
 import com.cadentia.generated.model.AdminDuplicateMatch;
 import com.cadentia.generated.model.AdminImportCandidateDetailResponse;
-import com.cadentia.generated.model.*;
+import com.cadentia.generated.model.AdminImportCandidateQueueItem;
+import com.cadentia.generated.model.AdminReviewHistoryItem;
+import com.cadentia.generated.model.AssignModerationFlagRequest;
+import com.cadentia.generated.model.EscalateModerationFlagRequest;
+import com.cadentia.generated.model.ImportCandidateStatus;
+import com.cadentia.generated.model.ModerationFlagResponse;
+import com.cadentia.generated.model.ModerationFlagStatus;
+import com.cadentia.generated.model.ModerationFlagType;
+import com.cadentia.generated.model.OpenModerationFlagRequest;
+import com.cadentia.generated.model.ResolveModerationFlagRequest;
 import com.cadentia.scraperadmin.AdminAuditEvent;
 import com.cadentia.scraperadmin.AdminImportCandidateDetail;
 import com.cadentia.scraperadmin.AdminImportReviewService;
@@ -16,6 +26,7 @@ import java.util.List;
 import java.util.UUID;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -70,7 +81,7 @@ public class AdminImportCandidateController implements AdminReviewApi {
     @Override
     public ResponseEntity<ModerationFlagResponse> openAdminModerationFlag(
             @PathVariable UUID candidateId,
-            @org.springframework.web.bind.annotation.RequestBody OpenModerationFlagRequest request) {
+            @RequestBody OpenModerationFlagRequest request) {
         ModerationFlag flag = reviewService.openModerationFlag(
                 candidateId,
                 com.cadentia.scraperadmin.ModerationFlagType.valueOf(request.getType().getValue()),
@@ -83,7 +94,7 @@ public class AdminImportCandidateController implements AdminReviewApi {
     @Override
     public ResponseEntity<ModerationFlagResponse> assignAdminModerationFlag(
             @PathVariable UUID flagId,
-            @org.springframework.web.bind.annotation.RequestBody AssignModerationFlagRequest request) {
+            @RequestBody AssignModerationFlagRequest request) {
         return ResponseEntity.ok(toModerationFlagResponse(
                 reviewService.assignModerationFlag(flagId, request.getAssignedTo(), request.getActor(), request.getReason())));
     }
@@ -91,7 +102,7 @@ public class AdminImportCandidateController implements AdminReviewApi {
     @Override
     public ResponseEntity<ModerationFlagResponse> resolveAdminModerationFlag(
             @PathVariable UUID flagId,
-            @org.springframework.web.bind.annotation.RequestBody ResolveModerationFlagRequest request) {
+            @RequestBody ResolveModerationFlagRequest request) {
         return ResponseEntity.ok(toModerationFlagResponse(
                 reviewService.resolveModerationFlag(flagId, request.getActor(), request.getResolutionNotes())));
     }
@@ -99,7 +110,7 @@ public class AdminImportCandidateController implements AdminReviewApi {
     @Override
     public ResponseEntity<ModerationFlagResponse> escalateAdminModerationFlag(
             @PathVariable UUID flagId,
-            @org.springframework.web.bind.annotation.RequestBody EscalateModerationFlagRequest request) {
+            @RequestBody EscalateModerationFlagRequest request) {
         return ResponseEntity.ok(toModerationFlagResponse(
                 reviewService.escalateModerationFlag(flagId, request.getActor(), request.getReason())));
     }
