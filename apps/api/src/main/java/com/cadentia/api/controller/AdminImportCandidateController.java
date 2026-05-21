@@ -14,7 +14,6 @@ import com.cadentia.generated.model.ExecuteRollbackRequest;
 import com.cadentia.generated.model.RollbackExecutionResponse;
 import com.cadentia.generated.model.RollbackImpactedRecord;
 import com.cadentia.generated.model.RollbackPreviewResponse;
-import com.cadentia.generated.model.RollbackTargetType;
 import com.cadentia.generated.model.EscalateModerationFlagRequest;
 import com.cadentia.generated.model.ImportCandidateStatus;
 import com.cadentia.generated.model.ModerationFlagResponse;
@@ -26,6 +25,9 @@ import com.cadentia.scraperadmin.AdminImportCandidateDetail;
 import com.cadentia.scraperadmin.AdminImportReviewService;
 import com.cadentia.scraperadmin.ModerationFlag;
 import com.cadentia.scraperadmin.ModerationFlagType;
+import com.cadentia.scraperadmin.RollbackExecutionResult;
+import com.cadentia.scraperadmin.RollbackPreview;
+import com.cadentia.scraperadmin.RollbackTargetType;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
@@ -124,14 +126,14 @@ public class AdminImportCandidateController implements AdminReviewApi {
 
     @Override
     public ResponseEntity<RollbackPreviewResponse> createAdminRollbackPreview(@RequestBody CreateRollbackPreviewRequest request) {
-        com.cadentia.scraperadmin.RollbackPreview preview = reviewService.previewRollback(
-                com.cadentia.scraperadmin.RollbackTargetType.valueOf(request.getTargetType().getValue()),
+        RollbackPreview preview = reviewService.previewRollback(
+                RollbackTargetType.valueOf(request.getTargetType().getValue()),
                 request.getTargetId(),
                 request.getActor(),
                 request.getImportBatchId());
         RollbackPreviewResponse response = new RollbackPreviewResponse()
                 .rollbackRequestId(preview.rollbackRequestId())
-                .targetType(RollbackTargetType.fromValue(preview.targetType().name()))
+                .targetType(com.cadentia.generated.model.RollbackTargetType.fromValue(preview.targetType().name()))
                 .targetId(preview.targetId())
                 .importBatchId(preview.importBatchId())
                 .eligibilityImpacted(preview.eligibilityImpacted())
@@ -146,13 +148,14 @@ public class AdminImportCandidateController implements AdminReviewApi {
 
     @Override
     public ResponseEntity<RollbackExecutionResponse> executeAdminRollback(@RequestBody ExecuteRollbackRequest request) {
-        com.cadentia.scraperadmin.RollbackExecutionResult result =
+        RollbackExecutionResult result =
                 reviewService.executeRollback(request.getRollbackRequestId(), request.getActor(), request.getReason());
         return ResponseEntity.ok(new RollbackExecutionResponse()
                 .rollbackRequestId(result.rollbackRequestId())
                 .action(result.action())
                 .auditEventId(result.auditEventId()));
     }
+
     private static AdminImportCandidateDetailResponse toDetail(AdminImportCandidateDetail detail) {
         return new AdminImportCandidateDetailResponse()
                 .candidateId(detail.candidate().id())

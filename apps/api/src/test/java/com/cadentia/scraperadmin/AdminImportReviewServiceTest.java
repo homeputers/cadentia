@@ -571,8 +571,6 @@ class AdminImportReviewServiceTest {
                 .contains("MODERATION_FLAG_ESCALATED");
     }
 
-
-
     @Test
     void rollbackPreviewAndExecutionForImportCandidateResetsStatusAndAudits() {
         ImportCandidate candidate = candidate(UUID.randomUUID(), ImportCandidateStatus.REJECTED, null);
