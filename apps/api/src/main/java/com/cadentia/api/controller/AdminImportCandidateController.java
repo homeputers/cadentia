@@ -5,23 +5,17 @@ import com.cadentia.catalog.entity.ProposedDuplicateMatch;
 import com.cadentia.generated.api.AdminReviewApi;
 import com.cadentia.generated.model.AdminDuplicateMatch;
 import com.cadentia.generated.model.AdminImportCandidateDetailResponse;
-import com.cadentia.generated.model.AdminImportCandidateQueueItem;
-import com.cadentia.generated.model.AdminReviewHistoryItem;
-import com.cadentia.generated.model.ImportCandidateStatus;
+import com.cadentia.generated.model.*;
 import com.cadentia.scraperadmin.AdminAuditEvent;
 import com.cadentia.scraperadmin.AdminImportCandidateDetail;
 import com.cadentia.scraperadmin.AdminImportReviewService;
 import com.cadentia.scraperadmin.ModerationFlag;
-import com.cadentia.scraperadmin.ModerationFlagType;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -66,48 +60,48 @@ public class AdminImportCandidateController implements AdminReviewApi {
         return ResponseEntity.ok(detail.duplicateMatches().stream().map(AdminImportCandidateController::toDuplicate).toList());
     }
 
-    @GetMapping("/api/admin/import-candidates/{candidateId}/audit-history")
-    public ResponseEntity<List<AuditHistoryItemResponse>> getAuditHistory(@PathVariable UUID candidateId) {
+    @Override
+    public ResponseEntity<List<AdminAuditHistoryItem>> getAdminImportCandidateAuditHistory(@PathVariable UUID candidateId) {
         return ResponseEntity.ok(reviewService.getAuditHistory(candidateId).stream()
                 .map(AdminImportCandidateController::toAuditHistoryItem)
                 .toList());
     }
 
-    @PostMapping("/api/admin/import-candidates/{candidateId}/moderation-flags")
-    public ResponseEntity<ModerationFlagResponse> openModerationFlag(
+    @Override
+    public ResponseEntity<ModerationFlagResponse> openAdminModerationFlag(
             @PathVariable UUID candidateId,
-            @RequestBody OpenModerationFlagRequest request) {
+            @org.springframework.web.bind.annotation.RequestBody OpenModerationFlagRequest request) {
         ModerationFlag flag = reviewService.openModerationFlag(
                 candidateId,
-                ModerationFlagType.valueOf(request.type()),
-                request.openedBy(),
-                request.reason(),
-                request.excludeFromRecommendation());
+                com.cadentia.scraperadmin.ModerationFlagType.valueOf(request.getType().getValue()),
+                request.getOpenedBy(),
+                request.getReason(),
+                request.getExcludeFromRecommendation());
         return ResponseEntity.ok(toModerationFlagResponse(flag));
     }
 
-    @PostMapping("/api/admin/moderation-flags/{flagId}/assign")
-    public ResponseEntity<ModerationFlagResponse> assignModerationFlag(
+    @Override
+    public ResponseEntity<ModerationFlagResponse> assignAdminModerationFlag(
             @PathVariable UUID flagId,
-            @RequestBody AssignModerationFlagRequest request) {
+            @org.springframework.web.bind.annotation.RequestBody AssignModerationFlagRequest request) {
         return ResponseEntity.ok(toModerationFlagResponse(
-                reviewService.assignModerationFlag(flagId, request.assignedTo(), request.actor(), request.reason())));
+                reviewService.assignModerationFlag(flagId, request.getAssignedTo(), request.getActor(), request.getReason())));
     }
 
-    @PostMapping("/api/admin/moderation-flags/{flagId}/resolve")
-    public ResponseEntity<ModerationFlagResponse> resolveModerationFlag(
+    @Override
+    public ResponseEntity<ModerationFlagResponse> resolveAdminModerationFlag(
             @PathVariable UUID flagId,
-            @RequestBody ResolveModerationFlagRequest request) {
+            @org.springframework.web.bind.annotation.RequestBody ResolveModerationFlagRequest request) {
         return ResponseEntity.ok(toModerationFlagResponse(
-                reviewService.resolveModerationFlag(flagId, request.actor(), request.resolutionNotes())));
+                reviewService.resolveModerationFlag(flagId, request.getActor(), request.getResolutionNotes())));
     }
 
-    @PostMapping("/api/admin/moderation-flags/{flagId}/escalate")
-    public ResponseEntity<ModerationFlagResponse> escalateModerationFlag(
+    @Override
+    public ResponseEntity<ModerationFlagResponse> escalateAdminModerationFlag(
             @PathVariable UUID flagId,
-            @RequestBody EscalateModerationFlagRequest request) {
+            @org.springframework.web.bind.annotation.RequestBody EscalateModerationFlagRequest request) {
         return ResponseEntity.ok(toModerationFlagResponse(
-                reviewService.escalateModerationFlag(flagId, request.actor(), request.reason())));
+                reviewService.escalateModerationFlag(flagId, request.getActor(), request.getReason())));
     }
 
     private static AdminImportCandidateDetailResponse toDetail(AdminImportCandidateDetail detail) {
@@ -147,67 +141,31 @@ public class AdminImportCandidateController implements AdminReviewApi {
                 .reviewedAt(OffsetDateTime.ofInstant(review.reviewedAt(), ZoneOffset.UTC));
     }
 
-    private static AuditHistoryItemResponse toAuditHistoryItem(AdminAuditEvent event) {
-        return new AuditHistoryItemResponse(
-                event.id(),
-                event.entityId(),
-                event.entityType(),
-                event.action(),
-                event.actor(),
-                OffsetDateTime.ofInstant(event.occurredAt(), ZoneOffset.UTC),
-                event.reason(),
-                event.beforeState(),
-                event.afterState());
+    private static AdminAuditHistoryItem toAuditHistoryItem(AdminAuditEvent event) {
+        return new AdminAuditHistoryItem()
+                .id(event.id())
+                .entityId(event.entityId())
+                .entityType(event.entityType())
+                .action(event.action())
+                .actor(event.actor())
+                .occurredAt(OffsetDateTime.ofInstant(event.occurredAt(), ZoneOffset.UTC))
+                .reason(event.reason())
+                .beforeState(event.beforeState())
+                .afterState(event.afterState());
     }
 
     private static ModerationFlagResponse toModerationFlagResponse(ModerationFlag flag) {
-        return new ModerationFlagResponse(
-                flag.id(),
-                flag.importCandidateId(),
-                flag.type().name(),
-                flag.status().name(),
-                flag.openedBy(),
-                flag.assignedTo(),
-                flag.resolutionNotes(),
-                flag.excludeFromRecommendation(),
-                OffsetDateTime.ofInstant(flag.openedAt(), ZoneOffset.UTC),
-                OffsetDateTime.ofInstant(flag.updatedAt(), ZoneOffset.UTC));
+        return new ModerationFlagResponse()
+                .id(flag.id())
+                .importCandidateId(flag.importCandidateId())
+                .type(ModerationFlagType.fromValue(flag.type().name()))
+                .status(ModerationFlagStatus.fromValue(flag.status().name()))
+                .openedBy(flag.openedBy())
+                .assignedTo(flag.assignedTo())
+                .resolutionNotes(flag.resolutionNotes())
+                .excludeFromRecommendation(flag.excludeFromRecommendation())
+                .openedAt(OffsetDateTime.ofInstant(flag.openedAt(), ZoneOffset.UTC))
+                .updatedAt(OffsetDateTime.ofInstant(flag.updatedAt(), ZoneOffset.UTC));
     }
 
-    public record OpenModerationFlagRequest(String type, String openedBy, String reason, boolean excludeFromRecommendation) {
-    }
-
-    public record AssignModerationFlagRequest(String assignedTo, String actor, String reason) {
-    }
-
-    public record ResolveModerationFlagRequest(String actor, String resolutionNotes) {
-    }
-
-    public record EscalateModerationFlagRequest(String actor, String reason) {
-    }
-
-    public record AuditHistoryItemResponse(
-            UUID id,
-            UUID entityId,
-            String entityType,
-            String action,
-            String actor,
-            OffsetDateTime occurredAt,
-            String reason,
-            Object beforeState,
-            Object afterState) {
-    }
-
-    public record ModerationFlagResponse(
-            UUID id,
-            UUID importCandidateId,
-            String type,
-            String status,
-            String openedBy,
-            String assignedTo,
-            String resolutionNotes,
-            boolean excludeFromRecommendation,
-            OffsetDateTime openedAt,
-            OffsetDateTime updatedAt) {
-    }
 }
