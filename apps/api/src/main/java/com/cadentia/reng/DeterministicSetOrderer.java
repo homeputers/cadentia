@@ -6,6 +6,8 @@ import com.cadentia.reng.scoring.OrderedSetItem;
 import com.cadentia.reng.scoring.OrderedSetResponse;
 import com.cadentia.reng.scoring.ItemExplanationFactory;
 import com.cadentia.reng.scoring.RecommendationExplanationFact;
+import com.cadentia.reng.scoring.RecommendationExplanationEvidence;
+import com.cadentia.reng.scoring.RecommendationExplanationSubject;
 import com.cadentia.reng.scoring.TransitionExplanationFactory;
 import com.cadentia.reng.scoring.ScoringProfile;
 import com.cadentia.reng.scoring.ScoringRequest;
@@ -17,6 +19,7 @@ import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 
 public class DeterministicSetOrderer implements SetOrderer {
@@ -106,8 +109,43 @@ public class DeterministicSetOrderer implements SetOrderer {
         }
 
         List<RecommendationExplanationFact> setExplanationFacts = setExplanationFactory.build(request, selected, sorted, items);
+        List<RecommendationExplanationFact> adminFacts = request.includeAdminExplanations()
+                ? buildAdminExclusionFacts(sorted, selected, request)
+                : List.of();
 
-        return OrderedSetResponse.of(profile, candidateSnapshotVersion, items, setExplanationFacts, totalScore);
+        return new OrderedSetResponse(
+                profile.version(),
+                candidateSnapshotVersion,
+                items,
+                setExplanationFacts,
+                adminFacts,
+                profile.deterministicTieBreakOrder(),
+                totalScore);
+    }
+
+    private List<RecommendationExplanationFact> buildAdminExclusionFacts(
+            List<CandidateFeatureScorer.CandidateFeatureScore> sorted,
+            List<CandidateFeatureScorer.CandidateFeatureScore> selected,
+            ScoringRequest request) {
+        Set<java.util.UUID> selectedIds = selected.stream().map(score -> score.candidate().arrangementId()).collect(java.util.stream.Collectors.toSet());
+        List<RecommendationExplanationFact> facts = new ArrayList<>();
+        int targetSize = request.praiseCount() + request.worshipCount();
+        for (CandidateFeatureScorer.CandidateFeatureScore score : sorted) {
+            if (selectedIds.contains(score.candidate().arrangementId())) {
+                continue;
+            }
+            String reason = selected.size() >= targetSize ? "FILLED_QUOTA" : "WEAKER_SCORE";
+            facts.add(new RecommendationExplanationFact(
+                    reason,
+                    "info",
+                    "candidate_exclusion",
+                    new RecommendationExplanationSubject("candidate", score.candidate().arrangementId().toString(), null, null),
+                    "candidate_exclusion." + reason.toLowerCase(Locale.ROOT),
+                    Map.of("candidateTitle", score.candidate().title(), "candidateScore", score.totalScore()),
+                    List.of(new RecommendationExplanationEvidence("score", "candidate", score.candidate().arrangementId().toString(), score.totalScore())),
+                    null));
+        }
+        return facts;
     }
 
     private static String normalize(String value) {

@@ -7,12 +7,14 @@ public record OrderedSetResponse(
         String candidateSnapshotVersion,
         List<OrderedSetItem> items,
         List<RecommendationExplanationFact> setExplanationFacts,
+        List<RecommendationExplanationFact> adminCandidateExplanationFacts,
         List<String> deterministicOrderingRules,
         double totalScore) {
 
     public OrderedSetResponse {
         items = items == null ? List.of() : List.copyOf(items);
         setExplanationFacts = setExplanationFacts == null ? List.of() : List.copyOf(setExplanationFacts);
+        adminCandidateExplanationFacts = adminCandidateExplanationFacts == null ? List.of() : List.copyOf(adminCandidateExplanationFacts);
         deterministicOrderingRules = deterministicOrderingRules == null ? List.of() : List.copyOf(deterministicOrderingRules);
     }
 
@@ -27,6 +29,7 @@ public record OrderedSetResponse(
                 candidateSnapshotVersion,
                 items,
                 setExplanationFacts,
+                List.of(),
                 profile.deterministicTieBreakOrder(),
                 totalScore);
     }

@@ -43,6 +43,7 @@ public class ScoringRequestFactory {
                 request.getEnergyArc() == null ? null : request.getEnergyArc().getValue(),
                 languageDefaulted ? DEFAULT_LANGUAGE : request.getLanguage(),
                 request.getExcludedSongs() == null ? List.of() : request.getExcludedSongs(),
+                false,
                 new ScoringRequest.DefaultsApplied(
                         countsDefaulted,
                         keyPolicyDefaulted,

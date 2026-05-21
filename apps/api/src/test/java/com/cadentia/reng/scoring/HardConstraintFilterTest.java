@@ -30,6 +30,7 @@ class HardConstraintFilterTest {
                         null,
                         "en",
                         List.of(candidate.songId().toString()),
+                        false,
                         new ScoringRequest.DefaultsApplied(false, false, false, false)));
 
         assertThat(result.eligibleCandidates()).isEmpty();
@@ -150,6 +151,7 @@ class HardConstraintFilterTest {
                 null,
                 "en",
                 List.of(),
+                false,
                 new ScoringRequest.DefaultsApplied(false, false, false, false));
     }
 
