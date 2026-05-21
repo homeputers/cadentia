@@ -48,6 +48,7 @@ class TransitionScorerTest {
                 null,
                 "en",
                 List.of(),
+                false,
                 new ScoringRequest.DefaultsApplied(false, false, false, false));
     }
 

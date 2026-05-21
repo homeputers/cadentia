@@ -138,6 +138,35 @@ class DeterministicSetOrdererTest {
                 });
     }
 
+    @Test
+    void omitsAdminExclusionFactsByDefault() {
+        CandidateFeatureScorer.CandidateFeatureScore first = score(candidate("A", "C", 120), 1.0d);
+        CandidateFeatureScorer.CandidateFeatureScore second = score(candidate("B", "G", 118), 0.9d);
+        CandidateFeatureScorer.CandidateFeatureScore third = score(candidate("D", "D", 116), 0.8d);
+
+        OrderedSetResponse ordered = orderer.order(List.of(first, second, third), request(2), profile(), "snap");
+
+        assertThat(ordered.adminCandidateExplanationFacts()).isEmpty();
+        assertThat(ordered.items()).extracting(item -> item.arrangementId())
+                .containsExactly(first.candidate().arrangementId(), second.candidate().arrangementId());
+    }
+
+    @Test
+    void emitsAdminExclusionFactsWithoutChangingSelection() {
+        CandidateFeatureScorer.CandidateFeatureScore first = score(candidate("A", "C", 120), 1.0d);
+        CandidateFeatureScorer.CandidateFeatureScore second = score(candidate("B", "G", 118), 0.9d);
+        CandidateFeatureScorer.CandidateFeatureScore third = score(candidate("D", "D", 116), 0.8d);
+
+        OrderedSetResponse baseline = orderer.order(List.of(first, second, third), request(2), profile(), "snap");
+        OrderedSetResponse admin = orderer.order(List.of(first, second, third), request(2, true), profile(), "snap");
+
+        assertThat(admin.items()).extracting(item -> item.arrangementId())
+                .containsExactlyElementsOf(baseline.items().stream().map(item -> item.arrangementId()).toList());
+        assertThat(admin.adminCandidateExplanationFacts())
+                .extracting(fact -> fact.code())
+                .contains("FILLED_QUOTA");
+    }
+
     private static CandidateFeatureScorer.CandidateFeatureScore score(RecommendableArrangement candidate, double total) {
         return new CandidateFeatureScorer.CandidateFeatureScore(
                 candidate,
@@ -149,6 +178,10 @@ class DeterministicSetOrdererTest {
     }
 
     private static ScoringRequest request(int maxKeyCenters) {
+        return request(maxKeyCenters, false);
+    }
+
+    private static ScoringRequest request(int maxKeyCenters, boolean includeAdminExplanations) {
         return new ScoringRequest(
                 null,
                 List.of(),
@@ -159,6 +192,7 @@ class DeterministicSetOrdererTest {
                 null,
                 "en",
                 List.of(),
+                includeAdminExplanations,
                 new ScoringRequest.DefaultsApplied(false, false, false, false));
     }
 

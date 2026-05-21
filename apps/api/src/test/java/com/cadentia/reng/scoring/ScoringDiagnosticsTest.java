@@ -77,7 +77,7 @@ class ScoringDiagnosticsTest {
     private static ScoringRequest request() {
         return new ScoringRequest("Psalm 24", List.of("holiness"), 10, 5,
                 new ScoringRequest.KeyPolicy(true, true, 2), new ScoringRequest.TempoPolicy(12),
-                null, "en", List.of(), new ScoringRequest.DefaultsApplied(false, false, false, false));
+                null, "en", List.of(), false, new ScoringRequest.DefaultsApplied(false, false, false, false));
     }
 
     private static ScoringProfile scoringProfile() {

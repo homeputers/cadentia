@@ -12,6 +12,7 @@ public record ScoringRequest(
         String energyArc,
         String language,
         List<String> excludedSongIds,
+        boolean includeAdminExplanations,
         DefaultsApplied defaultsApplied) {
 
     public ScoringRequest {
