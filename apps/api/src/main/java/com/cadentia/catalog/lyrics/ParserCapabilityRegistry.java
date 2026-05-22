@@ -1,5 +1,6 @@
 package com.cadentia.catalog.lyrics;
 
+import com.cadentia.catalog.model.LyricsFormat;
 import java.util.List;
 import org.springframework.stereotype.Component;
 
@@ -12,11 +13,11 @@ public class ParserCapabilityRegistry {
 
     public ParserCapabilityRegistry() {
         this.capabilities = List.of(
-                new ParserCapability("SECTION_STRUCTURE", com.cadentia.catalog.model.LyricsFormat.PLAIN_TEXT, "Section extraction"),
-                new ParserCapability("SECTION_STRUCTURE", com.cadentia.catalog.model.LyricsFormat.CHORDPRO, "Section extraction"),
-                new ParserCapability("SECTION_STRUCTURE", com.cadentia.catalog.model.LyricsFormat.MARKDOWN, "Section extraction"),
-                new ParserCapability("CHORD_DETECTION", com.cadentia.catalog.model.LyricsFormat.CHORDPRO, "Chord token extraction"),
-                new ParserCapability("CHORD_DETECTION", com.cadentia.catalog.model.LyricsFormat.MARKDOWN, "Chord token extraction"));
+                new ParserCapability("SECTION_STRUCTURE", LyricsFormat.PLAIN_TEXT, "Section extraction"),
+                new ParserCapability("SECTION_STRUCTURE", LyricsFormat.CHORDPRO, "Section extraction"),
+                new ParserCapability("SECTION_STRUCTURE", LyricsFormat.MARKDOWN, "Section extraction"),
+                new ParserCapability("CHORD_DETECTION", LyricsFormat.CHORDPRO, "Chord token extraction"),
+                new ParserCapability("CHORD_DETECTION", LyricsFormat.MARKDOWN, "Chord token extraction"));
     }
 
     public String version() {
