@@ -23,7 +23,9 @@ class LyricsParserRegistryTest {
         LyricsParserPlugin highPriority = new StubPlugin("alpha", 100, true);
         LyricsParserPlugin samePriorityNameTieBreaker = new StubPlugin("beta", 100, true);
         LyricsParserRegistry registry = new LyricsParserRegistry(
-                java.util.List.of(lowPriority, samePriorityNameTieBreaker, highPriority));
+                java.util.List.of(lowPriority, samePriorityNameTieBreaker, highPriority),
+                new ParserCapabilityRegistry(),
+                new ParserDiagnosticCodebook());
 
         assertThat(registry.findParser(LyricsFormat.PLAIN_TEXT, "source")).hasValue(highPriority);
     }
