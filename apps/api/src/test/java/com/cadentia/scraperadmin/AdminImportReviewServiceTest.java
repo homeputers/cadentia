@@ -37,6 +37,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -625,6 +627,34 @@ class AdminImportReviewServiceTest {
         assertThat(service.getAuditHistory(candidate.id()))
                 .extracting(AdminAuditEvent::action)
                 .containsExactly("REVIEW_RECORD_DENIED");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"reviewer@example.test", "approver@example.test"})
+    void recordReviewAllowsReviewerAndApproverRoles(String reviewerActor) {
+        ImportCandidate candidate = candidate(UUID.randomUUID(), ImportCandidateStatus.DEDUPLICATION_REVIEW, null);
+        ImportCandidateReview review = review(candidate.id(), null, ImportCandidateReviewDecision.NEEDS_MORE_INFO);
+        when(songRepository.findImportCandidateById(candidate.id())).thenReturn(Optional.of(candidate));
+        when(songRepository.createImportCandidateReview(any(CreateImportCandidateReviewCommand.class))).thenReturn(review);
+        AdminImportReviewService service = new AdminImportReviewService(songRepository);
+
+        ImportCandidateReview result = service.recordReview(new CreateImportCandidateReviewCommand(
+                candidate.id(), null, ImportCandidateReviewDecision.NEEDS_MORE_INFO, reviewerActor, "extra context"));
+
+        assertThat(result).isEqualTo(review);
+    }
+
+    @Test
+    void rollbackPreviewDeniedForNonRollbackRoleAndAudited() {
+        UUID targetId = UUID.randomUUID();
+        AdminImportReviewService service = new AdminImportReviewService(songRepository);
+
+        assertThatThrownBy(() -> service.previewRollback(
+                RollbackTargetType.IMPORT_CANDIDATE, targetId, "approver@example.test", UUID.randomUUID()))
+                .hasMessageContaining("Authorization denied");
+        assertThat(service.getAuditHistory(targetId))
+                .extracting(AdminAuditEvent::action)
+                .containsExactly("PREVIEW_ROLLBACK_DENIED");
     }
 
     private static ApprovalRecord approvalRecord(UUID id, UUID songId, ApprovalStatus status) {
