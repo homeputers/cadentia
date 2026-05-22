@@ -8,7 +8,8 @@ public record MatchSignal(
         BigDecimal weight,
         String candidateValue,
         String catalogValue,
-        String explanation) {
+        String explanation,
+        FingerprintSupportSignal fingerprintSupportSignal) {
 
     public MatchSignal {
         if (name == null || name.isBlank()) {
@@ -20,5 +21,9 @@ public record MatchSignal(
         candidateValue = candidateValue == null ? "" : candidateValue;
         catalogValue = catalogValue == null ? "" : catalogValue;
         explanation = explanation == null ? "" : explanation;
+    }
+
+    public MatchSignal(String name, boolean matched, BigDecimal weight, String candidateValue, String catalogValue, String explanation) {
+        this(name, matched, weight, candidateValue, catalogValue, explanation, null);
     }
 }

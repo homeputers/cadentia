@@ -135,6 +135,30 @@ Fingerprints should be computed from:
 
 Fingerprinting must distinguish a new arrangement from a duplicate import. Reviewers should see why two candidates were considered similar.
 
+
+### Fingerprint-to-Dedupe Integration
+
+Fingerprint outputs may contribute to duplicate review support, but only through a governed signal contract.
+
+Required properties:
+
+- stable signal codes with explicit semantics and fixed weights
+- deterministic aggregation into duplicate-support scoring
+- reviewer-visible evidence using hashes, normalized structure, and non-copyright-sensitive metadata
+- no automatic merge or rejection based solely on fingerprint evidence
+
+### Parser Rollout Orchestration
+
+Parser upgrades must use an idempotent batch orchestration model so large-scale recalculations remain auditable and restart-safe.
+
+Orchestration requirements:
+
+- batch identity must be derived from parser name/version and canonicalized selection criteria
+- item processing order must be deterministic
+- selection must include source-hash mismatch and parser-version mismatch paths
+- reruns of the same batch input must avoid duplicate successful parser-run history entries
+- partial failures must preserve successful results and expose retryable vs terminal outcomes
+
 ## Nashville Number Support
 
 Nashville number parsing is a future capability. The architecture should allow conversion between absolute chord notation and key-relative Nashville notation after key detection is sufficiently reliable.
