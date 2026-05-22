@@ -33,6 +33,7 @@ import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -48,6 +49,7 @@ public class AdminImportCandidateController implements AdminReviewApi {
     }
 
     @Override
+    @PreAuthorize("hasAnyAuthority('catalog.admin.view','catalog.admin.review','catalog.admin.approve','catalog.admin.rollback')")
     public ResponseEntity<List<AdminImportCandidateQueueItem>> listAdminImportCandidates(
             @RequestParam UUID batchId,
             @RequestParam(required = false) ImportCandidateStatus status) {
@@ -68,18 +70,21 @@ public class AdminImportCandidateController implements AdminReviewApi {
     }
 
     @Override
+    @PreAuthorize("hasAnyAuthority('catalog.admin.view','catalog.admin.review','catalog.admin.approve','catalog.admin.rollback')")
     public ResponseEntity<AdminImportCandidateDetailResponse> getAdminImportCandidateDetail(@PathVariable UUID candidateId) {
         AdminImportCandidateDetail detail = reviewService.getCandidateDetail(candidateId);
         return ResponseEntity.ok(toDetail(detail));
     }
 
     @Override
+    @PreAuthorize("hasAnyAuthority('catalog.admin.view','catalog.admin.review','catalog.admin.approve','catalog.admin.rollback')")
     public ResponseEntity<List<AdminDuplicateMatch>> getAdminImportCandidateDuplicates(@PathVariable UUID candidateId) {
         AdminImportCandidateDetail detail = reviewService.getCandidateDetail(candidateId);
         return ResponseEntity.ok(detail.duplicateMatches().stream().map(AdminImportCandidateController::toDuplicate).toList());
     }
 
     @Override
+    @PreAuthorize("hasAnyAuthority('catalog.admin.view','catalog.admin.review','catalog.admin.approve','catalog.admin.rollback')")
     public ResponseEntity<List<AdminAuditHistoryItem>> getAdminImportCandidateAuditHistory(@PathVariable UUID candidateId) {
         return ResponseEntity.ok(reviewService.getAuditHistory(candidateId).stream()
                 .map(AdminImportCandidateController::toAuditHistoryItem)
@@ -87,6 +92,7 @@ public class AdminImportCandidateController implements AdminReviewApi {
     }
 
     @Override
+    @PreAuthorize("hasAnyAuthority('catalog.admin.review','catalog.admin.approve')")
     public ResponseEntity<ModerationFlagResponse> openAdminModerationFlag(
             @PathVariable UUID candidateId,
             @RequestBody OpenModerationFlagRequest request) {
@@ -100,6 +106,7 @@ public class AdminImportCandidateController implements AdminReviewApi {
     }
 
     @Override
+    @PreAuthorize("hasAnyAuthority('catalog.admin.review','catalog.admin.approve')")
     public ResponseEntity<ModerationFlagResponse> assignAdminModerationFlag(
             @PathVariable UUID flagId,
             @RequestBody AssignModerationFlagRequest request) {
@@ -108,6 +115,7 @@ public class AdminImportCandidateController implements AdminReviewApi {
     }
 
     @Override
+    @PreAuthorize("hasAnyAuthority('catalog.admin.review','catalog.admin.approve')")
     public ResponseEntity<ModerationFlagResponse> resolveAdminModerationFlag(
             @PathVariable UUID flagId,
             @RequestBody ResolveModerationFlagRequest request) {
@@ -116,6 +124,7 @@ public class AdminImportCandidateController implements AdminReviewApi {
     }
 
     @Override
+    @PreAuthorize("hasAuthority('catalog.admin.approve')")
     public ResponseEntity<ModerationFlagResponse> escalateAdminModerationFlag(
             @PathVariable UUID flagId,
             @RequestBody EscalateModerationFlagRequest request) {
@@ -125,6 +134,7 @@ public class AdminImportCandidateController implements AdminReviewApi {
 
 
     @Override
+    @PreAuthorize("hasAuthority('catalog.admin.rollback')")
     public ResponseEntity<RollbackPreviewResponse> createAdminRollbackPreview(@RequestBody CreateRollbackPreviewRequest request) {
         RollbackPreview preview = reviewService.previewRollback(
                 RollbackTargetType.valueOf(request.getTargetType().getValue()),
@@ -147,6 +157,7 @@ public class AdminImportCandidateController implements AdminReviewApi {
     }
 
     @Override
+    @PreAuthorize("hasAuthority('catalog.admin.rollback')")
     public ResponseEntity<RollbackExecutionResponse> executeAdminRollback(@RequestBody ExecuteRollbackRequest request) {
         RollbackExecutionResult result =
                 reviewService.executeRollback(request.getRollbackRequestId(), request.getActor(), request.getReason());
