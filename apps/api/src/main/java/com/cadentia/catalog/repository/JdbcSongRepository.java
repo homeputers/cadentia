@@ -973,7 +973,6 @@ public class JdbcSongRepository implements SongRepository {
                 .addValue("reviewNotes", command.reviewNotes());
     }
 
-
     private static String toJsonArray(List<String> values) {
         if (values == null || values.isEmpty()) {
             return "[]";
