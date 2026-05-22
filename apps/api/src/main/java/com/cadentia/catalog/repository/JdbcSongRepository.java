@@ -48,6 +48,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -272,7 +273,6 @@ public class JdbcSongRepository implements SongRepository {
                 """.formatted(LYRICS_COLUMNS);
         return queryOptional(sql, lyricsParseResultParams(id, command), lyricsMapper());
     }
-
 
     @Override
     @Transactional
@@ -951,7 +951,6 @@ public class JdbcSongRepository implements SongRepository {
                 .addValue("reviewNotes", command.reviewNotes());
     }
 
-
     private static MapSqlParameterSource parserRunHistoryParams(ParserRunHistory runHistory) {
         return new MapSqlParameterSource()
                 .addValue("id", runHistory.id())
@@ -963,8 +962,8 @@ public class JdbcSongRepository implements SongRepository {
                 .addValue("actor", runHistory.actor())
                 .addValue("supersedesRunId", runHistory.supersedesRunId())
                 .addValue("status", runHistory.status().name())
-                .addValue("warningsJson", runHistory.warnings().isEmpty() ? "[]" : runHistory.warnings().get(0))
-                .addValue("confidenceSnapshotJson", runHistory.confidenceSnapshot().isEmpty() ? "[]" : runHistory.confidenceSnapshot().get(0));
+                .addValue("warningsJson", toJsonArray(runHistory.warnings()))
+                .addValue("confidenceSnapshotJson", toJsonArray(runHistory.confidenceSnapshot()));
     }
 
     private static MapSqlParameterSource approvalParams(UpdateApprovalRecordCommand command) {
@@ -972,6 +971,39 @@ public class JdbcSongRepository implements SongRepository {
                 .addValue("status", command.status().name())
                 .addValue("reviewer", command.reviewer())
                 .addValue("reviewNotes", command.reviewNotes());
+    }
+
+
+    private static String toJsonArray(List<String> values) {
+        if (values == null || values.isEmpty()) {
+            return "[]";
+        }
+        StringBuilder builder = new StringBuilder("[");
+        for (int i = 0; i < values.size(); i++) {
+            if (i > 0) {
+                builder.append(',');
+            }
+            builder.append('\"').append(values.get(i).replace("\\", "\\\\").replace("\"", "\\\"")).append('\"');
+        }
+        return builder.append(']').toString();
+    }
+
+    private static List<String> parseJsonArray(String jsonArray) {
+        if (jsonArray == null || jsonArray.isBlank() || jsonArray.equals("[]")) {
+            return List.of();
+        }
+        String trimmed = jsonArray.trim();
+        if (trimmed.length() < 2 || trimmed.charAt(0) != '[' || trimmed.charAt(trimmed.length() - 1) != ']') {
+            throw new IllegalArgumentException("Expected JSON array value");
+        }
+        String content = trimmed.substring(1, trimmed.length() - 1).trim();
+        if (content.isEmpty()) {
+            return List.of();
+        }
+        return Arrays.stream(content.split("\\s*,\\s*"))
+                .map(token -> token.replaceAll("^\"|\"$", ""))
+                .map(token -> token.replace("\\\"", "\"").replace("\\\\", "\\"))
+                .toList();
     }
 
     private static RowMapper<Song> songMapper() {
@@ -1035,7 +1067,6 @@ public class JdbcSongRepository implements SongRepository {
                 rs.getString("structural_markers_json"));
     }
 
-
     private static RowMapper<ParserRunHistory> parserRunHistoryMapper() {
         return (rs, rowNum) -> new ParserRunHistory(
                 uuid(rs, "id"),
@@ -1049,8 +1080,8 @@ public class JdbcSongRepository implements SongRepository {
                 uuid(rs, "supersedes_run_id"),
                 uuid(rs, "superseded_by_run_id"),
                 LyricsParseStatus.valueOf(rs.getString("parse_status")),
-                List.of(rs.getString("warnings_json")),
-                List.of(rs.getString("confidence_snapshot_json")));
+                parseJsonArray(rs.getString("warnings_json")),
+                parseJsonArray(rs.getString("confidence_snapshot_json")));
     }
 
     private static RowMapper<Tag> tagMapper() {
