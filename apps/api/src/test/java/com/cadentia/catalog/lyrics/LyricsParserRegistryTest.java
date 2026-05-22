@@ -32,12 +32,13 @@ class LyricsParserRegistryTest {
     }
 
     @Test
-    void recordsUnsupportedStatusForStoredButUnparsedFormats() {
+    void recordsUnsupportedStatusWithDiagnosticCodeForStoredButUnparsedFormats() {
         LyricsParserRegistry registry = new LyricsParserRegistry();
 
         LyricsParseResult result = registry.parse(LyricsFormat.ONSONG, "reference", "Verse\nFixture excerpt");
 
         assertThat(result.status()).isEqualTo(LyricsParseStatus.UNSUPPORTED);
+        assertThat(result.diagnosticCode()).isEqualTo("PARSER_UNSUPPORTED_FORMAT");
         assertThat(result.error()).contains("No deterministic parser").contains("onsong");
     }
 
