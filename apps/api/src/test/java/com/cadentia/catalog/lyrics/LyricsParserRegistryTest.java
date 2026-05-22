@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.cadentia.catalog.model.LyricsFormat;
 import com.cadentia.catalog.model.LyricsParseStatus;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class LyricsParserRegistryTest {
@@ -23,18 +24,21 @@ class LyricsParserRegistryTest {
         LyricsParserPlugin highPriority = new StubPlugin("alpha", 100, true);
         LyricsParserPlugin samePriorityNameTieBreaker = new StubPlugin("beta", 100, true);
         LyricsParserRegistry registry = new LyricsParserRegistry(
-                java.util.List.of(lowPriority, samePriorityNameTieBreaker, highPriority));
+                List.of(lowPriority, samePriorityNameTieBreaker, highPriority),
+                new ParserCapabilityRegistry(),
+                new ParserDiagnosticCodebook());
 
         assertThat(registry.findParser(LyricsFormat.PLAIN_TEXT, "source")).hasValue(highPriority);
     }
 
     @Test
-    void recordsUnsupportedStatusForStoredButUnparsedFormats() {
+    void recordsUnsupportedStatusWithDiagnosticCodeForStoredButUnparsedFormats() {
         LyricsParserRegistry registry = new LyricsParserRegistry();
 
         LyricsParseResult result = registry.parse(LyricsFormat.ONSONG, "reference", "Verse\nFixture excerpt");
 
         assertThat(result.status()).isEqualTo(LyricsParseStatus.UNSUPPORTED);
+        assertThat(result.diagnosticCode()).isEqualTo("PARSER_UNSUPPORTED_FORMAT");
         assertThat(result.error()).contains("No deterministic parser").contains("onsong");
     }
 

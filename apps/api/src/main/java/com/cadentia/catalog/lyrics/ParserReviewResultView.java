@@ -3,6 +3,8 @@ package com.cadentia.catalog.lyrics;
 import com.cadentia.catalog.entity.LyricsDocument;
 import com.cadentia.catalog.model.LyricsParseStatus;
 import java.time.Instant;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 public record ParserReviewResultView(
@@ -13,6 +15,9 @@ public record ParserReviewResultView(
         String parseError,
         String parserName,
         String parserVersion,
+        String parserCapabilityRegistryVersion,
+        List<ParserCapability> parserCapabilities,
+        Map<String, ParserDiagnosticCode> parserDiagnosticCodebook,
         Instant parsedAt,
         String parsedSectionsJson,
         String chordMapJson,
@@ -28,6 +33,9 @@ public record ParserReviewResultView(
                 document.parseError(),
                 document.parserName(),
                 document.parserVersion(),
+                "adr-009-capabilities-v1",
+                List.of(),
+                Map.of(),
                 document.parsedAt(),
                 document.parsedSectionsJson(),
                 document.chordMapJson(),

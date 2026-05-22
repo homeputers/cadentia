@@ -5,6 +5,7 @@ import com.cadentia.catalog.model.UpdateLyricsParseResultCommand;
 
 public record LyricsParseResult(
         LyricsParseStatus status,
+        String diagnosticCode,
         String error,
         String parserName,
         String parserVersion,
@@ -21,6 +22,7 @@ public record LyricsParseResult(
         return new LyricsParseResult(
                 LyricsParseStatus.PARSED,
                 null,
+                null,
                 parserName,
                 parserVersion,
                 parsedSectionsJson,
@@ -29,11 +31,11 @@ public record LyricsParseResult(
     }
 
     public static LyricsParseResult failed(String parserName, String parserVersion, String error) {
-        return new LyricsParseResult(LyricsParseStatus.FAILED, error, parserName, parserVersion, null, null, null);
+        return new LyricsParseResult(LyricsParseStatus.FAILED, "PARSER_CONTENT_REQUIRED", error, parserName, parserVersion, null, null, null);
     }
 
-    public static LyricsParseResult unsupported(String error) {
-        return new LyricsParseResult(LyricsParseStatus.UNSUPPORTED, error, null, null, null, null, null);
+    public static LyricsParseResult unsupported(String diagnosticCode, String error) {
+        return new LyricsParseResult(LyricsParseStatus.UNSUPPORTED, diagnosticCode, error, null, null, null, null, null);
     }
 
     public UpdateLyricsParseResultCommand toCommand() {
