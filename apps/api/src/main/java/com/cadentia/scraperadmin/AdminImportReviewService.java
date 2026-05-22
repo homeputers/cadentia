@@ -45,6 +45,17 @@ import org.springframework.transaction.annotation.Transactional;
 public class AdminImportReviewService {
 
     private static final BigDecimal REVIEWED_IMPORT_CONFIDENCE = new BigDecimal("1.0000");
+    private static final Map<String, List<AdminAuthorizationRole>> AUTHORIZATION_MATRIX = Map.of(
+            "REVIEW_RECORD", List.of(AdminAuthorizationRole.REVIEWER, AdminAuthorizationRole.APPROVER),
+            "MERGE_CANDIDATE", List.of(AdminAuthorizationRole.REVIEWER, AdminAuthorizationRole.APPROVER),
+            "CREATE_CANONICAL", List.of(AdminAuthorizationRole.REVIEWER, AdminAuthorizationRole.APPROVER),
+            "APPLY_APPROVAL", List.of(AdminAuthorizationRole.APPROVER),
+            "OPEN_MODERATION", List.of(AdminAuthorizationRole.REVIEWER, AdminAuthorizationRole.APPROVER),
+            "ASSIGN_MODERATION", List.of(AdminAuthorizationRole.REVIEWER, AdminAuthorizationRole.APPROVER),
+            "RESOLVE_MODERATION", List.of(AdminAuthorizationRole.REVIEWER, AdminAuthorizationRole.APPROVER),
+            "ESCALATE_MODERATION", List.of(AdminAuthorizationRole.APPROVER),
+            "PREVIEW_ROLLBACK", List.of(AdminAuthorizationRole.ROLLBACK_ADMIN),
+            "EXECUTE_ROLLBACK", List.of(AdminAuthorizationRole.ROLLBACK_ADMIN));
 
     private final SongRepository songRepository;
     private final TitleNormalizer titleNormalizer;
@@ -97,6 +108,7 @@ public class AdminImportReviewService {
 
     @Transactional(readOnly = true)
     public RollbackPreview previewRollback(RollbackTargetType targetType, UUID targetId, String actor, UUID importBatchId) {
+        requireAuthorized("PREVIEW_ROLLBACK", actor, targetId, "IMPORT_CANDIDATE");
         List<String> blockers = new ArrayList<>();
         List<Map<String, Object>> impacted = new ArrayList<>();
         boolean eligibilityImpacted = false;
@@ -128,6 +140,7 @@ public class AdminImportReviewService {
 
     @Transactional
     public RollbackExecutionResult executeRollback(UUID rollbackRequestId, String actor, String reason) {
+        requireAuthorized("EXECUTE_ROLLBACK", actor, rollbackRequestId, "ROLLBACK_REQUEST");
         RollbackPreview preview = rollbackPreviewsById.get(rollbackRequestId);
         if (preview == null) {
             throw new IllegalArgumentException("Unknown rollback request: " + rollbackRequestId);
@@ -181,6 +194,7 @@ public class AdminImportReviewService {
             String openedBy,
             String reason,
             boolean excludeFromRecommendation) {
+        requireAuthorized("OPEN_MODERATION", openedBy, importCandidateId, "IMPORT_CANDIDATE");
         requireCandidate(importCandidateId);
         Instant now = Instant.now();
         ModerationFlag flag = new ModerationFlag(
@@ -208,6 +222,7 @@ public class AdminImportReviewService {
 
     @Transactional
     public ModerationFlag assignModerationFlag(UUID flagId, String assignedTo, String actor, String reason) {
+        requireAuthorized("ASSIGN_MODERATION", actor, flagId, "MODERATION_FLAG");
         ModerationFlag flag = requireFlag(flagId);
         ModerationFlag updated = new ModerationFlag(
                 flag.id(),
@@ -229,6 +244,7 @@ public class AdminImportReviewService {
 
     @Transactional
     public ModerationFlag resolveModerationFlag(UUID flagId, String actor, String resolutionNotes) {
+        requireAuthorized("RESOLVE_MODERATION", actor, flagId, "MODERATION_FLAG");
         ModerationFlag flag = requireFlag(flagId);
         ModerationFlag updated = new ModerationFlag(
                 flag.id(),
@@ -250,6 +266,7 @@ public class AdminImportReviewService {
 
     @Transactional
     public ModerationFlag escalateModerationFlag(UUID flagId, String actor, String reason) {
+        requireAuthorized("ESCALATE_MODERATION", actor, flagId, "MODERATION_FLAG");
         ModerationFlag flag = requireFlag(flagId);
         ModerationFlag updated = new ModerationFlag(
                 flag.id(),
@@ -287,6 +304,7 @@ public class AdminImportReviewService {
 
     @Transactional
     public ImportCandidateReview recordReview(CreateImportCandidateReviewCommand command) {
+        requireAuthorized("REVIEW_RECORD", command.reviewer(), command.importCandidateId(), "IMPORT_CANDIDATE");
         ImportCandidate candidate = requireCandidate(command.importCandidateId());
         ProposedDuplicateMatch proposedMatch = null;
         if (command.proposedDuplicateMatchId() != null) {
@@ -303,6 +321,7 @@ public class AdminImportReviewService {
 
     @Transactional
     public AdminMergeResult mergeIntoExistingSong(MergeIntoExistingSongCommand command) {
+        requireAuthorized("MERGE_CANDIDATE", command.reviewer(), command.importCandidateId(), "IMPORT_CANDIDATE");
         ImportCandidate candidate = requireCandidate(command.importCandidateId());
         if (candidate.status() == ImportCandidateStatus.MERGED) {
             Song mergedSong = requireSong(candidate.mergedSongId());
@@ -357,6 +376,10 @@ public class AdminImportReviewService {
 
     @Transactional
     public ApprovalRecord applyApprovalAction(ApplyApprovalActionCommand command) {
+        UUID approvalEntityId = command.songId() == null
+                ? (command.arrangementId() == null ? command.lyricsDocumentId() : command.arrangementId())
+                : command.songId();
+        requireAuthorized("APPLY_APPROVAL", command.reviewer(), approvalEntityId, "APPROVAL_TARGET");
         ApprovalStatus nextStatus = statusFor(command.action());
         return songRepository
                 .findApprovalRecord(command.songId(), command.arrangementId(), command.lyricsDocumentId(), command.approvalType())
@@ -386,6 +409,7 @@ public class AdminImportReviewService {
 
     @Transactional
     public AdminMergeResult createNewCanonicalSong(CreateCanonicalSongFromImportCandidateCommand command) {
+        requireAuthorized("CREATE_CANONICAL", command.reviewer(), command.importCandidateId(), "IMPORT_CANDIDATE");
         ImportCandidate candidate = requireCandidate(command.importCandidateId());
         if (candidate.status() == ImportCandidateStatus.MERGED) {
             Song mergedSong = requireSong(candidate.mergedSongId());
@@ -513,6 +537,17 @@ public class AdminImportReviewService {
                 afterState);
         auditEventsByEntityId.computeIfAbsent(entityId, ignored -> new ArrayList<>()).add(event);
         return event;
+    }
+
+    private void requireAuthorized(String action, String actor, UUID entityId, String entityType) {
+        AdminAuthorizationRole role = AdminAuthorizationRole.fromActor(actor);
+        List<AdminAuthorizationRole> allowedRoles = AUTHORIZATION_MATRIX.getOrDefault(action, List.of());
+        if (allowedRoles.contains(role)) {
+            return;
+        }
+        addAuditEvent(entityId, entityType, action + "_DENIED", actor, "authorization denied",
+                Map.of("requiredRoles", allowedRoles.toString()), Map.of("actualRole", role.name()));
+        throw new IllegalStateException("Authorization denied for action " + action + " with role " + role.name());
     }
 
     private void requirePermittingReview(
