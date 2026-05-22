@@ -31,6 +31,7 @@ class OrderedSetResponseTest {
         // Assert
         assertThat(response.scoringProfileVersion()).isEqualTo("v1.0.0");
         assertThat(response.candidateSnapshotVersion()).isEqualTo("snapshot-2026-05-17");
+        assertThat(response.profileLifecycle().state()).isEqualTo(ScoringProfileLifecycle.ProfileState.ACTIVE);
         assertThat(response.deterministicOrderingRules())
                 .containsExactly("total_score", "theme_priority", "arrangement_id");
         assertThat(response.items()).hasSize(1);
