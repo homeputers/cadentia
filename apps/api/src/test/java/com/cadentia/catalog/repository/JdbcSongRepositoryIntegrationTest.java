@@ -9,6 +9,7 @@ import com.cadentia.catalog.entity.ImportBatch;
 import com.cadentia.catalog.entity.ImportCandidate;
 import com.cadentia.catalog.entity.ImportCandidateReview;
 import com.cadentia.catalog.entity.LyricsDocument;
+import com.cadentia.catalog.entity.ParserRunHistory;
 import com.cadentia.catalog.entity.ProposedDuplicateMatch;
 import com.cadentia.catalog.entity.ProvenanceRecord;
 import com.cadentia.catalog.entity.Song;
@@ -370,6 +371,72 @@ class JdbcSongRepositoryIntegrationTest {
         assertThat(parsedDocument.parsedSectionsJson()).contains("chorus");
         assertThat(repository.findLyricsDocumentById(lyricsDocument.id()).orElseThrow().content())
                 .isEqualTo(rawContent);
+    }
+
+    @Test
+    void appendsParserRunHistoryAndReadsLineageInBothDirections() {
+        // Arrange
+        Song song = createSong();
+        Arrangement arrangement = createArrangement(song);
+        LyricsDocument lyricsDocument = createLyricsDocument(arrangement);
+        ParserRunHistory firstRun = new ParserRunHistory(
+                java.util.UUID.randomUUID(),
+                lyricsDocument.id(),
+                "plain_text",
+                "1.0.0",
+                lyricsDocument.contentHash(),
+                "IMPORT",
+                "system:ingestion",
+                null,
+                null,
+                null,
+                LyricsParseStatus.PARSED,
+                List.of("ambiguous_token"),
+                List.of("chords:0.81"));
+
+        // Act
+        ParserRunHistory insertedFirst = repository.appendParserRunHistory(firstRun);
+        ParserRunHistory secondRun = new ParserRunHistory(
+                java.util.UUID.randomUUID(),
+                lyricsDocument.id(),
+                "plain_text",
+                "1.1.0",
+                lyricsDocument.contentHash(),
+                "RECALCULATION",
+                "system:lyrics-parser",
+                null,
+                insertedFirst.id(),
+                null,
+                LyricsParseStatus.PARSED,
+                List.of("section_inference"),
+                List.of("sections:0.92"));
+        ParserRunHistory insertedSecond = repository.appendParserRunHistory(secondRun);
+
+        // Assert
+        assertThat(insertedFirst.createdAt()).isNotNull();
+        assertThat(insertedSecond.supersedesRunId()).isEqualTo(insertedFirst.id());
+        assertThat(repository.findLatestParserRunHistoryByLyricsDocumentId(lyricsDocument.id()))
+                .contains(insertedSecond);
+        assertThat(repository.findParserRunHistoryByLyricsDocumentId(lyricsDocument.id()))
+                .extracting(
+                        ParserRunHistory::id,
+                        ParserRunHistory::supersedesRunId,
+                        ParserRunHistory::supersededByRunId,
+                        ParserRunHistory::warnings,
+                        ParserRunHistory::confidenceSnapshot)
+                .containsExactly(
+                        Tuple.tuple(
+                                insertedFirst.id(),
+                                null,
+                                insertedSecond.id(),
+                                List.of("ambiguous_token"),
+                                List.of("chords:0.81")),
+                        Tuple.tuple(
+                                insertedSecond.id(),
+                                insertedFirst.id(),
+                                null,
+                                List.of("section_inference"),
+                                List.of("sections:0.92")));
     }
 
     @Test

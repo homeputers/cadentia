@@ -6,6 +6,7 @@ import com.cadentia.catalog.entity.ImportBatch;
 import com.cadentia.catalog.entity.ImportCandidate;
 import com.cadentia.catalog.entity.ImportCandidateReview;
 import com.cadentia.catalog.entity.LyricsDocument;
+import com.cadentia.catalog.entity.ParserRunHistory;
 import com.cadentia.catalog.entity.ProposedDuplicateMatch;
 import com.cadentia.catalog.entity.ProvenanceRecord;
 import com.cadentia.catalog.entity.Song;
@@ -63,6 +64,12 @@ public interface SongRepository {
     Optional<LyricsDocument> updateLyricsDocument(UUID id, UpdateLyricsDocumentCommand command);
 
     Optional<LyricsDocument> updateLyricsParseResult(UUID id, UpdateLyricsParseResultCommand command);
+
+    ParserRunHistory appendParserRunHistory(ParserRunHistory parserRunHistory);
+
+    Optional<ParserRunHistory> findLatestParserRunHistoryByLyricsDocumentId(UUID lyricsDocumentId);
+
+    List<ParserRunHistory> findParserRunHistoryByLyricsDocumentId(UUID lyricsDocumentId);
 
     List<LyricsDocument> findLyricsDocumentsByArrangementId(UUID arrangementId);
 
