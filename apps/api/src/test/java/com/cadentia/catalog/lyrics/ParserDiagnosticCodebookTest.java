@@ -19,6 +19,17 @@ class ParserDiagnosticCodebookTest {
     }
 
     @Test
+    void resolvesLegacyWarningAliasesForBackwardCompatibility() {
+        ParserDiagnosticCodebook codebook = new ParserDiagnosticCodebook();
+
+        ParserDiagnosticCode unknownChord = codebook.require("UNKNOWN_CHORD");
+        ParserDiagnosticCode malformedMarker = codebook.require("MALFORMED_MARKER");
+
+        assertThat(unknownChord.severity()).isEqualTo(ParserDiagnosticSeverity.WARNING);
+        assertThat(malformedMarker.severity()).isEqualTo(ParserDiagnosticSeverity.WARNING);
+    }
+
+    @Test
     void throwsForUnregisteredCode() {
         ParserDiagnosticCodebook codebook = new ParserDiagnosticCodebook();
 

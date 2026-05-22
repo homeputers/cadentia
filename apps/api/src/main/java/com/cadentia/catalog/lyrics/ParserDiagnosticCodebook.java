@@ -30,7 +30,17 @@ public class ParserDiagnosticCodebook {
                 new ParserDiagnosticCode(
                         "PARSER_UNKNOWN_CHORD",
                         ParserDiagnosticSeverity.WARNING,
-                        "Normalize unsupported chord tokens to supported notation."));
+                        "Normalize unsupported chord tokens to supported notation."),
+                "UNKNOWN_CHORD",
+                new ParserDiagnosticCode(
+                        "UNKNOWN_CHORD",
+                        ParserDiagnosticSeverity.WARNING,
+                        "Normalize unsupported chord tokens to supported notation."),
+                "MALFORMED_MARKER",
+                new ParserDiagnosticCode(
+                        "MALFORMED_MARKER",
+                        ParserDiagnosticSeverity.WARNING,
+                        "Fix malformed structural markers such as unclosed brackets."));
     }
 
     public ParserDiagnosticCode require(String code) {
