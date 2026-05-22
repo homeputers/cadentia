@@ -6,6 +6,7 @@ import com.cadentia.catalog.entity.ImportBatch;
 import com.cadentia.catalog.entity.ImportCandidate;
 import com.cadentia.catalog.entity.ImportCandidateReview;
 import com.cadentia.catalog.entity.LyricsDocument;
+import com.cadentia.catalog.entity.ParserRunHistory;
 import com.cadentia.catalog.entity.ProposedDuplicateMatch;
 import com.cadentia.catalog.entity.ProvenanceRecord;
 import com.cadentia.catalog.entity.Song;
@@ -270,6 +271,58 @@ public class JdbcSongRepository implements SongRepository {
                 RETURNING %s
                 """.formatted(LYRICS_COLUMNS);
         return queryOptional(sql, lyricsParseResultParams(id, command), lyricsMapper());
+    }
+
+
+    @Override
+    @Transactional
+    public ParserRunHistory appendParserRunHistory(ParserRunHistory parserRunHistory) {
+        String insertSql = """
+                INSERT INTO parser_run_history (
+                    id, lyrics_document_id, parser_name, parser_version, source_content_hash, trigger_type, actor,
+                    supersedes_run_id, parse_status, warnings_json, confidence_snapshot_json
+                ) VALUES (
+                    :id, :lyricsDocumentId, :parserName, :parserVersion, :sourceContentHash, :triggerType, :actor,
+                    :supersedesRunId, :status, CAST(:warningsJson AS jsonb), CAST(:confidenceSnapshotJson AS jsonb)
+                )
+                RETURNING id, lyrics_document_id, parser_name, parser_version, source_content_hash, trigger_type, actor,
+                    created_at, supersedes_run_id, superseded_by_run_id, parse_status, warnings_json::text AS warnings_json,
+                    confidence_snapshot_json::text AS confidence_snapshot_json
+                """;
+        ParserRunHistory inserted = jdbcTemplate.queryForObject(insertSql, parserRunHistoryParams(parserRunHistory), parserRunHistoryMapper());
+        if (parserRunHistory.supersedesRunId() != null) {
+            jdbcTemplate.update(
+                    "UPDATE parser_run_history SET superseded_by_run_id = :id WHERE id = :supersedesRunId",
+                    Map.of("id", parserRunHistory.id(), "supersedesRunId", parserRunHistory.supersedesRunId()));
+        }
+        return inserted;
+    }
+
+    @Override
+    public Optional<ParserRunHistory> findLatestParserRunHistoryByLyricsDocumentId(UUID lyricsDocumentId) {
+        String sql = """
+                SELECT id, lyrics_document_id, parser_name, parser_version, source_content_hash, trigger_type, actor,
+                    created_at, supersedes_run_id, superseded_by_run_id, parse_status, warnings_json::text AS warnings_json,
+                    confidence_snapshot_json::text AS confidence_snapshot_json
+                FROM parser_run_history
+                WHERE lyrics_document_id = :lyricsDocumentId
+                ORDER BY created_at DESC
+                LIMIT 1
+                """;
+        return queryOptional(sql, Map.of("lyricsDocumentId", lyricsDocumentId), parserRunHistoryMapper());
+    }
+
+    @Override
+    public List<ParserRunHistory> findParserRunHistoryByLyricsDocumentId(UUID lyricsDocumentId) {
+        String sql = """
+                SELECT id, lyrics_document_id, parser_name, parser_version, source_content_hash, trigger_type, actor,
+                    created_at, supersedes_run_id, superseded_by_run_id, parse_status, warnings_json::text AS warnings_json,
+                    confidence_snapshot_json::text AS confidence_snapshot_json
+                FROM parser_run_history
+                WHERE lyrics_document_id = :lyricsDocumentId
+                ORDER BY created_at, id
+                """;
+        return jdbcTemplate.query(sql, Map.of("lyricsDocumentId", lyricsDocumentId), parserRunHistoryMapper());
     }
 
     @Override
@@ -898,6 +951,22 @@ public class JdbcSongRepository implements SongRepository {
                 .addValue("reviewNotes", command.reviewNotes());
     }
 
+
+    private static MapSqlParameterSource parserRunHistoryParams(ParserRunHistory runHistory) {
+        return new MapSqlParameterSource()
+                .addValue("id", runHistory.id())
+                .addValue("lyricsDocumentId", runHistory.lyricsDocumentId())
+                .addValue("parserName", runHistory.parserName())
+                .addValue("parserVersion", runHistory.parserVersion())
+                .addValue("sourceContentHash", runHistory.sourceContentHash())
+                .addValue("triggerType", runHistory.triggerType())
+                .addValue("actor", runHistory.actor())
+                .addValue("supersedesRunId", runHistory.supersedesRunId())
+                .addValue("status", runHistory.status().name())
+                .addValue("warningsJson", runHistory.warnings().isEmpty() ? "[]" : runHistory.warnings().get(0))
+                .addValue("confidenceSnapshotJson", runHistory.confidenceSnapshot().isEmpty() ? "[]" : runHistory.confidenceSnapshot().get(0));
+    }
+
     private static MapSqlParameterSource approvalParams(UpdateApprovalRecordCommand command) {
         return new MapSqlParameterSource()
                 .addValue("status", command.status().name())
@@ -964,6 +1033,24 @@ public class JdbcSongRepository implements SongRepository {
                 rs.getString("parsed_sections_json"),
                 rs.getString("chord_map_json"),
                 rs.getString("structural_markers_json"));
+    }
+
+
+    private static RowMapper<ParserRunHistory> parserRunHistoryMapper() {
+        return (rs, rowNum) -> new ParserRunHistory(
+                uuid(rs, "id"),
+                uuid(rs, "lyrics_document_id"),
+                rs.getString("parser_name"),
+                rs.getString("parser_version"),
+                rs.getString("source_content_hash"),
+                rs.getString("trigger_type"),
+                rs.getString("actor"),
+                instant(rs, "created_at"),
+                uuid(rs, "supersedes_run_id"),
+                uuid(rs, "superseded_by_run_id"),
+                LyricsParseStatus.valueOf(rs.getString("parse_status")),
+                List.of(rs.getString("warnings_json")),
+                List.of(rs.getString("confidence_snapshot_json")));
     }
 
     private static RowMapper<Tag> tagMapper() {

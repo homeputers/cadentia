@@ -6,6 +6,7 @@ import com.cadentia.catalog.entity.ImportBatch;
 import com.cadentia.catalog.entity.ImportCandidate;
 import com.cadentia.catalog.entity.ImportCandidateReview;
 import com.cadentia.catalog.entity.LyricsDocument;
+import com.cadentia.catalog.entity.ParserRunHistory;
 import com.cadentia.catalog.entity.ProposedDuplicateMatch;
 import com.cadentia.catalog.entity.ProvenanceRecord;
 import com.cadentia.catalog.entity.Song;
@@ -98,6 +99,22 @@ public class InMemorySongRepository implements SongRepository {
     @Override
     public Optional<LyricsDocument> updateLyricsParseResult(UUID id, UpdateLyricsParseResultCommand command) {
         return Optional.empty();
+    }
+
+
+    @Override
+    public ParserRunHistory appendParserRunHistory(ParserRunHistory parserRunHistory) {
+        return parserRunHistory;
+    }
+
+    @Override
+    public Optional<ParserRunHistory> findLatestParserRunHistoryByLyricsDocumentId(UUID lyricsDocumentId) {
+        return Optional.empty();
+    }
+
+    @Override
+    public List<ParserRunHistory> findParserRunHistoryByLyricsDocumentId(UUID lyricsDocumentId) {
+        return List.of();
     }
 
     @Override
