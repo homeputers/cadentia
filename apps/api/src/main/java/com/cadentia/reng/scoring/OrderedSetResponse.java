@@ -8,6 +8,7 @@ public record OrderedSetResponse(
         List<OrderedSetItem> items,
         List<RecommendationExplanationFact> setExplanationFacts,
         List<RecommendationExplanationFact> adminCandidateExplanationFacts,
+        ScoringProfileLifecycle profileLifecycle,
         List<String> deterministicOrderingRules,
         double totalScore) {
 
@@ -15,6 +16,7 @@ public record OrderedSetResponse(
         items = items == null ? List.of() : List.copyOf(items);
         setExplanationFacts = setExplanationFacts == null ? List.of() : List.copyOf(setExplanationFacts);
         adminCandidateExplanationFacts = adminCandidateExplanationFacts == null ? List.of() : List.copyOf(adminCandidateExplanationFacts);
+        profileLifecycle = profileLifecycle == null ? ScoringProfileLifecycle.active() : profileLifecycle;
         deterministicOrderingRules = deterministicOrderingRules == null ? List.of() : List.copyOf(deterministicOrderingRules);
     }
 
@@ -30,6 +32,7 @@ public record OrderedSetResponse(
                 items,
                 setExplanationFacts,
                 List.of(),
+                profile.lifecycle(),
                 profile.deterministicTieBreakOrder(),
                 totalScore);
     }

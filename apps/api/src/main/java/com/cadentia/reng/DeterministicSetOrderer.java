@@ -119,6 +119,7 @@ public class DeterministicSetOrderer implements SetOrderer {
                 items,
                 setExplanationFacts,
                 adminFacts,
+                profile.lifecycle(),
                 profile.deterministicTieBreakOrder(),
                 totalScore);
     }

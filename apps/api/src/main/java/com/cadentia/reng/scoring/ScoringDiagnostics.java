@@ -13,16 +13,20 @@ public record ScoringDiagnostics(
         Map<HardFilterReasonCode, Integer> exclusionReasonCounts,
         ScoreRange candidateScoreRange,
         ScoreRange transitionScoreRange,
+        List<ConstraintRelaxationStep> constraintRelaxationSequence,
+        List<SearchPruningDecision> searchPruningDecisions,
         List<String> transitionTradeoffCodes,
         SelectedSetSummary selectedSetSummary) {
 
     public ScoringDiagnostics {
         exclusionReasonCounts = exclusionReasonCounts == null ? Map.of() : Map.copyOf(exclusionReasonCounts);
+        constraintRelaxationSequence = constraintRelaxationSequence == null ? List.of() : List.copyOf(constraintRelaxationSequence);
+        searchPruningDecisions = searchPruningDecisions == null ? List.of() : List.copyOf(searchPruningDecisions);
         transitionTradeoffCodes = transitionTradeoffCodes == null ? List.of() : List.copyOf(transitionTradeoffCodes);
     }
 
     public static ScoringDiagnostics disabled() {
-        return new ScoringDiagnostics(false, 0, 0, 0, Map.of(), ScoreRange.empty(), ScoreRange.empty(), List.of(),
+        return new ScoringDiagnostics(false, 0, 0, 0, Map.of(), ScoreRange.empty(), ScoreRange.empty(), List.of(), List.of(), List.of(),
                 SelectedSetSummary.empty());
     }
 
@@ -58,6 +62,13 @@ public record ScoringDiagnostics(
                 ScoreRange.from(candidateScores.stream().mapToDouble(CandidateFeatureScorer.CandidateFeatureScore::totalScore)
                         .toArray()),
                 ScoreRange.from(transitionScores.stream().mapToDouble(TransitionScore::totalScore).toArray()),
+                List.of(),
+                hardFilterResult.excludedCandidates().stream()
+                        .map(excluded -> new SearchPruningDecision(
+                                excluded.candidate().arrangementId().toString(),
+                                excluded.reasonCodes().isEmpty() ? "UNKNOWN" : excluded.reasonCodes().get(0).name(),
+                                "hard_constraint_filter"))
+                        .toList(),
                 tradeoffs,
                 SelectedSetSummary.from(selectedSet));
     }

@@ -46,6 +46,8 @@ class ScoringDiagnosticsTest {
         assertThat(diagnostics.eligibleCandidateCount()).isEqualTo(1);
         assertThat(diagnostics.excludedCandidateCount()).isEqualTo(1);
         assertThat(diagnostics.exclusionReasonCounts()).containsEntry(HardFilterReasonCode.MISSING_PROVENANCE, 1);
+        assertThat(diagnostics.searchPruningDecisions()).hasSize(1);
+        assertThat(diagnostics.searchPruningDecisions().get(0).phaseCode()).isEqualTo("hard_constraint_filter");
         assertThat(diagnostics.candidateScoreRange().max()).isGreaterThan(0d);
         assertThat(diagnostics.transitionTradeoffCodes()).containsExactly(TransitionScorer.KEY_MODULATION);
         assertThat(diagnostics.selectedSetSummary().totalScore()).isEqualTo(1.25d);
