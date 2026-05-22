@@ -11,37 +11,85 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 class ScoringPerformanceTest {
 
+    @ParameterizedTest
+    @CsvSource({
+        "small,400,180,280",
+        "medium,1500,400,550",
+        "large,3000,700,900"
+    })
+    void scoringPipelineMeetsLatencySloByCatalogSize(String catalogSize, int candidateCount, long p50Ms, long p95Ms) {
+        List<Long> samples = benchmarkMatrixRun(candidateCount, requestBaselineDefaults());
+        long measuredP50 = percentile(samples, 0.50d);
+        long measuredP95 = percentile(samples, 0.95d);
+
+        assertThat(samples).as("matrix " + catalogSize + " should have samples").hasSize(7);
+        assertThat(measuredP50).as("p50 slo for " + catalogSize).isLessThanOrEqualTo(p50Ms);
+        assertThat(measuredP95).as("p95 slo for " + catalogSize).isLessThanOrEqualTo(p95Ms);
+    }
+
     @Test
-    void scoringPipelineCompletesWithinLatencyBudgetForRepresentativeCatalog() {
+    void scoringPipelineMeetsComplexityProfilesAtMediumCatalogSize() {
+        int candidateCount = 1500;
+        assertThat(percentile(benchmarkMatrixRun(candidateCount, requestBaselineDefaults()), 0.95d)).isLessThanOrEqualTo(550);
+        assertThat(percentile(benchmarkMatrixRun(candidateCount, requestThemeDense()), 0.95d)).isLessThanOrEqualTo(600);
+        assertThat(percentile(benchmarkMatrixRun(candidateCount, requestConstraintHeavy()), 0.95d)).isLessThanOrEqualTo(650);
+    }
+
+    private static ScoringRequest requestBaselineDefaults() {
+        return new ScoringRequest("Psalm 24", List.of("holiness"), 10, 5,
+                new ScoringRequest.KeyPolicy(true, true, 2), new ScoringRequest.TempoPolicy(12),
+                null, "en", List.of(), false, new ScoringRequest.DefaultsApplied(false, false, false, false));
+    }
+
+    private static ScoringRequest requestThemeDense() {
+        return new ScoringRequest("Psalm 24", List.of("holiness", "majesty", "kingdom", "praise", "worship"), 10, 5,
+                new ScoringRequest.KeyPolicy(true, true, 2), new ScoringRequest.TempoPolicy(12),
+                null, "en", List.of(), false, new ScoringRequest.DefaultsApplied(false, false, false, false));
+    }
+
+    private static ScoringRequest requestConstraintHeavy() {
+        return new ScoringRequest("Psalm 24", List.of("holiness"), 10, 5,
+                new ScoringRequest.KeyPolicy(true, false, 1), new ScoringRequest.TempoPolicy(6),
+                null, "en", List.of(), false, new ScoringRequest.DefaultsApplied(false, false, false, false));
+    }
+
+    private static List<Long> benchmarkMatrixRun(int candidateCount, ScoringRequest request) {
+        List<RecommendableArrangement> candidates = buildCandidates(candidateCount);
+        HardConstraintFilter filter = new HardConstraintFilter();
+        CandidateFeatureScorer scorer = new CandidateFeatureScorer();
+        List<Long> elapsedMs = new ArrayList<>();
+        for (int run = 0; run < 7; run++) {
+            long started = System.nanoTime();
+            HardFilterResult filtered = filter.filter(candidates, request);
+            List<CandidateFeatureScorer.CandidateFeatureScore> scores =
+                    scorer.scoreCandidates(filtered.eligibleCandidates(), request, profile());
+            long elapsed = (System.nanoTime() - started) / 1_000_000;
+            assertThat(scores).hasSize(candidateCount);
+            elapsedMs.add(elapsed);
+        }
+        return elapsedMs;
+    }
+
+    private static List<RecommendableArrangement> buildCandidates(int count) {
         List<RecommendableArrangement> candidates = new ArrayList<>();
-        for (int i = 0; i < 1500; i++) {
+        for (int i = 0; i < count; i++) {
             candidates.add(new RecommendableArrangement(
                     UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), "Song-" + i, "en", i % 2 == 0 ? "G" : "D",
                     KeyMode.MAJOR, 90 + (i % 40), "4/4", 50 + (i % 40), List.of(i % 3 == 0 ? "praise" : "worship"),
                     List.of(), List.of(), approvedSummary()));
         }
-
-        HardConstraintFilter filter = new HardConstraintFilter();
-        CandidateFeatureScorer scorer = new CandidateFeatureScorer();
-        long started = System.nanoTime();
-
-        HardFilterResult filtered = filter.filter(candidates, request());
-        List<CandidateFeatureScorer.CandidateFeatureScore> scores =
-                scorer.scoreCandidates(filtered.eligibleCandidates(), request(), profile());
-
-        long elapsedMs = (System.nanoTime() - started) / 1_000_000;
-        assertThat(filtered.eligibleCandidates()).hasSize(1500);
-        assertThat(scores).hasSize(1500);
-        assertThat(elapsedMs).isLessThan(400L);
+        return candidates;
     }
 
-    private static ScoringRequest request() {
-        return new ScoringRequest("Psalm 24", List.of("holiness"), 10, 5,
-                new ScoringRequest.KeyPolicy(true, true, 2), new ScoringRequest.TempoPolicy(12),
-                null, "en", List.of(), false, new ScoringRequest.DefaultsApplied(false, false, false, false));
+    private static long percentile(List<Long> values, double percentile) {
+        List<Long> sorted = values.stream().sorted().toList();
+        int index = (int) Math.ceil(percentile * sorted.size()) - 1;
+        return sorted.get(Math.max(0, index));
     }
 
     private static ScoringProfile profile() {

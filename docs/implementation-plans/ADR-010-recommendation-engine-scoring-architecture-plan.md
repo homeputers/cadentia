@@ -175,28 +175,37 @@ and stable catalog identifiers.
 - Do not depend on database default row order.
 - Do not hide tie-break decisions from diagnostic output.
 
-## Subtask 7: Add scoring diagnostics and performance tests
+## Subtask 7: Add benchmark matrix and audience-partitioned diagnostics
 
 ### Context
 
 The engine should be diagnosable and performant enough for user-facing setlist
-generation while preserving auditability.
+generation while preserving auditability and safety boundaries between admin and
+public consumers.
 
 ### Prompt
 
 Add diagnostics for candidate counts by phase, filter reasons, score ranges,
-transition tradeoffs, and selected set summary. Add performance tests around
-representative catalog sizes.
+transition tradeoffs, and selected set summary. Enforce a repeatable benchmark
+matrix with explicit SLO pass/fail gates across catalog-size and
+request-complexity profiles.
 
 ### Acceptance criteria
 
-- Diagnostics can be enabled for admins without changing user-facing results.
-- Performance tests assert acceptable latency for representative candidate sets.
-- Logs avoid full copyrighted lyric content.
-- Tests verify diagnostics do not change selection output.
+- Benchmark suites cover `small`, `medium`, and `large` catalog fixtures.
+- Benchmark suites cover `baseline_defaults`, `theme_dense`, and
+  `constraint_heavy` request profiles.
+- Clear latency thresholds (for example p50 and p95) are enforced as automated
+  pass/fail gates.
+- Admin diagnostics include deep exclusion and constraint-relaxation rationale
+  with stable machine-readable codes.
+- Public diagnostics redact admin-only details while preserving deterministic
+  metadata (profile version, arc, result identifiers, tradeoff labels).
+- Tests verify diagnostics visibility mode does not change selection output.
 
 ### Restrictions
 
 - Do not expose admin-only exclusion details to normal users by default.
 - Do not optimize by skipping approval gates.
 - Do not log sensitive source payloads.
+- Do not make benchmarks network-dependent.

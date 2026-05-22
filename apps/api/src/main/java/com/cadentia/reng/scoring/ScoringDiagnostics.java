@@ -30,6 +30,24 @@ public record ScoringDiagnostics(
                 SelectedSetSummary.empty());
     }
 
+    public ScoringDiagnostics forAudience(DiagnosticsAudience audience) {
+        if (!enabled || audience == DiagnosticsAudience.ADMIN) {
+            return this;
+        }
+        return new ScoringDiagnostics(
+                true,
+                retrievedCandidateCount,
+                eligibleCandidateCount,
+                excludedCandidateCount,
+                Map.of(),
+                candidateScoreRange,
+                transitionScoreRange,
+                List.of(),
+                List.of(),
+                transitionTradeoffCodes,
+                selectedSetSummary);
+    }
+
     public static ScoringDiagnostics from(
             List<RecommendableArrangement> retrieved,
             HardFilterResult hardFilterResult,

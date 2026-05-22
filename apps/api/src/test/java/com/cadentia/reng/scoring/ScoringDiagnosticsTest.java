@@ -70,6 +70,50 @@ class ScoringDiagnosticsTest {
         assertThat(selected.scoringProfileVersion()).isEqualTo("v1");
     }
 
+    @Test
+    void publicAudienceRedactsAdminOnlyDiagnosticDetails() {
+        RecommendableArrangement eligible = candidate("G", 120, "4/4");
+        RecommendableArrangement excluded = new RecommendableArrangement(
+                UUID.randomUUID(), UUID.randomUUID(), null, "Missing Prov", "en", "A", KeyMode.MAJOR, 110, "4/4", 60,
+                List.of("praise"), List.of(), List.of(), approvedSummary());
+        HardFilterResult hardFilterResult = new HardConstraintFilter().filter(
+                List.of(eligible, excluded), request());
+
+        ScoringDiagnostics diagnostics = ScoringDiagnostics.from(
+                List.of(eligible, excluded),
+                hardFilterResult,
+                List.of(),
+                List.of(),
+                OrderedSetResponse.of(scoringProfile(), "snap-v1", List.of(), 1.0d),
+                true);
+
+        ScoringDiagnostics publicView = diagnostics.forAudience(DiagnosticsAudience.PUBLIC);
+
+        assertThat(publicView.retrievedCandidateCount()).isEqualTo(diagnostics.retrievedCandidateCount());
+        assertThat(publicView.exclusionReasonCounts()).isEmpty();
+        assertThat(publicView.searchPruningDecisions()).isEmpty();
+        assertThat(publicView.constraintRelaxationSequence()).isEmpty();
+        assertThat(publicView.transitionTradeoffCodes()).isEqualTo(diagnostics.transitionTradeoffCodes());
+    }
+
+    @Test
+    void adminAudienceKeepsDetailedDiagnostics() {
+        ScoringDiagnostics diagnostics = new ScoringDiagnostics(
+                true,
+                2,
+                1,
+                1,
+                Map.of(HardFilterReasonCode.MISSING_PROVENANCE, 1),
+                new ScoringDiagnostics.ScoreRange(1, 2, 1.5),
+                new ScoringDiagnostics.ScoreRange(0, 1, 0.5),
+                List.of(new ConstraintRelaxationStep(1, "STEP", "RELAXED", "note")),
+                List.of(new SearchPruningDecision("arr-1", "MISSING_PROVENANCE", "hard_constraint_filter")),
+                List.of("KEY_MODULATION"),
+                new ScoringDiagnostics.SelectedSetSummary(1, 2.0));
+
+        assertThat(diagnostics.forAudience(DiagnosticsAudience.ADMIN)).isEqualTo(diagnostics);
+    }
+
     private static RecommendableArrangement candidate(String key, int bpm, String meter) {
         return new RecommendableArrangement(
                 UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), "Song", "en", key, KeyMode.MAJOR, bpm, meter, 70,

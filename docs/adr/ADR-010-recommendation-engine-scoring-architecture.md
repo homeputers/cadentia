@@ -141,6 +141,33 @@ Each selected item should include:
 
 Rejected or near-miss candidates may include summarized reasons, especially when helpful for admins.
 
+Diagnostics must be audience-partitioned:
+
+- **Admin diagnostics:** full machine-readable exclusion codes, constraint-relaxation steps, tie-break outcomes, and per-phase candidate counts required for operational debugging and audit.
+- **Public diagnostics:** deterministic high-level metadata (profile version, selected arc, stable result identifiers, and summarized non-sensitive tradeoff labels) with admin-only rationale fields redacted.
+
+Public output must not expose sensitive review notes, copyrighted payload excerpts, or internal moderation details.
+
+## Benchmark Matrix and SLO Enforcement
+
+Recommendation performance must be verified using a repeatable benchmark matrix that spans catalog size and request complexity classes.
+
+Required matrix dimensions:
+
+- catalog sizes: `small`, `medium`, `large`
+- request complexity: `baseline_defaults`, `theme_dense`, `constraint_heavy`
+- diagnostics mode: `public_only`, `admin_enabled`
+
+Each matrix cell must run deterministic benchmark fixtures and assert explicit latency SLO thresholds (for example p50/p95) in CI or equivalent automated gates.
+
+Benchmark gates are valid only when:
+
+- approval/provenance hard filters remain enabled
+- network access is not required
+- benchmark data snapshots are versioned and reproducible
+
+Failing SLO checks should block profile or engine changes until remediated or formally re-baselined through governance.
+
 Example explanation facts:
 
 - selected because controlled theme tags matched Psalm 24 themes
@@ -164,6 +191,7 @@ Tradeoffs:
 - the engine requires richer feature data and more tests
 - scoring weights must be governed and versioned
 - deterministic set construction may be more complex than simple top-N ranking
+- benchmark fixture maintenance adds ongoing governance overhead
 
 ## Related Decisions
 
