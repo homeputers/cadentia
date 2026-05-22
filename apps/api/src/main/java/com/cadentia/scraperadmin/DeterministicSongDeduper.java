@@ -23,7 +23,6 @@ public final class DeterministicSongDeduper implements SongDeduper {
     public static final BigDecimal SUGGESTION_THRESHOLD = new BigDecimal("0.4000");
 
     private static final BigDecimal CCLI_EXACT_WEIGHT = new BigDecimal("0.5500");
-    private static final BigDecimal LYRICS_HASH_EXACT_WEIGHT = new BigDecimal("0.3500");
     private static final BigDecimal TITLE_EXACT_WEIGHT = new BigDecimal("0.2500");
     private static final BigDecimal TITLE_NEAR_WEIGHT = new BigDecimal("0.1800");
     private static final BigDecimal ARTIST_EXACT_WEIGHT = new BigDecimal("0.1500");
@@ -88,15 +87,23 @@ public final class DeterministicSongDeduper implements SongDeduper {
         boolean lyricsHashMatches = candidate.optionalLyricsHash().isPresent()
                 && catalogSong.optionalLyricsHash().isPresent()
                 && candidate.lyricsHash().equals(catalogSong.lyricsHash());
+        FingerprintSignalRegistry.RegisteredSignal registeredSignal =
+                FingerprintSignalRegistry.requireRegistered(FingerprintSignalRegistry.CODE_LYRICS_HASH_EXACT);
         signals.add(new MatchSignal(
                 "lyricsHash",
                 lyricsHashMatches,
-                lyricsHashMatches ? LYRICS_HASH_EXACT_WEIGHT : BigDecimal.ZERO.setScale(4),
+                lyricsHashMatches ? registeredSignal.weight() : BigDecimal.ZERO.setScale(4),
                 candidate.lyricsHash(),
                 catalogSong.lyricsHash(),
-                lyricsHashMatches ? "Exact allowed-source lyrics hash match." : "No lyrics hash match."));
+                lyricsHashMatches ? "Exact allowed-source lyrics hash match." : "No lyrics hash match.",
+                new FingerprintSupportSignal(
+                        registeredSignal.code(),
+                        registeredSignal.comparisonScope(),
+                        registeredSignal.weight(),
+                        lyricsHashMatches ? "supports_duplicate" : "neutral",
+                        lyricsHashMatches ? "matching-hash-prefix:" + redactedHash(candidate.lyricsHash()) : "")));
         if (lyricsHashMatches) {
-            score = score.add(LYRICS_HASH_EXACT_WEIGHT);
+            score = score.add(registeredSignal.weight());
         }
 
         BigDecimal titleSimilarity = titleSimilarity(candidateTitle, catalogSong.normalizedTitle());
@@ -139,6 +146,14 @@ public final class DeterministicSongDeduper implements SongDeduper {
                 .anyMatch(signal -> signal.matched()
                         && ("ccliNumber".equals(signal.name()) || "lyricsHash".equals(signal.name())));
         return hasIdentifierMatch || suggestion.score().compareTo(SUGGESTION_THRESHOLD) >= 0;
+    }
+
+    private String redactedHash(String hash) {
+        if (hash == null || hash.isBlank()) {
+            return "";
+        }
+        int limit = Math.min(hash.length(), 16);
+        return hash.substring(0, limit);
     }
 
     private BigDecimal artistWeight(ArtistSimilarityTier tier) {

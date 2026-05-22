@@ -68,6 +68,56 @@ Fingerprints should drive duplicate review support and parser-version rollout re
 
 Define and implement a deterministic integration contract for fingerprint signals into duplicate scoring support plus an idempotent batch recalculation orchestration for parser upgrades.
 
+### Implementation blueprint
+
+#### A) Fingerprint-to-dedupe contract
+
+- Introduce a `FingerprintSupportSignal` contract with immutable fields:
+  - `signalCode` (stable enum/code, e.g., `FP_LYRICS_HASH_EXACT`)
+  - `comparisonScope` (`song`, `arrangement`, `source_document`)
+  - `weight` (fixed decimal set in configuration/code, not runtime user input)
+  - `direction` (`supports_duplicate`, `supports_distinct_variant`, `neutral`)
+  - `evidence` (redacted hashes, normalized tokens, section/chord fingerprints only)
+- Add a deterministic aggregation step in dedupe scoring:
+  - score = sum of registered fingerprint support signals + existing non-fingerprint checks.
+  - fingerprint contributions must be explainable per-signal in admin review output.
+- Keep dedupe as reviewer-assist only:
+  - signals may open/raise duplicate-review priority.
+  - signals may never auto-merge or auto-reject candidates.
+
+#### B) Parser rollout orchestration contract
+
+- Introduce a `ParserRecalcBatch` identity keyed by:
+  - `targetParserName`
+  - `targetParserVersion`
+  - `selectionPredicateHash` (hash of the canonicalized selection query/criteria)
+  - `sourceSnapshotHash` (hash of candidate source-hash ids included at batch creation time)
+- Generate deterministic item ordering using:
+  1. parser name asc
+  2. parser version asc
+  3. lyrics document id asc
+- Item eligibility rules:
+  - include records where `last_parser_version != target_parser_version` OR `last_source_hash != current_source_hash`.
+  - exclude records in terminal/legal hold states per approval policy.
+
+#### C) Idempotency and recovery semantics
+
+- Persist per-item execution status in batch history (`pending`, `succeeded`, `failed_retryable`, `failed_terminal`, `skipped_idempotent`).
+- Re-running the same batch identity:
+  - must not create duplicate parser-run history rows for previously successful items with unchanged source hash + parser version.
+  - may re-attempt only retryable failures.
+- On partial failure:
+  - batch remains queryable with progress counters and failed-item diagnostics.
+  - no global rollback of successful per-item parser runs.
+
+#### D) Required test matrix
+
+- Unit: fingerprint signal mapping emits only registered signal codes/weights.
+- Unit: deterministic batch ordering remains stable across repeated runs.
+- Integration: identical batch identity produces no duplicate successful parser-run records.
+- Integration: source-hash change between runs creates a new parser run and supersedes prior run.
+- Integration: partial failures preserve succeeded items and expose retryable/terminal markers.
+
 ### Acceptance criteria
 
 - Fingerprint features are mapped to explicit duplicate-support signals with fixed weight semantics.
