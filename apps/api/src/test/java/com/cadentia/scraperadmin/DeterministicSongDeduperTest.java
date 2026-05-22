@@ -115,7 +115,8 @@ class DeterministicSongDeduperTest {
                         assertThat(signal.matched()).isTrue();
                         assertThat(signal.explanation()).contains("allowed-source lyrics hash");
                         assertThat(signal.fingerprintSupportSignal()).isNotNull();
-                        assertThat(signal.fingerprintSupportSignal().signalCode()).isEqualTo("FP_LYRICS_HASH_EXACT");
+                        assertThat(signal.fingerprintSupportSignal().signalCode()).isEqualTo(FingerprintSignalRegistry.CODE_LYRICS_HASH_EXACT);
+                        assertThat(signal.fingerprintSupportSignal().weight()).isEqualByComparingTo("0.3500");
                     });
         });
     }

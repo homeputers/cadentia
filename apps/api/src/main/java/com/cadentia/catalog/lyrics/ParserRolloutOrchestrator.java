@@ -25,25 +25,42 @@ public class ParserRolloutOrchestrator {
         String batchId = request.batchIdentity();
 
         ParserRecalcBatchResult previous = history.get(batchId);
-        Map<UUID, ParserRecalcItemStatus> existing = previous == null ? Map.of() : previous.itemStatuses();
-        Map<UUID, ParserRecalcItemStatus> statuses = new LinkedHashMap<>(existing);
+        Map<UUID, ParserRecalcItemOutcome> outcomes = previous == null
+                ? new LinkedHashMap<>()
+                : new LinkedHashMap<>(previous.itemOutcomes());
 
         List<ParserRecalcItem> orderedItems = new ArrayList<>(request.items());
-        orderedItems.sort(Comparator.comparing(ParserRecalcItem::lyricsDocumentId));
+        orderedItems.sort(Comparator.comparing(ParserRecalcItem::targetParserName)
+                .thenComparing(ParserRecalcItem::targetParserVersion)
+                .thenComparing(ParserRecalcItem::lyricsDocumentId));
 
         for (ParserRecalcItem item : orderedItems) {
-            ParserRecalcItemStatus existingStatus = statuses.get(item.lyricsDocumentId());
-            if (existingStatus == ParserRecalcItemStatus.SUCCEEDED && !item.sourceHashMismatch()) {
-                statuses.put(item.lyricsDocumentId(), ParserRecalcItemStatus.SKIPPED_IDEMPOTENT);
+            if (!item.eligible()) {
+                outcomes.put(item.lyricsDocumentId(), ParserRecalcItemOutcome.skipped(ParserRecalcItemStatus.SKIPPED_INELIGIBLE));
                 continue;
             }
-            if (existingStatus == ParserRecalcItemStatus.FAILED_TERMINAL) {
+
+            ParserRecalcItemOutcome existing = outcomes.get(item.lyricsDocumentId());
+            if (existing != null && existing.status() == ParserRecalcItemStatus.FAILED_TERMINAL) {
                 continue;
             }
-            statuses.put(item.lyricsDocumentId(), runner.execute(item));
+            if (existing != null
+                    && existing.status() == ParserRecalcItemStatus.SUCCEEDED
+                    && existing.lastSourceHash().equals(item.currentSourceHash())
+                    && existing.lastParserVersion().equals(item.targetParserVersion())) {
+                outcomes.put(item.lyricsDocumentId(), ParserRecalcItemOutcome.skipped(ParserRecalcItemStatus.SKIPPED_IDEMPOTENT));
+                continue;
+            }
+
+            ParserRecalcExecutionResult executionResult = runner.execute(item);
+            outcomes.put(item.lyricsDocumentId(), new ParserRecalcItemOutcome(
+                    executionResult.status(),
+                    executionResult.lastSourceHash(),
+                    executionResult.lastParserVersion(),
+                    executionResult.diagnostic()));
         }
 
-        ParserRecalcBatchResult result = new ParserRecalcBatchResult(batchId, Instant.now(), statuses);
+        ParserRecalcBatchResult result = new ParserRecalcBatchResult(batchId, Instant.now(), outcomes);
         history.put(batchId, result);
         return result;
     }
@@ -59,8 +76,12 @@ public class ParserRolloutOrchestrator {
         }
 
         public String batchIdentity() {
-            return sha256(targetParserName + "|" + targetParserVersion + "|" + canonicalize(selectionPredicate) + "|"
-                    + items.stream().map(ParserRecalcItem::lyricsDocumentId).sorted().map(UUID::toString).reduce("", String::concat));
+            String selectionPredicateHash = sha256(canonicalize(selectionPredicate));
+            String sourceSnapshotHash = sha256(items.stream()
+                    .sorted(Comparator.comparing(ParserRecalcItem::lyricsDocumentId))
+                    .map(item -> item.lyricsDocumentId() + ":" + item.currentSourceHash())
+                    .reduce("", (a, b) -> a + "|" + b));
+            return sha256(targetParserName + "|" + targetParserVersion + "|" + selectionPredicateHash + "|" + sourceSnapshotHash);
         }
 
         private static String canonicalize(String value) {
@@ -77,18 +98,66 @@ public class ParserRolloutOrchestrator {
         }
     }
 
-    public record ParserRecalcItem(UUID lyricsDocumentId, boolean sourceHashMismatch) {}
+    public record ParserRecalcItem(
+            UUID lyricsDocumentId,
+            String targetParserName,
+            String targetParserVersion,
+            String lastParserVersion,
+            String currentSourceHash,
+            String lastSourceHash,
+            boolean legalHold) {
+        public boolean eligible() {
+            boolean parserChanged = !Objects.equals(lastParserVersion, targetParserVersion);
+            boolean sourceChanged = !Objects.equals(lastSourceHash, currentSourceHash);
+            return !legalHold && (parserChanged || sourceChanged);
+        }
+    }
 
-    public enum ParserRecalcItemStatus { PENDING, SUCCEEDED, FAILED_RETRYABLE, FAILED_TERMINAL, SKIPPED_IDEMPOTENT }
+    public enum ParserRecalcItemStatus {
+        PENDING,
+        SUCCEEDED,
+        FAILED_RETRYABLE,
+        FAILED_TERMINAL,
+        SKIPPED_IDEMPOTENT,
+        SKIPPED_INELIGIBLE
+    }
 
-    public record ParserRecalcBatchResult(String batchIdentity, Instant finishedAt, Map<UUID, ParserRecalcItemStatus> itemStatuses) {
+    public record ParserRecalcExecutionResult(
+            ParserRecalcItemStatus status,
+            String lastSourceHash,
+            String lastParserVersion,
+            String diagnostic) {}
+
+    public record ParserRecalcItemOutcome(
+            ParserRecalcItemStatus status,
+            String lastSourceHash,
+            String lastParserVersion,
+            String diagnostic) {
+        static ParserRecalcItemOutcome skipped(ParserRecalcItemStatus status) {
+            return new ParserRecalcItemOutcome(status, "", "", "");
+        }
+    }
+
+    public record ParserRecalcBatchResult(String batchIdentity, Instant finishedAt, Map<UUID, ParserRecalcItemOutcome> itemOutcomes) {
         public ParserRecalcBatchResult {
-            itemStatuses = Map.copyOf(itemStatuses == null ? Map.of() : itemStatuses);
+            itemOutcomes = Map.copyOf(itemOutcomes == null ? Map.of() : itemOutcomes);
+        }
+
+        public long succeededCount() {
+            return itemOutcomes.values().stream().filter(outcome -> outcome.status() == ParserRecalcItemStatus.SUCCEEDED).count();
+        }
+
+        public long failedRetryableCount() {
+            return itemOutcomes.values().stream().filter(outcome -> outcome.status() == ParserRecalcItemStatus.FAILED_RETRYABLE).count();
+        }
+
+        public long failedTerminalCount() {
+            return itemOutcomes.values().stream().filter(outcome -> outcome.status() == ParserRecalcItemStatus.FAILED_TERMINAL).count();
         }
     }
 
     @FunctionalInterface
     public interface ParserRecalcRunner {
-        ParserRecalcItemStatus execute(ParserRecalcItem item);
+        ParserRecalcExecutionResult execute(ParserRecalcItem item);
     }
 }
