@@ -32,13 +32,16 @@ class DefaultIntentServiceTest {
     private ArgumentCaptor<String> promptCaptor;
 
     private DefaultIntentService intentService;
+    private RecordingObserver observer;
 
     @BeforeEach
     void setUp() {
+        observer = new RecordingObserver();
         intentService = new DefaultIntentService(
                 llmClient,
                 new IntentValidationService(new ObjectMapper()),
-                new IntentPromptRegistry());
+                new IntentPromptRegistry(),
+                observer);
     }
 
     @Test
@@ -72,6 +75,7 @@ class DefaultIntentServiceTest {
                 .contains("Build a short joyful setlist.");
         verify(llmClient).complete(promptCaptor.getValue());
         verifyNoMoreInteractions(llmClient);
+        assertThat(observer.terminalOutcomes).containsExactly("ACCEPTED:GENERATE_SETLIST:false");
     }
 
     @Test
@@ -105,6 +109,9 @@ class DefaultIntentServiceTest {
                 .contains("MALFORMED_JSON")
                 .contains("Return one valid JSON object only");
         verifyNoMoreInteractions(llmClient);
+        assertThat(observer.firstPassFailures).containsExactly("MALFORMED_JSON");
+        assertThat(observer.retryOutcomes).containsExactly("true:");
+        assertThat(observer.terminalOutcomes).containsExactly("ACCEPTED:GENERATE_SETLIST:true");
     }
 
     @Test
@@ -140,6 +147,8 @@ class DefaultIntentServiceTest {
                 .contains("UNSUPPORTED_FIELD")
                 .doesNotContain("selectedSongs");
         verifyNoMoreInteractions(llmClient);
+        assertThat(observer.retryOutcomes).containsExactly("false:MALFORMED_JSON");
+        assertThat(observer.terminalOutcomes).containsExactly("SAFE_FAILURE:UNSUPPORTED_REQUEST:true");
     }
 
     @Test
@@ -166,6 +175,7 @@ class DefaultIntentServiceTest {
             assertThat(intent.missingSlots()).containsExactly("verseText", "scriptureReferences");
         });
         verifyNoMoreInteractions(llmClient);
+        assertThat(observer.terminalOutcomes).containsExactly("ACCEPTED:CLARIFY_REQUEST:false");
     }
 
     @Test
@@ -191,5 +201,37 @@ class DefaultIntentServiceTest {
             assertThat(intent.safeMessage()).contains("cannot approve songs");
         });
         verifyNoMoreInteractions(llmClient);
+        assertThat(observer.terminalOutcomes).containsExactly("ACCEPTED:UNSUPPORTED_REQUEST:false");
+    }
+
+    private static final class RecordingObserver implements IntentOrchestrationObserver {
+
+        private final java.util.List<String> firstPassFailures = new java.util.ArrayList<>();
+        private final java.util.List<String> retryOutcomes = new java.util.ArrayList<>();
+        private final java.util.List<String> terminalOutcomes = new java.util.ArrayList<>();
+
+        @Override
+        public void recordFirstPassFailure(String promptVersion, String schemaVersion, java.util.List<com.cadentia.intent.IntentValidationError> errors) {
+            firstPassFailures.add(summarize(errors));
+        }
+
+        @Override
+        public void recordRetryAttempt(String promptVersion, String schemaVersion, java.util.List<com.cadentia.intent.IntentValidationError> firstPassErrors) {
+            // no-op for this test helper
+        }
+
+        @Override
+        public void recordRetryOutcome(String promptVersion, String schemaVersion, boolean success, java.util.List<com.cadentia.intent.IntentValidationError> retryErrors) {
+            retryOutcomes.add(success + ":" + summarize(retryErrors));
+        }
+
+        @Override
+        public void recordTerminalOutcome(IntentParseStatus status, IntentType intentType, boolean retryAttempted) {
+            terminalOutcomes.add(status + ":" + intentType + ":" + retryAttempted);
+        }
+
+        private String summarize(java.util.List<com.cadentia.intent.IntentValidationError> errors) {
+            return errors.stream().map(error -> error.code().name()).distinct().collect(java.util.stream.Collectors.joining(","));
+        }
     }
 }

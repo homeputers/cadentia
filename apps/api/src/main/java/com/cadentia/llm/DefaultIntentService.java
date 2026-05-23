@@ -24,14 +24,17 @@ public class DefaultIntentService implements IntentService {
     private final LlmClient llmClient;
     private final IntentValidationService validationService;
     private final IntentPromptRegistry promptRegistry;
+    private final IntentOrchestrationObserver orchestrationObserver;
 
     public DefaultIntentService(
             LlmClient llmClient,
             IntentValidationService validationService,
-            IntentPromptRegistry promptRegistry) {
+            IntentPromptRegistry promptRegistry,
+            IntentOrchestrationObserver orchestrationObserver) {
         this.llmClient = llmClient;
         this.validationService = validationService;
         this.promptRegistry = promptRegistry;
+        this.orchestrationObserver = orchestrationObserver;
     }
 
     @Override
@@ -40,22 +43,32 @@ public class DefaultIntentService implements IntentService {
         String firstResponse = llmClient.complete(buildInitialPrompt(template, input));
         IntentValidationResult firstValidation = validationService.validate(firstResponse);
         if (firstValidation.isAccepted()) {
-            return IntentParseResult.accepted(firstValidation.intent(), false);
+            IntentParseResult result = IntentParseResult.accepted(firstValidation.intent(), false);
+            orchestrationObserver.recordTerminalOutcome(result.status(), result.intent().intentType(), result.retryAttempted());
+            return result;
         }
 
+        orchestrationObserver.recordFirstPassFailure(template.promptVersion(), template.schemaVersion(), firstValidation.errors());
+        orchestrationObserver.recordRetryAttempt(template.promptVersion(), template.schemaVersion(), firstValidation.errors());
         logRetry(template, firstValidation.errors());
         String repairResponse = llmClient.complete(buildRepairPrompt(template, input, firstValidation.errors()));
         IntentValidationResult repairValidation = validationService.validate(repairResponse);
         if (repairValidation.isAccepted()) {
-            return IntentParseResult.accepted(repairValidation.intent(), true);
+            orchestrationObserver.recordRetryOutcome(template.promptVersion(), template.schemaVersion(), true, List.of());
+            IntentParseResult result = IntentParseResult.accepted(repairValidation.intent(), true);
+            orchestrationObserver.recordTerminalOutcome(result.status(), result.intent().intentType(), result.retryAttempted());
+            return result;
         }
 
+        orchestrationObserver.recordRetryOutcome(template.promptVersion(), template.schemaVersion(), false, repairValidation.errors());
         logSafeFailure(template, repairValidation.errors());
         UnsupportedRequestIntent safeFailureIntent = new UnsupportedRequestIntent(
                 IntentValidationService.CONTRACT_VERSION,
                 SAFE_FAILURE_REASON_CODE,
                 SAFE_FAILURE_MESSAGE);
-        return IntentParseResult.safeFailure(safeFailureIntent, repairValidation.errors());
+        IntentParseResult result = IntentParseResult.safeFailure(safeFailureIntent, repairValidation.errors());
+        orchestrationObserver.recordTerminalOutcome(result.status(), result.intent().intentType(), result.retryAttempted());
+        return result;
     }
 
     private String buildInitialPrompt(IntentPromptTemplate template, String input) {
