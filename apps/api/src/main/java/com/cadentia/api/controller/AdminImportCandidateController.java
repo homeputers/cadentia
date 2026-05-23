@@ -24,6 +24,7 @@ import com.cadentia.scraperadmin.AdminAuditEvent;
 import com.cadentia.scraperadmin.AdminImportCandidateDetail;
 import com.cadentia.scraperadmin.AdminImportReviewService;
 import com.cadentia.scraperadmin.ModerationFlag;
+import com.cadentia.scraperadmin.ModerationFlagSeverity;
 import com.cadentia.scraperadmin.ModerationFlagType;
 import com.cadentia.scraperadmin.RollbackExecutionResult;
 import com.cadentia.scraperadmin.RollbackPreview;
@@ -99,9 +100,9 @@ public class AdminImportCandidateController implements AdminReviewApi {
         ModerationFlag flag = reviewService.openModerationFlag(
                 candidateId,
                 ModerationFlagType.valueOf(request.getType().getValue()),
+                Boolean.TRUE.equals(request.getExcludeFromRecommendation()) ? ModerationFlagSeverity.HIGH : ModerationFlagSeverity.WARNING,
                 request.getOpenedBy(),
-                request.getReason(),
-                request.getExcludeFromRecommendation());
+                request.getReason());
         return ResponseEntity.ok(toModerationFlagResponse(flag));
     }
 
@@ -147,7 +148,7 @@ public class AdminImportCandidateController implements AdminReviewApi {
                 .targetId(preview.targetId())
                 .importBatchId(preview.importBatchId())
                 .eligibilityImpacted(preview.eligibilityImpacted())
-                .blockers(preview.blockers())
+                .blockers(preview.blockingCodes())
                 .impactedRecords(preview.impactedRecords().stream().map(record -> new RollbackImpactedRecord()
                         .entityType(String.valueOf(record.get("entityType")))
                         .entityId(String.valueOf(record.get("entityId")))
