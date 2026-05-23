@@ -306,6 +306,72 @@ ADR-012 safety depends on strict versioned schema governance and predictable val
 
 Define schema-evolution rules (compatibility and migration tests) and implement a stable validation-error taxonomy mapped to API behavior (retryable, clarify, unsupported, hard-fail).
 
+### Implementation blueprint
+
+#### A) Schema versioning and compatibility contract
+
+- Introduce explicit intent payload envelope fields:
+  - `schemaName` (fixed: `intent.generate_setlist`)
+  - `schemaVersion` (semver string, e.g., `1.2.0`)
+  - `contractRevision` (monotonic integer for prompt+schema bundle governance)
+- Compatibility policy:
+  - **Patch** (`x.y.z -> x.y.z+1`): bugfix/clarification only, no structural changes.
+  - **Minor** (`x.y -> x.y+1`): additive-only (new optional fields/enums with default behavior).
+  - **Major** (`x -> x+1`): breaking change; requires migration adapter and explicit rollout gate.
+- Unknown top-level schema names or versions outside supported range must be rejected with stable `unsupported_schema_*` codes.
+
+#### B) Allowed-change matrix and migration governance
+
+- Add machine-readable schema changelog entries with:
+  - `fromVersion`, `toVersion`, `changeType`, `compatibilityClass`, `migrationRequired`, `sunsetDate`.
+- Allowed without major bump:
+  - add optional slot
+  - add enum value with deterministic fallback
+  - tighten description text without validation impact.
+- Requires major bump:
+  - remove/rename fields
+  - change field type
+  - convert optional to required without backend default
+  - change semantic meaning of existing field values.
+- If `migrationRequired=true`, provide deterministic adapter tests proving old payload maps to new canonical form.
+
+#### C) Validation error taxonomy and API outcome mapping
+
+- Create a centralized `IntentValidationErrorCode` registry with fields:
+  - `code`, `category`, `httpStatus`, `outcomeClass`, `retryable`, `userActionHintKey`.
+- Required category set:
+  - `parse_error` (malformed JSON)
+  - `schema_error` (missing required/type/unknown field/range)
+  - `intent_error` (unsupported intent for endpoint)
+  - `policy_error` (prohibited slot combinations)
+  - `boundary_violation` (selection/recommendation payload leakage)
+- Deterministic outcome mapping:
+  - `retryable`: malformed JSON on first pass, transient model envelope issues.
+  - `clarify`: valid intent but insufficient/ambiguous required user constraints.
+  - `unsupported`: unsupported intent/schema/action requested.
+  - `hard_fail`: policy/boundary violations or repeated invalid output after retry.
+
+#### D) Response contract + orchestration guardrails
+
+- Error response must include:
+  - `errorCode`
+  - `outcomeClass`
+  - `retryEligible`
+  - `schemaVersionEvaluated`
+  - `correlationId`
+  - `details[]` (field path + machine-readable reason code; no prose dependency)
+- Enforce gateway guardrail: only `intent=GENERATE_SETLIST` with successful validation can call REng.
+- Persist `validationDecision` audit events for every rejected/clarify/unsupported outcome.
+
+#### E) Required test matrix
+
+- Contract: unknown field fails with stable code and does not invoke REng.
+- Contract: additive minor-version payloads remain accepted by supported readers.
+- Contract: breaking-version payloads return `unsupported` until migration gate enabled.
+- Integration: first-pass parse failure retries once; second failure hard-fails with stable code.
+- Integration: boundary-violation payload (e.g., selected songs emitted by LLM) is rejected with `hard_fail` and zero REng calls.
+- Regression: error-code registry completeness test fails on uncatalogued emitted codes.
+
 ### Acceptance criteria
 
 - Compatibility policy exists for new schema versions.

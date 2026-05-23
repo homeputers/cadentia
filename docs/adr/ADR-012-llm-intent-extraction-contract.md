@@ -152,6 +152,54 @@ The deterministic boundary is between intent extraction and recommendation execu
 
 Only backend services may generate recommendation outputs. LLMs may later assist with natural-language rendering of already-computed explanations only if they are constrained to the provided facts and cannot add new claims.
 
+## Schema Evolution Governance
+
+Schema evolution must follow explicit compatibility rules tied to semantic versioning.
+
+- Patch upgrades (`x.y.z -> x.y.z+1`) are limited to non-structural clarifications and validation bug fixes.
+- Minor upgrades (`x.y -> x.y+1`) are additive only, such as new optional slots or enum values with deterministic backend fallback behavior.
+- Major upgrades (`x -> x+1`) are required for removals, renames, type changes, or semantic reinterpretation of existing fields.
+
+The backend must maintain a supported-version window and reject unknown schema names or unsupported versions with machine-readable `UNSUPPORTED_SCHEMA` class codes.
+
+Any migration between major versions must include a deterministic adapter and compatibility fixtures proving canonical equivalence where expected.
+
+## Validation Error Taxonomy and Outcome Classes
+
+Validation failures must use a governed, stable error-code taxonomy rather than ad hoc text.
+
+Minimum required categories:
+
+- `PARSE_ERROR`: malformed JSON or non-JSON output
+- `SCHEMA_ERROR`: required field/type/range/enum violations and unknown fields
+- `INTENT_ERROR`: unsupported intent for the endpoint contract
+- `POLICY_ERROR`: prohibited slot combinations or policy-level constraints
+- `BOUNDARY_VIOLATION`: LLM output crossing boundary (for example selecting songs)
+
+Each error code must map deterministically to one API outcome class:
+
+- `RETRYABLE`: transiently recoverable failures (for this ADR, malformed output on first pass)
+- `CLARIFY`: valid contract shape but insufficient user constraints
+- `UNSUPPORTED`: out-of-contract request, intent, or schema version
+- `HARD_FAIL`: unsafe or repeated invalid output that must not proceed
+
+Error responses must be machine-readable and include at least:
+
+- stable `errorCode`
+- `outcomeClass`
+- `retryEligible`
+- `schemaVersionEvaluated`
+- `details[]` with field paths and reason codes
+- correlation identifier for audit traceability
+
+## Enforcement Boundary
+
+Recommendation execution is forbidden unless validation succeeds and the resulting intent is `GENERATE_SETLIST`.
+
+- Invalid, clarify, and unsupported outcomes must result in zero Recommendation Engine invocations.
+- Boundary-violation errors must be treated as hard-fail outcomes.
+- Validation outcomes must be audit-logged with stable codes.
+
 ## Consequences
 
 Benefits:
