@@ -7,10 +7,12 @@ import com.cadentia.generated.api.AdminReviewApi;
 import com.cadentia.generated.model.ModerationFlagType;
 import com.cadentia.generated.model.OpenModerationFlagRequest;
 import com.cadentia.scraperadmin.AdminImportReviewService;
+import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -33,7 +35,7 @@ class AdminImportCandidateControllerSecurityTest {
     static class TestConfig {
         @Bean
         AdminImportReviewService adminImportReviewService() {
-            SongRepository songRepository = org.mockito.Mockito.mock(SongRepository.class);
+            SongRepository songRepository = Mockito.mock(SongRepository.class);
             return new AdminImportReviewService(songRepository);
         }
     }
@@ -51,7 +53,7 @@ class AdminImportCandidateControllerSecurityTest {
         SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(
                 "viewer",
                 "n/a",
-                java.util.List.of(new SimpleGrantedAuthority("catalog.admin.view"))));
+                List.of(new SimpleGrantedAuthority("catalog.admin.view"))));
 
         OpenModerationFlagRequest request = new OpenModerationFlagRequest()
                 .type(ModerationFlagType.LICENSING_CONCERN)
@@ -68,7 +70,7 @@ class AdminImportCandidateControllerSecurityTest {
         SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(
                 "reviewer",
                 "n/a",
-                java.util.List.of(new SimpleGrantedAuthority("catalog.admin.review"))));
+                List.of(new SimpleGrantedAuthority("catalog.admin.review"))));
         OpenModerationFlagRequest request = new OpenModerationFlagRequest()
                 .type(ModerationFlagType.LICENSING_CONCERN)
                 .openedBy("reviewer@example.test")
