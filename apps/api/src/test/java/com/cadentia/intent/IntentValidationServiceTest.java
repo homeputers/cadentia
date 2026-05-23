@@ -15,6 +15,9 @@ class IntentValidationServiceTest {
         // Arrange
         String llmJson = """
                 {
+                  "schemaName": "intent.generate_setlist",
+                  "schemaVersion": "1.0.0",
+                  "contractRevision": 1,
                   "intent": "GENERATE_SETLIST",
                   "slots": {}
                 }
@@ -37,6 +40,28 @@ class IntentValidationServiceTest {
             assertThat(intent.slots().energyArc()).isNull();
             assertThat(intent.slots().excludedSongs()).isEmpty();
             assertThat(intent.slots().serviceMoment()).isNull();
+        });
+    }
+
+    @Test
+    void validateRejectsUnsupportedSchemaVersionWithDeterministicUnsupportedOutcome() {
+        String llmJson = """
+                {
+                  "schemaName": "intent.generate_setlist",
+                  "schemaVersion": "2.0.0",
+                  "intent": "GENERATE_SETLIST",
+                  "slots": {}
+                }
+                """;
+
+        IntentValidationResult result = validationService.validate(llmJson);
+
+        assertThat(result.isAccepted()).isFalse();
+        assertThat(result.outcomeClass()).isEqualTo(IntentOutcomeClass.UNSUPPORTED);
+        assertThat(result.errors()).singleElement().satisfies(error -> {
+            assertThat(error.code()).isEqualTo(IntentValidationErrorCode.UNSUPPORTED_SCHEMA_VERSION);
+            assertThat(error.category()).isEqualTo(IntentValidationCategory.INTENT_ERROR);
+            assertThat(error.retryable()).isFalse();
         });
     }
 

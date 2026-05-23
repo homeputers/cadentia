@@ -16,13 +16,17 @@ import org.springframework.stereotype.Service;
 public class IntentValidationService {
 
     public static final String CONTRACT_VERSION = "v1";
+    private static final String SCHEMA_NAME = "intent.generate_setlist";
+    private static final String SCHEMA_VERSION = "1.0.0";
     private static final Counts DEFAULT_COUNTS = new Counts(10, 5);
     private static final IntentKeyPolicy DEFAULT_KEY_POLICY = new IntentKeyPolicy(true, true, 2);
     private static final IntentTempoPolicy DEFAULT_TEMPO_POLICY = new IntentTempoPolicy(12);
-    private static final Set<String> TOP_LEVEL_GENERATE_FIELDS = Set.of("intent", "slots");
+    private static final Set<String> TOP_LEVEL_GENERATE_FIELDS = Set.of(
+            "schemaName", "schemaVersion", "contractRevision", "intent", "slots");
     private static final Set<String> TOP_LEVEL_CLARIFY_FIELDS = Set.of(
-            "intent", "reasonCode", "clarificationQuestion", "missingSlots");
-    private static final Set<String> TOP_LEVEL_UNSUPPORTED_FIELDS = Set.of("intent", "reasonCode", "safeMessage");
+            "schemaName", "schemaVersion", "contractRevision", "intent", "reasonCode", "clarificationQuestion", "missingSlots");
+    private static final Set<String> TOP_LEVEL_UNSUPPORTED_FIELDS = Set.of(
+            "schemaName", "schemaVersion", "contractRevision", "intent", "reasonCode", "safeMessage");
     private static final Set<String> GENERATE_SLOT_FIELDS = Set.of(
             "verseText",
             "scriptureReferences",
@@ -66,6 +70,11 @@ public class IntentValidationService {
             return reject(IntentValidationErrorCode.INVALID_TYPE, "$", "Intent output must be a JSON object.");
         }
 
+        IntentValidationError schemaError = validateSchemaEnvelope(root);
+        if (schemaError != null) {
+            return IntentValidationResult.rejected(List.of(schemaError));
+        }
+
         JsonNode intentNode = root.get("intent");
         if (intentNode == null) {
             return reject(IntentValidationErrorCode.MISSING_REQUIRED_FIELD, "$.intent", "Intent is required.");
@@ -80,6 +89,32 @@ public class IntentValidationService {
             case "UNSUPPORTED_REQUEST" -> validateUnsupportedRequest(root);
             default -> reject(IntentValidationErrorCode.UNKNOWN_INTENT, "$.intent", "Intent is not supported.");
         };
+    }
+
+    private IntentValidationError validateSchemaEnvelope(JsonNode root) {
+        JsonNode schemaNameNode = root.get("schemaName");
+        if (schemaNameNode != null) {
+            if (!schemaNameNode.isTextual()) {
+                return error(IntentValidationErrorCode.INVALID_TYPE, "$.schemaName", "schemaName must be a string.");
+            }
+            if (!SCHEMA_NAME.equals(schemaNameNode.asText())) {
+                return error(IntentValidationErrorCode.UNSUPPORTED_SCHEMA_NAME, "$.schemaName", "Schema name is not supported.");
+            }
+        }
+        JsonNode schemaVersionNode = root.get("schemaVersion");
+        if (schemaVersionNode != null) {
+            if (!schemaVersionNode.isTextual()) {
+                return error(IntentValidationErrorCode.INVALID_TYPE, "$.schemaVersion", "schemaVersion must be a string.");
+            }
+            if (!SCHEMA_VERSION.equals(schemaVersionNode.asText())) {
+                return error(IntentValidationErrorCode.UNSUPPORTED_SCHEMA_VERSION, "$.schemaVersion", "Schema version is not supported.");
+            }
+        }
+        JsonNode contractRevisionNode = root.get("contractRevision");
+        if (contractRevisionNode != null && !contractRevisionNode.isInt()) {
+            return error(IntentValidationErrorCode.INVALID_TYPE, "$.contractRevision", "contractRevision must be an integer.");
+        }
+        return null;
     }
 
     private IntentValidationResult validateGenerateSetlist(JsonNode root) {
