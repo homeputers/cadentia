@@ -136,6 +136,10 @@ Rollback cases include:
 - re-open an import candidate for review
 
 Rollback must not erase prior audit events, provenance records, or approval history. When canonical data changes, downstream read models should refresh or invalidate affected candidates.
+Rollback preview and execution should be dependency-graph-driven. Previews should report direct and transitive impact sets, machine-readable blocker codes, and required manual actions before execution is permitted. Execution should require a matching preview version/hash to prevent stale-state rollback races.
+
+Moderation states should be linked to a versioned eligibility policy that maps flag type, severity, and scope to explicit recommendation effects and reinstatement requirements. Recommendation eligibility changes should reference the applied policy rule in audit history.
+
 
 ## Consequences
 
