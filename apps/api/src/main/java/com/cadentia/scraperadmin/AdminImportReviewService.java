@@ -695,8 +695,6 @@ public class AdminImportReviewService {
             throw new IllegalStateException("Unable to serialize structured review note", exception);
         }
     }
-
-
     private ModerationEligibilityPolicyRule policyRuleFor(ModerationFlagType type, ModerationFlagSeverity severity) {
         if (type == ModerationFlagType.LICENSING_CONCERN && severity == ModerationFlagSeverity.CRITICAL) {
             return new ModerationEligibilityPolicyRule("LIC-CRIT-001", "v1", type, severity, ModerationEligibilityEffect.EXCLUDE_UNTIL_RESOLVED);
