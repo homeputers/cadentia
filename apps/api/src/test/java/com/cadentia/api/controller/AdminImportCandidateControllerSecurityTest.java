@@ -1,6 +1,7 @@
 package com.cadentia.api.controller;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.mock;
 import com.cadentia.api.config.MethodSecurityConfig;
 import com.cadentia.catalog.repository.SongRepository;
 import com.cadentia.generated.api.AdminReviewApi;
@@ -12,7 +13,6 @@ import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -35,7 +35,7 @@ class AdminImportCandidateControllerSecurityTest {
     static class TestConfig {
         @Bean
         AdminImportReviewService adminImportReviewService() {
-            SongRepository songRepository = Mockito.mock(SongRepository.class);
+            SongRepository songRepository = mock(SongRepository.class);
             return new AdminImportReviewService(songRepository);
         }
     }
