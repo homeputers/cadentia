@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -120,7 +121,7 @@ class AdminImportReviewServiceTest {
 
         // Assert
         assertThat(result.decision()).isEqualTo(ImportCandidateReviewDecision.REJECT_CANDIDATE);
-        verify(songRepository).updateImportCandidateStatus(candidate.id(), ImportCandidateStatus.REJECTED);
+        verify(songRepository, atLeastOnce()).updateImportCandidateStatus(candidate.id(), ImportCandidateStatus.REJECTED);
         verify(songRepository, never()).createSong(any(CreateSongCommand.class));
         verify(songRepository, never()).createArrangement(any(CreateArrangementCommand.class));
         verify(songRepository, never()).createProvenanceRecord(any(CreateProvenanceRecordCommand.class));
@@ -525,9 +526,9 @@ class AdminImportReviewServiceTest {
         ModerationFlag opened = service.openModerationFlag(
                 candidate.id(),
                 ModerationFlagType.LICENSING_CONCERN,
+                ModerationFlagSeverity.WARNING,
                 "reviewer@example.test",
-                "License source is incomplete",
-                false);
+                "License source is incomplete");
         ModerationFlag assigned = service.assignModerationFlag(
                 opened.id(),
                 "approver@example.test",
@@ -557,9 +558,9 @@ class AdminImportReviewServiceTest {
         ModerationFlag opened = service.openModerationFlag(
                 candidate.id(),
                 ModerationFlagType.DOCTRINAL_CONCERN,
+                ModerationFlagSeverity.HIGH,
                 "reviewer@example.test",
-                "Potential doctrinal mismatch",
-                false);
+                "Potential doctrinal mismatch");
         ModerationFlag escalated = service.escalateModerationFlag(
                 opened.id(),
                 "approver@example.test",
@@ -567,7 +568,7 @@ class AdminImportReviewServiceTest {
 
         assertThat(escalated.status()).isEqualTo(ModerationFlagStatus.ESCALATED);
         assertThat(escalated.excludeFromRecommendation()).isTrue();
-        verify(songRepository).updateImportCandidateStatus(candidate.id(), ImportCandidateStatus.REJECTED);
+        verify(songRepository, atLeastOnce()).updateImportCandidateStatus(candidate.id(), ImportCandidateStatus.REJECTED);
         assertThat(service.getAuditHistory(candidate.id()))
                 .extracting(AdminAuditEvent::action)
                 .contains("MODERATION_FLAG_ESCALATED");
@@ -585,7 +586,8 @@ class AdminImportReviewServiceTest {
                 "rollback-admin@example.test",
                 candidate.importBatchId());
 
-        assertThat(preview.blockers()).isEmpty();
+        assertThat(preview.blockingCodes()).isEmpty();
+        assertThat(preview.rollbackAllowed()).isTrue();
         RollbackExecutionResult result = service.executeRollback(
                 preview.rollbackRequestId(),
                 "rollback-admin@example.test",
@@ -610,7 +612,8 @@ class AdminImportReviewServiceTest {
                 "rollback-admin@example.test",
                 UUID.randomUUID());
 
-        assertThat(preview.blockers()).isNotEmpty();
+        assertThat(preview.blockingCodes()).isNotEmpty();
+        assertThat(preview.rollbackAllowed()).isFalse();
         assertThatThrownBy(() -> service.executeRollback(preview.rollbackRequestId(), "rollback-admin@example.test", "Wrong batch"))
                 .hasMessageContaining("Rollback blocked");
     }

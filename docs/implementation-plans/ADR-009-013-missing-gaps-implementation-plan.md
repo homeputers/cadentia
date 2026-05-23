@@ -218,17 +218,80 @@ Rollback and moderation must be policy-driven with predictable eligibility impac
 
 Implement rollback dependency graph evaluation (including irreversible blockers) and moderation policy linkage that maps flag types/severities to recommendation eligibility effects.
 
+### Implementation blueprint
+
+#### A) Rollback dependency-graph contract
+
+- Introduce a typed `RollbackGraphNode` / `RollbackGraphEdge` model with stable node categories:
+  - `song`, `arrangement`, `lyrics_version`, `approval_record`, `merge_decision`, `moderation_event`, `read_model_projection`.
+- Build graph edges with explicit `edgeType` enums:
+  - `depends_on`, `supersedes`, `derived_from`, `gated_by_approval`, `gated_by_moderation`, `projected_into`.
+- Require every rollback request to resolve into a deterministic impact set:
+  - `directImpactNodeIds` (immediate targets)
+  - `transitiveImpactNodeIds` (closure traversal)
+  - `eligibilityAffectedNodeIds` (subset impacting recommendable state)
+
+#### B) Blocker policy and machine-readable rollback preview
+
+- Add `RollbackPreview` output contract with:
+  - `rollbackAllowed` (boolean)
+  - `blockingCodes[]` (stable codes)
+  - `warningCodes[]`
+  - `requiredManualActions[]`
+  - `impactSummary` counters by node/edge type.
+- Define irreversible / manual-intervention blocker codes (examples):
+  - `RBK_APPROVAL_AUDIT_IMMUTABLE`
+  - `RBK_EXTERNAL_LICENSE_HOLD`
+  - `RBK_LEGAL_REVIEW_LOCK`
+  - `RBK_MISSING_SOURCE_PROVENANCE`
+  - `RBK_READMODEL_REBUILD_REQUIRED` (warning if async rebuild is allowed; blocker if policy forbids delayed rebuild).
+- Enforce "preview-first" execution semantics:
+  - execution endpoint must require a matching preview hash/version.
+  - if graph state changed since preview, return conflict and require re-preview.
+
+#### C) Moderation-to-eligibility policy linkage
+
+- Introduce a versioned `ModerationEligibilityPolicy` table/config keyed by:
+  - `flagType` (e.g., doctrinal, licensing, quality, provenance)
+  - `severity` (`info`, `warning`, `high`, `critical`)
+  - `scope` (`song`, `arrangement`, `lyrics_version`)
+  - `effect` (`no_change`, `exclude_from_recommendation`, `exclude_until_resolved`, `allow_existing_sets_only`)
+  - `requiresApprovalType[]` for reinstatement (e.g., doctrinal re-approval).
+- Disallow implicit behavior:
+  - unknown flag type/severity/scope combinations must fail validation.
+  - recommendation eligibility changes must cite policy version + rule id in audit events.
+- Lifecycle semantics:
+  - opening a flag applies effect immediately to read-model eligibility.
+  - resolving/overriding a flag restores eligibility only after policy-specified approvals are satisfied.
+
+#### D) Public/admin visibility boundary
+
+- Public APIs expose eligibility state + stable moderation effect codes only.
+- Admin APIs include full policy traces, actor attribution, and internal notes.
+- Confidential reviewer notes must never appear in recommendation/public diagnostics.
+
+#### E) Required test matrix
+
+- Unit: graph traversal returns stable direct/transitive impact sets for fixed fixtures.
+- Unit: blocker policy maps graph conditions to deterministic `blockingCodes`.
+- Integration: rollback execution denied when preview hash is stale.
+- Integration: rollback succeeds when no blockers and updates impacted eligibility/read-model markers.
+- Integration: moderation flag create/update/resolve transitions produce policy-linked eligibility changes and required re-approval gating.
+- Contract: public API redacts confidential moderation notes while preserving effect codes.
+
 ### Acceptance criteria
 
 - Rollback preview reports direct and transitive impacts.
 - Irreversible blockers are surfaced with machine-readable codes.
 - Moderation flag policy explicitly controls eligibility inclusion/exclusion behavior.
-- Tests cover rollback with blockers, rollback without blockers, and moderation lifecycle impact on eligibility.
+- Eligibility transitions include policy-versioned audit evidence and deterministic reinstatement gating.
+- Tests cover rollback with blockers, rollback without blockers, stale-preview conflict handling, and moderation lifecycle impact on eligibility.
 
 ### Restrictions
 
 - Do not execute rollback when blockers require manual intervention.
 - Do not allow moderation flags to affect eligibility without explicit policy mapping.
+- Do not bypass preview-hash concurrency checks on rollback execution.
 - Do not expose confidential moderation notes in public responses.
 
 ---

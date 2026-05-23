@@ -109,14 +109,20 @@ public class AdminImportReviewService {
     @Transactional(readOnly = true)
     public RollbackPreview previewRollback(RollbackTargetType targetType, UUID targetId, String actor, UUID importBatchId) {
         requireAuthorized("PREVIEW_ROLLBACK", actor, targetId, "IMPORT_CANDIDATE");
-        List<String> blockers = new ArrayList<>();
+        List<String> blockingCodes = new ArrayList<>();
+        List<String> warningCodes = new ArrayList<>();
+        List<String> requiredManualActions = new ArrayList<>();
         List<Map<String, Object>> impacted = new ArrayList<>();
+        List<String> directImpactNodeIds = new ArrayList<>();
+        List<String> transitiveImpactNodeIds = new ArrayList<>();
+        List<String> eligibilityAffectedNodeIds = new ArrayList<>();
         boolean eligibilityImpacted = false;
 
         if (targetType == RollbackTargetType.IMPORT_CANDIDATE) {
             ImportCandidate candidate = requireCandidate(targetId);
             if (importBatchId != null && !importBatchId.equals(candidate.importBatchId())) {
-                blockers.add("target candidate does not belong to selected import batch");
+                blockingCodes.add("RBK_IMPORT_BATCH_MISMATCH");
+                requiredManualActions.add("Select the import batch that owns the target candidate.");
             }
             impacted.add(Map.of("entityType", "IMPORT_CANDIDATE", "entityId", candidate.id().toString(), "status", candidate.status().name()));
             eligibilityImpacted = candidate.status() == ImportCandidateStatus.REJECTED || candidate.status() == ImportCandidateStatus.MERGED;
@@ -124,16 +130,24 @@ public class AdminImportReviewService {
             ModerationFlag flag = requireFlag(targetId);
             ImportCandidate candidate = requireCandidate(flag.importCandidateId());
             if (importBatchId != null && !importBatchId.equals(candidate.importBatchId())) {
-                blockers.add("moderation flag candidate does not belong to selected import batch");
+                blockingCodes.add("RBK_IMPORT_BATCH_MISMATCH");
             }
             impacted.add(Map.of("entityType", "MODERATION_FLAG", "entityId", flag.id().toString(), "status", flag.status().name()));
             impacted.add(Map.of("entityType", "IMPORT_CANDIDATE", "entityId", candidate.id().toString(), "status", candidate.status().name()));
             eligibilityImpacted = flag.excludeFromRecommendation();
         } else {
-            blockers.add("approval rollback preview is not yet supported");
+            blockingCodes.add("RBK_APPROVAL_AUDIT_IMMUTABLE");
+            requiredManualActions.add("Approval rollback requires manual intervention.");
         }
 
-        RollbackPreview preview = new RollbackPreview(UUID.randomUUID(), targetType, targetId, importBatchId, eligibilityImpacted, impacted, blockers);
+        String directNode = targetType.name()+":"+targetId;
+        directImpactNodeIds.add(directNode);
+        transitiveImpactNodeIds.addAll(directImpactNodeIds);
+        if (eligibilityImpacted) {
+            eligibilityAffectedNodeIds.add(directNode);
+        }
+        boolean rollbackAllowed = blockingCodes.isEmpty();
+        RollbackPreview preview = new RollbackPreview(UUID.randomUUID(), UUID.randomUUID().toString(), targetType, targetId, importBatchId, rollbackAllowed, eligibilityImpacted, directImpactNodeIds, transitiveImpactNodeIds, eligibilityAffectedNodeIds, impacted, Map.of("direct", directImpactNodeIds.size(), "transitive", transitiveImpactNodeIds.size()), blockingCodes, warningCodes, requiredManualActions);
         rollbackPreviewsById.put(preview.rollbackRequestId(), preview);
         return preview;
     }
@@ -145,8 +159,8 @@ public class AdminImportReviewService {
         if (preview == null) {
             throw new IllegalArgumentException("Unknown rollback request: " + rollbackRequestId);
         }
-        if (!preview.blockers().isEmpty()) {
-            throw new IllegalStateException("Rollback blocked: " + String.join("; ", preview.blockers()));
+        if (!preview.rollbackAllowed()) {
+            throw new IllegalStateException("Rollback blocked: " + String.join("; ", preview.blockingCodes()));
         }
 
         String action;
@@ -162,7 +176,10 @@ public class AdminImportReviewService {
                     flag.id(),
                     flag.importCandidateId(),
                     flag.type(),
+                    flag.severity(),
                     ModerationFlagStatus.OPEN,
+                    flag.policyVersion(),
+                    flag.policyRuleId(),
                     flag.openedBy(),
                     flag.assignedTo(),
                     flag.resolutionNotes(),
@@ -191,17 +208,22 @@ public class AdminImportReviewService {
     public ModerationFlag openModerationFlag(
             UUID importCandidateId,
             ModerationFlagType type,
+            ModerationFlagSeverity severity,
             String openedBy,
-            String reason,
-            boolean excludeFromRecommendation) {
+            String reason) {
         requireAuthorized("OPEN_MODERATION", openedBy, importCandidateId, "IMPORT_CANDIDATE");
         requireCandidate(importCandidateId);
         Instant now = Instant.now();
+        ModerationEligibilityPolicyRule policyRule = policyRuleFor(type, severity);
+        boolean excludeFromRecommendation = policyRule.effect() != ModerationEligibilityEffect.NO_CHANGE;
         ModerationFlag flag = new ModerationFlag(
                 UUID.randomUUID(),
                 importCandidateId,
                 type,
+                severity,
                 ModerationFlagStatus.OPEN,
+                policyRule.policyVersion(),
+                policyRule.ruleId(),
                 openedBy,
                 null,
                 null,
@@ -213,7 +235,9 @@ public class AdminImportReviewService {
                 "flagId", flag.id().toString(),
                 "type", flag.type().name(),
                 "status", flag.status().name(),
-                "excludeFromRecommendation", flag.excludeFromRecommendation()));
+                "excludeFromRecommendation", flag.excludeFromRecommendation(),
+                "policyVersion", flag.policyVersion(),
+                "policyRuleId", flag.policyRuleId()));
         if (excludeFromRecommendation) {
             songRepository.updateImportCandidateStatus(importCandidateId, ImportCandidateStatus.REJECTED);
         }
@@ -228,7 +252,10 @@ public class AdminImportReviewService {
                 flag.id(),
                 flag.importCandidateId(),
                 flag.type(),
+                flag.severity(),
                 ModerationFlagStatus.ASSIGNED,
+                flag.policyVersion(),
+                flag.policyRuleId(),
                 flag.openedBy(),
                 assignedTo,
                 flag.resolutionNotes(),
@@ -250,7 +277,10 @@ public class AdminImportReviewService {
                 flag.id(),
                 flag.importCandidateId(),
                 flag.type(),
+                flag.severity(),
                 ModerationFlagStatus.RESOLVED,
+                flag.policyVersion(),
+                flag.policyRuleId(),
                 flag.openedBy(),
                 flag.assignedTo(),
                 resolutionNotes,
@@ -272,7 +302,10 @@ public class AdminImportReviewService {
                 flag.id(),
                 flag.importCandidateId(),
                 flag.type(),
+                flag.severity(),
                 ModerationFlagStatus.ESCALATED,
+                flag.policyVersion(),
+                flag.policyRuleId(),
                 flag.openedBy(),
                 flag.assignedTo(),
                 flag.resolutionNotes(),
@@ -661,5 +694,15 @@ public class AdminImportReviewService {
         } catch (Exception exception) {
             throw new IllegalStateException("Unable to serialize structured review note", exception);
         }
+    }
+
+    private ModerationEligibilityPolicyRule policyRuleFor(ModerationFlagType type, ModerationFlagSeverity severity) {
+        if (type == ModerationFlagType.LICENSING_CONCERN && severity == ModerationFlagSeverity.CRITICAL) {
+            return new ModerationEligibilityPolicyRule("LIC-CRIT-001", "v1", type, severity, ModerationEligibilityEffect.EXCLUDE_UNTIL_RESOLVED);
+        }
+        if (type == ModerationFlagType.DOCTRINAL_CONCERN && (severity == ModerationFlagSeverity.HIGH || severity == ModerationFlagSeverity.CRITICAL)) {
+            return new ModerationEligibilityPolicyRule("DOC-HIGH-001", "v1", type, severity, ModerationEligibilityEffect.EXCLUDE_FROM_RECOMMENDATION);
+        }
+        return new ModerationEligibilityPolicyRule("GEN-WARN-001", "v1", type, severity, ModerationEligibilityEffect.NO_CHANGE);
     }
 }
