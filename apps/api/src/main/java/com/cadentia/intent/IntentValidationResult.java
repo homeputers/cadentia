@@ -38,4 +38,20 @@ public final class IntentValidationResult {
     public List<IntentValidationError> errors() {
         return errors;
     }
+
+    public IntentOutcomeClass outcomeClass() {
+        if (isAccepted()) {
+            if (intent.intentType() == IntentType.CLARIFY_REQUEST) {
+                return IntentOutcomeClass.CLARIFY;
+            }
+            if (intent.intentType() == IntentType.UNSUPPORTED_REQUEST) {
+                return IntentOutcomeClass.UNSUPPORTED;
+            }
+            return null;
+        }
+        return errors.stream()
+                .map(IntentValidationError::outcomeClass)
+                .findFirst()
+                .orElse(IntentOutcomeClass.HARD_FAIL);
+    }
 }
