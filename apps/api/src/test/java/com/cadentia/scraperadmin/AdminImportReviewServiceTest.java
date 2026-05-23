@@ -37,6 +37,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -251,7 +253,7 @@ class AdminImportReviewServiceTest {
 
         ApprovalRecord result = service.applyApprovalAction(new ApplyApprovalActionCommand(
                 songId, null, null, ApprovalType.DOCTRINAL, ApprovalReviewAction.APPROVE,
-                "elder@example.test", "Approved after doctrinal review"));
+                "approver@example.test", "Approved after doctrinal review"));
 
         assertThat(result.status()).isEqualTo(ApprovalStatus.APPROVED);
     }
@@ -265,7 +267,7 @@ class AdminImportReviewServiceTest {
 
         assertThatThrownBy(() -> service.applyApprovalAction(new ApplyApprovalActionCommand(
                 songId, null, null, ApprovalType.DOCTRINAL, ApprovalReviewAction.REJECT,
-                "elder@example.test", "Attempted invalid direct rejection")))
+                "approver@example.test", "Attempted invalid direct rejection")))
                 .hasMessageContaining("not allowed");
     }
 
@@ -280,7 +282,7 @@ class AdminImportReviewServiceTest {
 
         ApprovalRecord revokeResult = service.applyApprovalAction(new ApplyApprovalActionCommand(
                 songId, null, null, ApprovalType.EDITORIAL, ApprovalReviewAction.REVOKE,
-                "editor@example.test", "Metadata changed; re-review required"));
+                "approver@example.test", "Metadata changed; re-review required"));
 
         assertThat(revokeResult.status()).isEqualTo(ApprovalStatus.NEEDS_REVIEW);
     }
@@ -560,7 +562,7 @@ class AdminImportReviewServiceTest {
                 false);
         ModerationFlag escalated = service.escalateModerationFlag(
                 opened.id(),
-                "reviewer@example.test",
+                "approver@example.test",
                 "Escalated to doctrinal board");
 
         assertThat(escalated.status()).isEqualTo(ModerationFlagStatus.ESCALATED);
@@ -611,6 +613,48 @@ class AdminImportReviewServiceTest {
         assertThat(preview.blockers()).isNotEmpty();
         assertThatThrownBy(() -> service.executeRollback(preview.rollbackRequestId(), "rollback-admin@example.test", "Wrong batch"))
                 .hasMessageContaining("Rollback blocked");
+    }
+
+    @Test
+    void viewerRoleIsDeniedForMutatingActionsAndDenialIsAudited() {
+        ImportCandidate candidate = candidate(UUID.randomUUID(), ImportCandidateStatus.DEDUPLICATION_REVIEW, null);
+        AdminImportReviewService service = new AdminImportReviewService(songRepository);
+
+        assertThatThrownBy(() -> service.recordReview(new CreateImportCandidateReviewCommand(
+                candidate.id(), null, ImportCandidateReviewDecision.NEEDS_MORE_INFO,
+                "viewer@example.test", "Need additional context")))
+                .hasMessageContaining("Authorization denied");
+        assertThat(service.getAuditHistory(candidate.id()))
+                .extracting(AdminAuditEvent::action)
+                .containsExactly("REVIEW_RECORD_DENIED");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"reviewer@example.test", "approver@example.test"})
+    void recordReviewAllowsReviewerAndApproverRoles(String reviewerActor) {
+        ImportCandidate candidate = candidate(UUID.randomUUID(), ImportCandidateStatus.DEDUPLICATION_REVIEW, null);
+        ImportCandidateReview review = review(candidate.id(), null, ImportCandidateReviewDecision.NEEDS_MORE_INFO);
+        when(songRepository.findImportCandidateById(candidate.id())).thenReturn(Optional.of(candidate));
+        when(songRepository.createImportCandidateReview(any(CreateImportCandidateReviewCommand.class))).thenReturn(review);
+        AdminImportReviewService service = new AdminImportReviewService(songRepository);
+
+        ImportCandidateReview result = service.recordReview(new CreateImportCandidateReviewCommand(
+                candidate.id(), null, ImportCandidateReviewDecision.NEEDS_MORE_INFO, reviewerActor, "extra context"));
+
+        assertThat(result).isEqualTo(review);
+    }
+
+    @Test
+    void rollbackPreviewDeniedForNonRollbackRoleAndAudited() {
+        UUID targetId = UUID.randomUUID();
+        AdminImportReviewService service = new AdminImportReviewService(songRepository);
+
+        assertThatThrownBy(() -> service.previewRollback(
+                RollbackTargetType.IMPORT_CANDIDATE, targetId, "approver@example.test", UUID.randomUUID()))
+                .hasMessageContaining("Authorization denied");
+        assertThat(service.getAuditHistory(targetId))
+                .extracting(AdminAuditEvent::action)
+                .containsExactly("PREVIEW_ROLLBACK_DENIED");
     }
 
     private static ApprovalRecord approvalRecord(UUID id, UUID songId, ApprovalStatus status) {
