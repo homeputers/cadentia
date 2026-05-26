@@ -51,19 +51,29 @@ class RecommendationExplanationRendererTest {
 
     @Test
     void shouldReturnSafeFallbackForUnknownTemplateKey() {
-        RecommendationExplanationFact fact = fact("UNKNOWN", "unknown.template", Map.of());
+        RecommendationExplanationFact fact = fact("ROLE_FIT", "unknown.template", Map.of());
 
         ExplanationRenderResult result = renderer.render(fact);
 
-        assertThat(result.text()).isEqualTo("[UNKNOWN]");
+        assertThat(result.text()).isEqualTo("[ROLE_FIT]");
         assertThat(result.validationErrors()).contains("Unknown template key: unknown.template");
     }
 
     private static RecommendationExplanationFact fact(String code, String templateKey, Map<String, Object> values) {
+        String scope = switch (code) {
+            case "RELATIVE_KEY_TRANSITION", "TEMPO_POLICY_OK" -> "transition";
+            case "COUNT_TARGET_MET", "INSUFFICIENT_CANDIDATES" -> "set";
+            case "FILLED_QUOTA", "WEAKER_SCORE" -> "candidate_exclusion";
+            default -> "item";
+        };
+        String severity = switch (code) {
+            case "INSUFFICIENT_CANDIDATES" -> "warning";
+            default -> "info";
+        };
         return new RecommendationExplanationFact(
                 code,
-                "info",
-                "item",
+                severity,
+                scope,
                 new RecommendationExplanationSubject("arrangement", "subject-id"),
                 templateKey,
                 values,
