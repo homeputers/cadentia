@@ -107,7 +107,7 @@ class DeterministicSetOrdererTest {
                 .filteredOn(fact -> "INSUFFICIENT_CANDIDATES".equals(fact.code()))
                 .allSatisfy(fact -> {
                     assertThat(fact.severity()).isEqualTo("warning");
-                    assertThat(fact.scope()).isEqualTo("warning");
+                    assertThat(fact.scope()).isEqualTo("set");
                 });
     }
 
