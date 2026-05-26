@@ -49,6 +49,52 @@ Recommended fields:
 
 Free-form strings may be included for simple clients, but structured facts are the source of truth.
 
+### Explanation Code Registry and Lifecycle Governance
+
+Explanation codes must be defined in a centrally governed registry owned by backend recommendation governance.
+
+Required registry fields:
+
+- `code`: immutable identifier (for example `THEME_MATCH`)
+- `status`: `active`, `deprecated`, or `replaced`
+- `scope`: allowed fact scopes (`item`, `transition`, `set`, `candidate_exclusion`)
+- `severity`: allowed severities (`info`, `warning`, `blocked`)
+- `introducedInVersion`: first engine version that may emit this code
+- `deprecatedInVersion`: optional version when code became deprecated
+- `replacedBy`: optional replacement code required when `status=replaced`
+- `evidenceContract`: required evidence reference types the emitter must provide
+
+Lifecycle rules:
+
+- only `active` codes may be emitted for new scoring/filter logic
+- `deprecated` codes may be emitted only during a defined compatibility window
+- `replaced` codes are read-compatible for historical payloads but must not be emitted by current engine versions
+- any code removal requires explicit migration notes and compatibility tests for historical explanation payloads
+
+This governance prevents ad hoc explanation reasons and preserves stable, auditable semantics across engine upgrades.
+
+### Coverage Matrix Enforcement
+
+Every deterministic recommendation component must map to explanation behavior through a machine-checkable coverage matrix.
+
+Coverage matrix rows should include at least:
+
+- `componentId`: stable scoring/filter/transition component identifier
+- `componentType`: `scoring`, `filter`, `transition`, `quota`, or `policy_guard`
+- `explanationCode`: registry code emitted when component contributes a user-visible fact
+- `coverageMode`: `required`, `optional`, or `intentional_omission`
+- `omissionReasonCode`: required when `coverageMode=intentional_omission`
+- `evidenceContractRef`: pointer to expected evidence contract for emitted facts
+
+Enforcement policy:
+
+- build/test must fail when a new component exists without a matrix entry
+- build/test must fail when a matrix entry references an unknown or non-emittable explanation code
+- build/test must fail when `required` mappings do not produce evidence-conformant facts in integration tests
+- intentional omissions are allowed only with explicit `omissionReasonCode` and approval in governance review
+
+This matrix is the contract proving explanation completeness and preventing silent drift between engine logic and explanation output.
+
 ## Item-Level Explanations
 
 Each selected item should explain why it appears in the set.
@@ -144,7 +190,7 @@ Benefits:
 Tradeoffs:
 
 - scoring code must emit structured evidence, not just totals
-- explanation codes and templates require governance
+- explanation code registry lifecycle and coverage matrix require active governance
 - clients must handle warnings and tradeoffs clearly
 
 ## Related Decisions

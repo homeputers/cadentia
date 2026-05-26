@@ -422,6 +422,48 @@ ADR-013 trust depends on stable explanation codes and guaranteed alignment with 
 
 Implement explanation-code lifecycle governance (active/deprecated/replaced) plus a test-enforced coverage matrix mapping scoring/filter/transition components to explanation codes or intentional omissions.
 
+### Implementation blueprint
+
+#### A) Explanation-code registry lifecycle model
+
+- Add a versioned `ExplanationCodeRegistryEntry` contract with immutable fields:
+  - `code`
+  - `status` (`active`, `deprecated`, `replaced`)
+  - `scope[]`
+  - `severity[]`
+  - `introducedInVersion`
+  - `deprecatedInVersion` (optional)
+  - `replacedBy` (required when status is `replaced`)
+  - `evidenceContractRef`
+- Enforce emission policy in recommendation explanation assembly:
+  - current engine version may emit only `active` codes.
+  - `deprecated` code emission must be gated by an explicit compatibility flag and sunset date.
+  - `replaced` codes are accepted only for historical read/replay paths, not live emission.
+
+#### B) Coverage matrix contract
+
+- Introduce a machine-readable `ExplanationCoverageMatrix` keyed by `componentId`.
+- Each matrix row must include:
+  - `componentType` (`scoring`, `filter`, `transition`, `quota`, `policy_guard`)
+  - `explanationCode` (nullable only for intentional omission)
+  - `coverageMode` (`required`, `optional`, `intentional_omission`)
+  - `omissionReasonCode` (required when intentional omission)
+  - `evidenceContractRef`
+- Require matrix updates whenever scoring/filter/transition components are added or renamed.
+
+#### C) Test and CI enforcement
+
+- Unit: registry validation fails on duplicate code, invalid lifecycle transitions, or missing `replacedBy` for `replaced` entries.
+- Unit: coverage matrix validation fails when component IDs are missing, duplicated, or reference unknown codes.
+- Integration: explanation payload for deterministic scenarios includes all `required` component mappings with evidence-conformant facts.
+- CI guard: schema/component inventory snapshot test fails when new components exist without explicit matrix rows.
+
+#### D) Governance and migration behavior
+
+- Publish compatibility rules for deprecated/replaced code handling windows.
+- Require migration notes for any lifecycle transition away from `active`.
+- Maintain changelog entries mapping old→new explanation codes for analytics/reporting continuity.
+
 ### Acceptance criteria
 
 - Explanation code registry supports lifecycle metadata.
