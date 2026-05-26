@@ -1,88 +1,70 @@
 # ADR-020: External Integration Boundaries
 
-Status: Proposed  
-Date: 2026-05-26
+Status: Rejected (Covered by Existing ADRs)  
+Date: 2026-05-26  
+Superseded by: ADR-008, ADR-003, ADR-011, ADR-004
 
 ## Context
 
-Cadentia benefits from importing and enriching song data from external systems, but uncontrolled ingestion can undermine provenance, approval gates, licensing boundaries, and recommendation safety.
-
-The platform must integrate broadly while guaranteeing that only curated and approved catalog data can become recommendable.
+ADR-020 was drafted to define staging-first imports, provenance requirements, connector adapters, licensing boundaries, retry/idempotency behavior, and enrichment safeguards for external integrations.
 
 ## Problem
 
-Without explicit integration boundaries:
+The scope proposed in ADR-020 materially overlaps existing ADRs:
 
-- external connectors may inject unvetted songs directly into recommendation pool
-- provenance can be lost, weakening trust and auditability
-- third-party outages or malformed payloads can corrupt internal state
-- licensing constraints may be violated by unrestricted data usage
+- ADR-008 already defines connector types including OpenSong, ChordPro, CSV, Planning Center, and local Markdown import plus adapter lifecycle, provenance, retries, and policy boundaries.
+- ADR-003 already defines staged import and deduplication workflow.
+- ADR-011 already defines governance/review gating before promotion.
+- ADR-004 already defines supported lyrics formats including chordpro, onsong, and markdown.
+
+Keeping ADR-020 as an active standalone decision creates duplication and uncertainty about which ADR is canonical.
 
 ## Decision
 
-Implement integration adapters behind a staging-first ingestion boundary.
+Reject ADR-020 as covered by existing ADRs and treat its content as either:
 
-- Supported integration families include:
-  - file import
-  - CSV import
-  - ChordPro import
-  - Planning Center export/import
-  - SongSelect/CCLI metadata
-  - YouTube/Spotify metadata enrichment
-- All imported entities must enter staging first.
-- Every imported record requires provenance metadata.
-- No external source can directly create recommendable songs.
-- Promotion to curated catalog requires normal governance and approval flows.
+1. already captured by ADR-008/ADR-003/ADR-011/ADR-004, or
+2. future extension material to be added by amendment to those ADRs.
+
+ADR-020 must not be used as the primary implementation source.
 
 ## Requirements
 
-- Define adapter pattern with consistent contracts for fetch, parse, validate, map, and stage.
-- Require provenance fields (source system, source identifiers, retrieval time, adapter version).
-- Keep staging records isolated from recommendable catalog views.
-- Enforce licensing and terms-of-use boundaries per connector type.
-- Define connector error handling with retries, dead-letter capture, and idempotency safeguards.
-- Define rate limits and backoff behavior for external APIs.
-- Prevent metadata enrichment from overwriting approved curated values without review.
-
-### Safety and Promotion Rules
-
-- Import success means “staged,” not “approved.”
-- Promotion workflow must pass deduplication, validation, and approval checks.
-- Enrichment sources may augment candidate metadata but cannot bypass governance.
-- Connector failures must fail safe and preserve catalog consistency.
+- External integration implementation must reference ADR-008 as the primary connector architecture decision.
+- Staging/deduplication behavior must reference ADR-003.
+- Promotion/review gates must reference ADR-011.
+- Lyrics-format import compatibility boundaries must reference ADR-004.
+- Any genuinely new integration policy (for example, third-party enrichment override policy details) must be proposed as amendments to the authoritative ADRs above.
 
 ## Acceptance Criteria
 
-- Imported songs are never immediately recommendable.
-- Every imported entity contains provenance attributes.
-- Connector failures do not corrupt curated catalog state.
-- External metadata enrichment cannot override approved curated metadata without explicit review.
-- Retry/idempotency behavior prevents duplicate staging records from transient failures.
+- Planning documents and tasks do not treat ADR-020 as an active normative source.
+- References to OpenSong/ChordPro/CSV/Markdown import behavior point to ADR-008 and ADR-004.
+- Review and promotion boundaries reference ADR-003 and ADR-011.
+- Readers can unambiguously identify ADR-020 as duplicate coverage, not net-new architecture.
 
 ## Consequences
 
 Positive:
 
-- safer expansion of external ecosystem integrations
-- stronger auditability and compliance posture
-- resilience against third-party instability
+- Avoids ADR fragmentation and duplicated governance language.
+- Preserves one canonical decision chain for import/integration safety.
+- Makes it easier to assess implementation status against existing ADRs.
 
 Tradeoffs:
 
-- additional staging and review workflow complexity
-- connector maintenance overhead and monitoring requirements
+- Contributors must amend existing ADRs rather than adding overlapping new ADRs.
 
 ## Alternatives Considered
 
-1. Direct-write connectors into curated catalog.
-   - Rejected: unacceptable integrity and governance risk.
-2. Manual copy/paste imports only.
-   - Rejected: poor scalability and high operator burden.
-3. Trust external metadata as canonical.
-   - Rejected: conflicts with Cadentia curated approval model.
+1. Keep ADR-020 active alongside ADR-008/003/011/004.
+   - Rejected: overlapping scope and conflicting authority risk.
+2. Narrow ADR-020 to metadata-enrichment-only policy.
+   - Deferred: possible future amendment path if requirements exceed current ADRs.
+3. Supersede ADR-008 with ADR-020.
+   - Rejected: ADR-008 already includes broader and more detailed connector architecture.
 
 ## Open Questions
 
-- Which connectors should be prioritized for initial rollout based on partner demand?
-- What provenance retention period is required for legal/compliance needs?
-- Should enrichment confidence scores be standardized across providers?
+- Should enrichment-provider policy (e.g., YouTube/Spotify metadata precedence and confidence thresholds) be added explicitly to ADR-008?
+- Should ADR index docs include an explicit “duplicate/rejected ADR” section for discoverability?
