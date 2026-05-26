@@ -1,140 +1,59 @@
 # ADR-014: LLM Intent Extraction Contract
 
-Status: Proposed  
-Date: 2026-05-26
+Status: Rejected (Duplicate)  
+Date: 2026-05-26  
+Superseded by: ADR-012
 
 ## Context
 
-Cadentia accepts natural-language requests from worship leaders through guided and conversational interfaces. The LLM is responsible for transforming user language into structured intent only. Recommendation logic, candidate eligibility, and ordering remain deterministic backend responsibilities.
-
-To preserve safety, repeatability, and auditability, the Recommendation Engine must consume only validated structured requests. Any LLM output that includes unstructured prose, fabricated songs, or schema-invalid payloads must be blocked before it reaches deterministic recommendation components.
+During continued ADR drafting, this record was proposed to define the LLM intent extraction boundary for setlist generation.
 
 ## Problem
 
-Without a strict extraction contract, the system risks:
+The proposal in ADR-014 overlaps materially with an existing accepted/proposed architecture decision: ADR-012 already defines the same concern domain (JSON contract, validation, retries/fallbacks, anti-hallucination guardrails, and deterministic handoff to recommendation services).
 
-- leaking non-deterministic LLM output into deterministic scoring
-- allowing invalid or partial payloads to break recommendation behavior
-- accidental acceptance of LLM-suggested songs outside curated catalog controls
-- inconsistent defaults across clients and channels
-- weak auditability when request normalization differs run-to-run
+Maintaining two ADRs for the same architectural boundary creates governance ambiguity about the canonical contract.
 
 ## Decision
 
-Adopt a strict JSON extraction contract for intent parsing.
+Reject ADR-014 as a duplicate and retain **ADR-012** as the single source of truth for the LLM intent extraction contract.
 
-1. The LLM must output JSON only for intent extraction responses.
-2. The contract defines canonical slots and normalization rules.
-3. Backend validation rejects schema-invalid output and retries extraction with bounded attempts.
-4. Song title suggestions emitted by the LLM are ignored, sanitized, and recorded as policy violations for observability.
-5. Recommendation Engine accepts only validated and normalized structured request objects.
-6. The system stores both raw user input and normalized intent for audit and debugging.
-
-### Canonical Extraction Shape
-
-```json
-{
-  "intent": "GENERATE_SETLIST",
-  "slots": {
-    "theme": ["holiness", "gratitude"],
-    "verse": {
-      "reference": "Psalm 24",
-      "text": "Who may ascend the mountain of the Lord?"
-    },
-    "language": "en",
-    "setShape": {
-      "praise": 10,
-      "worship": 5
-    },
-    "energyArc": {
-      "profile": "rise_then_settle"
-    },
-    "keyPolicy": {
-      "preferSameKey": true,
-      "allowRelativeMajorMinor": true,
-      "maxKeyCenters": 2
-    },
-    "tempoPolicy": {
-      "maxJumpBpm": 12
-    },
-    "exclusions": {
-      "songIds": [],
-      "arrangementIds": []
-    },
-    "preferences": {
-      "artists": [],
-      "familiarityBias": "balanced"
-    }
-  }
-}
-```
+Implementation and validation work must continue to reference ADR-012.
 
 ## Requirements
 
-- JSON schema must define required fields, optional fields, type constraints, enum constraints, and bounds.
-- Required slot domains include:
-  - theme
-  - verse
-  - language
-  - set shape
-  - energy arc
-  - key policy
-  - tempo policy
-  - exclusions
-  - preferences
-- LLM output must be strict JSON with no prose wrappers or markdown.
-- Missing optional fields are filled through deterministic defaults.
-- Missing required fields trigger extraction retry and, if unresolved, user clarification flow.
-- Validation pipeline must include:
-  - schema validation
-  - normalization pass (case, aliases, code mapping)
-  - policy sanitation (remove forbidden fields and LLM song suggestions)
-- Retry policy must be bounded and observable (attempt count, reason codes, final state).
-- Original user request text and parsed/normalized payload must be persisted for audit.
-- Recommendation Engine must reject non-validated payload sources.
-
-### Defaulting Rules
-
-- `intent`: default only to `GENERATE_SETLIST` when request scope is setlist generation and confidence threshold is met.
-- `setShape`: default `praise=10`, `worship=5`.
-- `keyPolicy`: default `preferSameKey=true`, `allowRelativeMajorMinor=true`, `maxKeyCenters=2`.
-- `tempoPolicy`: default `maxJumpBpm=12`.
-- `language`: default to user/session locale when absent.
-- `energyArc`: default to configured service profile (for example `rise_then_settle`).
-- `exclusions` and `preferences`: default to empty structures.
+- ADR-012 remains the authoritative contract for LLM intent extraction.
+- Any new intent-contract requirements must be proposed as amendments to ADR-012 (or a formal superseding ADR), not parallel duplicate ADRs.
+- Planning artifacts and implementation references must not treat ADR-014 as independently implementable.
 
 ## Acceptance Criteria
 
-- Invalid LLM output never reaches Recommendation Engine.
-- Any LLM-selected song titles are ignored or flagged and never treated as eligible inputs.
-- Same raw input and same normalization rules produce deterministic normalized slots.
-- Raw request, extracted payload, validation errors, retries, and final normalized payload are auditable.
-- Recommendation requests accepted by the engine have passed schema + normalization + sanitation checks.
+- No implementation plan or code task references ADR-014 as the source of intent contract behavior.
+- ADR-012 remains the only ADR referenced for intent extraction schema and validation behavior.
+- Documentation readers can unambiguously identify ADR-014 as non-active and duplicate.
 
 ## Consequences
 
 Positive:
 
-- clear safety boundary between language understanding and deterministic recommendation
-- stronger reproducibility and debugging
-- consistent behavior across Telegram/menu/free-text channels
+- Removes conflicting architectural guidance.
+- Preserves a single canonical intent contract source.
+- Reduces implementation drift risk.
 
 Tradeoffs:
 
-- stricter contract increases extractor prompt and validator maintenance
-- additional retry/clarification steps can increase latency for malformed input
+- Requirements drafted uniquely in ADR-014 must be reconciled into ADR-012 through follow-up amendment if still desired.
 
 ## Alternatives Considered
 
-1. Allow semi-structured LLM prose and parse heuristically.
-   - Rejected: too fragile and non-deterministic.
-2. Let Recommendation Engine interpret free text directly.
-   - Rejected: would couple deterministic engine to language ambiguity.
-3. Accept LLM-suggested songs as soft preferences.
-   - Rejected: violates curated catalog boundary and anti-hallucination guardrails.
+1. Keep both ADR-012 and ADR-014 active.
+   - Rejected: creates ambiguity and maintenance burden.
+2. Rename ADR-014 and narrow scope to a different concern.
+   - Rejected for now: no clearly distinct boundary was identified.
+3. Supersede ADR-012 with ADR-014.
+   - Rejected: ADR-012 is already integrated into ordering and implementation plans.
 
 ## Open Questions
 
-- What confidence threshold should trigger clarification vs automatic defaults?
-- Should language normalization be ISO-only (`en`, `es`) or locale-granular (`en-US`, `es-MX`)?
-- Which fields should support user-visible “inferred by system” annotations during confirmation?
+- Should the additional slot fields drafted in the original ADR-014 text be merged into ADR-012 via amendment?
+- Do we need explicit ADR lifecycle metadata (`Supersedes`, `Superseded by`, `Obsoletes`) standardized across all ADR documents?
