@@ -32,7 +32,7 @@ public class SetExplanationFactory {
             facts.add(new RecommendationExplanationFact(
                     "INSUFFICIENT_CANDIDATES",
                     "warning",
-                    "warning",
+                    "set",
                     setSubject,
                     "warning.insufficient_candidates",
                     Map.of("selected", selected.size(), "target", targetSize, "availableCandidates", availableCandidates.size()),
@@ -115,7 +115,7 @@ public class SetExplanationFactory {
             facts.add(new RecommendationExplanationFact(
                     "LOW_CONFIDENCE_METADATA_PRESENT",
                     "warning",
-                    "warning",
+                    "set",
                     setSubject,
                     "warning.low_confidence_metadata",
                     Map.of("reason", "metadata_confidence_below_one"),

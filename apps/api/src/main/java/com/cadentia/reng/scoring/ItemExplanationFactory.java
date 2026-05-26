@@ -85,7 +85,7 @@ public class ItemExplanationFactory {
                 .ifPresent(score -> facts.add(new RecommendationExplanationFact(
                         "METADATA_LOW_CONFIDENCE",
                         "warning",
-                        "warning",
+                        "item",
                         subject,
                         "item.metadata_low_confidence",
                         Map.of("confidence", score.rawScore()),
