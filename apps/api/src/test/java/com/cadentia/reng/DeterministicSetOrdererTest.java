@@ -165,6 +165,11 @@ class DeterministicSetOrdererTest {
         assertThat(admin.adminCandidateExplanationFacts())
                 .extracting(fact -> fact.code())
                 .contains("FILLED_QUOTA");
+
+        OrderedSetResponse publicView = admin.asPublicResponse();
+        assertThat(publicView.adminCandidateExplanationFacts()).isEmpty();
+        assertThat(publicView.items()).containsExactlyElementsOf(admin.items());
+        assertThat(publicView.setExplanationFacts()).containsExactlyElementsOf(admin.setExplanationFacts());
     }
 
     private static CandidateFeatureScorer.CandidateFeatureScore score(RecommendableArrangement candidate, double total) {

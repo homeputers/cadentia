@@ -8,6 +8,8 @@ import java.util.regex.Pattern;
 
 public class RecommendationExplanationRenderer {
 
+    private static final String DEFAULT_LOCALE = "en";
+
     private static final Pattern TOKEN_PATTERN = Pattern.compile("\\{([a-zA-Z0-9_]+)}");
 
     private static final Map<String, String> TEMPLATE_BY_KEY = Map.ofEntries(
@@ -25,6 +27,10 @@ public class RecommendationExplanationRenderer {
             Map.entry("candidate_exclusion.weaker_score", "Candidate {candidateTitle} was excluded because its score {candidateScore} ranked lower."));
 
     public ExplanationRenderResult render(RecommendationExplanationFact fact) {
+        return render(fact, DEFAULT_LOCALE);
+    }
+
+    public ExplanationRenderResult render(RecommendationExplanationFact fact, String locale) {
         String template = TEMPLATE_BY_KEY.get(fact.templateKey());
         if (template == null) {
             return new ExplanationRenderResult(
@@ -52,9 +58,14 @@ public class RecommendationExplanationRenderer {
     }
 
     public List<ExplanationRenderResult> renderAll(List<RecommendationExplanationFact> facts) {
+        return renderAll(facts, DEFAULT_LOCALE);
+    }
+
+    public List<ExplanationRenderResult> renderAll(List<RecommendationExplanationFact> facts, String locale) {
         if (facts == null || facts.isEmpty()) {
             return List.of();
         }
-        return facts.stream().map(this::render).toList();
+        String normalizedLocale = (locale == null || locale.isBlank()) ? DEFAULT_LOCALE : locale;
+        return facts.stream().map(fact -> render(fact, normalizedLocale)).toList();
     }
 }

@@ -50,6 +50,16 @@ class RecommendationExplanationRendererTest {
     }
 
     @Test
+    void shouldUseDeterministicFallbackWhenLocaleIsBlank() {
+        RecommendationExplanationFact fact = fact("ROLE_FIT", "item.role_fit", Map.of("role", "praise"));
+
+        ExplanationRenderResult result = renderer.render(fact, " ");
+
+        assertThat(result.text()).isEqualTo("Song fills the praise slot.");
+        assertThat(result.validationErrors()).isEmpty();
+    }
+
+    @Test
     void shouldReturnSafeFallbackForUnknownTemplateKey() {
         RecommendationExplanationFact fact = fact("ROLE_FIT", "unknown.template", Map.of());
 

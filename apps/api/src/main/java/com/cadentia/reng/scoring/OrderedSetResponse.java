@@ -44,4 +44,16 @@ public record OrderedSetResponse(
             double totalScore) {
         return of(profile, candidateSnapshotVersion, items, List.of(), totalScore);
     }
+
+    public OrderedSetResponse asPublicResponse() {
+        return new OrderedSetResponse(
+                scoringProfileVersion,
+                candidateSnapshotVersion,
+                items,
+                setExplanationFacts,
+                List.of(),
+                profileLifecycle,
+                deterministicOrderingRules,
+                totalScore);
+    }
 }
