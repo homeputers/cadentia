@@ -200,3 +200,53 @@ graph TD
 - Multi-church tenancy.
 - Analytics for song usage.
 - Planning Center integration.
+
+------------------------------------------------------------------------
+
+## ADR-015 Observability and Operations
+
+The guided menu and conversational request flow adds a state machine boundary
+between intent parsing and recommendation execution. Operations must observe how
+requests progress from `START` to `CONFIRMED`, and detect churn caused by
+clarification loops or session expiry.
+
+### Required Metrics
+
+- `cadentia_request_state_transition_total`
+  - Counter for every transition (`from_state`, `to_state`, `channel`,
+    `reason`).
+  - Allowed low-cardinality labels only; do not include raw user text or IDs.
+- `cadentia_request_state_duration_seconds`
+  - Histogram for time spent in each state (`state`, `channel`).
+  - Used to identify stalled `CLARIFICATION_REQUIRED` or `READY_TO_CONFIRM`
+    states.
+- `cadentia_request_clarification_total`
+  - Counter for clarification prompts (`channel`, `conflict_type`).
+- `cadentia_request_confirmation_outcome_total`
+  - Counter for confirm/cancel outcomes (`outcome`, `channel`).
+- `cadentia_request_expiry_total`
+  - Counter for session expiry (`expiry_type`: `inactivity` or `absolute`,
+    plus `channel`).
+
+### Logging and Trace Requirements
+
+- Emit structured transition logs per merge/revision event with:
+  `session_id`, `channel`, `from_state`, `to_state`, `source`,
+  `merge_decision`, and optional `conflict_reason`.
+- Redact free-text user content in logs; store only normalized slot keys and
+  decision metadata.
+- Attach request/trace IDs so API logs can be correlated with bot adapter and
+  recommendation calls.
+
+### Alerting Guidance
+
+Define baseline alerts:
+
+- Expiry spike alert: expiry rate > 2x seven-day baseline for 15 minutes.
+- Clarification loop alert: repeated clarification retries per session exceed
+  threshold (for example 3 retries without confirmation).
+- Confirmation funnel regression alert: confirmed/started ratio drops below
+  expected weekly baseline.
+
+Operational procedures, troubleshooting steps, and triage checklists are
+maintained in `docs/runbooks/adr-015-conversational-flow-operations.md`.
