@@ -13,6 +13,9 @@ import com.cadentia.llm.IntentParseStatus;
 import com.cadentia.llm.LlmClient;
 import com.cadentia.llm.prompt.IntentPromptRegistry;
 import com.cadentia.reng.SetlistService;
+import com.cadentia.reng.setlist.SetlistVersionDiffService;
+import com.cadentia.reng.setlist.SetlistVersionRepository;
+import com.cadentia.reng.setlist.SetlistVersionService;
 import com.cadentia.intent.DefaultSessionMergeService;
 import com.cadentia.intent.IntentType;
 import com.cadentia.intent.IntentValidationError;
@@ -87,7 +90,9 @@ class IntentOrchestrationFailureIntegrationTest {
                 new NoopObserver());
         CapturingSetlistService setlistService = new CapturingSetlistService();
         SetlistController controller = new SetlistController(setlistService, intentService, new ValidatedSetlistRequestMapper(),
-                new ConversationSessionFacade(new DefaultSessionMergeService(), new ValidatedSetlistRequestMapper(), Duration.ofMinutes(30), Duration.ofHours(4)));
+                new ConversationSessionFacade(new DefaultSessionMergeService(), new ValidatedSetlistRequestMapper(), Duration.ofMinutes(30), Duration.ofHours(4)),
+                setlistVersionService(),
+                new SetlistVersionDiffService());
 
         ResponseEntity<SetlistProposalResponse> response = controller.generateSetlistProposalFromNaturalLanguage(
                 new NaturalLanguageSetlistRequest().text("help"));
@@ -96,6 +101,16 @@ class IntentOrchestrationFailureIntegrationTest {
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().getStatus()).isEqualTo(expectedStatus);
         assertThat(setlistService.invocationCount).isZero();
+    }
+
+
+    private static SetlistVersionService setlistVersionService() {
+        return new SetlistVersionService(new SetlistVersionRepository() {
+            @Override public com.cadentia.reng.setlist.SetlistVersionModels.SetlistVersionSnapshot createBaseline(com.cadentia.reng.setlist.SetlistVersionModels.CreateSetlistBaselineCommand command) { throw new UnsupportedOperationException(); }
+            @Override public com.cadentia.reng.setlist.SetlistVersionModels.SetlistVersionSnapshot createEditedVersion(com.cadentia.reng.setlist.SetlistVersionModels.CreateSetlistVersionCommand command) { throw new UnsupportedOperationException(); }
+            @Override public java.util.Optional<com.cadentia.reng.setlist.SetlistVersionModels.SetlistVersionSnapshot> findVersion(java.util.UUID setlistId, java.util.UUID versionId) { return java.util.Optional.empty(); }
+            @Override public java.util.List<com.cadentia.reng.setlist.SetlistVersionModels.SetlistVersionSnapshot> findVersions(java.util.UUID setlistId) { return java.util.List.of(); }
+        });
     }
 
     private static final class NoopObserver implements IntentOrchestrationObserver {
