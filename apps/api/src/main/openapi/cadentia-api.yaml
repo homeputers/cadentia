@@ -447,6 +447,144 @@ paths:
                 $ref: '#/components/schemas/SetlistProposalResponse'
         '400':
           description: Request validation failed.
+  /setlists:
+    post:
+      tags:
+        - Setlists
+      operationId: createSetlistBaselineVersion
+      summary: Persist a generated setlist baseline as version 1
+      description: >-
+        Stores the deterministic recommendation output and immutable generation context.
+        The resulting resource is identified by a logical setlist_id and immutable version_id.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSetlistBaselineRequest'
+      responses:
+        '201':
+          description: Baseline version created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SetlistVersionEnvelope'
+        '400':
+          description: Request validation failed.
+  /setlists/{setlistId}/edits:
+    post:
+      tags:
+        - Setlists
+      operationId: commitSetlistEdits
+      summary: Commit auditable edit operations as a new immutable version
+      parameters:
+        - in: path
+          name: setlistId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CommitSetlistEditsRequest'
+      responses:
+        '201':
+          description: Edit operations committed and a new immutable version created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SetlistVersionEnvelope'
+        '404':
+          description: Setlist or base version does not exist.
+        '409':
+          description: Base version is locked or is not the latest permitted editable ancestor.
+  /setlists/{setlistId}/versions:
+    get:
+      tags:
+        - Setlists
+      operationId: listSetlistVersions
+      summary: List immutable versions for a setlist lineage
+      parameters:
+        - in: path
+          name: setlistId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Ordered version lineage metadata.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SetlistVersionListResponse'
+        '404':
+          description: Setlist not found.
+  /setlists/{setlistId}/versions/{versionId}:
+    get:
+      tags:
+        - Setlists
+      operationId: getSetlistVersion
+      summary: Retrieve a specific immutable setlist version snapshot
+      parameters:
+        - in: path
+          name: setlistId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: path
+          name: versionId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Immutable snapshot and provenance details.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SetlistVersionEnvelope'
+        '404':
+          description: Setlist or version not found.
+  /setlists/{setlistId}/versions/{fromVersionId}/diff/{toVersionId}:
+    get:
+      tags:
+        - Setlists
+      operationId: diffSetlistVersions
+      summary: Compare two immutable versions in the same setlist lineage
+      parameters:
+        - in: path
+          name: setlistId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: path
+          name: fromVersionId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: path
+          name: toVersionId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Deterministic structural and attribute diff.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SetlistVersionDiffResponse'
+        '404':
+          description: Setlist or requested versions not found.
 components:
   schemas:
     NaturalLanguageSetlistRequest:
@@ -601,6 +739,265 @@ components:
           example:
             - Recommendation Engine scaffold accepted the structured request.
             - No songs were selected because catalog retrieval is not implemented yet.
+    SetlistProvenanceType:
+      type: string
+      enum:
+        - GENERATED_BASELINE
+        - MANUAL_EDIT
+    SetlistItemChangeType:
+      type: string
+      enum:
+        - UNCHANGED
+        - ADDED
+        - REMOVED
+        - REORDERED
+        - REPLACED
+        - TRANSPOSED
+    SetlistVersionStatus:
+      type: string
+      enum:
+        - DRAFT
+        - PUBLISHED
+        - LOCKED
+    CreateSetlistBaselineRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - request
+        - parsedIntent
+        - engineProfileVersion
+        - items
+      properties:
+        request:
+          $ref: '#/components/schemas/GenerateSetlistRequest'
+        parsedIntent:
+          description: Validated intent payload used by recommendation.
+          type: object
+          additionalProperties: true
+        engineProfileVersion:
+          type: string
+          minLength: 1
+          description: Recommendation/scoring engine profile version identifier.
+          example: scoring-profile-2026.05.1
+        explanationFacts:
+          type: array
+          items:
+            type: string
+        items:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/SetlistVersionItem'
+    CommitSetlistEditsRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - baseVersionId
+        - operations
+      properties:
+        baseVersionId:
+          type: string
+          format: uuid
+        actorId:
+          type: string
+          description: Authenticated actor committing the edit transaction.
+        operations:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/SetlistEditOperation'
+    SetlistEditOperation:
+      type: object
+      additionalProperties: false
+      required:
+        - action
+      properties:
+        action:
+          type: string
+          enum:
+            - REORDER
+            - REPLACE
+            - REMOVE
+            - TRANSPOSE
+        itemId:
+          type: string
+          format: uuid
+          description: Target item in base version for remove, replace, and transpose.
+        fromPosition:
+          type: integer
+          format: int32
+          minimum: 1
+        toPosition:
+          type: integer
+          format: int32
+          minimum: 1
+        replacementArrangementId:
+          type: string
+          format: uuid
+          description: Catalog arrangement reference for replace action.
+        semitoneDelta:
+          type: integer
+          format: int32
+          minimum: -12
+          maximum: 12
+          description: Relative transpose adjustment for transpose action.
+    SetlistVersionListResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - setlistId
+        - versions
+      properties:
+        setlistId:
+          type: string
+          format: uuid
+        versions:
+          type: array
+          items:
+            $ref: '#/components/schemas/SetlistVersionSummary'
+    SetlistVersionSummary:
+      type: object
+      additionalProperties: false
+      required:
+        - versionId
+        - versionNumber
+        - provenance
+        - status
+      properties:
+        versionId:
+          type: string
+          format: uuid
+        parentVersionId:
+          type: string
+          format: uuid
+          nullable: true
+        versionNumber:
+          type: integer
+          format: int32
+          minimum: 1
+        provenance:
+          $ref: '#/components/schemas/SetlistProvenanceType'
+        status:
+          $ref: '#/components/schemas/SetlistVersionStatus'
+        createdAt:
+          type: string
+          format: date-time
+    SetlistVersionEnvelope:
+      type: object
+      additionalProperties: false
+      required:
+        - setlistId
+        - version
+      properties:
+        setlistId:
+          type: string
+          format: uuid
+        version:
+          $ref: '#/components/schemas/SetlistVersion'
+    SetlistVersion:
+      allOf:
+        - $ref: '#/components/schemas/SetlistVersionSummary'
+        - type: object
+          additionalProperties: false
+          required:
+            - engineProfileVersion
+            - items
+          properties:
+            request:
+              $ref: '#/components/schemas/GenerateSetlistRequest'
+            parsedIntent:
+              type: object
+              additionalProperties: true
+            engineProfileVersion:
+              type: string
+            explanationFacts:
+              type: array
+              items:
+                type: string
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/SetlistVersionItem'
+    SetlistVersionItem:
+      type: object
+      additionalProperties: false
+      required:
+        - itemId
+        - position
+        - catalogArrangementId
+        - provenance
+      properties:
+        itemId:
+          type: string
+          format: uuid
+        position:
+          type: integer
+          format: int32
+          minimum: 1
+        catalogArrangementId:
+          type: string
+          format: uuid
+        transposeSemitones:
+          type: integer
+          format: int32
+          minimum: -12
+          maximum: 12
+          default: 0
+        provenance:
+          $ref: '#/components/schemas/SetlistProvenanceType'
+    SetlistVersionDiffResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - setlistId
+        - fromVersionId
+        - toVersionId
+        - operations
+      properties:
+        setlistId:
+          type: string
+          format: uuid
+        fromVersionId:
+          type: string
+          format: uuid
+        toVersionId:
+          type: string
+          format: uuid
+        operations:
+          type: array
+          items:
+            $ref: '#/components/schemas/SetlistDiffOperation'
+    SetlistDiffOperation:
+      type: object
+      additionalProperties: false
+      required:
+        - action
+      properties:
+        action:
+          $ref: '#/components/schemas/SetlistItemChangeType'
+        itemId:
+          type: string
+          format: uuid
+        previousPosition:
+          type: integer
+          format: int32
+          minimum: 1
+        newPosition:
+          type: integer
+          format: int32
+          minimum: 1
+        previousCatalogArrangementId:
+          type: string
+          format: uuid
+        newCatalogArrangementId:
+          type: string
+          format: uuid
+        previousTransposeSemitones:
+          type: integer
+          format: int32
+        newTransposeSemitones:
+          type: integer
+          format: int32
 
     ConversationState:
       type: string
