@@ -13,6 +13,8 @@ tags:
     description: Admin import-governance review operations
   - name: FeedbackTuning
     description: Recommendation feedback ingestion, inspection, and reset operations
+  - name: ServicePlans
+    description: Service-plan composition, attachment, and publish operations
 paths:
   /feedback/events:
     post:
@@ -703,6 +705,171 @@ paths:
                 $ref: '#/components/schemas/SetlistVersionDiffResponse'
         '404':
           description: Setlist or requested versions not found.
+  /service-plans:
+    post:
+      tags:
+        - ServicePlans
+      operationId: createServicePlan
+      summary: Create a draft service plan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateServicePlanRequest'
+      responses:
+        '201':
+          description: Draft service plan created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServicePlanResponse'
+    get:
+      tags:
+        - ServicePlans
+      operationId: listServicePlans
+      summary: List service plans
+      responses:
+        '200':
+          description: Service plans matching filter criteria.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ServicePlanSummary'
+
+  /service-plans/{servicePlanId}:
+    get:
+      tags:
+        - ServicePlans
+      operationId: getServicePlan
+      summary: Retrieve a service plan
+      parameters:
+        - in: path
+          name: servicePlanId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Service plan detail.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServicePlanResponse'
+        '404':
+          description: Service plan not found.
+    patch:
+      tags:
+        - ServicePlans
+      operationId: updateServicePlan
+      summary: Update mutable draft service-plan metadata
+      parameters:
+        - in: path
+          name: servicePlanId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateServicePlanRequest'
+      responses:
+        '200':
+          description: Updated service plan detail.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServicePlanResponse'
+
+  /service-plans/{servicePlanId}/blocks:order:
+    post:
+      tags:
+        - ServicePlans
+      operationId: reorderServicePlanBlocks
+      summary: Reorder service-plan blocks within a draft
+      parameters:
+        - in: path
+          name: servicePlanId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReorderServicePlanBlocksRequest'
+      responses:
+        '200':
+          description: Updated block ordering and effective sequence preview.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServicePlanResponse'
+
+  /service-plans/{servicePlanId}/setlist-attachments:
+    post:
+      tags:
+        - ServicePlans
+      operationId: attachSetlistVersionToServicePlan
+      summary: Attach an immutable setlist version to a service plan
+      parameters:
+        - in: path
+          name: servicePlanId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AttachSetlistVersionRequest'
+      responses:
+        '201':
+          description: Setlist version attachment created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServicePlanSetlistAttachmentResponse'
+
+  /service-plans/{servicePlanId}/publish:
+    post:
+      tags:
+        - ServicePlans
+      operationId: publishServicePlan
+      summary: Publish a service plan and persist immutable effective sequence
+      parameters:
+        - in: path
+          name: servicePlanId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PublishServicePlanRequest'
+      responses:
+        '200':
+          description: Service plan published with immutable snapshot.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServicePlanPublishResponse'
+        '409':
+          description: Service plan cannot be published due to validation or stale references.
+
 components:
   schemas:
     FeedbackOutcome:
@@ -1775,3 +1942,124 @@ components:
           type: object
           nullable: true
           additionalProperties: true
+
+    ServicePlanStatus:
+      type: string
+      enum: [draft, published, finalized]
+    ServicePlanBlockType:
+      type: string
+      enum: [praise, worship, offering, altar_call, communion, special]
+    ServicePlanBlockSourceType:
+      type: string
+      enum: [setlist_version, manual]
+    ServicePlanSummary:
+      type: object
+      required: [servicePlanId, title, serviceDateTime, status]
+      properties:
+        servicePlanId: { type: string, format: uuid }
+        title: { type: string }
+        serviceDateTime: { type: string, format: date-time }
+        status: { $ref: '#/components/schemas/ServicePlanStatus' }
+    CreateServicePlanRequest:
+      type: object
+      additionalProperties: false
+      required: [serviceDateTime, title]
+      properties:
+        serviceDateTime: { type: string, format: date-time }
+        title: { type: string, minLength: 1, maxLength: 160 }
+        theme: { type: string, nullable: true }
+        scripture: { type: string, nullable: true }
+        notes: { type: string, nullable: true }
+    UpdateServicePlanRequest:
+      allOf:
+        - $ref: '#/components/schemas/CreateServicePlanRequest'
+    AttachSetlistVersionRequest:
+      type: object
+      additionalProperties: false
+      required: [setlistId, setlistVersionId]
+      properties:
+        setlistId: { type: string, format: uuid }
+        setlistVersionId: { type: string, format: uuid }
+        placementIndex: { type: integer, minimum: 0, nullable: true }
+        notes: { type: string, nullable: true }
+    ServicePlanSetlistAttachmentResponse:
+      type: object
+      required: [attachmentId, servicePlanId, setlistId, setlistVersionId]
+      properties:
+        attachmentId: { type: string, format: uuid }
+        servicePlanId: { type: string, format: uuid }
+        setlistId: { type: string, format: uuid }
+        setlistVersionId: { type: string, format: uuid }
+        attachedAt: { type: string, format: date-time }
+    ServicePlanBlockProvenance:
+      type: object
+      properties:
+        sourceType: { $ref: '#/components/schemas/ServicePlanBlockSourceType' }
+        setlistId: { type: string, format: uuid, nullable: true }
+        setlistVersionId: { type: string, format: uuid, nullable: true }
+        setlistEntryId: { type: string, format: uuid, nullable: true }
+    ServicePlanBlock:
+      type: object
+      required: [blockId, orderIndex, type, title, provenance]
+      properties:
+        blockId: { type: string, format: uuid }
+        orderIndex: { type: integer, minimum: 0 }
+        type: { $ref: '#/components/schemas/ServicePlanBlockType' }
+        title: { type: string }
+        notes: { type: string, nullable: true }
+        serviceTransposeSemitones: { type: integer, nullable: true }
+        serviceKeyOverride: { type: string, nullable: true }
+        provenance:
+          $ref: '#/components/schemas/ServicePlanBlockProvenance'
+    ReorderServicePlanBlocksRequest:
+      type: object
+      additionalProperties: false
+      required: [orderedBlockIds]
+      properties:
+        orderedBlockIds:
+          type: array
+          minItems: 1
+          items: { type: string, format: uuid }
+    ServicePlanEffectiveSequenceSnapshot:
+      type: object
+      required: [snapshotId, capturedAt, blocks]
+      properties:
+        snapshotId: { type: string, format: uuid }
+        capturedAt: { type: string, format: date-time }
+        blocks:
+          type: array
+          items: { $ref: '#/components/schemas/ServicePlanBlock' }
+    ServicePlanResponse:
+      type: object
+      required: [servicePlanId, serviceDateTime, title, status, blocks, setlistAttachments]
+      properties:
+        servicePlanId: { type: string, format: uuid }
+        serviceDateTime: { type: string, format: date-time }
+        title: { type: string }
+        theme: { type: string, nullable: true }
+        scripture: { type: string, nullable: true }
+        notes: { type: string, nullable: true }
+        status: { $ref: '#/components/schemas/ServicePlanStatus' }
+        blocks:
+          type: array
+          items: { $ref: '#/components/schemas/ServicePlanBlock' }
+        setlistAttachments:
+          type: array
+          items: { $ref: '#/components/schemas/ServicePlanSetlistAttachmentResponse' }
+        effectiveSequenceSnapshot:
+          $ref: '#/components/schemas/ServicePlanEffectiveSequenceSnapshot'
+          nullable: true
+    PublishServicePlanRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        expectedRevision: { type: integer, minimum: 0, nullable: true }
+        publishNote: { type: string, nullable: true }
+    ServicePlanPublishResponse:
+      allOf:
+        - $ref: '#/components/schemas/ServicePlanResponse'
+        - type: object
+          required: [publishedAt, publishedBy]
+          properties:
+            publishedAt: { type: string, format: date-time }
+            publishedBy: { type: string }

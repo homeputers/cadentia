@@ -43,6 +43,22 @@ fields.
 - Do not allow publish endpoints to mutate referenced setlist versions.
 - Do not omit block-level provenance back to setlist/version references.
 
+### Subtask 1 Contract Definition (Draft)
+
+- Add `ServicePlans` OpenAPI tag and CRUD endpoints for draft metadata lifecycle:
+  - `POST /service-plans`, `GET /service-plans`, `GET/PATCH /service-plans/{servicePlanId}`
+- Add service composition endpoints:
+  - `POST /service-plans/{servicePlanId}/blocks:order`
+  - `POST /service-plans/{servicePlanId}/setlist-attachments`
+- Add publish endpoint with immutable effective sequence response contract:
+  - `POST /service-plans/{servicePlanId}/publish`
+- Define schema families:
+  - Core metadata: `CreateServicePlanRequest`, `UpdateServicePlanRequest`, `ServicePlanResponse`
+  - Block model: `ServicePlanBlock`, `ServicePlanBlockType`, `ServicePlanBlockProvenance`
+  - Attachment/provenance: `AttachSetlistVersionRequest`, `ServicePlanSetlistAttachmentResponse`
+  - Publish snapshot: `ServicePlanEffectiveSequenceSnapshot`, `ServicePlanPublishResponse`
+- Enforce required ADR-018 fields (`serviceDateTime`, `title`, `theme`, `scripture`, `notes`) and block taxonomy (`praise`, `worship`, `offering`, `altar_call`, `communion`, `special`).
+
 ## Subtask 2: Implement domain model, persistence, and override isolation
 
 ### Context
