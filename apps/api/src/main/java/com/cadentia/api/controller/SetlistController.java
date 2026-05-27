@@ -2,6 +2,13 @@ package com.cadentia.api.controller;
 
 import com.cadentia.generated.api.SetlistsApi;
 import com.cadentia.generated.model.GenerateSetlistRequest;
+
+import com.cadentia.generated.model.ConversationClarificationRequest;
+import com.cadentia.generated.model.ConversationConfirmRequest;
+import com.cadentia.generated.model.ConversationRecoveryResponse;
+import com.cadentia.generated.model.ConversationSessionStateResponse;
+import com.cadentia.generated.model.ConversationSlotUpdateRequest;
+import java.util.UUID;
 import com.cadentia.generated.model.NaturalLanguageSetlistRequest;
 import com.cadentia.generated.model.SetlistProposalResponse;
 import com.cadentia.intent.ClarifyRequestIntent;
@@ -22,14 +29,24 @@ public class SetlistController implements SetlistsApi {
     private final SetlistService setlistService;
     private final IntentService intentService;
     private final ValidatedSetlistRequestMapper requestMapper;
+    private final ConversationSessionFacade conversationSessionFacade;
 
     public SetlistController(
             SetlistService setlistService,
             IntentService intentService,
             ValidatedSetlistRequestMapper requestMapper) {
+        this(setlistService, intentService, requestMapper, new ConversationSessionFacade(new com.cadentia.intent.DefaultSessionMergeService(), requestMapper));
+    }
+
+    public SetlistController(
+            SetlistService setlistService,
+            IntentService intentService,
+            ValidatedSetlistRequestMapper requestMapper,
+            ConversationSessionFacade conversationSessionFacade) {
         this.setlistService = setlistService;
         this.intentService = intentService;
         this.requestMapper = requestMapper;
+        this.conversationSessionFacade = conversationSessionFacade;
     }
 
     @Override
@@ -48,6 +65,39 @@ public class SetlistController implements SetlistsApi {
         GenerateSetlistIntent intent = (GenerateSetlistIntent) parseResult.intent();
         GenerateSetlistRequest validatedRequest = requestMapper.toGenerateSetlistRequest(intent);
         return ResponseEntity.accepted().body(setlistService.generate(validatedRequest));
+    }
+
+    @Override
+    public ResponseEntity<ConversationSessionStateResponse> getConversationSessionState(UUID sessionId) {
+        return ResponseEntity.ok(conversationSessionFacade.get(sessionId));
+    }
+
+    @Override
+    public ResponseEntity<ConversationSessionStateResponse> updateConversationSessionSlots(
+            UUID sessionId, ConversationSlotUpdateRequest conversationSlotUpdateRequest) {
+        return ResponseEntity.ok(conversationSessionFacade.update(sessionId, conversationSlotUpdateRequest));
+    }
+
+    @Override
+    public ResponseEntity<ConversationSessionStateResponse> requestConversationClarification(
+            UUID sessionId, ConversationClarificationRequest conversationClarificationRequest) {
+        return ResponseEntity.ok(conversationSessionFacade.clarify(sessionId, conversationClarificationRequest));
+    }
+
+    @Override
+    public ResponseEntity<ConversationSessionStateResponse> confirmConversationSession(
+            UUID sessionId, ConversationConfirmRequest conversationConfirmRequest) {
+        return ResponseEntity.ok(conversationSessionFacade.confirm(sessionId, conversationConfirmRequest));
+    }
+
+    @Override
+    public ResponseEntity<ConversationSessionStateResponse> cancelConversationSession(UUID sessionId) {
+        return ResponseEntity.ok(conversationSessionFacade.cancel(sessionId));
+    }
+
+    @Override
+    public ResponseEntity<ConversationRecoveryResponse> recoverConversationSession(UUID sessionId) {
+        return ResponseEntity.ok(conversationSessionFacade.recover(sessionId));
     }
 
     private SetlistProposalResponse safeIntentResponse(IntentParseResult parseResult) {
