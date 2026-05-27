@@ -288,3 +288,51 @@ Define baseline alerts:
 
 Operational procedures, troubleshooting steps, and triage checklists are
 maintained in `docs/runbooks/adr-015-conversational-flow-operations.md`.
+
+------------------------------------------------------------------------
+
+## ADR-017 Feedback Tuning Observability and Governance Operations
+
+ADR-017 introduces explicit feedback ingestion and deterministic ranking influence.
+Operators must monitor ingestion quality, negative-signal drift, and scope-reset
+safety without collecting unnecessary personal context.
+
+### Required Metrics
+
+- `cadentia_feedback_events_total`
+  - Counter grouped by `outcome` (`accepted`, `rejected`, `skipped`,
+    `favorited`) and `scope_layer` (`personal`, `team`, `policy`).
+  - Supports capacity planning and anomaly detection for feedback volume shifts.
+- `cadentia_feedback_ranking_impact_distribution`
+  - Distribution metric for feedback contribution values applied during ranking
+    (`min`, `max`, `avg`, candidate count per recommendation run).
+  - Used to detect profile drift when feedback dominates or is unexpectedly null.
+- `cadentia_feedback_scope_resets_total`
+  - Counter for reset actions by `scope_layer` and actor role.
+  - Used for governance and incident-response trigger thresholds.
+
+### Audit and Data Governance Requirements
+
+- Feedback mutations and reset actions must emit structured audit entries with:
+  `actor_id`, `scope_layer`, `scope_id`, operation type, and timestamp.
+- Audit logs must not include free-form personal context or raw conversation
+  content; only deterministic identifiers and controlled taxonomy fields.
+- Feedback event retention must preserve governance traceability while avoiding
+  indefinite storage of personal-layer preference details.
+
+### Alerting Guidance
+
+Define baseline alerts:
+
+- Negative feedback spike alert: `rejected` event rate exceeds 2x seven-day
+  baseline for 15 minutes.
+- Reset surge alert: `cadentia_feedback_scope_resets_total` exceeds normal
+  daily baseline or repeats from same scope in short windows.
+- Ranking-impact drift alert: feedback contribution average or max exceeds
+  expected profile envelope, indicating tuning misconfiguration.
+
+### Operator Runbook
+
+Operational procedures for role boundaries, reset authorization, anomaly
+triage, and retention review are documented in
+`docs/runbooks/adr-017-feedback-tuning-operations.md`.

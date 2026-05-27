@@ -1,6 +1,6 @@
 # ADR-017: User Feedback and Recommendation Tuning
 
-Status: Proposed  
+Status: Complete  
 Date: 2026-05-26
 
 ## Context

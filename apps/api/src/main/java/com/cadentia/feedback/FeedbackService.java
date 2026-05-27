@@ -12,13 +12,17 @@ import org.springframework.stereotype.Service;
 @Service
 public class FeedbackService {
     private final FeedbackRepository feedbackRepository;
+    private final FeedbackObservabilityRecorder observabilityRecorder;
 
-    public FeedbackService(FeedbackRepository feedbackRepository) {
+    public FeedbackService(FeedbackRepository feedbackRepository, FeedbackObservabilityRecorder observabilityRecorder) {
         this.feedbackRepository = feedbackRepository;
+        this.observabilityRecorder = observabilityRecorder;
     }
 
     public FeedbackEventRecord createEvent(FeedbackEventRecord eventRecord) {
-        return feedbackRepository.createEvent(eventRecord);
+        FeedbackEventRecord saved = feedbackRepository.createEvent(eventRecord);
+        observabilityRecorder.recordEventIngested(saved);
+        return saved;
     }
 
     public List<FeedbackEventRecord> listEvents(String scopeLayer, UUID scopeId, UUID arrangementId) {
@@ -28,12 +32,16 @@ public class FeedbackService {
     public FeedbackScopeAggregate getScopeStateWithFallback(String scopeLayer, UUID scopeId) {
         Optional<FeedbackScopeAggregate> current = feedbackRepository.getScopeAggregate(scopeLayer, scopeId);
         if (current.isPresent()) {
+            observabilityRecorder.recordScopeStateRead(scopeLayer, scopeId, false);
             return current.get();
         }
+        observabilityRecorder.recordScopeStateRead(scopeLayer, scopeId, true);
         return new FeedbackScopeAggregate(scopeLayer, scopeId, 0, 0, 0, 0, Map.of(), null);
     }
 
     public FeedbackResetResult resetScope(String scopeLayer, UUID scopeId, String actorId) {
-        return feedbackRepository.resetScope(scopeLayer, scopeId, actorId);
+        FeedbackResetResult result = feedbackRepository.resetScope(scopeLayer, scopeId, actorId);
+        observabilityRecorder.recordScopeReset(result);
+        return result;
     }
 }
