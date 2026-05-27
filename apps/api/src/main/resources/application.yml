@@ -17,3 +17,9 @@ management:
     web:
       exposure:
         include: health,info
+
+cadentia:
+  conversation:
+    session:
+      inactivity-timeout: ${CADENTIA_CONVERSATION_INACTIVITY_TIMEOUT:PT30M}
+      absolute-lifetime: ${CADENTIA_CONVERSATION_ABSOLUTE_LIFETIME:PT4H}

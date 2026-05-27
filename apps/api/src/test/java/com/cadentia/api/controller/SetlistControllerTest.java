@@ -41,7 +41,7 @@ class SetlistControllerTest {
                 setlistService,
                 intentService,
                 new ValidatedSetlistRequestMapper(),
-                new ConversationSessionFacade(new com.cadentia.intent.DefaultSessionMergeService(), new ValidatedSetlistRequestMapper()));
+                new ConversationSessionFacade(new com.cadentia.intent.DefaultSessionMergeService(), new ValidatedSetlistRequestMapper(), java.time.Duration.ofMinutes(30), java.time.Duration.ofHours(4)));
 
         // Act
         ResponseEntity<SetlistProposalResponse> response = controller.generateSetlistProposalFromNaturalLanguage(
@@ -73,7 +73,7 @@ class SetlistControllerTest {
                 setlistService,
                 intentService,
                 new ValidatedSetlistRequestMapper(),
-                new ConversationSessionFacade(new com.cadentia.intent.DefaultSessionMergeService(), new ValidatedSetlistRequestMapper()));
+                new ConversationSessionFacade(new com.cadentia.intent.DefaultSessionMergeService(), new ValidatedSetlistRequestMapper(), java.time.Duration.ofMinutes(30), java.time.Duration.ofHours(4)));
 
         // Act
         ResponseEntity<SetlistProposalResponse> response = controller.generateSetlistProposalFromNaturalLanguage(
@@ -103,7 +103,7 @@ class SetlistControllerTest {
                 setlistService,
                 intentService,
                 new ValidatedSetlistRequestMapper(),
-                new ConversationSessionFacade(new com.cadentia.intent.DefaultSessionMergeService(), new ValidatedSetlistRequestMapper()));
+                new ConversationSessionFacade(new com.cadentia.intent.DefaultSessionMergeService(), new ValidatedSetlistRequestMapper(), java.time.Duration.ofMinutes(30), java.time.Duration.ofHours(4)));
 
         // Act
         ResponseEntity<SetlistProposalResponse> response = controller.generateSetlistProposalFromNaturalLanguage(
