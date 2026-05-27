@@ -68,14 +68,6 @@ public class SetlistController implements SetlistsApi {
     }
 
 
-    public SetlistController(
-            SetlistService setlistService,
-            IntentService intentService,
-            ValidatedSetlistRequestMapper requestMapper,
-            ConversationSessionFacade conversationSessionFacade) {
-        this(setlistService, intentService, requestMapper, conversationSessionFacade, null, null);
-    }
-
     @Override
     public ResponseEntity<SetlistProposalResponse> generateSetlistProposal(GenerateSetlistRequest request) {
         return ResponseEntity.accepted().body(setlistService.generate(request));
@@ -126,7 +118,6 @@ public class SetlistController implements SetlistsApi {
     public ResponseEntity<ConversationRecoveryResponse> recoverConversationSession(UUID sessionId) {
         return ResponseEntity.ok(conversationSessionFacade.recover(sessionId));
     }
-
 
     @Override
     public ResponseEntity<SetlistVersionListResponse> listSetlistVersions(UUID setlistId) {
@@ -187,6 +178,7 @@ public class SetlistController implements SetlistsApi {
                 .parsedIntent(Collections.emptyMap())
                 .explanationFacts(List.of());
     }
+
     private SetlistProposalResponse safeIntentResponse(IntentParseResult parseResult) {
         return switch (parseResult.intent().intentType()) {
             case CLARIFY_REQUEST -> clarifyResponse((ClarifyRequestIntent) parseResult.intent());
