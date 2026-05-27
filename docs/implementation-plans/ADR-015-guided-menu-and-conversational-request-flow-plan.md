@@ -131,3 +131,10 @@ session expiry metrics; document dashboards, alerts, and operator runbooks.
 - Do not log sensitive full free-text content when redaction is required.
 - Do not emit unbounded-cardinality labels.
 - Do not ship without runbook updates for new state-machine operations.
+
+
+### Implementation status
+
+Completed on 2026-05-27. Observability instrumentation and operational
+documentation were added for state-transition metrics, clarification/expiry
+alerts, and operator troubleshooting runbooks.

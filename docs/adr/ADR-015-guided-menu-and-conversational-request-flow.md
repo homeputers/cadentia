@@ -1,6 +1,6 @@
 # ADR-015: Guided Menu and Conversational Request Flow
 
-Status: Proposed  
+Status: Completed  
 Date: 2026-05-26
 
 ## Context
