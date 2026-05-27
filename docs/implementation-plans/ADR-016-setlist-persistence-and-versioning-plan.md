@@ -101,6 +101,8 @@ and expose debugging data needed to reproduce a generated baseline.
 
 ## Subtask 4: Add observability, retention policy, and operator docs
 
+Status: Completed (2026-05-27)
+
 ### Context
 
 Version growth and edit activity need operational controls and visibility.
@@ -126,3 +128,9 @@ drafts, and document runbooks for lineage anomalies and storage growth.
 - Do not delete immutable published history outside explicit policy.
 - Do not emit personally sensitive data in high-cardinality telemetry.
 - Do not ship retention behavior without documented recovery procedures.
+
+### Completion Notes
+
+- Observability coverage is specified in `docs/ARCHITECTURE.md` under ADR-016 operations, including version creation/diff/retrieval metrics and conflict counters.
+- Draft retention defaults and archival/delete safeguards are documented with explicit recovery expectations.
+- Operator runbook now exists at `docs/runbooks/adr-016-setlist-versioning-operations.md`, including partial edit commit remediation and conflict retry procedures.

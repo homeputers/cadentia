@@ -185,6 +185,44 @@ graph TD
 
 ------------------------------------------------------------------------
 
+
+## ADR-016 Setlist Versioning Operations
+
+ADR-016 extends operational observability and lifecycle controls to immutable
+setlist lineage. Platform operators must monitor version creation, diff usage,
+and retrieval latency while protecting privacy and keeping telemetry
+low-cardinality.
+
+### Required Metrics
+
+- `cadentia_setlist_version_created_total`
+  - Counter for generated baselines and manual edit commits.
+  - Labels constrained to low-cardinality operational facets only.
+- `cadentia_setlist_version_diff_requests_total`
+  - Counter for diff endpoint demand and outcomes.
+- `cadentia_setlist_version_retrieval_latency_seconds`
+  - Histogram for version/diff read latency used in SLO monitoring.
+- `cadentia_setlist_edit_commit_conflict_total`
+  - Counter for optimistic concurrency conflicts and retry pressure.
+- `cadentia_setlist_draft_retention_actions_total`
+  - Counter for archive/delete/restore lifecycle events.
+
+### Retention Policy
+
+- Immutable published history is never deleted outside explicit policy execution.
+- Draft lineages may be archived after 90 days of inactivity.
+- Archived draft lineages may be hard-deleted after 365 days when no hold applies.
+- Retention jobs must emit auditable action records and be reversible from backup
+  checkpoints.
+
+### Operator Runbook
+
+Operational procedures for partial edit commit recovery, conflict retries,
+retention execution, and restoration drills are documented in
+`docs/runbooks/adr-016-setlist-versioning-operations.md`.
+
+------------------------------------------------------------------------
+
 ## Future Extensions
 
 - ADR-002 recommendation candidate read model derived from canonical catalog
