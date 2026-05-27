@@ -25,7 +25,7 @@ Define a conversation state machine that supports menu-only, free-text-only, and
 The request pipeline must:
 
 1. collect inputs from both channels into one session request model
-2. parse free text via ADR-014 extraction contract
+2. parse free text via ADR-012 extraction contract
 3. merge slot updates deterministically with source precedence rules
 4. detect ambiguity and request clarification
 5. confirm normalized request prior to recommendation
