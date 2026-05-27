@@ -58,6 +58,10 @@ includes:
   ADR-007 tag types, controlled-vocabulary lifecycle, assignment rules,
   admin workflows, import handling, recommendation/reporting usage, and
   LLM boundaries.
+- [ADR-016 Setlist Versioning Operations Runbook](../runbooks/adr-016-setlist-versioning-operations.md) documents
+  observability metrics, structured audit logging expectations, retention/archival
+  defaults, conflict retry handling, partial-commit recovery, and restoration
+  drill procedures.
 
 ## Recommended foundation implementation order
 

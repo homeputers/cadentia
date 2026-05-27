@@ -1,6 +1,6 @@
 # ADR-016: Setlist Persistence and Versioning
 
-Status: Proposed  
+Status: Complete  
 Date: 2026-05-26
 
 ## Context
@@ -83,8 +83,8 @@ Tradeoffs:
 3. Snapshot-only storage without edit events.
    - Rejected: weaker intent-level audit for individual user actions.
 
-## Open Questions
+## Resolution Notes
 
-- Should branching versions be allowed for parallel team planning workflows?
-- What retention policy applies to abandoned draft versions?
-- Should replacement candidates store ranked alternatives at edit time for later audit?
+- Branching lineage remains policy-controlled via `parent_version_id`; default deployments should enforce linear head commits unless explicitly configured for collaboration branches.
+- Retention policy for abandoned drafts is now defined operationally: archive after 90 days of inactivity and hard-delete after 365 days when no hold exists.
+- Replacement-candidate ranking capture remains optional follow-up work and is not required for immutable version traceability in ADR-016 scope.
