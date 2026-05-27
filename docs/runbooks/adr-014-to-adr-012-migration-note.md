@@ -9,7 +9,7 @@ ADR-014 is rejected as a duplicate. This note provides deterministic, reference-
 
 ## Scope
 
-Use this note when a task, branch, PR, ticket, test plan, or operational runbook references ADR-014 as normative for intent extraction behavior.
+Use this note when a task, branch, PR, ticket, test plan, or operational runbook cites the rejected duplicate intent-contract ADR as normative for behavior.
 
 This migration is **reference-only**:
 
@@ -34,7 +34,7 @@ This migration is **reference-only**:
 
 Update backlog labels or ticket metadata using all of the following criteria:
 
-1. Remove any label/tag indicating ADR-014 as active (for example `adr-014-contract`).
+1. Remove any label/tag indicating the duplicate contract ADR is active (for example `adr-014-contract`).
 2. Add/retain canonical tag `adr-012` (or local equivalent).
 3. Set task note: `Reference migration only; behavior unchanged.`
 4. Confirm acceptance text references ADR-012 for schema/validation/fallback behavior.
@@ -73,8 +73,8 @@ Run this checklist before merge:
 
 ### Incorrect
 
-- "Implement ADR-014 intent schema updates in controller validation."
-- "ADR-014 defines fallback behavior for extraction retries."
+- "Implement duplicate-ADR intent schema updates in controller validation."
+- "Rejected duplicate ADR defines fallback behavior for extraction retries."
 - "Use ADR-014 and ADR-012 together as co-equal contract sources."
 
 ## Search and Replace Hints
