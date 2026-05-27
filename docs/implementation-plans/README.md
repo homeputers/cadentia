@@ -32,6 +32,16 @@ includes:
 - [ADR-011 Implementation Plan: Admin Review and Catalog Governance UI](./ADR-011-admin-review-catalog-governance-ui-plan.md)
 - [ADR-013 Implementation Plan: Recommendation Explanation System](./ADR-013-recommendation-explanation-system-plan.md)
 
+### Phase 3 plans
+
+- [ADR-014 Implementation Plan: Duplicate Governance for Intent Contract](./ADR-014-llm-intent-extraction-contract-plan.md)
+- [ADR-015 Implementation Plan: Guided Menu and Conversational Request Flow](./ADR-015-guided-menu-and-conversational-request-flow-plan.md)
+- [ADR-016 Implementation Plan: Setlist Persistence and Versioning](./ADR-016-setlist-persistence-and-versioning-plan.md)
+- [ADR-017 Implementation Plan: User Feedback and Recommendation Tuning](./ADR-017-user-feedback-and-recommendation-tuning-plan.md)
+- [ADR-018 Implementation Plan: Service Plan Integration Model](./ADR-018-service-plan-integration-model-plan.md)
+- [ADR-019 Implementation Plan: Security, Roles, and Permissions](./ADR-019-security-roles-and-permissions-plan.md)
+- [ADR-020 Implementation Plan: Duplicate Governance for External Integrations](./ADR-020-external-integration-boundaries-plan.md)
+
 ## Operational workflow docs
 
 - [Song Import and Deduplication Workflow](../import-workflow.md) documents the
@@ -83,6 +93,37 @@ deterministic scoring core can be built and tested against already-approved
 read-model data without making newly imported content recommendable. ADR-011
 still remains the mandatory gate before Phase 2 imported content can become
 eligible for recommendation.
+
+## Recommended Phase 3 implementation order
+
+1. [ADR-014: Duplicate Governance for Intent Contract](./ADR-014-llm-intent-extraction-contract-plan.md)
+2. [ADR-015: Guided Menu and Conversational Request Flow](./ADR-015-guided-menu-and-conversational-request-flow-plan.md)
+3. [ADR-016: Setlist Persistence and Versioning](./ADR-016-setlist-persistence-and-versioning-plan.md)
+4. [ADR-017: User Feedback and Recommendation Tuning](./ADR-017-user-feedback-and-recommendation-tuning-plan.md)
+5. [ADR-018: Service Plan Integration Model](./ADR-018-service-plan-integration-model-plan.md)
+6. [ADR-019: Security, Roles, and Permissions](./ADR-019-security-roles-and-permissions-plan.md)
+7. [ADR-020: Duplicate Governance for External Integrations](./ADR-020-external-integration-boundaries-plan.md)
+
+Phase 3 starts with duplicate-governance cleanup (ADR-014) so teams do not
+implement against a rejected intent contract source. The conversational
+orchestration flow (ADR-015) and immutable setlist versioning model (ADR-016)
+establish the planning lifecycle required for feedback capture (ADR-017),
+service-plan composition (ADR-018), and role-based enforcement (ADR-019).
+ADR-020 is then applied as governance hardening to ensure external integration
+work is consistently routed to canonical ADRs (ADR-008/003/011/004) rather than
+duplicate directives.
+
+```mermaid
+flowchart TD
+    A[ADR-014: Intent-contract duplicate governance] --> B[ADR-015: Guided + conversational flow]
+    B --> C[ADR-016: Setlist persistence and versioning]
+    C --> D[ADR-017: Feedback and tuning]
+    C --> E[ADR-018: Service plan integration]
+    B --> E
+    E --> F[ADR-019: Security, roles, and permissions]
+    D --> F
+    F --> G[ADR-020: External integration duplicate governance]
+```
 
 ## Cross-plan guardrails
 
