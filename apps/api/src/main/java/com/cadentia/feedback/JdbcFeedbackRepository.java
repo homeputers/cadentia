@@ -57,40 +57,6 @@ public class JdbcFeedbackRepository implements FeedbackRepository {
         return saved;
     }
 
-    private void updateAggregate(FeedbackEventRecord event) {
-        jdbcTemplate.update("""
-                INSERT INTO recommendation_feedback_scope_aggregates (
-                    scope_layer, scope_id, accepted_count, rejected_count, skipped_count, favorited_count,
-                    replacement_reason_counts, last_feedback_at, updated_at
-                ) VALUES (
-                    :scopeLayer, :scopeId,
-                    CASE WHEN :outcome = 'accepted' THEN 1 ELSE 0 END,
-                    CASE WHEN :outcome = 'rejected' THEN 1 ELSE 0 END,
-                    CASE WHEN :outcome = 'skipped' THEN 1 ELSE 0 END,
-                    CASE WHEN :outcome = 'favorited' THEN 1 ELSE 0 END,
-                    CASE WHEN :replacementReason IS NULL THEN '{}'::jsonb ELSE jsonb_build_object(:replacementReason, 1) END,
-                    :createdAt,
-                    NOW()
-                ) ON CONFLICT (scope_layer, scope_id) DO UPDATE SET
-                    accepted_count = recommendation_feedback_scope_aggregates.accepted_count + CASE WHEN :outcome = 'accepted' THEN 1 ELSE 0 END,
-                    rejected_count = recommendation_feedback_scope_aggregates.rejected_count + CASE WHEN :outcome = 'rejected' THEN 1 ELSE 0 END,
-                    skipped_count = recommendation_feedback_scope_aggregates.skipped_count + CASE WHEN :outcome = 'skipped' THEN 1 ELSE 0 END,
-                    favorited_count = recommendation_feedback_scope_aggregates.favorited_count + CASE WHEN :outcome = 'favorited' THEN 1 ELSE 0 END,
-                    replacement_reason_counts = recommendation_feedback_scope_aggregates.replacement_reason_counts ||
-                        CASE WHEN :replacementReason IS NULL THEN '{}'::jsonb
-                             ELSE jsonb_build_object(:replacementReason,
-                                COALESCE((recommendation_feedback_scope_aggregates.replacement_reason_counts ->> :replacementReason)::int, 0) + 1)
-                        END,
-                    last_feedback_at = GREATEST(recommendation_feedback_scope_aggregates.last_feedback_at, :createdAt),
-                    updated_at = NOW()
-                """, new MapSqlParameterSource()
-                .addValue("scopeLayer", event.scopeLayer())
-                .addValue("scopeId", event.scopeId())
-                .addValue("outcome", event.outcome())
-                .addValue("replacementReason", event.replacementReason())
-                .addValue("createdAt", Timestamp.from(event.createdAt())));
-    }
-
     @Override
     public List<FeedbackEventRecord> listEvents(String scopeLayer, UUID scopeId, UUID arrangementId) {
         return jdbcTemplate.query("""
@@ -151,5 +117,39 @@ public class JdbcFeedbackRepository implements FeedbackRepository {
         } catch (Exception e) {
             throw new IllegalStateException("Failed to parse aggregate replacement reason counts", e);
         }
+    }
+
+    private void updateAggregate(FeedbackEventRecord event) {
+        jdbcTemplate.update("""
+                INSERT INTO recommendation_feedback_scope_aggregates (
+                    scope_layer, scope_id, accepted_count, rejected_count, skipped_count, favorited_count,
+                    replacement_reason_counts, last_feedback_at, updated_at
+                ) VALUES (
+                    :scopeLayer, :scopeId,
+                    CASE WHEN :outcome = 'accepted' THEN 1 ELSE 0 END,
+                    CASE WHEN :outcome = 'rejected' THEN 1 ELSE 0 END,
+                    CASE WHEN :outcome = 'skipped' THEN 1 ELSE 0 END,
+                    CASE WHEN :outcome = 'favorited' THEN 1 ELSE 0 END,
+                    CASE WHEN :replacementReason IS NULL THEN '{}'::jsonb ELSE jsonb_build_object(:replacementReason, 1) END,
+                    :createdAt,
+                    NOW()
+                ) ON CONFLICT (scope_layer, scope_id) DO UPDATE SET
+                    accepted_count = recommendation_feedback_scope_aggregates.accepted_count + CASE WHEN :outcome = 'accepted' THEN 1 ELSE 0 END,
+                    rejected_count = recommendation_feedback_scope_aggregates.rejected_count + CASE WHEN :outcome = 'rejected' THEN 1 ELSE 0 END,
+                    skipped_count = recommendation_feedback_scope_aggregates.skipped_count + CASE WHEN :outcome = 'skipped' THEN 1 ELSE 0 END,
+                    favorited_count = recommendation_feedback_scope_aggregates.favorited_count + CASE WHEN :outcome = 'favorited' THEN 1 ELSE 0 END,
+                    replacement_reason_counts = recommendation_feedback_scope_aggregates.replacement_reason_counts ||
+                        CASE WHEN :replacementReason IS NULL THEN '{}'::jsonb
+                             ELSE jsonb_build_object(:replacementReason,
+                                COALESCE((recommendation_feedback_scope_aggregates.replacement_reason_counts ->> :replacementReason)::int, 0) + 1)
+                        END,
+                    last_feedback_at = GREATEST(recommendation_feedback_scope_aggregates.last_feedback_at, :createdAt),
+                    updated_at = NOW()
+                """, new MapSqlParameterSource()
+                .addValue("scopeLayer", event.scopeLayer())
+                .addValue("scopeId", event.scopeId())
+                .addValue("outcome", event.outcome())
+                .addValue("replacementReason", event.replacementReason())
+                .addValue("createdAt", Timestamp.from(event.createdAt())));
     }
 }

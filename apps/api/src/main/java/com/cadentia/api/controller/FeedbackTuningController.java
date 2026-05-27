@@ -7,6 +7,8 @@ import com.cadentia.feedback.FeedbackService;
 import com.cadentia.generated.api.FeedbackTuningApi;
 import com.cadentia.generated.model.CreateFeedbackEventRequest;
 import com.cadentia.generated.model.FeedbackEventResponse;
+import com.cadentia.generated.model.FeedbackOutcome;
+import com.cadentia.generated.model.FeedbackReplacementReason;
 import com.cadentia.generated.model.FeedbackResetRequest;
 import com.cadentia.generated.model.FeedbackResetResponse;
 import com.cadentia.generated.model.FeedbackScopeLayer;
@@ -17,6 +19,7 @@ import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.RestController;
@@ -85,12 +88,12 @@ public class FeedbackTuningController implements FeedbackTuningApi {
 
     private FeedbackEventResponse toResponse(FeedbackEventRecord saved) {
         return new FeedbackEventResponse(saved.feedbackEventId(), saved.setlistId(), saved.arrangementId(),
-                com.cadentia.generated.model.FeedbackOutcome.fromValue(saved.outcome()),
+                FeedbackOutcome.fromValue(saved.outcome()),
                 FeedbackScopeLayer.fromValue(saved.scopeLayer()), saved.scopeId(),
                 OffsetDateTime.ofInstant(saved.createdAt(), ZoneOffset.UTC))
                 .setlistVersionId(saved.setlistVersionId())
                 .actorId(saved.actorId())
-                .replacementReason(saved.replacementReason() == null ? null : com.cadentia.generated.model.FeedbackReplacementReason.fromValue(saved.replacementReason()))
+                .replacementReason(saved.replacementReason() == null ? null : FeedbackReplacementReason.fromValue(saved.replacementReason()))
                 .replacedWithArrangementId(saved.replacedWithArrangementId())
                 .familiarityScore(saved.familiarityScore());
     }
@@ -99,6 +102,6 @@ public class FeedbackTuningController implements FeedbackTuningApi {
         if (source == null || source.isEmpty()) {
             return Map.of();
         }
-        return source.entrySet().stream().collect(java.util.stream.Collectors.toMap(Map.Entry::getKey, e -> e.getValue().longValue()));
+        return source.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().longValue()));
     }
 }
