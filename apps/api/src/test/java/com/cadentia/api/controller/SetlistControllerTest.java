@@ -40,7 +40,8 @@ class SetlistControllerTest {
         SetlistController controller = new SetlistController(
                 setlistService,
                 intentService,
-                new ValidatedSetlistRequestMapper());
+                new ValidatedSetlistRequestMapper(),
+                new ConversationSessionFacade(new com.cadentia.intent.DefaultSessionMergeService(), new ValidatedSetlistRequestMapper()));
 
         // Act
         ResponseEntity<SetlistProposalResponse> response = controller.generateSetlistProposalFromNaturalLanguage(
@@ -71,7 +72,8 @@ class SetlistControllerTest {
         SetlistController controller = new SetlistController(
                 setlistService,
                 intentService,
-                new ValidatedSetlistRequestMapper());
+                new ValidatedSetlistRequestMapper(),
+                new ConversationSessionFacade(new com.cadentia.intent.DefaultSessionMergeService(), new ValidatedSetlistRequestMapper()));
 
         // Act
         ResponseEntity<SetlistProposalResponse> response = controller.generateSetlistProposalFromNaturalLanguage(
@@ -100,7 +102,8 @@ class SetlistControllerTest {
         SetlistController controller = new SetlistController(
                 setlistService,
                 intentService,
-                new ValidatedSetlistRequestMapper());
+                new ValidatedSetlistRequestMapper(),
+                new ConversationSessionFacade(new com.cadentia.intent.DefaultSessionMergeService(), new ValidatedSetlistRequestMapper()));
 
         // Act
         ResponseEntity<SetlistProposalResponse> response = controller.generateSetlistProposalFromNaturalLanguage(
