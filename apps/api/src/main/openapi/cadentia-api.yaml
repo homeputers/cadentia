@@ -11,7 +11,125 @@ tags:
     description: Deterministic setlist proposal operations
   - name: AdminReview
     description: Admin import-governance review operations
+  - name: FeedbackTuning
+    description: Recommendation feedback ingestion, inspection, and reset operations
 paths:
+  /feedback/events:
+    post:
+      tags:
+        - FeedbackTuning
+      operationId: recordFeedbackEvent
+      summary: Record explicit recommendation feedback for deterministic tuning
+      description: >
+        Persists explicit user feedback signals that influence ranking weights only.
+        Feedback never changes eligibility gates such as approval, provenance, activity, or licensing.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateFeedbackEventRequest'
+      responses:
+        '201':
+          description: Feedback event recorded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FeedbackEventResponse'
+    get:
+      tags:
+        - FeedbackTuning
+      operationId: listFeedbackEvents
+      summary: List feedback events for inspection and governance
+      description: >
+        Returns append-only feedback events by scope for audit and tuning analysis.
+        Listing requires authenticated operational roles (for example TEAM_LEAD or ADMIN).
+      parameters:
+        - in: query
+          name: scopeLayer
+          schema:
+            $ref: '#/components/schemas/FeedbackScopeLayer'
+        - in: query
+          name: scopeId
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: arrangementId
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Feedback events matching filters.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FeedbackEventResponse'
+  /feedback/scopes/{scopeLayer}/{scopeId}/state:
+    get:
+      tags:
+        - FeedbackTuning
+      operationId: getFeedbackScopeState
+      summary: Inspect deterministic feedback aggregate state for a scope
+      description: >
+        Returns aggregate counters and last-updated markers used by recommendation tuning.
+        Scope resolution order is personal -> team -> policy/global fallback.
+      parameters:
+        - in: path
+          name: scopeLayer
+          required: true
+          schema:
+            $ref: '#/components/schemas/FeedbackScopeLayer'
+        - in: path
+          name: scopeId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Aggregated feedback state for the requested scope.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FeedbackScopeStateResponse'
+  /feedback/scopes/{scopeLayer}/{scopeId}/reset:
+    post:
+      tags:
+        - FeedbackTuning
+      operationId: resetFeedbackScopeState
+      summary: Reset feedback state for a scope
+      description: >
+        Destructive governance operation that resets feedback influence state for a scope.
+        This endpoint must be restricted to elevated roles (for example TEAM_LEAD or ADMIN).
+      parameters:
+        - in: path
+          name: scopeLayer
+          required: true
+          schema:
+            $ref: '#/components/schemas/FeedbackScopeLayer'
+        - in: path
+          name: scopeId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FeedbackResetRequest'
+      responses:
+        '200':
+          description: Feedback scope reset was accepted and audited.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FeedbackResetResponse'
   /api/admin/import-candidates:
     get:
       tags:
@@ -587,6 +705,214 @@ paths:
           description: Setlist or requested versions not found.
 components:
   schemas:
+    FeedbackOutcome:
+      type: string
+      enum:
+        - accepted
+        - rejected
+        - skipped
+        - favorited
+    FeedbackScopeLayer:
+      type: string
+      description: Deterministic preference precedence is personal then team then policy/global.
+      enum:
+        - personal
+        - team
+        - policy_global
+    FeedbackReplacementReason:
+      type: string
+      description: Controlled taxonomy for replace/reject/skipped rationales used for tuning.
+      enum:
+        - theological_mismatch
+        - congregational_familiarity_low
+        - vocal_range_mismatch
+        - key_center_flow
+        - tempo_flow
+        - instrumentation_fit
+        - seasonal_mismatch
+        - service_moment_mismatch
+        - duplicate_recent_usage
+        - pastoral_direction
+    CreateFeedbackEventRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - setlistId
+        - arrangementId
+        - outcome
+        - scopeLayer
+        - scopeId
+      properties:
+        setlistId:
+          type: string
+          format: uuid
+        setlistVersionId:
+          type: string
+          format: uuid
+          nullable: true
+        arrangementId:
+          type: string
+          format: uuid
+        outcome:
+          $ref: '#/components/schemas/FeedbackOutcome'
+        replacementReason:
+          $ref: '#/components/schemas/FeedbackReplacementReason'
+        replacedWithArrangementId:
+          type: string
+          format: uuid
+          nullable: true
+        familiarityScore:
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 5
+          nullable: true
+        serviceType:
+          type: string
+          nullable: true
+          description: Optional service context (for example youth or prayer-night).
+        scopeLayer:
+          $ref: '#/components/schemas/FeedbackScopeLayer'
+        scopeId:
+          type: string
+          format: uuid
+        actorId:
+          type: string
+          minLength: 1
+      description: >
+        Explicit feedback payload used by deterministic scoring profiles.
+        Free-form scoring reason codes are not accepted.
+    FeedbackEventResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - feedbackEventId
+        - setlistId
+        - arrangementId
+        - outcome
+        - scopeLayer
+        - scopeId
+        - createdAt
+      properties:
+        feedbackEventId:
+          type: string
+          format: uuid
+        setlistId:
+          type: string
+          format: uuid
+        setlistVersionId:
+          type: string
+          format: uuid
+          nullable: true
+        arrangementId:
+          type: string
+          format: uuid
+        outcome:
+          $ref: '#/components/schemas/FeedbackOutcome'
+        replacementReason:
+          $ref: '#/components/schemas/FeedbackReplacementReason'
+        replacedWithArrangementId:
+          type: string
+          format: uuid
+          nullable: true
+        familiarityScore:
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 5
+          nullable: true
+        scopeLayer:
+          $ref: '#/components/schemas/FeedbackScopeLayer'
+        scopeId:
+          type: string
+          format: uuid
+        actorId:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    FeedbackScopeStateResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - scopeLayer
+        - scopeId
+        - counters
+      properties:
+        scopeLayer:
+          $ref: '#/components/schemas/FeedbackScopeLayer'
+        scopeId:
+          type: string
+          format: uuid
+        counters:
+          type: object
+          additionalProperties: false
+          required:
+            - accepted
+            - rejected
+            - skipped
+            - favorited
+          properties:
+            accepted:
+              type: integer
+              format: int64
+              minimum: 0
+            rejected:
+              type: integer
+              format: int64
+              minimum: 0
+            skipped:
+              type: integer
+              format: int64
+              minimum: 0
+            favorited:
+              type: integer
+              format: int64
+              minimum: 0
+        replacementReasonCounts:
+          type: object
+          additionalProperties:
+            type: integer
+            format: int64
+            minimum: 0
+        lastFeedbackAt:
+          type: string
+          format: date-time
+          nullable: true
+    FeedbackResetRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - reason
+      properties:
+        reason:
+          type: string
+          minLength: 3
+          maxLength: 500
+        actorId:
+          type: string
+          minLength: 1
+    FeedbackResetResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - scopeLayer
+        - scopeId
+        - resetAt
+      properties:
+        scopeLayer:
+          $ref: '#/components/schemas/FeedbackScopeLayer'
+        scopeId:
+          type: string
+          format: uuid
+        resetAt:
+          type: string
+          format: date-time
+        actorId:
+          type: string
+        auditReference:
+          type: string
+          description: Identifier of append-only reset audit event.
     NaturalLanguageSetlistRequest:
       type: object
       additionalProperties: false
