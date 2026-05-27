@@ -3,6 +3,7 @@ package com.cadentia.api.controller;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
+import com.cadentia.generated.model.GenerateSetlistRequest;
 import com.cadentia.generated.model.NaturalLanguageSetlistRequest;
 import com.cadentia.generated.model.SetlistProposalResponse;
 import com.cadentia.llm.DefaultIntentService;
@@ -12,10 +13,12 @@ import com.cadentia.llm.IntentParseStatus;
 import com.cadentia.llm.LlmClient;
 import com.cadentia.llm.prompt.IntentPromptRegistry;
 import com.cadentia.reng.SetlistService;
+import com.cadentia.intent.DefaultSessionMergeService;
 import com.cadentia.intent.IntentType;
 import com.cadentia.intent.IntentValidationError;
 import com.cadentia.intent.IntentValidationService;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.time.Duration;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -84,7 +87,7 @@ class IntentOrchestrationFailureIntegrationTest {
                 new NoopObserver());
         CapturingSetlistService setlistService = new CapturingSetlistService();
         SetlistController controller = new SetlistController(setlistService, intentService, new ValidatedSetlistRequestMapper(),
-                new ConversationSessionFacade(new com.cadentia.intent.DefaultSessionMergeService(), new ValidatedSetlistRequestMapper()));
+                new ConversationSessionFacade(new DefaultSessionMergeService(), new ValidatedSetlistRequestMapper(), Duration.ofMinutes(30), Duration.ofHours(4)));
 
         ResponseEntity<SetlistProposalResponse> response = controller.generateSetlistProposalFromNaturalLanguage(
                 new NaturalLanguageSetlistRequest().text("help"));
@@ -110,7 +113,7 @@ class IntentOrchestrationFailureIntegrationTest {
         private int invocationCount;
 
         @Override
-        public com.cadentia.generated.model.SetlistProposalResponse generate(com.cadentia.generated.model.GenerateSetlistRequest request) {
+        public SetlistProposalResponse generate(GenerateSetlistRequest request) {
             invocationCount++;
             return super.generate(request);
         }
