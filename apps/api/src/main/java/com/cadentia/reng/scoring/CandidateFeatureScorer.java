@@ -9,8 +9,12 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class CandidateFeatureScorer {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(CandidateFeatureScorer.class);
 
     public static final String THEME_MATCH = "theme_match";
     public static final String SCRIPTURE_MATCH = "scripture_match";
@@ -32,6 +36,7 @@ public class CandidateFeatureScorer {
             ScoringRequest request,
             ScoringProfile profile,
             Map<UUID, Double> feedbackContributions) {
+        emitFeedbackImpactDistribution(feedbackContributions);
         return candidates.stream()
                 .map(candidate -> scoreCandidate(candidate, request, profile, feedbackContributions))
                 .sorted(Comparator
@@ -71,6 +76,18 @@ public class CandidateFeatureScorer {
 
         double total = componentScores.stream().mapToDouble(ScoringComponentScore::weightedContribution).sum();
         return new CandidateFeatureScore(candidate, List.copyOf(componentScores), total);
+    }
+
+    private void emitFeedbackImpactDistribution(Map<UUID, Double> feedbackContributions) {
+        double min = feedbackContributions.values().stream().mapToDouble(Double::doubleValue).min().orElse(0.0d);
+        double max = feedbackContributions.values().stream().mapToDouble(Double::doubleValue).max().orElse(0.0d);
+        double avg = feedbackContributions.values().stream().mapToDouble(Double::doubleValue).average().orElse(0.0d);
+        LOGGER.info(
+                "feedback_observability event=ranking_impact_distribution candidates={} min={} max={} avg={}",
+                feedbackContributions.size(),
+                min,
+                max,
+                avg);
     }
 
     private static ScoringComponentScore componentScore(String code, double raw, Map<String, Double> weights) {
