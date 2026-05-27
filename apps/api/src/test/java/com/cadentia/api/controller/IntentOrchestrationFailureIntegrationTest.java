@@ -83,7 +83,8 @@ class IntentOrchestrationFailureIntegrationTest {
                 new IntentPromptRegistry(),
                 new NoopObserver());
         CapturingSetlistService setlistService = new CapturingSetlistService();
-        SetlistController controller = new SetlistController(setlistService, intentService, new ValidatedSetlistRequestMapper());
+        SetlistController controller = new SetlistController(setlistService, intentService, new ValidatedSetlistRequestMapper(),
+                new ConversationSessionFacade(new com.cadentia.intent.DefaultSessionMergeService(), new ValidatedSetlistRequestMapper()));
 
         ResponseEntity<SetlistProposalResponse> response = controller.generateSetlistProposalFromNaturalLanguage(
                 new NaturalLanguageSetlistRequest().text("help"));

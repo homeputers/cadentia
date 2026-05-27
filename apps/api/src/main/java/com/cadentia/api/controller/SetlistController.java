@@ -34,13 +34,6 @@ public class SetlistController implements SetlistsApi {
     public SetlistController(
             SetlistService setlistService,
             IntentService intentService,
-            ValidatedSetlistRequestMapper requestMapper) {
-        this(setlistService, intentService, requestMapper, new ConversationSessionFacade(new com.cadentia.intent.DefaultSessionMergeService(), requestMapper));
-    }
-
-    public SetlistController(
-            SetlistService setlistService,
-            IntentService intentService,
             ValidatedSetlistRequestMapper requestMapper,
             ConversationSessionFacade conversationSessionFacade) {
         this.setlistService = setlistService;

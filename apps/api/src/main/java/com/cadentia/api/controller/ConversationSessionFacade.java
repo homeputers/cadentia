@@ -34,14 +34,30 @@ public class ConversationSessionFacade {
         this.mapper = mapper;
     }
 
-    ConversationSessionStateResponse get(UUID sessionId) { return snapshot(sessionId, ConversationState.COLLECTING); }
-    ConversationSessionStateResponse clarify(UUID sessionId, ConversationClarificationRequest request) { return snapshot(sessionId, ConversationState.CLARIFICATION_REQUIRED); }
-    ConversationSessionStateResponse confirm(UUID sessionId, ConversationConfirmRequest request) { return snapshot(sessionId, ConversationState.CONFIRMED); }
-    ConversationSessionStateResponse cancel(UUID sessionId) { return snapshot(sessionId, ConversationState.CANCELLED); }
+    ConversationSessionStateResponse get(UUID sessionId) {
+        return snapshot(sessionId, ConversationState.COLLECTING);
+    }
+
+    ConversationSessionStateResponse clarify(UUID sessionId, ConversationClarificationRequest request) {
+        return snapshot(sessionId, ConversationState.CLARIFICATION_REQUIRED);
+    }
+
+    ConversationSessionStateResponse confirm(UUID sessionId, ConversationConfirmRequest request) {
+        return snapshot(sessionId, ConversationState.CONFIRMED);
+    }
+
+    ConversationSessionStateResponse cancel(UUID sessionId) {
+        return snapshot(sessionId, ConversationState.CANCELLED);
+    }
 
     ConversationSessionStateResponse update(UUID sessionId, ConversationSlotUpdateRequest request) {
         GenerateSetlistSlots baseline = sessions.computeIfAbsent(sessionId, id -> empty());
-        SessionMergeResult merged = mergeService.merge(baseline, new SessionSlotUpdate(empty(), SlotValueSource.valueOf(request.getSource().getValue().toUpperCase()), false));
+        SessionMergeResult merged = mergeService.merge(
+                baseline,
+                new SessionSlotUpdate(
+                        empty(),
+                        SlotValueSource.valueOf(request.getSource().getValue().toUpperCase()),
+                        false));
         sessions.put(sessionId, merged.mergedSlots());
         return snapshot(sessionId, ConversationState.COLLECTING);
     }
@@ -52,8 +68,17 @@ public class ConversationSessionFacade {
     }
 
     private ConversationSessionStateResponse snapshot(UUID sessionId, ConversationState state) {
-        GenerateSetlistRequest slots = mapper.toGenerateSetlistRequest(new com.cadentia.intent.GenerateSetlistIntent("v1", sessions.computeIfAbsent(sessionId, id -> empty())));
-        return new ConversationSessionStateResponse(sessionId, state, ChannelType.MIXED, slots, new ArrayList<ConversationSlotSource>(), new ArrayList<ConversationRevisionEvent>(), OffsetDateTime.now().plusMinutes(30), List.of("Session state emitted."));
+        GenerateSetlistRequest slots = mapper.toGenerateSetlistRequest(new com.cadentia.intent.GenerateSetlistIntent(
+                "v1", sessions.computeIfAbsent(sessionId, id -> empty())));
+        return new ConversationSessionStateResponse(
+                sessionId,
+                state,
+                ChannelType.MIXED,
+                slots,
+                new ArrayList<ConversationSlotSource>(),
+                new ArrayList<ConversationRevisionEvent>(),
+                OffsetDateTime.now().plusMinutes(30),
+                List.of("Session state emitted."));
     }
 
     private GenerateSetlistSlots empty() {
