@@ -14,6 +14,7 @@ public final class ExplanationCodeRegistry {
                     new Entry("APPROVAL_ELIGIBLE", Status.ACTIVE, Set.of(Scope.ITEM), Set.of(Severity.INFO), "v1", null, null),
                     new Entry("THEME_MATCH", Status.ACTIVE, Set.of(Scope.ITEM), Set.of(Severity.INFO), "v1", null, null),
                     new Entry("METADATA_LOW_CONFIDENCE", Status.ACTIVE, Set.of(Scope.ITEM), Set.of(Severity.WARNING), "v1", null, null),
+                    new Entry("FEEDBACK_TUNING", Status.ACTIVE, Set.of(Scope.ITEM), Set.of(Severity.INFO, Severity.WARNING), "v1", null, null),
                     new Entry("SAME_KEY_TRANSITION", Status.ACTIVE, Set.of(Scope.TRANSITION), Set.of(Severity.INFO), "v1", null, null),
                     new Entry("RELATIVE_KEY_TRANSITION", Status.ACTIVE, Set.of(Scope.TRANSITION), Set.of(Severity.INFO), "v1", null, null),
                     new Entry("CLOSE_KEY_TRANSITION", Status.ACTIVE, Set.of(Scope.TRANSITION), Set.of(Severity.INFO), "v1", null, null),

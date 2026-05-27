@@ -16,6 +16,7 @@ public class RecommendationExplanationRenderer {
             Map.entry("item.theme_match", "Theme {theme} matched request input {requestInput}."),
             Map.entry("item.role_fit", "Song fills the {role} slot."),
             Map.entry("item.approval_eligible", "Approval eligibility is satisfied for {approvalScope}."),
+            Map.entry("item.feedback_tuning", "Feedback tuning contributed {feedbackContribution} to ranking."),
             Map.entry("transition.same_key", "Transition kept the same key from {fromKey} to {toKey}."),
             Map.entry("transition.relative_key", "Transition from {fromKey} to {toKey} used allowed relative major/minor movement."),
             Map.entry("transition.tempo_policy", "Tempo moved from {fromBpm} BPM to {toBpm} BPM within max jump {maxJumpBpm}."),

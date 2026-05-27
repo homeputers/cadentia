@@ -27,7 +27,7 @@ class CandidateFeatureScorerTest {
 
         CandidateFeatureScorer.CandidateFeatureScore score = scorer.scoreCandidate(candidate, request, profile);
 
-        assertThat(score.componentScores()).hasSize(6);
+        assertThat(score.componentScores()).hasSize(7);
         assertThat(score.componentScores())
                 .extracting(ScoringComponentScore::componentCode)
                 .containsExactly(
@@ -36,7 +36,8 @@ class CandidateFeatureScorerTest {
                         CandidateFeatureScorer.ROLE_FIT,
                         CandidateFeatureScorer.MUSICAL_FIT,
                         CandidateFeatureScorer.ENERGY_FIT,
-                        CandidateFeatureScorer.METADATA_CONFIDENCE);
+                        CandidateFeatureScorer.METADATA_CONFIDENCE,
+                        CandidateFeatureScorer.FEEDBACK_TUNING);
         assertThat(score.totalScore()).isGreaterThan(0.8d);
     }
 
@@ -75,6 +76,27 @@ class CandidateFeatureScorerTest {
         assertThat(scores)
                 .extracting(item -> item.candidate().arrangementId())
                 .containsExactly(first.arrangementId(), second.arrangementId());
+    }
+
+    @Test
+    void scoreCandidateAppliesFeedbackContributionWhenPresent() {
+        RecommendableArrangement candidate = candidateWithIds(
+                UUID.fromString("00000000-0000-0000-0000-000000000010"),
+                UUID.fromString("00000000-0000-0000-0000-000000000010"));
+
+        CandidateFeatureScorer.CandidateFeatureScore score = scorer.scoreCandidate(
+                candidate,
+                request(),
+                scoringProfile(),
+                Map.of(candidate.arrangementId(), 0.75d));
+
+        assertThat(score.componentScores())
+                .filteredOn(component -> component.componentCode().equals(CandidateFeatureScorer.FEEDBACK_TUNING))
+                .singleElement()
+                .satisfies(component -> {
+                    assertThat(component.rawScore()).isEqualTo(0.75d);
+                    assertThat(component.weightedContribution()).isCloseTo(0.075d, org.assertj.core.data.Offset.offset(1.0e-9d));
+                });
     }
 
     private static RecommendableArrangement candidateWithIds(UUID arrangementId, UUID songId) {
@@ -143,7 +165,8 @@ class CandidateFeatureScorerTest {
                         CandidateFeatureScorer.ROLE_FIT, 0.2,
                         CandidateFeatureScorer.MUSICAL_FIT, 0.1,
                         CandidateFeatureScorer.ENERGY_FIT, 0.1,
-                        CandidateFeatureScorer.METADATA_CONFIDENCE, 0.1),
+                        CandidateFeatureScorer.METADATA_CONFIDENCE, 0.1,
+                        CandidateFeatureScorer.FEEDBACK_TUNING, 0.1),
                 List.of("total_score", "song_id", "arrangement_id"));
     }
 
