@@ -92,6 +92,20 @@ public class ItemExplanationFactory {
                         List.of(new RecommendationExplanationEvidence("catalog", "arrangement", "metadata", score.rawScore())),
                         score.weightedContribution())));
 
+        componentScores.stream()
+                .filter(score -> CandidateFeatureScorer.FEEDBACK_TUNING.equals(score.componentCode()))
+                .findFirst()
+                .filter(score -> score.rawScore() != 0.0d)
+                .ifPresent(score -> facts.add(new RecommendationExplanationFact(
+                        "FEEDBACK_TUNING",
+                        score.rawScore() > 0.0d ? "info" : "warning",
+                        "item",
+                        subject,
+                        "item.feedback_tuning",
+                        Map.of("feedbackContribution", score.rawScore()),
+                        List.of(new RecommendationExplanationEvidence("score", "feedback.aggregate", "raw", score.rawScore())),
+                        score.weightedContribution())));
+
         return List.copyOf(facts);
     }
 

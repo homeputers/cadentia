@@ -8,6 +8,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.UUID;
 
 public class CandidateFeatureScorer {
 
@@ -17,13 +18,22 @@ public class CandidateFeatureScorer {
     public static final String MUSICAL_FIT = "musical_fit";
     public static final String ENERGY_FIT = "energy_fit";
     public static final String METADATA_CONFIDENCE = "metadata_confidence";
+    public static final String FEEDBACK_TUNING = "feedback_tuning";
 
     public List<CandidateFeatureScore> scoreCandidates(
             List<RecommendableArrangement> candidates,
             ScoringRequest request,
             ScoringProfile profile) {
+        return scoreCandidates(candidates, request, profile, Map.of());
+    }
+
+    public List<CandidateFeatureScore> scoreCandidates(
+            List<RecommendableArrangement> candidates,
+            ScoringRequest request,
+            ScoringProfile profile,
+            Map<UUID, Double> feedbackContributions) {
         return candidates.stream()
-                .map(candidate -> scoreCandidate(candidate, request, profile))
+                .map(candidate -> scoreCandidate(candidate, request, profile, feedbackContributions))
                 .sorted(Comparator
                         .comparingDouble(CandidateFeatureScore::totalScore)
                         .reversed()
@@ -36,6 +46,14 @@ public class CandidateFeatureScorer {
             RecommendableArrangement candidate,
             ScoringRequest request,
             ScoringProfile profile) {
+        return scoreCandidate(candidate, request, profile, Map.of());
+    }
+
+    public CandidateFeatureScore scoreCandidate(
+            RecommendableArrangement candidate,
+            ScoringRequest request,
+            ScoringProfile profile,
+            Map<UUID, Double> feedbackContributions) {
         List<ScoringComponentScore> componentScores = new ArrayList<>();
         componentScores.add(componentScore(THEME_MATCH, themeMatch(candidate, request), profile.componentWeights()));
         componentScores.add(componentScore(SCRIPTURE_MATCH, scriptureMatch(candidate, request), profile.componentWeights()));
@@ -45,6 +63,10 @@ public class CandidateFeatureScorer {
         componentScores.add(componentScore(
                 METADATA_CONFIDENCE,
                 metadataConfidence(candidate),
+                profile.componentWeights()));
+        componentScores.add(componentScore(
+                FEEDBACK_TUNING,
+                feedbackContributions.getOrDefault(candidate.arrangementId(), 0.0d),
                 profile.componentWeights()));
 
         double total = componentScores.stream().mapToDouble(ScoringComponentScore::weightedContribution).sum();
