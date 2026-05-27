@@ -248,6 +248,155 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/RollbackExecutionResponse'
+  /conversation-sessions/{sessionId}:
+    get:
+      tags:
+        - Setlists
+      operationId: getConversationSessionState
+      summary: Read current conversation session state
+      parameters:
+        - in: path
+          name: sessionId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Session state snapshot.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConversationSessionStateResponse'
+        '404':
+          description: Session not found.
+
+  /conversation-sessions/{sessionId}/slots:
+    patch:
+      tags:
+        - Setlists
+      operationId: updateConversationSessionSlots
+      summary: Merge slot updates into conversation session state
+      parameters:
+        - in: path
+          name: sessionId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConversationSlotUpdateRequest'
+      responses:
+        '200':
+          description: Updated state snapshot after deterministic merge.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConversationSessionStateResponse'
+        '409':
+          description: Conflict or invalid state transition.
+
+  /conversation-sessions/{sessionId}/clarify:
+    post:
+      tags:
+        - Setlists
+      operationId: requestConversationClarification
+      summary: Submit clarification answer and return updated state
+      parameters:
+        - in: path
+          name: sessionId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConversationClarificationRequest'
+      responses:
+        '200':
+          description: Updated session state after clarification merge.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConversationSessionStateResponse'
+
+  /conversation-sessions/{sessionId}/confirm:
+    post:
+      tags:
+        - Setlists
+      operationId: confirmConversationSession
+      summary: Confirm normalized request and transition to CONFIRMED
+      parameters:
+        - in: path
+          name: sessionId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConversationConfirmRequest'
+      responses:
+        '200':
+          description: Confirmed session state.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConversationSessionStateResponse'
+        '409':
+          description: Session not ready to confirm.
+
+  /conversation-sessions/{sessionId}/cancel:
+    post:
+      tags:
+        - Setlists
+      operationId: cancelConversationSession
+      summary: Cancel active session
+      parameters:
+        - in: path
+          name: sessionId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Cancelled session state.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConversationSessionStateResponse'
+
+  /conversation-sessions/{sessionId}/recover:
+    post:
+      tags:
+        - Setlists
+      operationId: recoverConversationSession
+      summary: Recover from an expired session
+      parameters:
+        - in: path
+          name: sessionId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Recovery options and a restarted or resumed state.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConversationRecoveryResponse'
 
   /setlists/proposals/natural-language:
     post:
@@ -452,6 +601,162 @@ components:
           example:
             - Recommendation Engine scaffold accepted the structured request.
             - No songs were selected because catalog retrieval is not implemented yet.
+
+    ConversationState:
+      type: string
+      enum: [START, COLLECTING, CLARIFICATION_REQUIRED, READY_TO_CONFIRM, CONFIRMED, EXPIRED, CANCELLED]
+    SlotValueSource:
+      type: string
+      enum: [menu, free_text, default, user_edit]
+    ChannelType:
+      type: string
+      enum: [menu, free_text, mixed]
+    ConversationSlotSource:
+      type: object
+      additionalProperties: false
+      required: [slot, source]
+      properties:
+        slot:
+          type: string
+          enum: [verseText, scriptureReferences, themeHints, counts, keyPolicy, tempoPolicy, language, energyArc, excludedSongs, serviceMoment]
+        source:
+          $ref: '#/components/schemas/SlotValueSource'
+        updatedAt:
+          type: string
+          format: date-time
+    ConversationRevisionEvent:
+      type: object
+      additionalProperties: false
+      required: [eventId, eventType, source, occurredAt]
+      properties:
+        eventId:
+          type: string
+          format: uuid
+        eventType:
+          type: string
+          enum: [slot_update, clarification_answer, confirm, cancel, expire, recover]
+        source:
+          $ref: '#/components/schemas/SlotValueSource'
+        occurredAt:
+          type: string
+          format: date-time
+        summary:
+          type: string
+    ConversationSessionStateResponse:
+      type: object
+      additionalProperties: false
+      required: [sessionId, state, channel, slots, slotSources, revisionHistory, expiresAt, auditMessages]
+      properties:
+        sessionId:
+          type: string
+          format: uuid
+        state:
+          $ref: '#/components/schemas/ConversationState'
+        channel:
+          $ref: '#/components/schemas/ChannelType'
+        slots:
+          $ref: '#/components/schemas/GenerateSetlistRequest'
+        slotSources:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConversationSlotSource'
+        clarificationQuestion:
+          type: string
+          nullable: true
+        missingSlots:
+          type: array
+          items:
+            type: string
+        revisionHistory:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConversationRevisionEvent'
+        expiresAt:
+          type: string
+          format: date-time
+        confirmedAt:
+          type: string
+          format: date-time
+          nullable: true
+        auditMessages:
+          type: array
+          items:
+            type: string
+    ConversationSlotUpdateRequest:
+      type: object
+      additionalProperties: false
+      required: [source]
+      properties:
+        source:
+          $ref: '#/components/schemas/SlotValueSource'
+        slotPatch:
+          type: object
+          additionalProperties: false
+          properties:
+            verseText:
+              type: string
+            scriptureReferences:
+              type: array
+              items: { type: string }
+            themeHints:
+              type: array
+              items: { type: string }
+            counts:
+              $ref: '#/components/schemas/SetlistCounts'
+            keyPolicy:
+              $ref: '#/components/schemas/KeyPolicy'
+            tempoPolicy:
+              $ref: '#/components/schemas/TempoPolicy'
+            language:
+              type: string
+              nullable: true
+            energyArc:
+              type: string
+              nullable: true
+              enum: [steady, rising, falling, low_to_high, high_to_low]
+            excludedSongs:
+              type: array
+              items: { type: string }
+            serviceMoment:
+              type: string
+              nullable: true
+              enum: [opening, communion, response, altar_call, sending, other]
+    ConversationClarificationRequest:
+      type: object
+      additionalProperties: false
+      required: [source, clarificationAnswer]
+      properties:
+        source:
+          $ref: '#/components/schemas/SlotValueSource'
+        clarificationAnswer:
+          type: string
+          minLength: 1
+          maxLength: 5000
+    ConversationConfirmRequest:
+      type: object
+      additionalProperties: false
+      required: [accepted]
+      properties:
+        accepted:
+          type: boolean
+          enum: [true]
+    ConversationRecoveryResponse:
+      type: object
+      additionalProperties: false
+      required: [sessionId, priorState, recoveredState, recoveryMessage, restartSuggested]
+      properties:
+        sessionId:
+          type: string
+          format: uuid
+        priorState:
+          $ref: '#/components/schemas/ConversationState'
+        recoveredState:
+          $ref: '#/components/schemas/ConversationSessionStateResponse'
+        recoveryMessage:
+          type: string
+        restartSuggested:
+          type: boolean
+
     ImportCandidateStatus:
       type: string
       enum: [STAGED, DEDUPLICATION_REVIEW, READY_TO_MERGE, MERGED, REJECTED, FAILED]
