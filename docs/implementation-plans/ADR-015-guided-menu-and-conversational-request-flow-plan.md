@@ -9,10 +9,21 @@ inputs into a confirmable normalized request before recommendation execution.
 
 ### Context
 
+**Codebase anchors**
+- API service: `apps/api`
+- Intent contracts package: `packages/intent-contracts`
+- DB migrations: `apps/api/src/main/resources/db/migration`
+- Existing tests to extend: `apps/api/src/test/java` and `packages/intent-contracts/test`
+
 ADR-015 requires shared request accumulation across menu-only, free-text-only,
 and mixed interaction modes with explicit confirmation boundaries.
 
 ### Prompt
+
+**Implementation starting points**
+- OpenAPI/controller surface: `apps/api/src/test/java/com/cadentia/api/controller/SetlistControllerTest.java`, `.../IntentOrchestrationFailureIntegrationTest.java` (use to derive/extend controller contract expectations).
+- Intent and orchestration classes: `apps/api/src/main/java/com/cadentia/llm/DefaultIntentService.java`, `IntentOrchestrationObserver.java`, `apps/api/src/main/java/com/cadentia/intent/*`.
+- Contract source: `packages/intent-contracts/schemas/v1/intent.schema.json` and `packages/intent-contracts/src/index.ts`.
 
 Design and implement OpenAPI contracts and Java DTO validation for session state,
 slot updates, clarification prompts, confirmation requests, and expiration
@@ -38,6 +49,11 @@ responses.
 Mixed-mode slot accumulation must honor precedence and preserve auditability.
 
 ### Prompt
+
+**Implementation starting points**
+- Merge/normalization candidates: `apps/api/src/main/java/com/cadentia/intent/GenerateSetlistSlots.java`, `ValidatedIntent.java`, `IntentValidationService.java`.
+- Add service layer in `apps/api/src/main/java/com/cadentia/intent/` (for example `SessionMergeService`) and persistence adapter beside `catalog/repository` conventions.
+- Extend tests in `apps/api/src/test/java/com/cadentia/intent/` and `.../api/controller/ValidatedSetlistRequestMapperTest.java`.
 
 Implement Java services that apply precedence rules, detect conflicts, emit
 clarification requirements, and persist revision history for each merge event.
@@ -65,6 +81,11 @@ and recoverable expiration behavior.
 
 ### Prompt
 
+**Implementation starting points**
+- Migration pattern: follow `V013__parser_run_history.sql`; create new `V014+` session tables in `apps/api/src/main/resources/db/migration`.
+- Runtime config: `apps/api/src/main/resources/application.yml` for timeout settings.
+- Integration coverage: add expiration scenarios to `IntentOrchestrationFailureIntegrationTest`.
+
 Add persistence, TTL/expiration policy, lifecycle jobs, and recovery UX payloads
 for expired sessions in both menu and conversational adapters.
 
@@ -89,6 +110,11 @@ The orchestration layer needs visibility into ambiguity loops, expiration rates,
 and confirmation funnels.
 
 ### Prompt
+
+**Implementation starting points**
+- Observer hook: extend `LoggingIntentOrchestrationObserver.java` with structured transition events.
+- Add metrics/log fields in API layer and assert via integration tests under `apps/api/src/test/java/com/cadentia/api/controller`.
+- Document in `docs/ARCHITECTURE.md` and new runbook section under `docs/`.
 
 Instrument state transitions, clarification triggers, confirmation outcomes, and
 session expiry metrics; document dashboards, alerts, and operator runbooks.

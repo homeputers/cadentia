@@ -9,10 +9,22 @@ non-song blocks and service-scoped overrides while preserving catalog integrity.
 
 ### Context
 
+**Codebase anchors**
+- API service: `apps/api`
+- Intent contracts package: `packages/intent-contracts`
+- DB migrations: `apps/api/src/main/resources/db/migration`
+- Existing tests to extend: `apps/api/src/test/java` and `packages/intent-contracts/test`
+
 ADR-018 requires service plans to represent songs plus non-song moments and to
 reference specific setlist versions.
 
 ### Prompt
+
+**Implementation starting points**
+- Primary codebase: `apps/api` (Java/Spring controllers, services, repositories, migrations).
+- Contract package: `packages/intent-contracts` (schemas/tests) when request/response shape is involved.
+- Extend nearest tests first (for example in `apps/api/src/test/java/com/cadentia/{intent,reng,api/controller}` and `packages/intent-contracts/test`).
+- Reference docs to update: `docs/ARCHITECTURE.md`, relevant ADR, and existing topic docs in `docs/`.
 
 Add OpenAPI resources for service-plan CRUD, block ordering, setlist-version
 attachment, publish/finalize operations, and service-specific notes/transposition
@@ -39,6 +51,12 @@ Service-specific edits must remain isolated from canonical catalog arrangement
 records and from immutable setlist history.
 
 ### Prompt
+
+**Implementation starting points**
+- Primary codebase: `apps/api` (Java/Spring controllers, services, repositories, migrations).
+- Contract package: `packages/intent-contracts` (schemas/tests) when request/response shape is involved.
+- Extend nearest tests first (for example in `apps/api/src/test/java/com/cadentia/{intent,reng,api/controller}` and `packages/intent-contracts/test`).
+- Reference docs to update: `docs/ARCHITECTURE.md`, relevant ADR, and existing topic docs in `docs/`.
 
 Implement Java services/repositories and DB migrations for service plans, block
 composition, plan-to-setlist references, and service-scoped override metadata.
@@ -89,6 +107,12 @@ Service planning spans scheduling, publishing, and execution-sensitive
 operations that need runtime visibility.
 
 ### Prompt
+
+**Implementation starting points**
+- Primary codebase: `apps/api` (Java/Spring controllers, services, repositories, migrations).
+- Contract package: `packages/intent-contracts` (schemas/tests) when request/response shape is involved.
+- Extend nearest tests first (for example in `apps/api/src/test/java/com/cadentia/{intent,reng,api/controller}` and `packages/intent-contracts/test`).
+- Reference docs to update: `docs/ARCHITECTURE.md`, relevant ADR, and existing topic docs in `docs/`.
 
 Instrument plan lifecycle metrics and logs, then document dashboards and runbooks
 for publish failures, stale references, and cross-team collaboration scenarios.

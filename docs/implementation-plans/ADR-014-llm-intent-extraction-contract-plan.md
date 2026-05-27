@@ -9,11 +9,23 @@ implementation paths for LLM intent extraction behavior.
 
 ### Context
 
+**Codebase anchors**
+- API service: `apps/api`
+- Intent contracts package: `packages/intent-contracts`
+- DB migrations: `apps/api/src/main/resources/db/migration`
+- Existing tests to extend: `apps/api/src/test/java` and `packages/intent-contracts/test`
+
 ADR-014 is explicitly rejected and superseded by ADR-012. Any active design,
 API contract, or implementation reference must point to ADR-012 as the single
 source of truth.
 
 ### Prompt
+
+**Implementation starting points**
+- Primary codebase: `apps/api` (Java/Spring controllers, services, repositories, migrations).
+- Contract package: `packages/intent-contracts` (schemas/tests) when request/response shape is involved.
+- Extend nearest tests first (for example in `apps/api/src/test/java/com/cadentia/{intent,reng,api/controller}` and `packages/intent-contracts/test`).
+- Reference docs to update: `docs/ARCHITECTURE.md`, relevant ADR, and existing topic docs in `docs/`.
 
 Audit planning and architecture references, then update them so intent
 extraction behavior references ADR-012 only. Keep ADR-014 references only where
@@ -41,6 +53,12 @@ exist in CI and review workflows.
 
 ### Prompt
 
+**Implementation starting points**
+- Primary codebase: `apps/api` (Java/Spring controllers, services, repositories, migrations).
+- Contract package: `packages/intent-contracts` (schemas/tests) when request/response shape is involved.
+- Extend nearest tests first (for example in `apps/api/src/test/java/com/cadentia/{intent,reng,api/controller}` and `packages/intent-contracts/test`).
+- Reference docs to update: `docs/ARCHITECTURE.md`, relevant ADR, and existing topic docs in `docs/`.
+
 Add static checks and review guidance to prevent new implementation tasks from
 using ADR-014 as an active source for schema, validation, retry, or fallback
 logic.
@@ -66,6 +84,12 @@ In-flight feature branches or backlog items may still reference ADR-014 and need
 clear remediation instructions.
 
 ### Prompt
+
+**Implementation starting points**
+- Primary codebase: `apps/api` (Java/Spring controllers, services, repositories, migrations).
+- Contract package: `packages/intent-contracts` (schemas/tests) when request/response shape is involved.
+- Extend nearest tests first (for example in `apps/api/src/test/java/com/cadentia/{intent,reng,api/controller}` and `packages/intent-contracts/test`).
+- Reference docs to update: `docs/ARCHITECTURE.md`, relevant ADR, and existing topic docs in `docs/`.
 
 Create a migration note that maps old ADR-014 references to ADR-012 sections,
 including OpenAPI contract points, Java service boundaries, infra assumptions,

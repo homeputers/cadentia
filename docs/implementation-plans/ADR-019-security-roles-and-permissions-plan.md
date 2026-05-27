@@ -9,11 +9,23 @@ active content boundaries for user-facing recommendation and catalog APIs.
 
 ### Context
 
+**Codebase anchors**
+- API service: `apps/api`
+- Intent contracts package: `packages/intent-contracts`
+- DB migrations: `apps/api/src/main/resources/db/migration`
+- Existing tests to extend: `apps/api/src/test/java` and `packages/intent-contracts/test`
+
 ADR-019 defines role boundaries (`VIEWER`, `WORSHIP_LEADER`, `CATALOG_EDITOR`,
 `DOCTRINAL_REVIEWER`, `MUSICAL_REVIEWER`, `ADMIN`) and minimum capability
 expectations.
 
 ### Prompt
+
+**Implementation starting points**
+- Primary codebase: `apps/api` (Java/Spring controllers, services, repositories, migrations).
+- Contract package: `packages/intent-contracts` (schemas/tests) when request/response shape is involved.
+- Extend nearest tests first (for example in `apps/api/src/test/java/com/cadentia/{intent,reng,api/controller}` and `packages/intent-contracts/test`).
+- Reference docs to update: `docs/ARCHITECTURE.md`, relevant ADR, and existing topic docs in `docs/`.
 
 Publish permission matrix documentation and annotate OpenAPI operations with
 required roles/scopes for read, edit, import, approve, merge, planning, and
@@ -41,6 +53,12 @@ repositories with non-leaky failure semantics.
 
 ### Prompt
 
+**Implementation starting points**
+- Primary codebase: `apps/api` (Java/Spring controllers, services, repositories, migrations).
+- Contract package: `packages/intent-contracts` (schemas/tests) when request/response shape is involved.
+- Extend nearest tests first (for example in `apps/api/src/test/java/com/cadentia/{intent,reng,api/controller}` and `packages/intent-contracts/test`).
+- Reference docs to update: `docs/ARCHITECTURE.md`, relevant ADR, and existing topic docs in `docs/`.
+
 Implement Java security configuration, controller/service guards, and policy
 checks for catalog mutation, approvals, imports, merges, and admin actions.
 
@@ -67,6 +85,12 @@ operations.
 
 ### Prompt
 
+**Implementation starting points**
+- Primary codebase: `apps/api` (Java/Spring controllers, services, repositories, migrations).
+- Contract package: `packages/intent-contracts` (schemas/tests) when request/response shape is involved.
+- Extend nearest tests first (for example in `apps/api/src/test/java/com/cadentia/{intent,reng,api/controller}` and `packages/intent-contracts/test`).
+- Reference docs to update: `docs/ARCHITECTURE.md`, relevant ADR, and existing topic docs in `docs/`.
+
 Add audit-event persistence, migration support, and infrastructure controls for
 retention, integrity, and searchable privileged-operation trails.
 
@@ -91,6 +115,12 @@ Security posture depends on detecting permission failures, privilege misuse, and
 filtering regressions quickly.
 
 ### Prompt
+
+**Implementation starting points**
+- Primary codebase: `apps/api` (Java/Spring controllers, services, repositories, migrations).
+- Contract package: `packages/intent-contracts` (schemas/tests) when request/response shape is involved.
+- Extend nearest tests first (for example in `apps/api/src/test/java/com/cadentia/{intent,reng,api/controller}` and `packages/intent-contracts/test`).
+- Reference docs to update: `docs/ARCHITECTURE.md`, relevant ADR, and existing topic docs in `docs/`.
 
 Implement metrics, traces, and alerts for authorization outcomes and content
 visibility gates; update security runbooks and developer docs.

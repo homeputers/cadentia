@@ -9,10 +9,22 @@ canonical ADRs: ADR-008, ADR-003, ADR-011, and ADR-004.
 
 ### Context
 
+**Codebase anchors**
+- API service: `apps/api`
+- Intent contracts package: `packages/intent-contracts`
+- DB migrations: `apps/api/src/main/resources/db/migration`
+- Existing tests to extend: `apps/api/src/test/java` and `packages/intent-contracts/test`
+
 ADR-020 overlaps connector architecture, staging/dedup, governance promotion,
 and lyrics format decisions already captured by accepted ADRs.
 
 ### Prompt
+
+**Implementation starting points**
+- Primary codebase: `apps/api` (Java/Spring controllers, services, repositories, migrations).
+- Contract package: `packages/intent-contracts` (schemas/tests) when request/response shape is involved.
+- Extend nearest tests first (for example in `apps/api/src/test/java/com/cadentia/{intent,reng,api/controller}` and `packages/intent-contracts/test`).
+- Reference docs to update: `docs/ARCHITECTURE.md`, relevant ADR, and existing topic docs in `docs/`.
 
 Publish a mapping that routes each integration concern to its canonical ADR and
 implementation-plan anchor, including OpenAPI, Java modules, infra boundaries,
@@ -39,6 +51,12 @@ Duplicate ADR activation can recur without automated and process-level checks.
 
 ### Prompt
 
+**Implementation starting points**
+- Primary codebase: `apps/api` (Java/Spring controllers, services, repositories, migrations).
+- Contract package: `packages/intent-contracts` (schemas/tests) when request/response shape is involved.
+- Extend nearest tests first (for example in `apps/api/src/test/java/com/cadentia/{intent,reng,api/controller}` and `packages/intent-contracts/test`).
+- Reference docs to update: `docs/ARCHITECTURE.md`, relevant ADR, and existing topic docs in `docs/`.
+
 Add lint/review controls that flag implementation artifacts treating ADR-020 as
 normative and redirect contributors to canonical documents.
 
@@ -63,6 +81,12 @@ Existing branches/tasks may already reference ADR-020 and need deterministic
 remediation without feature loss.
 
 ### Prompt
+
+**Implementation starting points**
+- Primary codebase: `apps/api` (Java/Spring controllers, services, repositories, migrations).
+- Contract package: `packages/intent-contracts` (schemas/tests) when request/response shape is involved.
+- Extend nearest tests first (for example in `apps/api/src/test/java/com/cadentia/{intent,reng,api/controller}` and `packages/intent-contracts/test`).
+- Reference docs to update: `docs/ARCHITECTURE.md`, relevant ADR, and existing topic docs in `docs/`.
 
 Write a remediation guide that rewires active tasks to canonical ADR sections,
 including expected updates to OpenAPI specs, Java layers, infra automation,

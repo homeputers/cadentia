@@ -9,10 +9,22 @@ gates and catalog governance boundaries unchanged.
 
 ### Context
 
+**Codebase anchors**
+- API service: `apps/api`
+- Intent contracts package: `packages/intent-contracts`
+- DB migrations: `apps/api/src/main/resources/db/migration`
+- Existing tests to extend: `apps/api/src/test/java` and `packages/intent-contracts/test`
+
 Feedback inputs must be explicit, scoped, and machine-interpretable for
 controlled deterministic scoring adjustments.
 
 ### Prompt
+
+**Implementation starting points**
+- Primary codebase: `apps/api` (Java/Spring controllers, services, repositories, migrations).
+- Contract package: `packages/intent-contracts` (schemas/tests) when request/response shape is involved.
+- Extend nearest tests first (for example in `apps/api/src/test/java/com/cadentia/{intent,reng,api/controller}` and `packages/intent-contracts/test`).
+- Reference docs to update: `docs/ARCHITECTURE.md`, relevant ADR, and existing topic docs in `docs/`.
 
 Extend OpenAPI with feedback event endpoints and schemas for outcomes
 (`accepted`, `rejected`, `skipped`, `favorited`), replacement reasons, scope,
@@ -40,6 +52,12 @@ and deterministic scope resolution.
 
 ### Prompt
 
+**Implementation starting points**
+- Primary codebase: `apps/api` (Java/Spring controllers, services, repositories, migrations).
+- Contract package: `packages/intent-contracts` (schemas/tests) when request/response shape is involved.
+- Extend nearest tests first (for example in `apps/api/src/test/java/com/cadentia/{intent,reng,api/controller}` and `packages/intent-contracts/test`).
+- Reference docs to update: `docs/ARCHITECTURE.md`, relevant ADR, and existing topic docs in `docs/`.
+
 Create Java repositories/services and migrations for feedback events, scoped
 aggregates, and versioned feedback-rule configurations used by scoring.
 
@@ -63,6 +81,12 @@ aggregates, and versioned feedback-rule configurations used by scoring.
 Feedback effects must be inspectable and reproducible for governance and trust.
 
 ### Prompt
+
+**Implementation starting points**
+- Primary codebase: `apps/api` (Java/Spring controllers, services, repositories, migrations).
+- Contract package: `packages/intent-contracts` (schemas/tests) when request/response shape is involved.
+- Extend nearest tests first (for example in `apps/api/src/test/java/com/cadentia/{intent,reng,api/controller}` and `packages/intent-contracts/test`).
+- Reference docs to update: `docs/ARCHITECTURE.md`, relevant ADR, and existing topic docs in `docs/`.
 
 Wire feedback signals into recommendation scoring as explicit weighted
 components and emit per-candidate contribution facts in explanation outputs.
@@ -88,6 +112,12 @@ Admins and team leads need tooling to inspect drift, tune policy, and recover
 from bad feedback patterns.
 
 ### Prompt
+
+**Implementation starting points**
+- Primary codebase: `apps/api` (Java/Spring controllers, services, repositories, migrations).
+- Contract package: `packages/intent-contracts` (schemas/tests) when request/response shape is involved.
+- Extend nearest tests first (for example in `apps/api/src/test/java/com/cadentia/{intent,reng,api/controller}` and `packages/intent-contracts/test`).
+- Reference docs to update: `docs/ARCHITECTURE.md`, relevant ADR, and existing topic docs in `docs/`.
 
 Add metrics/traces/audits for feedback ingestion and scoring influence, then
 document governance workflows for inspection and reset.

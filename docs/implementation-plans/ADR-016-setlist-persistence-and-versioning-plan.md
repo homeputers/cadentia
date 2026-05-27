@@ -9,10 +9,20 @@ recommendation baselines and human edits without mutating catalog truth.
 
 ### Context
 
+**Codebase anchors**
+- API service: `apps/api`
+- Intent contracts package: `packages/intent-contracts`
+- DB migrations: `apps/api/src/main/resources/db/migration`
+- Existing tests to extend: `apps/api/src/test/java` and `packages/intent-contracts/test`
+
 Clients need explicit setlist lineage, immutable versions, and inspectable
 changes between baseline and edited snapshots.
 
 ### Prompt
+
+**Implementation starting points**
+- Existing setlist entrypoints: `apps/api/src/test/java/com/cadentia/api/controller/SetlistControllerTest.java` and `apps/api/src/main/java/com/cadentia/reng/SetlistService.java`.
+- Scoring response model touchpoints: `apps/api/src/test/java/com/cadentia/reng/scoring/OrderedSetResponseTest.java`.
 
 Design OpenAPI endpoints and response schemas for creating generated baselines,
 submitting edits, retrieving versions, and querying diffs.
@@ -39,6 +49,11 @@ arrangements, ordering, explanation facts, and scoring context.
 
 ### Prompt
 
+**Implementation starting points**
+- Repository pattern: `apps/api/src/main/java/com/cadentia/catalog/repository/JdbcSongRepository.java`.
+- New persistence classes should live under `apps/api/src/main/java/com/cadentia/reng/` or `.../setlist/` package with dedicated repository interfaces.
+- Migration conventions from existing `V00x__*.sql` files under `db/migration`.
+
 Implement Java entities/repositories/services and DB migrations for setlist
 lineage, immutable snapshots, parent references, and auditable edit commits.
 
@@ -64,6 +79,10 @@ Reproducibility requires inspection and replay of inputs and engine context.
 
 ### Prompt
 
+**Implementation starting points**
+- Repro/debug anchors: `apps/api/src/test/java/com/cadentia/reng/scoring/ScoringDiagnosticsTest.java`, `RecommendationExplanationAuditRegressionTest.java`.
+- Use deterministic comparison helpers from existing scoring tests before adding version diff utility.
+
 Build services to fetch historical snapshots, compute deterministic version diffs,
 and expose debugging data needed to reproduce a generated baseline.
 
@@ -87,6 +106,10 @@ and expose debugging data needed to reproduce a generated baseline.
 Version growth and edit activity need operational controls and visibility.
 
 ### Prompt
+
+**Implementation starting points**
+- Add counters/timers around new service methods in setlist version service and wire through existing logging style used by `LoggingIntentOrchestrationObserver`.
+- Document retention in `docs/ARCHITECTURE.md` + `docs/implementation-plans/README.md` index update if needed.
 
 Instrument create/edit/retrieve paths, define retention behavior for abandoned
 drafts, and document runbooks for lineage anomalies and storage growth.
