@@ -11,10 +11,12 @@ import com.cadentia.intent.GenerateSetlistIntent;
 import com.cadentia.intent.GenerateSetlistSlots;
 import com.cadentia.intent.IntentKeyPolicy;
 import com.cadentia.intent.IntentTempoPolicy;
+import com.cadentia.intent.DefaultSessionMergeService;
 import com.cadentia.intent.UnsupportedRequestIntent;
 import com.cadentia.llm.IntentParseResult;
 import com.cadentia.llm.IntentService;
 import com.cadentia.reng.SetlistService;
+import java.time.Duration;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.ResponseEntity;
@@ -41,7 +43,7 @@ class SetlistControllerTest {
                 setlistService,
                 intentService,
                 new ValidatedSetlistRequestMapper(),
-                new ConversationSessionFacade(new com.cadentia.intent.DefaultSessionMergeService(), new ValidatedSetlistRequestMapper(), java.time.Duration.ofMinutes(30), java.time.Duration.ofHours(4)));
+                new ConversationSessionFacade(new DefaultSessionMergeService(), new ValidatedSetlistRequestMapper(), Duration.ofMinutes(30), Duration.ofHours(4)));
 
         // Act
         ResponseEntity<SetlistProposalResponse> response = controller.generateSetlistProposalFromNaturalLanguage(
@@ -73,7 +75,7 @@ class SetlistControllerTest {
                 setlistService,
                 intentService,
                 new ValidatedSetlistRequestMapper(),
-                new ConversationSessionFacade(new com.cadentia.intent.DefaultSessionMergeService(), new ValidatedSetlistRequestMapper(), java.time.Duration.ofMinutes(30), java.time.Duration.ofHours(4)));
+                new ConversationSessionFacade(new DefaultSessionMergeService(), new ValidatedSetlistRequestMapper(), Duration.ofMinutes(30), Duration.ofHours(4)));
 
         // Act
         ResponseEntity<SetlistProposalResponse> response = controller.generateSetlistProposalFromNaturalLanguage(
@@ -103,7 +105,7 @@ class SetlistControllerTest {
                 setlistService,
                 intentService,
                 new ValidatedSetlistRequestMapper(),
-                new ConversationSessionFacade(new com.cadentia.intent.DefaultSessionMergeService(), new ValidatedSetlistRequestMapper(), java.time.Duration.ofMinutes(30), java.time.Duration.ofHours(4)));
+                new ConversationSessionFacade(new DefaultSessionMergeService(), new ValidatedSetlistRequestMapper(), Duration.ofMinutes(30), Duration.ofHours(4)));
 
         // Act
         ResponseEntity<SetlistProposalResponse> response = controller.generateSetlistProposalFromNaturalLanguage(
