@@ -120,38 +120,49 @@ public class JdbcFeedbackRepository implements FeedbackRepository {
     }
 
     private void updateAggregate(FeedbackEventRecord event) {
+        int acceptedIncrement = "accepted".equals(event.outcome()) ? 1 : 0;
+        int rejectedIncrement = "rejected".equals(event.outcome()) ? 1 : 0;
+        int skippedIncrement = "skipped".equals(event.outcome()) ? 1 : 0;
+        int favoritedIncrement = "favorited".equals(event.outcome()) ? 1 : 0;
         jdbcTemplate.update("""
                 INSERT INTO recommendation_feedback_scope_aggregates (
                     scope_layer, scope_id, accepted_count, rejected_count, skipped_count, favorited_count,
                     replacement_reason_counts, last_feedback_at, updated_at
                 ) VALUES (
                     :scopeLayer, :scopeId,
-                    CASE WHEN :outcome = 'accepted' THEN 1 ELSE 0 END,
-                    CASE WHEN :outcome = 'rejected' THEN 1 ELSE 0 END,
-                    CASE WHEN :outcome = 'skipped' THEN 1 ELSE 0 END,
-                    CASE WHEN :outcome = 'favorited' THEN 1 ELSE 0 END,
-                    CASE WHEN :replacementReason IS NULL THEN '{}'::jsonb ELSE jsonb_build_object(CAST(:replacementReason AS text), 1) END,
-                    CAST(:createdAt AS timestamptz),
+                    :acceptedIncrement,
+                    :rejectedIncrement,
+                    :skippedIncrement,
+                    :favoritedIncrement,
+                    CASE WHEN :replacementReason IS NULL THEN '{}'::jsonb ELSE jsonb_build_object(:replacementReason, 1) END,
+                    :createdAt,
                     NOW()
                 ) ON CONFLICT (scope_layer, scope_id) DO UPDATE SET
-                    accepted_count = recommendation_feedback_scope_aggregates.accepted_count + CASE WHEN :outcome = 'accepted' THEN 1 ELSE 0 END,
-                    rejected_count = recommendation_feedback_scope_aggregates.rejected_count + CASE WHEN :outcome = 'rejected' THEN 1 ELSE 0 END,
-                    skipped_count = recommendation_feedback_scope_aggregates.skipped_count + CASE WHEN :outcome = 'skipped' THEN 1 ELSE 0 END,
-                    favorited_count = recommendation_feedback_scope_aggregates.favorited_count + CASE WHEN :outcome = 'favorited' THEN 1 ELSE 0 END,
-                    replacement_reason_counts = recommendation_feedback_scope_aggregates.replacement_reason_counts ||
-                        CASE WHEN :replacementReason IS NULL THEN '{}'::jsonb
-                             ELSE jsonb_build_object(CAST(:replacementReason AS text),
-                                COALESCE((recommendation_feedback_scope_aggregates.replacement_reason_counts ->> CAST(:replacementReason AS text))::int, 0) + 1)
+                    accepted_count = recommendation_feedback_scope_aggregates.accepted_count + :acceptedIncrement,
+                    rejected_count = recommendation_feedback_scope_aggregates.rejected_count + :rejectedIncrement,
+                    skipped_count = recommendation_feedback_scope_aggregates.skipped_count + :skippedIncrement,
+                    favorited_count = recommendation_feedback_scope_aggregates.favorited_count + :favoritedIncrement,
+                    replacement_reason_counts =
+                        CASE WHEN :replacementReason IS NULL THEN recommendation_feedback_scope_aggregates.replacement_reason_counts
+                             ELSE jsonb_set(
+                                recommendation_feedback_scope_aggregates.replacement_reason_counts,
+                                ARRAY[:replacementReason],
+                                to_jsonb(COALESCE((recommendation_feedback_scope_aggregates.replacement_reason_counts ->> :replacementReason)::int, 0) + 1),
+                                true
+                             )
                         END,
                     last_feedback_at = GREATEST(
-                        COALESCE(recommendation_feedback_scope_aggregates.last_feedback_at, CAST(:createdAt AS timestamptz)),
-                        CAST(:createdAt AS timestamptz)
+                        COALESCE(recommendation_feedback_scope_aggregates.last_feedback_at, :createdAt),
+                        :createdAt
                     ),
                     updated_at = NOW()
                 """, new MapSqlParameterSource()
                 .addValue("scopeLayer", event.scopeLayer())
                 .addValue("scopeId", event.scopeId())
-                .addValue("outcome", event.outcome())
+                .addValue("acceptedIncrement", acceptedIncrement)
+                .addValue("rejectedIncrement", rejectedIncrement)
+                .addValue("skippedIncrement", skippedIncrement)
+                .addValue("favoritedIncrement", favoritedIncrement)
                 .addValue("replacementReason", event.replacementReason())
                 .addValue("createdAt", Timestamp.from(event.createdAt())));
     }
