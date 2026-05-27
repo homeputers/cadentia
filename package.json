@@ -10,7 +10,8 @@
   "scripts": {
     "build": "npm run build --workspaces",
     "test": "npm run test --workspaces",
-    "typecheck": "npm run typecheck --workspaces"
+    "typecheck": "npm run typecheck --workspaces",
+    "check:adr-governance": "node scripts/check-adr-governance.mjs"
   },
   "engines": {
     "node": ">=20.11.0",
