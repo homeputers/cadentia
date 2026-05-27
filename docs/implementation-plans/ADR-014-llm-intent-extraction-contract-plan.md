@@ -38,6 +38,13 @@ duplicate-governance context is needed.
 - Java module/package documentation for intent parsing references ADR-012.
 - Cross-document links preserve ADR-014 only as rejected lifecycle metadata.
 
+
+### Delivered artifact
+
+- Migration note published: `docs/runbooks/adr-014-to-adr-012-migration-note.md`
+- Includes section-by-section mapping to ADR-012, deterministic backlog metadata criteria,
+  no-behavior-change validation checklist, and correct/incorrect reference examples.
+
 ### Restrictions
 
 - Do not define a second intent schema in ADR-014 artifacts.
@@ -101,6 +108,11 @@ observability tags, and docs anchors.
 - Backlog labels or task metadata can be updated with deterministic criteria.
 - Teams have a checklist for validating no behavior changed during reference-only migration.
 - Documentation includes examples of correct and incorrect references.
+
+### Delivered artifact
+
+- Migration note published: `docs/runbooks/adr-014-to-adr-012-migration-note.md`
+- Includes section mapping to ADR-012, deterministic metadata criteria, no-behavior-change checklist, and correct/incorrect reference examples.
 
 ### Restrictions
 
