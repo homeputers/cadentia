@@ -248,8 +248,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/RollbackExecutionResponse'
-
-
   /conversation-sessions/{sessionId}:
     get:
       tags:
