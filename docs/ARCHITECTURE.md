@@ -369,3 +369,37 @@ Operators should alert on repeated publish conflicts, stale-reference failure
 surges, and anomalous reorder churn. Triage and multi-campus fork/share
 procedures are documented in
 `docs/runbooks/adr-018-service-plan-operations.md`.
+
+------------------------------------------------------------------------
+
+## ADR-019 Security Observability and Operations
+
+ADR-019 requires continuous observability over authorization decisions,
+privilege elevation, and approved+active content visibility boundaries.
+
+### Required Metrics
+
+- `cadentia_authz_decisions_total`
+  - Counter for authorization allow/deny outcomes by bounded operation class and role labels.
+- `cadentia_authz_denied_ratio`
+  - Derived deny ratio over 5m and 1h windows for anomaly detection.
+- `cadentia_policy_overrides_total`
+  - Counter for policy override creation/use paths.
+- `cadentia_approval_decisions_total`
+  - Counter for doctrinal/musical approval outcomes.
+- `cadentia_visibility_gate_failures_total`
+  - Counter for public API exposure regressions (unapproved or inactive content).
+
+### Tracing and Alerting Requirements
+
+- Authorization-protected requests must emit `authz.evaluate` spans with
+  operation class, actor role, required roles, decision, and policy rule id
+  where applicable.
+- Alert on deny spikes, unscheduled policy override activity, approval decision
+  anomalies, and any visibility gate failures.
+
+### Operator Runbook
+
+Incident triage, emergency remediation, and elevated-access revoke/rotate
+procedures are documented in
+`docs/runbooks/adr-019-security-observability-and-response.md`.
