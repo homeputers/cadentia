@@ -153,6 +153,52 @@ public class JdbcServicePlanRepository implements ServicePlanRepository {
         return getRequired(id);
     }
 
+    @Override
+    public boolean setlistVersionExists(UUID setlistId, UUID setlistVersionId) {
+        Integer count = jdbcTemplate.queryForObject(
+                """
+                SELECT COUNT(*)
+                FROM setlist_versions
+                WHERE id = :setlistVersionId
+                  AND setlist_id = :setlistId
+                """,
+                new MapSqlParameterSource()
+                        .addValue("setlistId", setlistId)
+                        .addValue("setlistVersionId", setlistVersionId),
+                Integer.class);
+        return count != null && count > 0;
+    }
+
+    @Override
+    public boolean hasNewerSetlistVersion(UUID setlistId, UUID setlistVersionId) {
+        Integer attachedVersionNumber = jdbcTemplate.queryForObject(
+                """
+                SELECT version_number
+                FROM setlist_versions
+                WHERE id = :setlistVersionId
+                  AND setlist_id = :setlistId
+                """,
+                new MapSqlParameterSource()
+                        .addValue("setlistId", setlistId)
+                        .addValue("setlistVersionId", setlistVersionId),
+                Integer.class);
+        if (attachedVersionNumber == null) {
+            return false;
+        }
+        Integer newerCount = jdbcTemplate.queryForObject(
+                """
+                SELECT COUNT(*)
+                FROM setlist_versions
+                WHERE setlist_id = :setlistId
+                  AND version_number > :attachedVersionNumber
+                """,
+                new MapSqlParameterSource()
+                        .addValue("setlistId", setlistId)
+                        .addValue("attachedVersionNumber", attachedVersionNumber),
+                Integer.class);
+        return newerCount != null && newerCount > 0;
+    }
+
     private ServicePlanRecord getRequired(UUID id) {
         return findById(id).orElseThrow();
     }

@@ -22,12 +22,13 @@ class JdbcServicePlanRepositoryIntegrationTest {
     private static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine");
 
     private JdbcServicePlanRepository repository;
+    private NamedParameterJdbcTemplate jdbcTemplate;
 
     @BeforeEach
     void setUp() {
         DriverManagerDataSource dataSource = new DriverManagerDataSource(
                 POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword());
-        NamedParameterJdbcTemplate jdbcTemplate = new NamedParameterJdbcTemplate(dataSource);
+        jdbcTemplate = new NamedParameterJdbcTemplate(dataSource);
 
         Flyway.configure().dataSource(dataSource).cleanDisabled(false).load().clean();
         jdbcTemplate.getJdbcTemplate().execute("CREATE EXTENSION IF NOT EXISTS pgcrypto");
@@ -141,5 +142,90 @@ class JdbcServicePlanRepositoryIntegrationTest {
         // Assert
         assertThat(listed).hasSize(1);
         assertThat(listed.get(0).servicePlanId()).isEqualTo(created.servicePlanId());
+    }
+
+    @Test
+    void setlistVersionExistsReturnsTrueWhenVersionBelongsToSetlist() {
+        // Arrange
+        UUID setlistId = UUID.randomUUID();
+        UUID versionId = UUID.randomUUID();
+        insertSetlist(setlistId);
+        insertSetlistVersion(setlistId, versionId, 1);
+
+        // Act
+        boolean exists = repository.setlistVersionExists(setlistId, versionId);
+
+        // Assert
+        assertThat(exists).isTrue();
+    }
+
+    @Test
+    void setlistVersionExistsReturnsFalseWhenVersionDoesNotBelongToSetlist() {
+        // Arrange
+        UUID setlistId = UUID.randomUUID();
+        UUID otherSetlistId = UUID.randomUUID();
+        UUID versionId = UUID.randomUUID();
+        insertSetlist(setlistId);
+        insertSetlist(otherSetlistId);
+        insertSetlistVersion(otherSetlistId, versionId, 1);
+
+        // Act
+        boolean exists = repository.setlistVersionExists(setlistId, versionId);
+
+        // Assert
+        assertThat(exists).isFalse();
+    }
+
+    @Test
+    void hasNewerSetlistVersionReturnsTrueWhenHigherVersionExists() {
+        // Arrange
+        UUID setlistId = UUID.randomUUID();
+        UUID versionOne = UUID.randomUUID();
+        UUID versionTwo = UUID.randomUUID();
+        insertSetlist(setlistId);
+        insertSetlistVersion(setlistId, versionOne, 1);
+        insertSetlistVersion(setlistId, versionTwo, 2);
+
+        // Act
+        boolean hasNewer = repository.hasNewerSetlistVersion(setlistId, versionOne);
+
+        // Assert
+        assertThat(hasNewer).isTrue();
+    }
+
+    @Test
+    void hasNewerSetlistVersionReturnsFalseWhenVersionIsLatest() {
+        // Arrange
+        UUID setlistId = UUID.randomUUID();
+        UUID versionOne = UUID.randomUUID();
+        UUID versionTwo = UUID.randomUUID();
+        insertSetlist(setlistId);
+        insertSetlistVersion(setlistId, versionOne, 1);
+        insertSetlistVersion(setlistId, versionTwo, 2);
+
+        // Act
+        boolean hasNewer = repository.hasNewerSetlistVersion(setlistId, versionTwo);
+
+        // Assert
+        assertThat(hasNewer).isFalse();
+    }
+
+    private void insertSetlist(UUID setlistId) {
+        jdbcTemplate.getJdbcTemplate().update(
+                "INSERT INTO setlists (id, lineage_policy, created_by) VALUES (?, 'LINEAR', 'test-user')",
+                setlistId);
+    }
+
+    private void insertSetlistVersion(UUID setlistId, UUID versionId, int versionNumber) {
+        jdbcTemplate.getJdbcTemplate().update(
+                """
+                INSERT INTO setlist_versions (
+                    id, setlist_id, version_number, provenance_type, request_payload, parsed_intent_payload,
+                    explanation_facts, scoring_profile_version, engine_version, created_by
+                ) VALUES (?, ?, ?, 'GENERATED_BASELINE', '{}'::jsonb, '{}'::jsonb, '[]'::jsonb, 'v1', 'engine-1', 'test-user')
+                """,
+                versionId,
+                setlistId,
+                versionNumber);
     }
 }

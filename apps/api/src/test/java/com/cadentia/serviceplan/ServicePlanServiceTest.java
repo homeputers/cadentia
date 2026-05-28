@@ -1,6 +1,7 @@
 package com.cadentia.serviceplan;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -44,5 +45,33 @@ class ServicePlanServiceTest {
 
         assertThat(actual).isEqualTo(expected);
         verify(repository).create(serviceDateTime, "Sunday Service", "Faith", "Hebrews 11", "notes");
+    }
+
+    @Test
+    void publishRejectsWhenAttachmentHasNewerVersion() {
+        UUID planId = UUID.randomUUID();
+        UUID setlistId = UUID.randomUUID();
+        UUID versionId = UUID.randomUUID();
+        ServicePlanRecord current = new ServicePlanRecord(
+                planId,
+                Instant.parse("2026-06-01T10:00:00Z"),
+                "Sunday Service",
+                "Faith",
+                "Hebrews 11",
+                "notes",
+                ServicePlanStatus.DRAFT,
+                null,
+                null,
+                List.of(),
+                List.of(new ServicePlanModels.SetlistAttachment(UUID.randomUUID(), setlistId, versionId, 0)));
+        when(repository.findById(planId)).thenReturn(java.util.Optional.of(current));
+        when(repository.setlistVersionExists(setlistId, versionId)).thenReturn(true);
+        when(repository.hasNewerSetlistVersion(setlistId, versionId)).thenReturn(true);
+
+        ServicePlanService service = new ServicePlanService(repository);
+
+        assertThatThrownBy(() -> service.publish(planId, "system", "note"))
+                .isInstanceOf(ServicePlanPublishConflictException.class)
+                .hasMessageContaining("newer setlist version exists");
     }
 }
