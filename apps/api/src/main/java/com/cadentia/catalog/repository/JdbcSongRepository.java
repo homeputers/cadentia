@@ -43,7 +43,11 @@ import com.cadentia.catalog.model.UpdateLyricsDocumentCommand;
 import com.cadentia.catalog.model.UpdateLyricsParseResultCommand;
 import com.cadentia.catalog.model.UpdateSongCommand;
 import com.cadentia.catalog.model.UpdateTagCommand;
+import com.cadentia.scraperadmin.AdminAuditEvent;
 import com.cadentia.scraperadmin.CatalogSongCandidate;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
@@ -98,6 +102,7 @@ public class JdbcSongRepository implements SongRepository {
             + "proposed_duplicate_match_id, decision, reviewer, review_notes, reviewed_at";
 
     private final NamedParameterJdbcTemplate jdbcTemplate;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     public JdbcSongRepository(NamedParameterJdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
@@ -726,6 +731,90 @@ public class JdbcSongRepository implements SongRepository {
                 RETURNING %s
                 """.formatted(APPROVAL_COLUMNS);
         return queryOptional(sql, approvalParams(command).addValue("id", id), approvalMapper());
+    }
+
+    @Override
+    public AdminAuditEvent appendPrivilegedActionAuditEvent(AdminAuditEvent event) {
+        String sql = """
+                INSERT INTO privileged_action_audit_events (
+                    id, actor, actor_roles, action, target_type, target_id, before_state_ref, after_state_ref,
+                    before_state_hash, after_state_hash, metadata, occurred_at, request_id
+                ) VALUES (
+                    :id, :actor, CAST(:actorRoles AS jsonb), :action, :targetType, :targetId, :beforeStateRef, :afterStateRef,
+                    :beforeStateHash, :afterStateHash, CAST(:metadata AS jsonb), :occurredAt, :requestId
+                )
+                RETURNING id, actor, action, target_type, target_id, occurred_at, metadata::text AS metadata_json
+                """;
+        MapSqlParameterSource params = new MapSqlParameterSource()
+                .addValue("id", event.id())
+                .addValue("actor", event.actor())
+                .addValue("actorRoles", "[]")
+                .addValue("action", event.action())
+                .addValue("targetType", event.entityType())
+                .addValue("targetId", event.entityId())
+                .addValue("beforeStateRef", referenceFor(event.beforeState()))
+                .addValue("afterStateRef", referenceFor(event.afterState()))
+                .addValue("beforeStateHash", Integer.toHexString(event.beforeState().toString().hashCode()))
+                .addValue("afterStateHash", Integer.toHexString(event.afterState().toString().hashCode()))
+                .addValue("metadata", metadataJson(event))
+                .addValue("occurredAt", Timestamp.from(event.occurredAt()))
+                .addValue("requestId", null);
+        return jdbcTemplate.queryForObject(sql, params, (rs, rowNum) -> event);
+    }
+
+    @Override
+    public List<AdminAuditEvent> findPrivilegedActionAuditEventsByEntityId(UUID entityId) {
+        String sql = """
+                SELECT id, actor, action, target_type, target_id, occurred_at, metadata::text AS metadata_json
+                FROM privileged_action_audit_events
+                WHERE target_id = :targetId
+                ORDER BY occurred_at ASC
+                """;
+        return jdbcTemplate.query(sql, Map.of("targetId", entityId), (rs, rowNum) -> {
+            Map<String, Object> metadata = parseMetadataJson(rs.getString("metadata_json"));
+            return new AdminAuditEvent(
+                    uuid(rs, "id"),
+                    uuid(rs, "target_id"),
+                    rs.getString("target_type"),
+                    rs.getString("action"),
+                    rs.getString("actor"),
+                    rs.getTimestamp("occurred_at").toInstant(),
+                    (String) metadata.get("reason"),
+                    toMap(metadata.get("beforeState")),
+                    toMap(metadata.get("afterState")));
+        });
+    }
+
+    private String metadataJson(AdminAuditEvent event) {
+        try {
+            return objectMapper.writeValueAsString(Map.of(
+                    "reason", event.reason(),
+                    "beforeState", event.beforeState(),
+                    "afterState", event.afterState()));
+        } catch (JsonProcessingException exception) {
+            return "{\"reason\":\"serialization-error\",\"beforeState\":{},\"afterState\":{}}";
+        }
+    }
+
+    private Map<String, Object> parseMetadataJson(String json) {
+        try {
+            return objectMapper.readValue(json, new TypeReference<>() {});
+        } catch (JsonProcessingException exception) {
+            return Map.of();
+        }
+    }
+
+    private static Map<String, Object> toMap(Object value) {
+        if (value instanceof Map<?, ?> map) {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> casted = (Map<String, Object>) map;
+            return casted;
+        }
+        return Map.of();
+    }
+
+    private static String referenceFor(Map<String, Object> state) {
+        return state.isEmpty() ? null : "inline:metadata";
     }
 
     private <T> Optional<T> queryOptional(String sql, Map<String, ?> params, RowMapper<T> mapper) {

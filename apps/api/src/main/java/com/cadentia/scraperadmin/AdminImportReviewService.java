@@ -63,7 +63,6 @@ public class AdminImportReviewService {
     private final TitleNormalizer titleNormalizer;
     private final ObjectMapper objectMapper;
     private final Map<UUID, ModerationFlag> moderationFlagsById = new ConcurrentHashMap<>();
-    private final Map<UUID, List<AdminAuditEvent>> auditEventsByEntityId = new ConcurrentHashMap<>();
     private final Map<UUID, RollbackPreview> rollbackPreviewsById = new ConcurrentHashMap<>();
 
     @Autowired
@@ -212,7 +211,7 @@ public class AdminImportReviewService {
     }
 @Transactional(readOnly = true)
     public List<AdminAuditEvent> getAuditHistory(UUID entityId) {
-        return List.copyOf(auditEventsByEntityId.getOrDefault(entityId, List.of()));
+        return songRepository.findPrivilegedActionAuditEventsByEntityId(entityId);
     }
 
     @Transactional
@@ -580,8 +579,7 @@ public class AdminImportReviewService {
                 reason,
                 beforeState,
                 afterState);
-        auditEventsByEntityId.computeIfAbsent(entityId, ignored -> new ArrayList<>()).add(event);
-        return event;
+        return songRepository.appendPrivilegedActionAuditEvent(event);
     }
 
     private void requireAuthorized(String action, String actor, UUID entityId, String entityType) {

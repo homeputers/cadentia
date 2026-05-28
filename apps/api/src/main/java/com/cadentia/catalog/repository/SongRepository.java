@@ -11,6 +11,7 @@ import com.cadentia.catalog.entity.ProposedDuplicateMatch;
 import com.cadentia.catalog.entity.ProvenanceRecord;
 import com.cadentia.catalog.entity.Song;
 import com.cadentia.catalog.entity.Tag;
+import com.cadentia.scraperadmin.AdminAuditEvent;
 import com.cadentia.catalog.model.ApprovalStatus;
 import com.cadentia.catalog.model.ApprovalType;
 import com.cadentia.catalog.model.CreateApprovalRecordCommand;
@@ -144,4 +145,12 @@ public interface SongRepository {
     boolean isArrangementDoctrinallyApprovedForRecommendation(UUID arrangementId);
 
     Optional<ApprovalRecord> updateApprovalRecord(UUID id, UpdateApprovalRecordCommand command);
+
+    default AdminAuditEvent appendPrivilegedActionAuditEvent(AdminAuditEvent event) {
+        return event;
+    }
+
+    default List<AdminAuditEvent> findPrivilegedActionAuditEventsByEntityId(UUID entityId) {
+        return List.of();
+    }
 }

@@ -33,6 +33,36 @@ CREATE INDEX privileged_action_audit_events_retention_idx
 
 COMMENT ON TABLE privileged_action_audit_events IS
     'Immutable privileged-operation audit trail for approvals, role assignments, policy overrides, and merges.';
+COMMENT ON COLUMN privileged_action_audit_events.id IS
+    'Stable audit event identifier.';
+COMMENT ON COLUMN privileged_action_audit_events.actor IS
+    'Authenticated principal responsible for the privileged action.';
+COMMENT ON COLUMN privileged_action_audit_events.actor_roles IS
+    'Role snapshot for the actor at the moment of action execution.';
+COMMENT ON COLUMN privileged_action_audit_events.action IS
+    'Controlled action code for the privileged operation.';
+COMMENT ON COLUMN privileged_action_audit_events.target_type IS
+    'Controlled target entity type.';
+COMMENT ON COLUMN privileged_action_audit_events.target_id IS
+    'Identifier of the target entity when one exists.';
+COMMENT ON COLUMN privileged_action_audit_events.request_id IS
+    'Optional request correlation identifier.';
+COMMENT ON COLUMN privileged_action_audit_events.before_state_ref IS
+    'Reference pointer to before-state snapshot material.';
+COMMENT ON COLUMN privileged_action_audit_events.after_state_ref IS
+    'Reference pointer to after-state snapshot material.';
+COMMENT ON COLUMN privileged_action_audit_events.before_state_hash IS
+    'Integrity hash of the before-state snapshot.';
+COMMENT ON COLUMN privileged_action_audit_events.after_state_hash IS
+    'Integrity hash of the after-state snapshot.';
+COMMENT ON COLUMN privileged_action_audit_events.metadata IS
+    'Structured, non-secret audit metadata for evidentiary context.';
+COMMENT ON COLUMN privileged_action_audit_events.occurred_at IS
+    'Timestamp when the privileged action occurred.';
+COMMENT ON COLUMN privileged_action_audit_events.recorded_at IS
+    'Timestamp when the audit row was persisted.';
+COMMENT ON COLUMN privileged_action_audit_events.retention_until IS
+    'Minimum retention horizon for governance and incident response.';
 
 CREATE OR REPLACE VIEW v_privileged_action_audit_history AS
 SELECT
