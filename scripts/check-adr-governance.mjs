@@ -4,22 +4,47 @@ import path from 'node:path';
 const ROOT = process.cwd();
 const DOCS_DIR = path.join(ROOT, 'docs');
 
-const ALLOWED_ADR_014_PATHS = new Set([
-  'docs/adr/ADR-014-llm-intent-extraction-contract.md',
-  'docs/implementation-plans/ADR-014-llm-intent-extraction-contract-plan.md'
-]);
-
-const FLAG_TERMS = [
-  'source of truth',
-  'authoritative',
-  'normative',
-  'implement',
-  'implementation',
-  'schema',
-  'validation',
-  'retry',
-  'fallback',
-  'active'
+const RULES = [
+  {
+    adr: 'ADR-014',
+    allowedPaths: new Set([
+      'docs/adr/ADR-014-llm-intent-extraction-contract.md',
+      'docs/implementation-plans/ADR-014-llm-intent-extraction-contract-plan.md'
+    ]),
+    canonicalReferences: ['ADR-012'],
+    rejectionTerms: ['duplicate', 'rejected', 'superseded', 'non-active'],
+    blockedTerms: [
+      'source of truth',
+      'authoritative',
+      'normative',
+      'implement',
+      'implementation',
+      'schema',
+      'validation',
+      'retry',
+      'fallback',
+      'active'
+    ]
+  },
+  {
+    adr: 'ADR-020',
+    allowedPaths: new Set([
+      'docs/adr/ADR-020-external-integration-boundaries.md',
+      'docs/implementation-plans/ADR-020-external-integration-boundaries-plan.md'
+    ]),
+    canonicalReferences: ['ADR-008', 'ADR-003', 'ADR-011', 'ADR-004'],
+    rejectionTerms: ['duplicate', 'rejected', 'superseded', 'historical'],
+    blockedTerms: [
+      'source of truth',
+      'authoritative',
+      'normative',
+      'implement',
+      'implementation',
+      'active',
+      'primary',
+      'canonical'
+    ]
+  }
 ];
 
 async function walk(dir) {
@@ -36,9 +61,9 @@ async function walk(dir) {
   return results;
 }
 
-function hasContextFlag(line) {
-  const normalized = line.toLowerCase();
-  return FLAG_TERMS.some((term) => normalized.includes(term));
+function hasTerm(text, terms) {
+  const normalized = text.toLowerCase();
+  return terms.some((term) => normalized.includes(term));
 }
 
 const files = await walk(DOCS_DIR);
@@ -46,12 +71,9 @@ const violations = [];
 
 for (const file of files) {
   const relativePath = path.relative(ROOT, file).replaceAll(path.sep, '/');
-  if (ALLOWED_ADR_014_PATHS.has(relativePath)) {
-    continue;
-  }
-
   const content = await readFile(file, 'utf8');
   const lines = content.split(/\r?\n/u);
+
   let inCodeBlock = false;
   for (let index = 0; index < lines.length; index += 1) {
     const line = lines[index];
@@ -59,21 +81,34 @@ for (const file of files) {
       inCodeBlock = !inCodeBlock;
       continue;
     }
-    if (inCodeBlock || line.includes('intentionally incorrect example') || !line.includes('ADR-014')) {
+
+    if (inCodeBlock || line.includes('intentionally incorrect example')) {
       continue;
     }
 
-    const context = lines.slice(Math.max(0, index - 1), Math.min(lines.length, index + 2)).join(' ').toLowerCase();
-    const mentionsRejectedContext = context.includes('duplicate') || context.includes('rejected') || context.includes('superseded') || context.includes('non-active');
+    for (const rule of RULES) {
+      if (rule.allowedPaths.has(relativePath) || !line.includes(rule.adr)) {
+        continue;
+      }
 
-    if (hasContextFlag(line) && !mentionsRejectedContext) {
-      violations.push(`${relativePath}:${index + 1}`);
+      const context = lines
+        .slice(Math.max(0, index - 1), Math.min(lines.length, index + 2))
+        .join(' ')
+        .toLowerCase();
+
+      const hasRejectedContext = hasTerm(context, rule.rejectionTerms);
+      const hasCanonicalReference = hasTerm(context, rule.canonicalReferences.map((reference) => reference.toLowerCase()));
+      const hasBlockedTerm = hasTerm(line, rule.blockedTerms);
+
+      if (hasBlockedTerm && !hasRejectedContext && !hasCanonicalReference) {
+        violations.push(`${relativePath}:${index + 1} (${rule.adr})`);
+      }
     }
   }
 }
 
 if (violations.length > 0) {
-  console.error('ADR governance check failed. ADR-014 cannot be referenced as an active implementation contract.');
+  console.error('ADR governance check failed. Rejected duplicate ADRs cannot be referenced as active implementation authority.');
   console.error('Violations:');
   for (const violation of violations) {
     console.error(`- ${violation}`);
@@ -81,4 +116,4 @@ if (violations.length > 0) {
   process.exit(1);
 }
 
-console.log('ADR governance check passed. ADR-014 references are non-normative outside ADR-014 records.');
+console.log('ADR governance check passed. Rejected duplicate ADR references are non-normative outside their archival records.');
