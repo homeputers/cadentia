@@ -1,5 +1,7 @@
 package com.cadentia.api.controller;
 
+import com.cadentia.api.security.RbacAuthorities;
+
 import com.cadentia.catalog.entity.ImportCandidateReview;
 import com.cadentia.catalog.entity.ProposedDuplicateMatch;
 import com.cadentia.generated.api.AdminReviewApi;
@@ -50,7 +52,7 @@ public class AdminImportCandidateController implements AdminReviewApi {
     }
 
     @Override
-    @PreAuthorize("hasAnyAuthority('catalog.admin.view','catalog.admin.review','catalog.admin.approve','catalog.admin.rollback')")
+    @PreAuthorize("hasAnyAuthority(T(com.cadentia.api.security.RbacAuthorities).ROLE_CATALOG_EDITOR, T(com.cadentia.api.security.RbacAuthorities).ROLE_DOCTRINAL_REVIEWER, T(com.cadentia.api.security.RbacAuthorities).ROLE_MUSICAL_REVIEWER, T(com.cadentia.api.security.RbacAuthorities).ROLE_ADMIN)")
     public ResponseEntity<List<AdminImportCandidateQueueItem>> listAdminImportCandidates(
             @RequestParam UUID batchId,
             @RequestParam(required = false) ImportCandidateStatus status) {
@@ -71,21 +73,21 @@ public class AdminImportCandidateController implements AdminReviewApi {
     }
 
     @Override
-    @PreAuthorize("hasAnyAuthority('catalog.admin.view','catalog.admin.review','catalog.admin.approve','catalog.admin.rollback')")
+    @PreAuthorize("hasAnyAuthority(T(com.cadentia.api.security.RbacAuthorities).ROLE_CATALOG_EDITOR, T(com.cadentia.api.security.RbacAuthorities).ROLE_DOCTRINAL_REVIEWER, T(com.cadentia.api.security.RbacAuthorities).ROLE_MUSICAL_REVIEWER, T(com.cadentia.api.security.RbacAuthorities).ROLE_ADMIN)")
     public ResponseEntity<AdminImportCandidateDetailResponse> getAdminImportCandidateDetail(@PathVariable UUID candidateId) {
         AdminImportCandidateDetail detail = reviewService.getCandidateDetail(candidateId);
         return ResponseEntity.ok(toDetail(detail));
     }
 
     @Override
-    @PreAuthorize("hasAnyAuthority('catalog.admin.view','catalog.admin.review','catalog.admin.approve','catalog.admin.rollback')")
+    @PreAuthorize("hasAnyAuthority(T(com.cadentia.api.security.RbacAuthorities).ROLE_CATALOG_EDITOR, T(com.cadentia.api.security.RbacAuthorities).ROLE_DOCTRINAL_REVIEWER, T(com.cadentia.api.security.RbacAuthorities).ROLE_MUSICAL_REVIEWER, T(com.cadentia.api.security.RbacAuthorities).ROLE_ADMIN)")
     public ResponseEntity<List<AdminDuplicateMatch>> getAdminImportCandidateDuplicates(@PathVariable UUID candidateId) {
         AdminImportCandidateDetail detail = reviewService.getCandidateDetail(candidateId);
         return ResponseEntity.ok(detail.duplicateMatches().stream().map(AdminImportCandidateController::toDuplicate).toList());
     }
 
     @Override
-    @PreAuthorize("hasAnyAuthority('catalog.admin.view','catalog.admin.review','catalog.admin.approve','catalog.admin.rollback')")
+    @PreAuthorize("hasAnyAuthority(T(com.cadentia.api.security.RbacAuthorities).ROLE_CATALOG_EDITOR, T(com.cadentia.api.security.RbacAuthorities).ROLE_DOCTRINAL_REVIEWER, T(com.cadentia.api.security.RbacAuthorities).ROLE_MUSICAL_REVIEWER, T(com.cadentia.api.security.RbacAuthorities).ROLE_ADMIN)")
     public ResponseEntity<List<AdminAuditHistoryItem>> getAdminImportCandidateAuditHistory(@PathVariable UUID candidateId) {
         return ResponseEntity.ok(reviewService.getAuditHistory(candidateId).stream()
                 .map(AdminImportCandidateController::toAuditHistoryItem)
@@ -93,7 +95,7 @@ public class AdminImportCandidateController implements AdminReviewApi {
     }
 
     @Override
-    @PreAuthorize("hasAnyAuthority('catalog.admin.review','catalog.admin.approve')")
+    @PreAuthorize("hasAnyAuthority(T(com.cadentia.api.security.RbacAuthorities).ROLE_CATALOG_EDITOR, T(com.cadentia.api.security.RbacAuthorities).ROLE_ADMIN)")
     public ResponseEntity<ModerationFlagResponse> openAdminModerationFlag(
             @PathVariable UUID candidateId,
             @RequestBody OpenModerationFlagRequest request) {
@@ -107,7 +109,7 @@ public class AdminImportCandidateController implements AdminReviewApi {
     }
 
     @Override
-    @PreAuthorize("hasAnyAuthority('catalog.admin.review','catalog.admin.approve')")
+    @PreAuthorize("hasAnyAuthority(T(com.cadentia.api.security.RbacAuthorities).ROLE_CATALOG_EDITOR, T(com.cadentia.api.security.RbacAuthorities).ROLE_ADMIN)")
     public ResponseEntity<ModerationFlagResponse> assignAdminModerationFlag(
             @PathVariable UUID flagId,
             @RequestBody AssignModerationFlagRequest request) {
@@ -116,7 +118,7 @@ public class AdminImportCandidateController implements AdminReviewApi {
     }
 
     @Override
-    @PreAuthorize("hasAnyAuthority('catalog.admin.review','catalog.admin.approve')")
+    @PreAuthorize("hasAnyAuthority(T(com.cadentia.api.security.RbacAuthorities).ROLE_CATALOG_EDITOR, T(com.cadentia.api.security.RbacAuthorities).ROLE_ADMIN)")
     public ResponseEntity<ModerationFlagResponse> resolveAdminModerationFlag(
             @PathVariable UUID flagId,
             @RequestBody ResolveModerationFlagRequest request) {
@@ -125,7 +127,7 @@ public class AdminImportCandidateController implements AdminReviewApi {
     }
 
     @Override
-    @PreAuthorize("hasAuthority('catalog.admin.approve')")
+    @PreAuthorize("hasAuthority(T(com.cadentia.api.security.RbacAuthorities).ROLE_ADMIN)")
     public ResponseEntity<ModerationFlagResponse> escalateAdminModerationFlag(
             @PathVariable UUID flagId,
             @RequestBody EscalateModerationFlagRequest request) {
@@ -135,7 +137,7 @@ public class AdminImportCandidateController implements AdminReviewApi {
 
 
     @Override
-    @PreAuthorize("hasAuthority('catalog.admin.rollback')")
+    @PreAuthorize("hasAuthority(T(com.cadentia.api.security.RbacAuthorities).ROLE_ADMIN)")
     public ResponseEntity<RollbackPreviewResponse> createAdminRollbackPreview(@RequestBody CreateRollbackPreviewRequest request) {
         RollbackPreview preview = reviewService.previewRollback(
                 RollbackTargetType.valueOf(request.getTargetType().getValue()),
@@ -158,7 +160,7 @@ public class AdminImportCandidateController implements AdminReviewApi {
     }
 
     @Override
-    @PreAuthorize("hasAuthority('catalog.admin.rollback')")
+    @PreAuthorize("hasAuthority(T(com.cadentia.api.security.RbacAuthorities).ROLE_ADMIN)")
     public ResponseEntity<RollbackExecutionResponse> executeAdminRollback(@RequestBody ExecuteRollbackRequest request) {
         RollbackExecutionResult result =
                 reviewService.executeRollback(request.getRollbackRequestId(), request.getActor(), request.getReason());

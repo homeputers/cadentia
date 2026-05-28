@@ -1,5 +1,7 @@
 package com.cadentia.api.controller;
 
+import com.cadentia.api.security.RbacAuthorities;
+
 import com.cadentia.generated.api.SetlistsApi;
 import com.cadentia.generated.model.CommitSetlistEditsRequest;
 import com.cadentia.generated.model.CreateSetlistBaselineRequest;
@@ -40,6 +42,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -69,11 +72,13 @@ public class SetlistController implements SetlistsApi {
 
 
     @Override
+    @PreAuthorize("hasAnyAuthority(T(com.cadentia.api.security.RbacAuthorities).ROLE_WORSHIP_LEADER, T(com.cadentia.api.security.RbacAuthorities).ROLE_CATALOG_EDITOR, T(com.cadentia.api.security.RbacAuthorities).ROLE_DOCTRINAL_REVIEWER, T(com.cadentia.api.security.RbacAuthorities).ROLE_MUSICAL_REVIEWER, T(com.cadentia.api.security.RbacAuthorities).ROLE_ADMIN)")
     public ResponseEntity<SetlistProposalResponse> generateSetlistProposal(GenerateSetlistRequest request) {
         return ResponseEntity.accepted().body(setlistService.generate(request));
     }
 
     @Override
+    @PreAuthorize("hasAnyAuthority(T(com.cadentia.api.security.RbacAuthorities).ROLE_WORSHIP_LEADER, T(com.cadentia.api.security.RbacAuthorities).ROLE_CATALOG_EDITOR, T(com.cadentia.api.security.RbacAuthorities).ROLE_DOCTRINAL_REVIEWER, T(com.cadentia.api.security.RbacAuthorities).ROLE_MUSICAL_REVIEWER, T(com.cadentia.api.security.RbacAuthorities).ROLE_ADMIN)")
     public ResponseEntity<SetlistProposalResponse> generateSetlistProposalFromNaturalLanguage(
             NaturalLanguageSetlistRequest request) {
         IntentParseResult parseResult = intentService.parse(request.getText());
