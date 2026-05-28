@@ -114,3 +114,16 @@ Tradeoffs:
 - Should role scoping support campus/team boundaries natively?
 - Which privileged actions require step-up authentication?
 - What is the escalation workflow for emergency content removals?
+
+## Privileged Action Audit Infrastructure Controls
+
+The privileged action audit trail is backed by an append-only table (`privileged_action_audit_events`) and a query-oriented view (`v_privileged_action_audit_history`).
+
+Controls:
+
+- **Required fields**: actor, action, target type, occurred-at timestamp, and before/after state references and hashes.
+- **High-risk action coverage**: approval decisions, role assignment/revocation, policy overrides, and merge actions.
+- **Retention baseline**: records are retained for at least **400 days** via `retention_until` to support incident investigations and access reviews.
+- **Tamper resistance**: immutable insert-only semantics at the application layer and hash references for before/after snapshots.
+- **Data minimization**: payload metadata is structured JSON with a guard constraint to block obvious secret-bearing keys/tokens.
+- **Operational queryability**: indexed actor/action/time and target lookups support incident response queries by actor, action, or time window.

@@ -170,3 +170,17 @@ visibility gates; update security runbooks and developer docs.
 - Do not include user-identifying high-cardinality labels unnecessarily.
 - Do not deploy without regression tests for approval visibility boundaries.
 - Do not omit guidance for rotating/revoking elevated access.
+
+## Subtask 3 Implementation Notes (2026-05-28)
+
+Implemented foundational privileged-action audit infrastructure:
+
+- Added migration `V017__privileged_action_audit_trail.sql` introducing `privileged_action_audit_events` with required actor/action/target/timestamp and before/after state reference fields.
+- Added retention and integrity controls:
+  - `retention_until` defaulted to 400 days.
+  - secret-pattern guardrail check constraint on metadata payload text.
+  - hash reference fields for before/after snapshots.
+- Added indexed search paths for actor/action/time and target lookups.
+- Added `v_privileged_action_audit_history` view for operational query workflows by actor/action/time window.
+
+Follow-up integration work should wire privileged mutation services to persist directly into this audit table for non-optional write enforcement across approvals, role assignment, policy override, and merge flows.
