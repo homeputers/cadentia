@@ -272,6 +272,23 @@ class JdbcCandidateRetrieverIntegrationTest {
                         org.assertj.core.groups.Tuple.tuple(TagType.THEME, "joy")));
     }
 
+
+    @Test
+    void findCandidatesExcludesInactiveArrangementsFromUserFacingRecommendationPath() {
+        // Arrange
+        CatalogContent inactive = createCatalogContent("inactive-arrangement");
+        approveAllRequiredGates(inactive, ApprovalStatus.APPROVED);
+        jdbcTemplate.update("UPDATE arrangements SET is_active = false WHERE id = :id", Map.of("id", inactive.arrangement().id()));
+
+        // Act
+        List<RecommendableArrangement> candidates = candidateRetriever.findCandidates(defaultCriteria());
+
+        // Assert
+        assertThat(candidates)
+                .extracting(RecommendableArrangement::arrangementId)
+                .doesNotContain(inactive.arrangement().id());
+    }
+
     @Test
     void findCandidatesUsesStableArrangementIdTieBreakerForMatchingTitles() {
         // Arrange
