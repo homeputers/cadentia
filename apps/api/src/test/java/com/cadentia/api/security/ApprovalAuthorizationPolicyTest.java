@@ -25,11 +25,14 @@ class ApprovalAuthorizationPolicyTest {
 
     @Test
     void requireApprovalPermissionRecordsAllowDecisionForReviewer() {
+        // Arrange
         SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken(
                 "reviewer", "n/a", List.of(() -> RbacAuthorities.ROLE_DOCTRINAL_REVIEWER)));
 
+        // Act
         policy.requireApprovalPermission(ApprovalType.DOCTRINAL);
 
+        // Assert
         assertThat(meterRegistry.get("cadentia_authz_decisions_total")
                 .tag("operation_class", "catalog.approve.doctrinal")
                 .tag("decision", "allow")
@@ -45,13 +48,16 @@ class ApprovalAuthorizationPolicyTest {
 
     @Test
     void requireApprovalPermissionRecordsDenyDecisionForUnauthorizedRole() {
+        // Arrange
         SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken(
                 "viewer", "n/a", List.of(() -> RbacAuthorities.ROLE_WORSHIP_LEADER)));
 
+        // Act / Assert
         assertThatThrownBy(() -> policy.requireApprovalPermission(ApprovalType.MUSICAL))
                 .isInstanceOf(AccessDeniedException.class)
                 .hasMessage("Access denied.");
 
+        // Assert
         assertThat(meterRegistry.get("cadentia_authz_decisions_total")
                 .tag("operation_class", "catalog.approve.musical")
                 .tag("decision", "deny")
