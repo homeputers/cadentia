@@ -654,7 +654,8 @@ paths:
       description: >-
         Accepts raw user text, invokes the LLM intent boundary, validates the
         resulting contract payload, applies backend defaults, and invokes
-        recommendation only for valid GENERATE_SETLIST intents.
+        recommendation only for valid GENERATE_SETLIST intents. Recommendations are
+        sourced from approved and active catalog content only.
       requestBody:
         required: true
         content:
@@ -678,7 +679,7 @@ paths:
       summary: Generate a setlist proposal from structured intent slots
       description: >-
         Accepts structured slots produced by the intent parser. Song selection remains
-        backend-only and must use approved catalog data.
+        backend-only and must use approved and active catalog data only.
       requestBody:
         required: true
         content:
@@ -778,6 +779,8 @@ paths:
         - MUSICAL_REVIEWER
         - ADMIN
       summary: List immutable versions for a setlist lineage
+      description: >
+        User-facing results include only songs and arrangements that are approved and active at read time.
       parameters:
         - in: path
           name: setlistId
@@ -808,6 +811,8 @@ paths:
         - MUSICAL_REVIEWER
         - ADMIN
       summary: Retrieve a specific immutable setlist version snapshot
+      description: >
+        User-facing results include only songs and arrangements that are approved and active at read time.
       parameters:
         - in: path
           name: setlistId
@@ -912,6 +917,8 @@ paths:
         - MUSICAL_REVIEWER
         - ADMIN
       summary: List service plans
+      description: >
+        User-facing plan payloads only expose approved and active song content in attached setlist references.
       responses:
         '200':
           description: Service plans matching filter criteria.
@@ -936,6 +943,8 @@ paths:
         - MUSICAL_REVIEWER
         - ADMIN
       summary: Retrieve a service plan
+      description: >
+        User-facing plan payloads only expose approved and active song content in attached setlist references.
       parameters:
         - in: path
           name: servicePlanId
