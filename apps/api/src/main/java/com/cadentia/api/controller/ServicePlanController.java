@@ -22,18 +22,34 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 public class ServicePlanController implements ServicePlansApi {
+
     private final ServicePlanService service;
 
-    public ServicePlanController(ServicePlanService service) { this.service = service; }
+    public ServicePlanController(ServicePlanService service) {
+        this.service = service;
+    }
 
     @Override
     public ResponseEntity<ServicePlanResponse> createServicePlan(CreateServicePlanRequest req) {
-        return ResponseEntity.status(201).body(toResponse(service.create(req.getServiceDateTime().toInstant(), req.getTitle(), req.getTheme(), req.getScripture(), req.getNotes())));
+        ServicePlanRecord created = service.create(
+                req.getServiceDateTime().toInstant(),
+                req.getTitle(),
+                req.getTheme(),
+                req.getScripture(),
+                req.getNotes());
+        return ResponseEntity.status(201).body(toResponse(created));
     }
 
     @Override
     public ResponseEntity<List<ServicePlanSummary>> listServicePlans() {
-        return ResponseEntity.ok(service.list().stream().map(r -> new ServicePlanSummary(r.servicePlanId(), r.title(), OffsetDateTime.ofInstant(r.serviceDateTime(), ZoneOffset.UTC), toStatus(r))).toList());
+        List<ServicePlanSummary> summaries = service.list().stream()
+                .map(r -> new ServicePlanSummary(
+                        r.servicePlanId(),
+                        r.title(),
+                        OffsetDateTime.ofInstant(r.serviceDateTime(), ZoneOffset.UTC),
+                        toStatus(r)))
+                .toList();
+        return ResponseEntity.ok(summaries);
     }
 
     @Override
@@ -43,28 +59,44 @@ public class ServicePlanController implements ServicePlansApi {
 
     @Override
     public ResponseEntity<ServicePlanResponse> updateServicePlan(UUID servicePlanId, UpdateServicePlanRequest req) {
-        return ResponseEntity.ok(toResponse(service.update(servicePlanId, req.getServiceDateTime().toInstant(), req.getTitle(), req.getTheme(), req.getScripture(), req.getNotes())));
+        ServicePlanRecord updated = service.update(
+                servicePlanId,
+                req.getServiceDateTime().toInstant(),
+                req.getTitle(),
+                req.getTheme(),
+                req.getScripture(),
+                req.getNotes());
+        return ResponseEntity.ok(toResponse(updated));
     }
 
     @Override
-    public ResponseEntity<ServicePlanResponse> reorderServicePlanBlocks(UUID servicePlanId, ReorderServicePlanBlocksRequest req) {
+    public ResponseEntity<ServicePlanResponse> reorderServicePlanBlocks(
+            UUID servicePlanId,
+            ReorderServicePlanBlocksRequest req) {
         return ResponseEntity.ok(toResponse(service.reorder(servicePlanId, req.getOrderedBlockIds())));
     }
 
     @Override
-    public ResponseEntity<ServicePlanSetlistAttachmentResponse> attachSetlistVersionToServicePlan(UUID servicePlanId, AttachSetlistVersionRequest req) {
+    public ResponseEntity<ServicePlanSetlistAttachmentResponse> attachSetlistVersionToServicePlan(
+            UUID servicePlanId,
+            AttachSetlistVersionRequest req) {
         ServicePlanRecord record = service.attach(servicePlanId, req.getSetlistId(), req.getSetlistVersionId());
-        ServicePlanSetlistAttachmentResponse last = new ServicePlanSetlistAttachmentResponse();
+        ServicePlanSetlistAttachmentResponse response = new ServicePlanSetlistAttachmentResponse();
         var attachment = record.attachments().get(record.attachments().size() - 1);
-        last.setAttachmentId(attachment.attachmentId());
-        last.setSetlistId(attachment.setlistId());
-        last.setSetlistVersionId(attachment.setlistVersionId());
-        return ResponseEntity.status(201).body(last);
+        response.setAttachmentId(attachment.attachmentId());
+        response.setServicePlanId(servicePlanId);
+        response.setSetlistId(attachment.setlistId());
+        response.setSetlistVersionId(attachment.setlistVersionId());
+        response.setAttachedAt(OffsetDateTime.now(ZoneOffset.UTC));
+        return ResponseEntity.status(201).body(response);
     }
 
     @Override
     public ResponseEntity<ServicePlanPublishResponse> publishServicePlan(UUID servicePlanId, PublishServicePlanRequest req) {
-        ServicePlanRecord published = service.publish(servicePlanId, "system", req == null ? null : req.getPublishNote());
+        ServicePlanRecord published = service.publish(
+                servicePlanId,
+                "system",
+                req == null ? null : req.getPublishNote());
         ServicePlanPublishResponse response = new ServicePlanPublishResponse();
         response.setPublishedAt(OffsetDateTime.ofInstant(published.publishedAt(), ZoneOffset.UTC));
         response.setPublishedBy(published.publishedBy());
