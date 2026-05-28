@@ -209,7 +209,8 @@ public class AdminImportReviewService {
                 Map.of("rollbackExecuted", true, "targetType", preview.targetType().name(), "targetId", preview.targetId().toString()));
         return new RollbackExecutionResult(rollbackRequestId, action, event.id());
     }
-@Transactional(readOnly = true)
+
+    @Transactional(readOnly = true)
     public List<AdminAuditEvent> getAuditHistory(UUID entityId) {
         return songRepository.findPrivilegedActionAuditEventsByEntityId(entityId);
     }

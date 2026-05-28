@@ -102,10 +102,15 @@ public class JdbcSongRepository implements SongRepository {
             + "proposed_duplicate_match_id, decision, reviewer, review_notes, reviewed_at";
 
     private final NamedParameterJdbcTemplate jdbcTemplate;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper;
 
     public JdbcSongRepository(NamedParameterJdbcTemplate jdbcTemplate) {
+        this(jdbcTemplate, new ObjectMapper());
+    }
+
+    public JdbcSongRepository(NamedParameterJdbcTemplate jdbcTemplate, ObjectMapper objectMapper) {
         this.jdbcTemplate = jdbcTemplate;
+        this.objectMapper = objectMapper;
     }
 
     @Override
