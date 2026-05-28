@@ -336,3 +336,36 @@ Define baseline alerts:
 Operational procedures for role boundaries, reset authorization, anomaly
 triage, and retention review are documented in
 `docs/runbooks/adr-017-feedback-tuning-operations.md`.
+
+------------------------------------------------------------------------
+
+## ADR-018 Service Plan Observability and Operations
+
+ADR-018 introduces service-plan lifecycle operations that must be monitored
+across draft composition, publish validation, and execution readiness.
+
+### Required Metrics
+
+- `cadentia_service_plan_draft_to_publish_total`
+  - Counter for successful draft-to-publish transitions.
+- `cadentia_service_plan_publish_total`
+  - Counter for completed publish operations.
+- `cadentia_service_plan_publish_failures_total`
+  - Counter for publish conflicts by controlled reason labels.
+- `cadentia_service_plan_block_reorder_total`
+  - Counter for block reorder activity in draft plans.
+
+### Audit and Logging Requirements
+
+- Publish and revision-sensitive actions must emit structured action codes and
+  before/after sequence metadata.
+- Do not use free-text fields (for example service title or notes) as metric
+  labels.
+- Include actor identity and outcome in auditable publish conflict/success logs.
+
+### Alerting and Runbook
+
+Operators should alert on repeated publish conflicts, stale-reference failure
+surges, and anomalous reorder churn. Triage and multi-campus fork/share
+procedures are documented in
+`docs/runbooks/adr-018-service-plan-operations.md`.

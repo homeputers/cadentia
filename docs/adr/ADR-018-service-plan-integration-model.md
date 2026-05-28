@@ -1,6 +1,6 @@
 # ADR-018: Service Plan Integration Model
 
-Status: Proposed  
+Status: Complete  
 Date: 2026-05-26
 
 ## Context
