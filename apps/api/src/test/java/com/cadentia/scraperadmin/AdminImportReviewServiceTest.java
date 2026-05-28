@@ -3,8 +3,8 @@ package com.cadentia.scraperadmin;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -38,14 +38,18 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 @ExtendWith(MockitoExtension.class)
 class AdminImportReviewServiceTest {
@@ -67,6 +71,11 @@ class AdminImportReviewServiceTest {
 
     @Captor
     private ArgumentCaptor<CreateApprovalRecordCommand> approvalCommandCaptor;
+
+    @AfterEach
+    void cleanupSecurityContext() {
+        SecurityContextHolder.clearContext();
+    }
 
     @Test
     void recordReviewConfirmsMatchAndMarksCandidateReadyToMerge() {
@@ -245,6 +254,7 @@ class AdminImportReviewServiceTest {
 
     @Test
     void applyApprovalActionApprovesExistingReviewRecord() {
+        authenticateAs("role.doctrinal_reviewer");
         UUID songId = UUID.randomUUID();
         ApprovalRecord pending = approvalRecord(UUID.randomUUID(), songId, ApprovalStatus.PENDING);
         ApprovalRecord approved = approvalRecord(UUID.randomUUID(), songId, ApprovalStatus.APPROVED);
@@ -261,6 +271,7 @@ class AdminImportReviewServiceTest {
 
     @Test
     void applyApprovalActionRejectsUnsupportedStatusTransition() {
+        authenticateAs("role.doctrinal_reviewer");
         UUID songId = UUID.randomUUID();
         ApprovalRecord approved = approvalRecord(UUID.randomUUID(), songId, ApprovalStatus.APPROVED);
         when(songRepository.findApprovalRecord(songId, null, null, ApprovalType.DOCTRINAL)).thenReturn(Optional.of(approved));
@@ -274,6 +285,7 @@ class AdminImportReviewServiceTest {
 
     @Test
     void applyApprovalActionMapsNeedsChangesAndRevokeToNeedsReview() {
+        authenticateAs("role.catalog_editor");
         UUID songId = UUID.randomUUID();
         ApprovalRecord approved = approvalRecord(UUID.randomUUID(), songId, ApprovalStatus.APPROVED);
         ApprovalRecord needsReview = approvalRecord(UUID.randomUUID(), songId, ApprovalStatus.NEEDS_REVIEW);
@@ -672,5 +684,12 @@ class AdminImportReviewServiceTest {
                 "Created from reviewed import candidate; approval remains pending.",
                 Instant.EPOCH,
                 Instant.EPOCH);
+    }
+
+    private void authenticateAs(String authority) {
+        SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(
+                "tester",
+                "n/a",
+                List.of(new SimpleGrantedAuthority(authority))));
     }
 }

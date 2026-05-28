@@ -25,6 +25,7 @@ import com.cadentia.catalog.model.ImportMethod;
 import com.cadentia.catalog.model.LicenseType;
 import com.cadentia.catalog.model.SongStatus;
 import com.cadentia.catalog.model.UpdateSongCommand;
+import com.cadentia.api.security.ApprovalAuthorizationPolicy;
 import com.cadentia.catalog.repository.SongRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -58,6 +59,7 @@ public class AdminImportReviewService {
             "EXECUTE_ROLLBACK", List.of(AdminAuthorizationRole.ROLLBACK_ADMIN));
 
     private final SongRepository songRepository;
+    private final ApprovalAuthorizationPolicy approvalAuthorizationPolicy;
     private final TitleNormalizer titleNormalizer;
     private final ObjectMapper objectMapper;
     private final Map<UUID, ModerationFlag> moderationFlagsById = new ConcurrentHashMap<>();
@@ -65,12 +67,21 @@ public class AdminImportReviewService {
     private final Map<UUID, RollbackPreview> rollbackPreviewsById = new ConcurrentHashMap<>();
 
     @Autowired
+    public AdminImportReviewService(SongRepository songRepository, ApprovalAuthorizationPolicy approvalAuthorizationPolicy) {
+        this(songRepository, approvalAuthorizationPolicy, new TitleNormalizer(), new ObjectMapper());
+    }
+
     public AdminImportReviewService(SongRepository songRepository) {
-        this(songRepository, new TitleNormalizer(), new ObjectMapper());
+        this(songRepository, new ApprovalAuthorizationPolicy(), new TitleNormalizer(), new ObjectMapper());
     }
 
     AdminImportReviewService(SongRepository songRepository, TitleNormalizer titleNormalizer, ObjectMapper objectMapper) {
+        this(songRepository, new ApprovalAuthorizationPolicy(), titleNormalizer, objectMapper);
+    }
+
+    AdminImportReviewService(SongRepository songRepository, ApprovalAuthorizationPolicy approvalAuthorizationPolicy, TitleNormalizer titleNormalizer, ObjectMapper objectMapper) {
         this.songRepository = songRepository;
+        this.approvalAuthorizationPolicy = approvalAuthorizationPolicy;
         this.titleNormalizer = titleNormalizer;
         this.objectMapper = objectMapper;
     }
@@ -413,6 +424,7 @@ public class AdminImportReviewService {
                 ? (command.arrangementId() == null ? command.lyricsDocumentId() : command.arrangementId())
                 : command.songId();
         requireAuthorized("APPLY_APPROVAL", command.reviewer(), approvalEntityId, "APPROVAL_TARGET");
+        approvalAuthorizationPolicy.requireApprovalPermission(command.approvalType());
         ApprovalStatus nextStatus = statusFor(command.action());
         return songRepository
                 .findApprovalRecord(command.songId(), command.arrangementId(), command.lyricsDocumentId(), command.approvalType())

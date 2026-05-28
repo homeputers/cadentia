@@ -1,5 +1,7 @@
 package com.cadentia.api.controller;
 
+import com.cadentia.api.security.RbacAuthorities;
+
 import com.cadentia.generated.api.ServicePlansApi;
 import com.cadentia.generated.model.AttachSetlistVersionRequest;
 import com.cadentia.generated.model.CreateServicePlanRequest;
@@ -18,6 +20,7 @@ import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -30,6 +33,7 @@ public class ServicePlanController implements ServicePlansApi {
     }
 
     @Override
+    @PreAuthorize("hasAnyAuthority(T(com.cadentia.api.security.RbacAuthorities).ROLE_WORSHIP_LEADER, T(com.cadentia.api.security.RbacAuthorities).ROLE_CATALOG_EDITOR, T(com.cadentia.api.security.RbacAuthorities).ROLE_DOCTRINAL_REVIEWER, T(com.cadentia.api.security.RbacAuthorities).ROLE_MUSICAL_REVIEWER, T(com.cadentia.api.security.RbacAuthorities).ROLE_ADMIN)")
     public ResponseEntity<ServicePlanResponse> createServicePlan(CreateServicePlanRequest req) {
         ServicePlanRecord created = service.create(
                 req.getServiceDateTime().toInstant(),
@@ -41,6 +45,7 @@ public class ServicePlanController implements ServicePlansApi {
     }
 
     @Override
+    @PreAuthorize("hasAnyAuthority(T(com.cadentia.api.security.RbacAuthorities).ROLE_WORSHIP_LEADER, T(com.cadentia.api.security.RbacAuthorities).ROLE_CATALOG_EDITOR, T(com.cadentia.api.security.RbacAuthorities).ROLE_DOCTRINAL_REVIEWER, T(com.cadentia.api.security.RbacAuthorities).ROLE_MUSICAL_REVIEWER, T(com.cadentia.api.security.RbacAuthorities).ROLE_ADMIN)")
     public ResponseEntity<List<ServicePlanSummary>> listServicePlans() {
         List<ServicePlanSummary> summaries = service.list().stream()
                 .map(r -> new ServicePlanSummary(
@@ -53,11 +58,13 @@ public class ServicePlanController implements ServicePlansApi {
     }
 
     @Override
+    @PreAuthorize("hasAnyAuthority(T(com.cadentia.api.security.RbacAuthorities).ROLE_WORSHIP_LEADER, T(com.cadentia.api.security.RbacAuthorities).ROLE_CATALOG_EDITOR, T(com.cadentia.api.security.RbacAuthorities).ROLE_DOCTRINAL_REVIEWER, T(com.cadentia.api.security.RbacAuthorities).ROLE_MUSICAL_REVIEWER, T(com.cadentia.api.security.RbacAuthorities).ROLE_ADMIN)")
     public ResponseEntity<ServicePlanResponse> getServicePlan(UUID servicePlanId) {
         return ResponseEntity.ok(toResponse(service.get(servicePlanId)));
     }
 
     @Override
+    @PreAuthorize("hasAnyAuthority(T(com.cadentia.api.security.RbacAuthorities).ROLE_WORSHIP_LEADER, T(com.cadentia.api.security.RbacAuthorities).ROLE_CATALOG_EDITOR, T(com.cadentia.api.security.RbacAuthorities).ROLE_DOCTRINAL_REVIEWER, T(com.cadentia.api.security.RbacAuthorities).ROLE_MUSICAL_REVIEWER, T(com.cadentia.api.security.RbacAuthorities).ROLE_ADMIN)")
     public ResponseEntity<ServicePlanResponse> updateServicePlan(UUID servicePlanId, UpdateServicePlanRequest req) {
         ServicePlanRecord updated = service.update(
                 servicePlanId,
@@ -70,6 +77,7 @@ public class ServicePlanController implements ServicePlansApi {
     }
 
     @Override
+    @PreAuthorize("hasAnyAuthority(T(com.cadentia.api.security.RbacAuthorities).ROLE_WORSHIP_LEADER, T(com.cadentia.api.security.RbacAuthorities).ROLE_CATALOG_EDITOR, T(com.cadentia.api.security.RbacAuthorities).ROLE_DOCTRINAL_REVIEWER, T(com.cadentia.api.security.RbacAuthorities).ROLE_MUSICAL_REVIEWER, T(com.cadentia.api.security.RbacAuthorities).ROLE_ADMIN)")
     public ResponseEntity<ServicePlanResponse> reorderServicePlanBlocks(
             UUID servicePlanId,
             ReorderServicePlanBlocksRequest req) {
@@ -77,6 +85,7 @@ public class ServicePlanController implements ServicePlansApi {
     }
 
     @Override
+    @PreAuthorize("hasAnyAuthority(T(com.cadentia.api.security.RbacAuthorities).ROLE_WORSHIP_LEADER, T(com.cadentia.api.security.RbacAuthorities).ROLE_CATALOG_EDITOR, T(com.cadentia.api.security.RbacAuthorities).ROLE_DOCTRINAL_REVIEWER, T(com.cadentia.api.security.RbacAuthorities).ROLE_MUSICAL_REVIEWER, T(com.cadentia.api.security.RbacAuthorities).ROLE_ADMIN)")
     public ResponseEntity<ServicePlanSetlistAttachmentResponse> attachSetlistVersionToServicePlan(
             UUID servicePlanId,
             AttachSetlistVersionRequest req) {
@@ -92,6 +101,7 @@ public class ServicePlanController implements ServicePlansApi {
     }
 
     @Override
+    @PreAuthorize("hasAnyAuthority(T(com.cadentia.api.security.RbacAuthorities).ROLE_WORSHIP_LEADER, T(com.cadentia.api.security.RbacAuthorities).ROLE_CATALOG_EDITOR, T(com.cadentia.api.security.RbacAuthorities).ROLE_DOCTRINAL_REVIEWER, T(com.cadentia.api.security.RbacAuthorities).ROLE_MUSICAL_REVIEWER, T(com.cadentia.api.security.RbacAuthorities).ROLE_ADMIN)")
     public ResponseEntity<ServicePlanPublishResponse> publishServicePlan(UUID servicePlanId, PublishServicePlanRequest req) {
         ServicePlanRecord published = service.publish(
                 servicePlanId,
