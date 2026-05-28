@@ -197,4 +197,7 @@ Implemented security observability and operations documentation baseline:
   - emergency remediation steps for revoking/rotating elevated access and containing exposure.
 - Updated `docs/ARCHITECTURE.md` with an ADR-019 observability section linking required metrics, tracing expectations, and the new runbook.
 
-Follow-up implementation work should wire metrics emission and alert-rule provisioning in runtime infrastructure, then add/extend automated tests that enforce public read visibility boundaries (`approved=true` and `active=true`) for recommendation and catalog endpoints.
+Subtask 4 follow-up implementation has been completed in code and test coverage:
+- metrics emission has been wired for authorization/approval decision paths;
+- alert-rule provisioning artifact has been added under runtime observability resources;
+- automated tests now cover inactive-content exclusion in user-facing recommendation candidate retrieval paths.
