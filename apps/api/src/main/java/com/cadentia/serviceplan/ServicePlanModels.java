@@ -5,9 +5,15 @@ import java.util.List;
 import java.util.UUID;
 
 public final class ServicePlanModels {
-    private ServicePlanModels() {}
 
-    public enum ServicePlanStatus { DRAFT, PUBLISHED, FINALIZED }
+    private ServicePlanModels() {
+    }
+
+    public enum ServicePlanStatus {
+        DRAFT,
+        PUBLISHED,
+        FINALIZED
+    }
 
     public record ServicePlanBlock(
             UUID blockId,
@@ -18,9 +24,15 @@ public final class ServicePlanModels {
             String overrideKey,
             String overrideMode,
             UUID sourceSetlistVersionId,
-            UUID sourceSetlistItemId) {}
+            UUID sourceSetlistItemId) {
+    }
 
-    public record SetlistAttachment(UUID attachmentId, UUID setlistId, UUID setlistVersionId, int attachmentOrder) {}
+    public record SetlistAttachment(
+            UUID attachmentId,
+            UUID setlistId,
+            UUID setlistVersionId,
+            int attachmentOrder) {
+    }
 
     public record ServicePlanRecord(
             UUID servicePlanId,
@@ -33,5 +45,6 @@ public final class ServicePlanModels {
             Instant publishedAt,
             String publishedBy,
             List<ServicePlanBlock> blocks,
-            List<SetlistAttachment> attachments) {}
+            List<SetlistAttachment> attachments) {
+    }
 }

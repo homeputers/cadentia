@@ -43,7 +43,7 @@ class ServicePlanControllerIntegrationTest {
                 """;
 
         mockMvc.perform(post("/service-plans")
-                                                .contentType(MediaType.APPLICATION_JSON)
+                        .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.servicePlanId").value("11111111-1111-1111-1111-111111111111"))
@@ -63,7 +63,12 @@ class ServicePlanControllerIntegrationTest {
     static class StubRepository implements ServicePlanRepository {
 
         @Override
-        public ServicePlanRecord create(Instant serviceDateTime, String title, String theme, String scripture, String notes) {
+        public ServicePlanRecord create(
+                Instant serviceDateTime,
+                String title,
+                String theme,
+                String scripture,
+                String notes) {
             return new ServicePlanRecord(
                     UUID.fromString("11111111-1111-1111-1111-111111111111"),
                     serviceDateTime,
@@ -79,10 +84,14 @@ class ServicePlanControllerIntegrationTest {
         }
 
         @Override
-        public List<ServicePlanRecord> list() { return List.of(); }
+        public List<ServicePlanRecord> list() {
+            return List.of();
+        }
 
         @Override
-        public Optional<ServicePlanRecord> findById(UUID servicePlanId) { return Optional.empty(); }
+        public Optional<ServicePlanRecord> findById(UUID servicePlanId) {
+            return Optional.empty();
+        }
 
         @Override
         public ServicePlanRecord updateMetadata(UUID servicePlanId, Instant serviceDateTime, String title, String theme, String scripture, String notes) {
@@ -90,12 +99,21 @@ class ServicePlanControllerIntegrationTest {
         }
 
         @Override
-        public ServicePlanRecord reorderBlocks(UUID servicePlanId, List<UUID> blockIds) { throw new UnsupportedOperationException(); }
+        public ServicePlanRecord reorderBlocks(UUID servicePlanId, List<UUID> blockIds) {
+            throw new UnsupportedOperationException();
+        }
 
         @Override
-        public ServicePlanRecord attachSetlistVersion(UUID servicePlanId, UUID setlistId, UUID setlistVersionId) { throw new UnsupportedOperationException(); }
+        public ServicePlanRecord attachSetlistVersion(
+                UUID servicePlanId,
+                UUID setlistId,
+                UUID setlistVersionId) {
+            throw new UnsupportedOperationException();
+        }
 
         @Override
-        public ServicePlanRecord publish(UUID servicePlanId, String publishedBy, String publishNote) { throw new UnsupportedOperationException(); }
+        public ServicePlanRecord publish(UUID servicePlanId, String publishedBy, String publishNote) {
+            throw new UnsupportedOperationException();
+        }
     }
 }
