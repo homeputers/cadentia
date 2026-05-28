@@ -1,0 +1,56 @@
+groups:
+  - name: cadentia-adr019-security
+    rules:
+      - alert: CadentiaAuthorizationDenySpike
+        expr: |
+          (
+            sum by (operation_class) (rate(cadentia_authz_decisions_total{decision="deny"}[5m]))
+            /
+            clamp_min(sum by (operation_class) (rate(cadentia_authz_decisions_total[5m])), 0.0001)
+          ) > 0.20
+          and
+          sum by (operation_class) (increase(cadentia_authz_decisions_total[5m])) >= 50
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Authorization deny spike for {{ $labels.operation_class }}"
+          description: "Denied ratio exceeded 20% for at least 15m with sufficient request volume."
+
+      - alert: CadentiaPolicyOverrideActivity
+        expr: increase(cadentia_policy_overrides_total[5m]) > 0
+        for: 0m
+        labels:
+          severity: high
+        annotations:
+          summary: "Policy override activity detected"
+          description: "At least one policy override event occurred in the last 5 minutes."
+
+      - alert: CadentiaApprovalAnomalyBurst
+        expr: |
+          (
+            sum by (review_domain) (rate(cadentia_approval_decisions_total[30m]))
+            >
+            3 * clamp_min(sum by (review_domain) (rate(cadentia_approval_decisions_total[24h])), 0.0001)
+          )
+          or
+          (
+            sum by (review_domain) (rate(cadentia_approval_decisions_total{decision="rejected"}[30m]))
+            /
+            clamp_min(sum by (review_domain) (rate(cadentia_approval_decisions_total[30m])), 0.0001)
+          ) > 0.70
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Approval anomaly for {{ $labels.review_domain }}"
+          description: "Approval throughput or rejection ratio deviates from expected baseline."
+
+      - alert: CadentiaVisibilityGateFailure
+        expr: increase(cadentia_visibility_gate_failures_total[5m]) > 0
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Visibility gate failure detected"
+          description: "Unapproved or inactive content may be exposed on public API surfaces."

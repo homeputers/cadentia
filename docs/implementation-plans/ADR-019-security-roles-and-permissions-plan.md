@@ -184,3 +184,20 @@ Implemented foundational privileged-action audit infrastructure:
 - Added `v_privileged_action_audit_history` view for operational query workflows by actor/action/time window.
 
 Follow-up integration work should wire privileged mutation services to persist directly into this audit table for non-optional write enforcement across approvals, role assignment, policy override, and merge flows.
+
+## Subtask 4 Implementation Notes (2026-05-28)
+
+Implemented security observability and operations documentation baseline:
+
+- Added runbook `docs/runbooks/adr-019-security-observability-and-response.md` with:
+  - bounded-cardinality authorization, override, approval, and visibility-gate metrics;
+  - tracing requirements for authorization decisions;
+  - alert definitions for deny spikes, override use, approval anomalies, and visibility regressions;
+  - incident triage SQL against `v_privileged_action_audit_history`;
+  - emergency remediation steps for revoking/rotating elevated access and containing exposure.
+- Updated `docs/ARCHITECTURE.md` with an ADR-019 observability section linking required metrics, tracing expectations, and the new runbook.
+
+Subtask 4 follow-up implementation has been completed in code and test coverage:
+- metrics emission has been wired for authorization/approval decision paths;
+- alert-rule provisioning artifact has been added under runtime observability resources;
+- automated tests now cover inactive-content exclusion in user-facing recommendation candidate retrieval paths.

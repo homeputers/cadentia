@@ -1,7 +1,8 @@
 # ADR-019: Security, Roles, and Permissions
 
-Status: Proposed  
+Status: Completed  
 Date: 2026-05-26
+Completion Date: 2026-05-28
 
 ## Context
 
