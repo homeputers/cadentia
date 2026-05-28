@@ -43,6 +43,37 @@ observability expectations, and documentation ownership.
 - Do not leave integration topics unmapped.
 - Do not rewrite canonical ADR requirements during mapping publication.
 
+### Canonical decision map (published)
+
+| Integration concern | Canonical ADR authority | Implementation-plan anchors | Delivery/verification artifacts |
+| --- | --- | --- | --- |
+| Connector lifecycle (registration, adapter boundaries, import contract) | **ADR-008** | `apps/api` connector services/repositories, connector-facing OpenAPI operations, adapter integration tests in `apps/api/src/test/java` | OpenAPI endpoints reference connector domain language from ADR-008; adapter tests cover create/run/sync/deactivate lifecycle paths; docs references point to ADR-008 sections only. |
+| Source provenance + auditability for imported content | **ADR-008** + governance handoff in **ADR-011** | DB migration and JPA entities in `apps/api/src/main/resources/db/migration` and `apps/api/src/main/java`, provenance fields in API DTOs/OpenAPI schemas, audit/review tests | Migration includes immutable source/provenance columns; API schema exposes provenance metadata; review workflow verifies provenance before promotion. |
+| Retry, backoff, and idempotent reprocessing | **ADR-008** | Connector job orchestration in `apps/api` services, job status persistence, failure metrics/logs instrumentation | Deterministic idempotency key behavior under repeated imports; retry policy documented in runbook/docs and asserted by service tests. |
+| Staging import boundary and deduplication before catalog promotion | **ADR-003** | Staging tables/entities + migration scripts, dedup pipeline services, API/admin review endpoints, staging-focused tests | No direct production writes from raw connector payloads; dedup decisions are reproducible and test-covered; staging-to-approved transition explicit. |
+| Approval/review gates and doctrinal/governance controls | **ADR-011** | Review state machine logic in `apps/api`, moderation/admin endpoints, policy audit trails, reviewer workflow docs | Promotion requires review state transitions; unreviewed records remain non-recommendable; policy audit events emitted and queryable. |
+| Lyrics/import format compatibility (ChordPro, OpenSong, Markdown, CSV mappings) | **ADR-004** (formats) + connector entrypoints from **ADR-008** | Parser/normalizer modules in `apps/api`, import DTO validation, format fixture tests | Supported formats are explicitly enumerated; unsupported/ambiguous formats fail with deterministic validation errors; test fixtures map each format to normalized internal model. |
+| OpenAPI authority for external integration surfaces | **ADR-008/003/011/004**, by concern | `apps/api` OpenAPI YAML/annotations, controller contracts, `packages/intent-contracts` only where schema contracts are shared | Every integration endpoint description includes canonical ADR references; no endpoint cites ADR-020 as normative source. |
+| Infrastructure boundaries (queues, schedulers, storage, secret/config ownership) | **ADR-008** primary, **ADR-003** for staging persistence boundary | Infra manifests/config under repo infra paths, scheduler/worker configuration, environment docs | Infra docs tie each boundary to canonical ADR; deployment checklists verify staging isolation and connector credential scoping. |
+| Observability expectations (logs, metrics, traces for ingestion + review) | **ADR-008** for connector execution, **ADR-011** for governance decisions | Logging/metrics code in `apps/api`, dashboards/alerts docs, ops runbooks | Operational signals cover ingestion success/failure, retries, dedup outcomes, and review gate throughput; alert playbooks cite canonical ADRs. |
+| Documentation ownership and backlog hygiene | This rejected ADR (historical only) + canonical ADRs above | `docs/ARCHITECTURE.md`, ADR index/table, backlog/issue templates, PR checklist | Templates instruct contributors to select ADR-008/003/011/004 as implementation authority and mention ADR-020 only as historical duplicate context. |
+
+### Backlog/reference template guidance
+
+Use the following template in implementation issues/PR descriptions for any
+integration work:
+
+1. **Canonical ADR reference (required):** ADR-008, ADR-003, ADR-011, or ADR-004.
+2. **Concern type (required):** connector lifecycle / staging-dedup / governance gate / format compatibility / provenance / retry-idempotency.
+3. **Implementation anchors (required):** specific module(s), OpenAPI surface(s), migration(s), and test suites.
+4. **ADR-020 mention (optional):** allowed only as historical duplicate context, never as decision authority.
+
+Example:
+
+- Canonical ADRs: ADR-003 (staging), ADR-011 (promotion gate)
+- Anchors: `apps/api` staging service + review controller + migration + integration tests
+- Historical note: “Originally proposed in ADR-020; implemented per ADR-003/011.”
+
 ## Subtask 2: Add safeguards against duplicate integration planning
 
 ### Context
