@@ -175,7 +175,7 @@ visibility gates; update security runbooks and developer docs.
 
 Implemented foundational privileged-action audit infrastructure:
 
-- Added migration `V017__privileged_action_audit_trail.sql` introducing `privileged_action_audit_events` with required actor/action/target/timestamp and before/after state reference fields.
+- Added migration `V019__privileged_action_audit_trail.sql` introducing `privileged_action_audit_events` with required actor/action/target/timestamp and before/after state reference fields.
 - Added retention and integrity controls:
   - `retention_until` defaulted to 400 days.
   - secret-pattern guardrail check constraint on metadata payload text.
