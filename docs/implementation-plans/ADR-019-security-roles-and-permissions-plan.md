@@ -31,6 +31,36 @@ Publish permission matrix documentation and annotate OpenAPI operations with
 required roles/scopes for read, edit, import, approve, merge, planning, and
 admin workflows.
 
+
+### Deliverables
+
+1. **Canonical permission matrix artifact**
+   - Add a role-operation matrix to ADR-019 (or linked security doc) covering read, plan, edit, import, approve, merge, and admin actions.
+   - Include explicit deny cases for ambiguous actions (for example worship leaders approving doctrinal content).
+
+2. **Authorization contract surface inventory**
+   - Enumerate all OpenAPI endpoints by operation class and annotate required roles/scopes.
+   - Define shared 401/403 response schemas and non-leaky error semantics.
+   - Document approved+active filtering contract for user-facing read endpoints.
+
+3. **Least-privilege role assignment workflow**
+   - Document default role assignment, elevation request path, reviewer role separation, and admin override controls.
+   - Require auditable role-change events and periodic access review ownership.
+
+### Proposed operation classes for matrix coverage
+
+- `catalog.read.public` (approved+active only)
+- `catalog.read.staged`
+- `setlist.generate`
+- `planning.write.own`
+- `catalog.write.staged`
+- `catalog.import`
+- `catalog.approve.doctrinal`
+- `catalog.approve.musical`
+- `catalog.merge`
+- `security.roles.assign`
+- `security.policy.override`
+
 ### Acceptance criteria
 
 - Permission matrix maps each role to allowed/denied operations.
@@ -61,6 +91,7 @@ repositories with non-leaky failure semantics.
 
 Implement Java security configuration, controller/service guards, and policy
 checks for catalog mutation, approvals, imports, merges, and admin actions.
+
 
 ### Acceptance criteria
 
@@ -94,6 +125,7 @@ operations.
 Add audit-event persistence, migration support, and infrastructure controls for
 retention, integrity, and searchable privileged-operation trails.
 
+
 ### Acceptance criteria
 
 - Audit records include actor, action, target, timestamp, and before/after state snapshot references.
@@ -124,6 +156,7 @@ filtering regressions quickly.
 
 Implement metrics, traces, and alerts for authorization outcomes and content
 visibility gates; update security runbooks and developer docs.
+
 
 ### Acceptance criteria
 
