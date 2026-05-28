@@ -135,3 +135,126 @@ observability, and documentation references.
 - Do not introduce new integration behavior under a governance-only remediation task.
 - Do not close tasks as complete without reference migration evidence.
 - Do not bypass formal ADR amendment process for new requirements.
+
+### Remediation guide (published)
+
+Use this guide when a branch, ticket, or PR is already in flight and references
+ADR-020 as implementation authority.
+
+#### 1) Inventory the in-flight scope and classify concerns
+
+1. Capture every ADR reference in the task body, PR description, linked design
+   notes, and changed files.
+2. Classify each referenced change by concern type:
+   - connector lifecycle / retry-idempotency / provenance
+   - staging + dedup boundary
+   - approval/review governance
+   - lyrics/import format compatibility
+3. Map each concern to canonical ADR authority:
+   - ADR-008 (connector architecture, provenance, retry/idempotency)
+   - ADR-003 (staging + dedup)
+   - ADR-011 (approval/review gate)
+   - ADR-004 (format compatibility)
+4. Record this mapping in the task checklist before any code edits.
+
+#### 2) Replace authority references without changing behavior
+
+1. Update issue/PR narrative text to remove ADR-020 as normative source.
+2. Update in-repo docs and inline comments that cite ADR-020 for
+   implementation behavior.
+3. Keep any ADR-020 mention explicitly historical, e.g.:
+   “Originally proposed in ADR-020; implemented per ADR-008/003/011/004.”
+4. Do **not** modify runtime behavior, schema fields, workflow transitions, or
+   API semantics in this remediation pass unless required for canonical
+   alignment and separately approved.
+
+#### 3) Rewire implementation anchors by surface area
+
+For each concern, verify references and ownership in the expected layer:
+
+- **OpenAPI / API contracts**
+  - Ensure endpoint descriptions and operation docs cite canonical ADRs only.
+  - Confirm `packages/intent-contracts` references (if present) do not treat
+    ADR-020 as authority.
+- **Java service/repository/controller layers (`apps/api`)**
+  - Replace ADR-020 references in service docs/comments with mapped canonical
+    ADRs.
+  - Confirm behavior remains unchanged (same validations, transitions, retry
+    semantics).
+- **Infra automation and config boundaries**
+  - Repoint runbook/checklist references to ADR-008 (connectors) and ADR-003
+    (staging boundary) where applicable.
+  - Keep queue/scheduler/secret ownership unchanged unless covered by approved
+    canonical ADR work.
+- **Observability artifacts**
+  - Update metric/log/alert documentation references to canonical ADRs.
+  - Preserve metric names, alert thresholds, and dashboards during remediation.
+- **Documentation surfaces**
+  - Update `docs/ARCHITECTURE.md`, ADR indexes, and implementation-plan links
+    to mark ADR-020 as rejected duplicate context.
+
+#### 4) Migration checklist (must be attached to ticket/PR)
+
+- [ ] Concern map completed (each integration concern mapped to ADR-008/003/011/004).
+- [ ] ADR-020 removed as normative authority from ticket/PR text.
+- [ ] OpenAPI and contract docs updated to canonical ADR references.
+- [ ] Java-layer comments/docs updated without behavior changes.
+- [ ] Infra/runbook/observability references updated.
+- [ ] Evidence attached: before/after reference diff + validation command output.
+- [ ] Any net-new requirement logged as ADR amendment candidate (not folded into remediation).
+
+#### 5) Verification commands (reference migration evidence)
+
+Run from repo root and attach outputs to the task:
+
+```bash
+rg -n "ADR-020" docs apps packages
+rg -n "ADR-(008|003|011|004)" docs apps packages
+git diff -- docs apps packages
+```
+
+Expected result:
+- ADR-020 remains only in historical/rejected context.
+- Active implementation references point to ADR-008/003/011/004.
+- Diffs show reference rewiring with no unintended behavior changes.
+
+#### 6) No-behavior-delta verification expectations
+
+When remediation only changes references/documentation, teams must demonstrate:
+
+1. No API contract delta (no schema/route/semantic changes).
+2. No state machine transition delta for staging/review promotion flows.
+3. No connector retry/idempotency logic delta.
+4. No import parser compatibility delta.
+
+Evidence may include existing test suite results for touched areas and
+“documentation-only” or “reference-only” diff review notes.
+
+#### 7) Worked examples
+
+1. **Connector adapter task in flight**
+   - Before: PR cites ADR-020 for connector retries.
+   - After: PR cites ADR-008 for retries/idempotency; code logic unchanged.
+2. **Import staging task in flight**
+   - Before: Ticket says ADR-020 requires staging table.
+   - After: Ticket maps staging/dedup decisions to ADR-003 and review gate to
+     ADR-011.
+3. **Approval gating task in flight**
+   - Before: Controller comment references ADR-020 gate policy.
+   - After: Comment references ADR-011; transition behavior unchanged.
+4. **Lyric-format handling task in flight**
+   - Before: Parser doc references ADR-020 format support.
+   - After: Parser doc cites ADR-004 for format compatibility and ADR-008 for
+     connector entrypoint context.
+
+#### 8) Escalation path for genuinely net-new requirements
+
+If in-flight work reveals requirements not covered by ADR-008/003/011/004:
+
+1. Mark the task section as “net-new requirement candidate.”
+2. Document gap statement, impacted modules, risk, and why canonical ADRs are
+   insufficient.
+3. Open an ADR amendment proposal against the relevant canonical ADR
+   (or a new ADR if scope is truly novel).
+4. Keep remediation changes separate from feature-governance decisions until
+   amendment is approved.
