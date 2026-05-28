@@ -31,6 +31,36 @@ Defined roles:
 
 Authorization is enforced server-side for all mutation and approval endpoints. User-facing catalog and recommendation APIs expose only approved, active content.
 
+
+## Permission Matrix
+
+| Operation | VIEWER | WORSHIP_LEADER | CATALOG_EDITOR | DOCTRINAL_REVIEWER | MUSICAL_REVIEWER | ADMIN |
+| --- | --- | --- | --- | --- | --- | --- |
+| Read approved+active catalog/recommendations | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Read staged/unapproved catalog data | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
+| Generate setlist recommendations | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Create/update own service plans | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Create/edit staged catalog items | ❌ | ❌ | ✅ | ❌ | ❌ | ✅ |
+| Submit item for review | ❌ | ❌ | ✅ | ❌ | ❌ | ✅ |
+| Import catalog metadata | ❌ | ❌ | ✅ | ❌ | ❌ | ✅ |
+| Merge approved catalog changes | ❌ | ❌ | ✅* | ❌ | ❌ | ✅ |
+| Doctrinal approval/rejection | ❌ | ❌ | ❌ | ✅ | ❌ | ✅ |
+| Musical approval/rejection | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ |
+| Assign/revoke roles & policy overrides | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
+
+`*` Catalog editor merge is allowed only when policy constraints are satisfied and all required review gates are complete.
+
+## Authorization Contract Surfaces
+
+Authorization must be declared and enforced at these surfaces:
+
+1. **OpenAPI contracts**: every operation declares `security` requirements, required roles, and 401/403 error schemas.
+2. **Controller boundaries**: mutation/approval/import/merge/admin endpoints require explicit role checks with deny-by-default behavior.
+3. **Service policy layer**: reviewer-domain checks, merge gate checks, and override rules are centralized in policy services (not duplicated in controllers).
+4. **Repository/query boundaries**: user-facing read paths enforce approved+active filters; staged content requires privileged role gates.
+5. **Audit boundary**: all privileged actions emit auditable records including actor, action, target, and before/after references.
+6. **Role assignment workflow**: role changes are explicit admin actions with audit trail and least-privilege defaults for new users.
+
 ## Requirements
 
 - Publish permission matrix across read, edit, import, approve, merge, and admin actions.
