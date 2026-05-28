@@ -210,8 +210,13 @@ public class AdminImportReviewService {
                 Map.of("rollbackExecuted", true, "targetType", preview.targetType().name(), "targetId", preview.targetId().toString()));
         return new RollbackExecutionResult(rollbackRequestId, action, event.id());
     }
-@Transactional(readOnly = true)
+
+    @Transactional(readOnly = true)
     public List<AdminAuditEvent> getAuditHistory(UUID entityId) {
+        List<AdminAuditEvent> persisted = songRepository.findPrivilegedActionAuditEventsByEntityId(entityId);
+        if (!persisted.isEmpty()) {
+            return persisted;
+        }
         return List.copyOf(auditEventsByEntityId.getOrDefault(entityId, List.of()));
     }
 
@@ -581,7 +586,8 @@ public class AdminImportReviewService {
                 beforeState,
                 afterState);
         auditEventsByEntityId.computeIfAbsent(entityId, ignored -> new ArrayList<>()).add(event);
-        return event;
+        AdminAuditEvent persisted = songRepository.appendPrivilegedActionAuditEvent(event);
+        return persisted == null ? event : persisted;
     }
 
     private void requireAuthorized(String action, String actor, UUID entityId, String entityType) {
