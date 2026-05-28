@@ -21,6 +21,14 @@ paths:
       tags:
         - FeedbackTuning
       operationId: recordFeedbackEvent
+      security:
+        - bearerAuth: []
+      x-required-roles: # recordFeedbackEvent
+        - WORSHIP_LEADER
+        - CATALOG_EDITOR
+        - DOCTRINAL_REVIEWER
+        - MUSICAL_REVIEWER
+        - ADMIN
       summary: Record explicit recommendation feedback for deterministic tuning
       description: >
         Persists explicit user feedback signals that influence ranking weights only.
@@ -42,6 +50,11 @@ paths:
       tags:
         - FeedbackTuning
       operationId: listFeedbackEvents
+      security:
+        - bearerAuth: []
+      x-required-roles: # listFeedbackEvents
+        - CATALOG_EDITOR
+        - ADMIN
       summary: List feedback events for inspection and governance
       description: >
         Returns append-only feedback events by scope for audit and tuning analysis.
@@ -75,6 +88,12 @@ paths:
       tags:
         - FeedbackTuning
       operationId: getFeedbackScopeState
+      security:
+        - bearerAuth: []
+      x-required-roles: # getFeedbackScopeState
+        - WORSHIP_LEADER
+        - CATALOG_EDITOR
+        - ADMIN
       summary: Inspect deterministic feedback aggregate state for a scope
       description: >
         Returns aggregate counters and last-updated markers used by recommendation tuning.
@@ -103,6 +122,10 @@ paths:
       tags:
         - FeedbackTuning
       operationId: resetFeedbackScopeState
+      security:
+        - bearerAuth: []
+      x-required-roles: # resetFeedbackScopeState
+        - ADMIN
       summary: Reset feedback state for a scope
       description: >
         Destructive governance operation that resets feedback influence state for a scope.
@@ -137,6 +160,11 @@ paths:
       tags:
         - AdminReview
       operationId: listAdminImportCandidates
+      security:
+        - bearerAuth: []
+      x-required-roles: # listAdminImportCandidates
+        - CATALOG_EDITOR
+        - ADMIN
       summary: List import candidates for admin triage queue
       parameters:
         - in: query
@@ -163,6 +191,11 @@ paths:
       tags:
         - AdminReview
       operationId: getAdminImportCandidateDetail
+      security:
+        - bearerAuth: []
+      x-required-roles: # getAdminImportCandidateDetail
+        - CATALOG_EDITOR
+        - ADMIN
       summary: Fetch admin candidate detail with parser evidence
       parameters:
         - in: path
@@ -185,6 +218,11 @@ paths:
       tags:
         - AdminReview
       operationId: getAdminImportCandidateDuplicates
+      security:
+        - bearerAuth: []
+      x-required-roles: # getAdminImportCandidateDuplicates
+        - CATALOG_EDITOR
+        - ADMIN
       summary: Fetch ranked duplicate matches for a candidate
       parameters:
         - in: path
@@ -208,6 +246,11 @@ paths:
       tags:
         - AdminReview
       operationId: getAdminImportCandidateAuditHistory
+      security:
+        - bearerAuth: []
+      x-required-roles: # getAdminImportCandidateAuditHistory
+        - CATALOG_EDITOR
+        - ADMIN
       summary: Fetch append-only audit history for an import candidate
       parameters:
         - in: path
@@ -230,6 +273,11 @@ paths:
       tags:
         - AdminReview
       operationId: openAdminModerationFlag
+      security:
+        - bearerAuth: []
+      x-required-roles: # openAdminModerationFlag
+        - CATALOG_EDITOR
+        - ADMIN
       summary: Open a moderation flag for an import candidate
       parameters:
         - in: path
@@ -256,6 +304,11 @@ paths:
       tags:
         - AdminReview
       operationId: assignAdminModerationFlag
+      security:
+        - bearerAuth: []
+      x-required-roles: # assignAdminModerationFlag
+        - CATALOG_EDITOR
+        - ADMIN
       summary: Assign a moderation flag to a reviewer
       parameters:
         - in: path
@@ -282,6 +335,11 @@ paths:
       tags:
         - AdminReview
       operationId: resolveAdminModerationFlag
+      security:
+        - bearerAuth: []
+      x-required-roles: # resolveAdminModerationFlag
+        - CATALOG_EDITOR
+        - ADMIN
       summary: Resolve a moderation flag
       parameters:
         - in: path
@@ -308,6 +366,11 @@ paths:
       tags:
         - AdminReview
       operationId: escalateAdminModerationFlag
+      security:
+        - bearerAuth: []
+      x-required-roles: # escalateAdminModerationFlag
+        - CATALOG_EDITOR
+        - ADMIN
       summary: Escalate a moderation flag
       parameters:
         - in: path
@@ -335,6 +398,10 @@ paths:
       tags:
         - AdminReview
       operationId: createAdminRollbackPreview
+      security:
+        - bearerAuth: []
+      x-required-roles: # createAdminRollbackPreview
+        - ADMIN
       summary: Create rollback preview for a target entity
       requestBody:
         required: true
@@ -354,6 +421,10 @@ paths:
       tags:
         - AdminReview
       operationId: executeAdminRollback
+      security:
+        - bearerAuth: []
+      x-required-roles: # executeAdminRollback
+        - ADMIN
       summary: Execute a previously previewed rollback
       requestBody:
         required: true
@@ -373,6 +444,14 @@ paths:
       tags:
         - Setlists
       operationId: getConversationSessionState
+      security:
+        - bearerAuth: []
+      x-required-roles: # getConversationSessionState
+        - WORSHIP_LEADER
+        - CATALOG_EDITOR
+        - DOCTRINAL_REVIEWER
+        - MUSICAL_REVIEWER
+        - ADMIN
       summary: Read current conversation session state
       parameters:
         - in: path
@@ -396,6 +475,14 @@ paths:
       tags:
         - Setlists
       operationId: updateConversationSessionSlots
+      security:
+        - bearerAuth: []
+      x-required-roles: # updateConversationSessionSlots
+        - WORSHIP_LEADER
+        - CATALOG_EDITOR
+        - DOCTRINAL_REVIEWER
+        - MUSICAL_REVIEWER
+        - ADMIN
       summary: Merge slot updates into conversation session state
       parameters:
         - in: path
@@ -425,6 +512,14 @@ paths:
       tags:
         - Setlists
       operationId: requestConversationClarification
+      security:
+        - bearerAuth: []
+      x-required-roles: # requestConversationClarification
+        - WORSHIP_LEADER
+        - CATALOG_EDITOR
+        - DOCTRINAL_REVIEWER
+        - MUSICAL_REVIEWER
+        - ADMIN
       summary: Submit clarification answer and return updated state
       parameters:
         - in: path
@@ -452,6 +547,14 @@ paths:
       tags:
         - Setlists
       operationId: confirmConversationSession
+      security:
+        - bearerAuth: []
+      x-required-roles: # confirmConversationSession
+        - WORSHIP_LEADER
+        - CATALOG_EDITOR
+        - DOCTRINAL_REVIEWER
+        - MUSICAL_REVIEWER
+        - ADMIN
       summary: Confirm normalized request and transition to CONFIRMED
       parameters:
         - in: path
@@ -481,6 +584,14 @@ paths:
       tags:
         - Setlists
       operationId: cancelConversationSession
+      security:
+        - bearerAuth: []
+      x-required-roles: # cancelConversationSession
+        - WORSHIP_LEADER
+        - CATALOG_EDITOR
+        - DOCTRINAL_REVIEWER
+        - MUSICAL_REVIEWER
+        - ADMIN
       summary: Cancel active session
       parameters:
         - in: path
@@ -502,6 +613,14 @@ paths:
       tags:
         - Setlists
       operationId: recoverConversationSession
+      security:
+        - bearerAuth: []
+      x-required-roles: # recoverConversationSession
+        - WORSHIP_LEADER
+        - CATALOG_EDITOR
+        - DOCTRINAL_REVIEWER
+        - MUSICAL_REVIEWER
+        - ADMIN
       summary: Recover from an expired session
       parameters:
         - in: path
@@ -523,6 +642,14 @@ paths:
       tags:
         - Setlists
       operationId: generateSetlistProposalFromNaturalLanguage
+      security:
+        - bearerAuth: []
+      x-required-roles: # generateSetlistProposalFromNaturalLanguage
+        - WORSHIP_LEADER
+        - CATALOG_EDITOR
+        - DOCTRINAL_REVIEWER
+        - MUSICAL_REVIEWER
+        - ADMIN
       summary: Generate a setlist proposal from natural-language text
       description: >-
         Accepts raw user text, invokes the LLM intent boundary, validates the
@@ -572,6 +699,14 @@ paths:
       tags:
         - Setlists
       operationId: createSetlistBaselineVersion
+      security:
+        - bearerAuth: []
+      x-required-roles: # createSetlistBaselineVersion
+        - WORSHIP_LEADER
+        - CATALOG_EDITOR
+        - DOCTRINAL_REVIEWER
+        - MUSICAL_REVIEWER
+        - ADMIN
       summary: Persist a generated setlist baseline as version 1
       description: >-
         Stores the deterministic recommendation output and immutable generation context.
@@ -596,6 +731,14 @@ paths:
       tags:
         - Setlists
       operationId: commitSetlistEdits
+      security:
+        - bearerAuth: []
+      x-required-roles: # commitSetlistEdits
+        - WORSHIP_LEADER
+        - CATALOG_EDITOR
+        - DOCTRINAL_REVIEWER
+        - MUSICAL_REVIEWER
+        - ADMIN
       summary: Commit auditable edit operations as a new immutable version
       parameters:
         - in: path
@@ -626,6 +769,14 @@ paths:
       tags:
         - Setlists
       operationId: listSetlistVersions
+      security:
+        - bearerAuth: []
+      x-required-roles: # listSetlistVersions
+        - WORSHIP_LEADER
+        - CATALOG_EDITOR
+        - DOCTRINAL_REVIEWER
+        - MUSICAL_REVIEWER
+        - ADMIN
       summary: List immutable versions for a setlist lineage
       parameters:
         - in: path
@@ -648,6 +799,14 @@ paths:
       tags:
         - Setlists
       operationId: getSetlistVersion
+      security:
+        - bearerAuth: []
+      x-required-roles: # getSetlistVersion
+        - WORSHIP_LEADER
+        - CATALOG_EDITOR
+        - DOCTRINAL_REVIEWER
+        - MUSICAL_REVIEWER
+        - ADMIN
       summary: Retrieve a specific immutable setlist version snapshot
       parameters:
         - in: path
@@ -676,6 +835,14 @@ paths:
       tags:
         - Setlists
       operationId: diffSetlistVersions
+      security:
+        - bearerAuth: []
+      x-required-roles: # diffSetlistVersions
+        - WORSHIP_LEADER
+        - CATALOG_EDITOR
+        - DOCTRINAL_REVIEWER
+        - MUSICAL_REVIEWER
+        - ADMIN
       summary: Compare two immutable versions in the same setlist lineage
       parameters:
         - in: path
@@ -710,6 +877,14 @@ paths:
       tags:
         - ServicePlans
       operationId: createServicePlan
+      security:
+        - bearerAuth: []
+      x-required-roles: # createServicePlan
+        - WORSHIP_LEADER
+        - CATALOG_EDITOR
+        - DOCTRINAL_REVIEWER
+        - MUSICAL_REVIEWER
+        - ADMIN
       summary: Create a draft service plan
       requestBody:
         required: true
@@ -728,6 +903,14 @@ paths:
       tags:
         - ServicePlans
       operationId: listServicePlans
+      security:
+        - bearerAuth: []
+      x-required-roles: # listServicePlans
+        - WORSHIP_LEADER
+        - CATALOG_EDITOR
+        - DOCTRINAL_REVIEWER
+        - MUSICAL_REVIEWER
+        - ADMIN
       summary: List service plans
       responses:
         '200':
@@ -744,6 +927,14 @@ paths:
       tags:
         - ServicePlans
       operationId: getServicePlan
+      security:
+        - bearerAuth: []
+      x-required-roles: # getServicePlan
+        - WORSHIP_LEADER
+        - CATALOG_EDITOR
+        - DOCTRINAL_REVIEWER
+        - MUSICAL_REVIEWER
+        - ADMIN
       summary: Retrieve a service plan
       parameters:
         - in: path
@@ -765,6 +956,14 @@ paths:
       tags:
         - ServicePlans
       operationId: updateServicePlan
+      security:
+        - bearerAuth: []
+      x-required-roles: # updateServicePlan
+        - WORSHIP_LEADER
+        - CATALOG_EDITOR
+        - DOCTRINAL_REVIEWER
+        - MUSICAL_REVIEWER
+        - ADMIN
       summary: Update mutable draft service-plan metadata
       parameters:
         - in: path
@@ -792,6 +991,14 @@ paths:
       tags:
         - ServicePlans
       operationId: reorderServicePlanBlocks
+      security:
+        - bearerAuth: []
+      x-required-roles: # reorderServicePlanBlocks
+        - WORSHIP_LEADER
+        - CATALOG_EDITOR
+        - DOCTRINAL_REVIEWER
+        - MUSICAL_REVIEWER
+        - ADMIN
       summary: Reorder service-plan blocks within a draft
       parameters:
         - in: path
@@ -819,6 +1026,14 @@ paths:
       tags:
         - ServicePlans
       operationId: attachSetlistVersionToServicePlan
+      security:
+        - bearerAuth: []
+      x-required-roles: # attachSetlistVersionToServicePlan
+        - WORSHIP_LEADER
+        - CATALOG_EDITOR
+        - DOCTRINAL_REVIEWER
+        - MUSICAL_REVIEWER
+        - ADMIN
       summary: Attach an immutable setlist version to a service plan
       parameters:
         - in: path
@@ -846,6 +1061,14 @@ paths:
       tags:
         - ServicePlans
       operationId: publishServicePlan
+      security:
+        - bearerAuth: []
+      x-required-roles: # publishServicePlan
+        - WORSHIP_LEADER
+        - CATALOG_EDITOR
+        - DOCTRINAL_REVIEWER
+        - MUSICAL_REVIEWER
+        - ADMIN
       summary: Publish a service plan and persist immutable effective sequence
       parameters:
         - in: path
@@ -871,6 +1094,11 @@ paths:
           description: Service plan cannot be published due to validation or stale references.
 
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
   schemas:
     FeedbackOutcome:
       type: string
