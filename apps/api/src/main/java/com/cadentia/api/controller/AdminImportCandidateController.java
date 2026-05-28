@@ -95,7 +95,7 @@ public class AdminImportCandidateController implements AdminReviewApi {
     }
 
     @Override
-    @PreAuthorize("hasAnyAuthority(T(com.cadentia.api.security.RbacAuthorities).ROLE_CATALOG_EDITOR, T(com.cadentia.api.security.RbacAuthorities).ROLE_ADMIN)")
+    @PreAuthorize("hasAnyAuthority(T(com.cadentia.api.security.RbacAuthorities).ROLE_CATALOG_EDITOR, T(com.cadentia.api.security.RbacAuthorities).ROLE_ADMIN, 'catalog.admin.review', 'catalog.admin.approve')")
     public ResponseEntity<ModerationFlagResponse> openAdminModerationFlag(
             @PathVariable UUID candidateId,
             @RequestBody OpenModerationFlagRequest request) {
@@ -109,7 +109,7 @@ public class AdminImportCandidateController implements AdminReviewApi {
     }
 
     @Override
-    @PreAuthorize("hasAnyAuthority(T(com.cadentia.api.security.RbacAuthorities).ROLE_CATALOG_EDITOR, T(com.cadentia.api.security.RbacAuthorities).ROLE_ADMIN)")
+    @PreAuthorize("hasAnyAuthority(T(com.cadentia.api.security.RbacAuthorities).ROLE_CATALOG_EDITOR, T(com.cadentia.api.security.RbacAuthorities).ROLE_ADMIN, 'catalog.admin.review', 'catalog.admin.approve')")
     public ResponseEntity<ModerationFlagResponse> assignAdminModerationFlag(
             @PathVariable UUID flagId,
             @RequestBody AssignModerationFlagRequest request) {
@@ -118,7 +118,7 @@ public class AdminImportCandidateController implements AdminReviewApi {
     }
 
     @Override
-    @PreAuthorize("hasAnyAuthority(T(com.cadentia.api.security.RbacAuthorities).ROLE_CATALOG_EDITOR, T(com.cadentia.api.security.RbacAuthorities).ROLE_ADMIN)")
+    @PreAuthorize("hasAnyAuthority(T(com.cadentia.api.security.RbacAuthorities).ROLE_CATALOG_EDITOR, T(com.cadentia.api.security.RbacAuthorities).ROLE_ADMIN, 'catalog.admin.review', 'catalog.admin.approve')")
     public ResponseEntity<ModerationFlagResponse> resolveAdminModerationFlag(
             @PathVariable UUID flagId,
             @RequestBody ResolveModerationFlagRequest request) {
