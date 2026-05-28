@@ -35,4 +35,8 @@ public interface ServicePlanRepository {
             UUID setlistVersionId);
 
     ServicePlanRecord publish(UUID servicePlanId, String publishedBy, String publishNote);
+
+    boolean setlistVersionExists(UUID setlistId, UUID setlistVersionId);
+
+    boolean hasNewerSetlistVersion(UUID setlistId, UUID setlistVersionId);
 }

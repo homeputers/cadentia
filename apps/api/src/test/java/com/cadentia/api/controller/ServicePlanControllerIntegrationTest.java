@@ -115,5 +115,15 @@ class ServicePlanControllerIntegrationTest {
         public ServicePlanRecord publish(UUID servicePlanId, String publishedBy, String publishNote) {
             throw new UnsupportedOperationException();
         }
+
+        @Override
+        public boolean setlistVersionExists(UUID setlistId, UUID setlistVersionId) {
+            return true;
+        }
+
+        @Override
+        public boolean hasNewerSetlistVersion(UUID setlistId, UUID setlistVersionId) {
+            return false;
+        }
     }
 }
