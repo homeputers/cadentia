@@ -6,6 +6,7 @@ import com.cadentia.serviceplan.ServicePlanModels.ServicePlanStatus;
 import com.cadentia.serviceplan.ServicePlanModels.SetlistAttachment;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -35,7 +36,7 @@ public class JdbcServicePlanRepository implements ServicePlanRepository {
                 RETURNING id
                 """,
                 new MapSqlParameterSource()
-                        .addValue("serviceDateTime", serviceDateTime)
+                         .addValue("serviceDateTime", Timestamp.from(serviceDateTime))
                         .addValue("title", title)
                         .addValue("theme", theme)
                         .addValue("scripture", scripture)
@@ -79,7 +80,7 @@ public class JdbcServicePlanRepository implements ServicePlanRepository {
                 """,
                 new MapSqlParameterSource()
                         .addValue("id", id)
-                        .addValue("serviceDateTime", serviceDateTime)
+                         .addValue("serviceDateTime", Timestamp.from(serviceDateTime))
                         .addValue("title", title)
                         .addValue("theme", theme)
                         .addValue("scripture", scripture)
