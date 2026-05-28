@@ -3,7 +3,6 @@ package com.cadentia.serviceplan;
 import com.cadentia.serviceplan.ServicePlanModels.ServicePlanRecord;
 import com.cadentia.serviceplan.ServicePlanModels.ServicePlanStatus;
 import io.micrometer.core.instrument.Counter;
-import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
 import java.time.Instant;
 import java.util.LinkedHashMap;
@@ -20,15 +19,9 @@ public class ServicePlanService {
     private static final Logger LOGGER = LoggerFactory.getLogger(ServicePlanService.class);
 
     private final ServicePlanRepository repository;
-    private final MeterRegistry meterRegistry;
 
     public ServicePlanService(ServicePlanRepository repository) {
-        this(repository, Metrics.globalRegistry);
-    }
-
-    public ServicePlanService(ServicePlanRepository repository, MeterRegistry meterRegistry) {
         this.repository = repository;
-        this.meterRegistry = meterRegistry;
     }
 
     public ServicePlanRecord create(
@@ -120,7 +113,7 @@ public class ServicePlanService {
     private Counter counter(String name, String... tags) {
         return Counter.builder(name)
                 .tags(tags)
-                .register(meterRegistry);
+                .register(Metrics.globalRegistry);
     }
 
     private String sequenceBlockIds(ServicePlanRecord plan) {
