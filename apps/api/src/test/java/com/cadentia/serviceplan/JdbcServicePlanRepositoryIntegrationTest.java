@@ -27,13 +27,39 @@ class JdbcServicePlanRepositoryIntegrationTest {
     void setUp() {
         DriverManagerDataSource dataSource = new DriverManagerDataSource(
                 POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword());
+        NamedParameterJdbcTemplate jdbcTemplate = new NamedParameterJdbcTemplate(dataSource);
+
+        jdbcTemplate.getJdbcTemplate().execute("CREATE EXTENSION IF NOT EXISTS pgcrypto");
+
         Flyway.configure().dataSource(dataSource).cleanDisabled(false).load().clean();
         Flyway.configure().dataSource(dataSource).load().migrate();
-        repository = new JdbcServicePlanRepository(new NamedParameterJdbcTemplate(dataSource));
+
+        repository = new JdbcServicePlanRepository(jdbcTemplate);
     }
 
     @Test
-    void createUpdateAttachAndPublishExecuteDeterministically() {
+    void createPersistsDraftPlan() {
+        // Arrange
+        Instant serviceDateTime = Instant.parse("2026-06-01T10:00:00Z");
+
+        // Act
+        ServicePlanRecord created = repository.create(
+                serviceDateTime,
+                "Sunday Service",
+                "Faithfulness",
+                "Psalm 100",
+                "Opening service");
+
+        // Assert
+        assertThat(created.servicePlanId()).isNotNull();
+        assertThat(created.status().name()).isEqualTo("DRAFT");
+        assertThat(created.title()).isEqualTo("Sunday Service");
+        assertThat(created.serviceDateTime()).isEqualTo(serviceDateTime);
+    }
+
+    @Test
+    void updateMetadataPersistsChangedFields() {
+        // Arrange
         ServicePlanRecord created = repository.create(
                 Instant.parse("2026-06-01T10:00:00Z"),
                 "Sunday Service",
@@ -41,9 +67,7 @@ class JdbcServicePlanRepositoryIntegrationTest {
                 "Psalm 100",
                 "Opening service");
 
-        assertThat(created.servicePlanId()).isNotNull();
-        assertThat(created.status().name()).isEqualTo("DRAFT");
-
+        // Act
         ServicePlanRecord updated = repository.updateMetadata(
                 created.servicePlanId(),
                 Instant.parse("2026-06-08T10:00:00Z"),
@@ -51,22 +75,71 @@ class JdbcServicePlanRepositoryIntegrationTest {
                 "Praise",
                 "Psalm 150",
                 "Updated notes");
-        assertThat(updated.title()).isEqualTo("Updated Sunday Service");
-        assertThat(updated.scripture()).isEqualTo("Psalm 150");
 
+        // Assert
+        assertThat(updated.title()).isEqualTo("Updated Sunday Service");
+        assertThat(updated.theme()).isEqualTo("Praise");
+        assertThat(updated.scripture()).isEqualTo("Psalm 150");
+        assertThat(updated.notes()).isEqualTo("Updated notes");
+    }
+
+    @Test
+    void attachSetlistVersionPersistsAttachmentReference() {
+        // Arrange
+        ServicePlanRecord created = repository.create(
+                Instant.parse("2026-06-01T10:00:00Z"),
+                "Sunday Service",
+                "Faithfulness",
+                "Psalm 100",
+                "Opening service");
         UUID setlistId = UUID.randomUUID();
         UUID setlistVersionId = UUID.randomUUID();
-        ServicePlanRecord attached = repository.attachSetlistVersion(created.servicePlanId(), setlistId, setlistVersionId);
+
+        // Act
+        ServicePlanRecord attached = repository.attachSetlistVersion(
+                created.servicePlanId(),
+                setlistId,
+                setlistVersionId);
+
+        // Assert
         assertThat(attached.attachments()).hasSize(1);
         assertThat(attached.attachments().get(0).setlistId()).isEqualTo(setlistId);
         assertThat(attached.attachments().get(0).setlistVersionId()).isEqualTo(setlistVersionId);
+    }
 
+    @Test
+    void publishPersistsPublishedStateAndAuditFields() {
+        // Arrange
+        ServicePlanRecord created = repository.create(
+                Instant.parse("2026-06-01T10:00:00Z"),
+                "Sunday Service",
+                "Faithfulness",
+                "Psalm 100",
+                "Opening service");
+
+        // Act
         ServicePlanRecord published = repository.publish(created.servicePlanId(), "tester", "ready");
+
+        // Assert
         assertThat(published.status().name()).isEqualTo("PUBLISHED");
         assertThat(published.publishedBy()).isEqualTo("tester");
         assertThat(published.publishedAt()).isNotNull();
+    }
 
+    @Test
+    void listReturnsPersistedPlansInResultSet() {
+        // Arrange
+        ServicePlanRecord created = repository.create(
+                Instant.parse("2026-06-01T10:00:00Z"),
+                "Sunday Service",
+                "Faithfulness",
+                "Psalm 100",
+                "Opening service");
+
+        // Act
         List<ServicePlanRecord> listed = repository.list();
+
+        // Assert
         assertThat(listed).hasSize(1);
         assertThat(listed.get(0).servicePlanId()).isEqualTo(created.servicePlanId());
     }
