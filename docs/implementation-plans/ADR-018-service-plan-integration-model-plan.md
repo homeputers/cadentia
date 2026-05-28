@@ -5,6 +5,13 @@
 Model service plans as first-class artifacts that compose setlist versions with
 non-song blocks and service-scoped overrides while preserving catalog integrity.
 
+## Status
+
+- Subtask 1: Complete
+- Subtask 2: Complete
+- Subtask 3: Complete
+- Subtask 4: Complete
+
 ## Subtask 1: Define service-plan API contract and block schemas
 
 ### Context
