@@ -29,9 +29,8 @@ class JdbcServicePlanRepositoryIntegrationTest {
                 POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword());
         NamedParameterJdbcTemplate jdbcTemplate = new NamedParameterJdbcTemplate(dataSource);
 
-        jdbcTemplate.getJdbcTemplate().execute("CREATE EXTENSION IF NOT EXISTS pgcrypto");
-
         Flyway.configure().dataSource(dataSource).cleanDisabled(false).load().clean();
+        jdbcTemplate.getJdbcTemplate().execute("CREATE EXTENSION IF NOT EXISTS pgcrypto");
         Flyway.configure().dataSource(dataSource).load().migrate();
 
         repository = new JdbcServicePlanRepository(jdbcTemplate);
