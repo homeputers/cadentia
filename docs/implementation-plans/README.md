@@ -62,6 +62,12 @@ includes:
   observability metrics, structured audit logging expectations, retention/archival
   defaults, conflict retry handling, partial-commit recovery, and restoration
   drill procedures.
+- [ADR-035 Telegram Bot Operations Runbook](../runbooks/adr-035-telegram-bot-operations.md) documents
+  webhook setup, smoke testing, channel telemetry, retry/dead-letter triage,
+  credential rotation, and safe channel disablement.
+- [ADR-036 Administrative Web Interface Operations Runbook](../runbooks/adr-036-admin-interface-operations.md) documents
+  admin UI deployment checks, role-access smoke tests, frontend/API contract
+  mismatch triage, high-risk action monitoring, and UI rollback procedures.
 
 ## Recommended foundation implementation order
 

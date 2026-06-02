@@ -38,6 +38,8 @@ This directory contains the Architecture Decision Records for Cadentia.
 - [ADR-032: Energy Arc Modeling](./ADR-032-energy-arc-modeling.md)
 - [ADR-033: Arrangement Compatibility and Instrumentation Modeling](./ADR-033-arrangement-compatibility-and-instrumentation-modeling.md)
 - [ADR-034: Congregational Familiarity Model](./ADR-034-congregational-familiarity-model.md)
+- [ADR-035: Telegram Bot E2E Integration and Operations](./ADR-035-telegram-bot-e2e-integration-and-operations.md)
+- [ADR-036: Administrative Web Interface](./ADR-036-administrative-web-interface.md)
 
 ## Implemented schema artifacts
 
@@ -87,6 +89,8 @@ Recommended reading order:
 32. ADR-032 — energy arc modeling
 33. ADR-033 — arrangement compatibility and instrumentation modeling
 34. ADR-034 — congregational familiarity model
+35. ADR-035 — Telegram bot E2E integration and operations
+36. ADR-036 — administrative web interface
 
 ## Phase 2 implementation order plan
 
@@ -144,12 +148,12 @@ flowchart TD
 
 ## Phase 4 ADR direction
 
-ADR-021 through ADR-034 extend the existing safety and recommendation foundation into operational maturity. They preserve Cadentia's core boundaries: the LLM interprets intent only, the deterministic Recommendation Engine selects and orders songs, recommendations use only curated and approved catalog data, and all eligibility remains approval-gated.
+ADR-021 through ADR-036 extend the existing safety and recommendation foundation into operational maturity. They preserve Cadentia's core boundaries: the LLM interprets intent only, the deterministic Recommendation Engine selects and orders songs, recommendations use only curated and approved catalog data, and all eligibility remains approval-gated.
 
 Phase 4 themes:
 
 1. **Explainability and musical intelligence:** ADR-021, ADR-031, ADR-032, ADR-033, and ADR-034 define structured explanations, transition analysis, energy arcs, arrangement compatibility, and familiarity controls.
-2. **Operational collaboration:** ADR-023 and ADR-024 model people, assignments, rehearsals, readiness, and service-specific workflow.
+2. **Operational collaboration:** ADR-023, ADR-024, ADR-035, and ADR-036 model people, assignments, rehearsals, readiness, Telegram interactions, and administrative web workflows.
 3. **Platform scale:** ADR-022, ADR-025, ADR-026, ADR-027, ADR-028, and ADR-029 define packaged isolated deployments, assets, search, caching, events, and telemetry.
 4. **Extensibility:** ADR-030 defines plugin boundaries while keeping approval gates and deterministic recommendation guarantees centralized.
 
