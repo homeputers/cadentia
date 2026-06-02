@@ -42,6 +42,10 @@ includes:
 - [ADR-019 Implementation Plan: Security, Roles, and Permissions](./ADR-019-security-roles-and-permissions-plan.md)
 - [ADR-020 Implementation Plan: Duplicate Governance for External Integrations](./ADR-020-external-integration-boundaries-plan.md)
 
+### Phase 4 plans
+
+- [ADR-021 Implementation Plan: Recommendation Engine Explainability API](./ADR-021-recommendation-engine-explainability-api-plan.md)
+
 ## Operational workflow docs
 
 - [Song Import and Deduplication Workflow](../import-workflow.md) documents the
@@ -134,6 +138,16 @@ flowchart TD
     D --> F
     F --> G[ADR-020: External integration duplicate governance]
 ```
+
+## Recommended Phase 4 implementation order
+
+1. [ADR-021: Recommendation Engine Explainability API](./ADR-021-recommendation-engine-explainability-api-plan.md)
+
+Phase 4 starts by making ADR-010 scoring facts and ADR-013 explanation facts
+available through a stable, audience-partitioned API contract. This preserves
+the deterministic Recommendation Engine boundary while allowing web clients,
+audit views, and localization layers to render explanations from structured
+facts rather than generated prose.
 
 ## Cross-plan guardrails
 
