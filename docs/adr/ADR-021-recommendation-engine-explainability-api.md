@@ -1,6 +1,6 @@
 # ADR-021: Recommendation Engine Explainability API
 
-Status: Proposed  
+Status: Accepted  
 Date: 2026-05-28
 
 ## Context

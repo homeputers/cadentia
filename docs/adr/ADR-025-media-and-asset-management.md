@@ -1,6 +1,6 @@
 # ADR-025: Media and Asset Management
 
-Status: Proposed  
+Status: Accepted  
 Date: 2026-05-28
 
 ## Context

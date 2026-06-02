@@ -1,6 +1,6 @@
 # ADR-036: Administrative Web Interface
 
-Status: Proposed  
+Status: Accepted  
 Date: 2026-06-02
 
 ## Context

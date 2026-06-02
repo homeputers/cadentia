@@ -1,6 +1,6 @@
 # ADR-033: Arrangement Compatibility and Instrumentation Modeling
 
-Status: Proposed  
+Status: Accepted  
 Date: 2026-05-28
 
 ## Context

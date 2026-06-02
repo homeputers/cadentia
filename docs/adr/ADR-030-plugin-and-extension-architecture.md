@@ -1,6 +1,6 @@
 # ADR-030: Plugin and Extension Architecture
 
-Status: Proposed  
+Status: Accepted  
 Date: 2026-05-28
 
 ## Context

@@ -1,6 +1,6 @@
 # ADR-027: Caching and Performance Strategy
 
-Status: Proposed  
+Status: Accepted  
 Date: 2026-05-28
 
 ## Context

@@ -1,6 +1,6 @@
 # ADR-029: Observability and Telemetry Strategy
 
-Status: Proposed  
+Status: Accepted  
 Date: 2026-05-28
 
 ## Context

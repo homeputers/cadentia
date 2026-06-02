@@ -1,6 +1,6 @@
 # ADR-034: Congregational Familiarity Model
 
-Status: Proposed  
+Status: Accepted  
 Date: 2026-05-28
 
 ## Context

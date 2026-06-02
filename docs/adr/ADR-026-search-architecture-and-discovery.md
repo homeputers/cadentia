@@ -1,6 +1,6 @@
 # ADR-026: Search Architecture and Discovery
 
-Status: Proposed  
+Status: Accepted  
 Date: 2026-05-28
 
 ## Context

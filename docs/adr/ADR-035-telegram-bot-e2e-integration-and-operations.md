@@ -1,6 +1,6 @@
 # ADR-035: Telegram Bot E2E Integration and Operations
 
-Status: Proposed  
+Status: Accepted  
 Date: 2026-06-02
 
 ## Context

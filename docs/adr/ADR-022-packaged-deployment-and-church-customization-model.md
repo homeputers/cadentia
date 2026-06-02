@@ -1,6 +1,6 @@
 # ADR-022: Packaged Deployment and Church Customization Model
 
-Status: Proposed  
+Status: Accepted  
 Date: 2026-06-02
 
 ## Context

@@ -1,6 +1,6 @@
 # ADR-031: Musical Transition Analysis Engine
 
-Status: Proposed  
+Status: Accepted  
 Date: 2026-05-28
 
 ## Context
