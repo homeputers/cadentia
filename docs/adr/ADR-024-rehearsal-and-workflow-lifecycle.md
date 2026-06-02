@@ -59,6 +59,6 @@ Tradeoffs:
 
 ## Open Questions
 
-- Which readiness states should be required versus tenant-configurable?
+- Which readiness states should be required versus church-configurable?
 - Should rehearsal notes support attachments and recordings directly or through ADR-025 assets only?
 - How long should completed rehearsal workflow data be retained?

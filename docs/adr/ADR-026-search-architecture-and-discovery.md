@@ -15,15 +15,15 @@ Basic database filtering will not support fuzzy search, autocomplete, scripture 
 
 Adopt a search architecture with explicit approved-search indexes, explainable ranking signals, and optional semantic recall. Search returns discoverable catalog candidates; the Recommendation Engine remains the only component that constructs deterministic setlists.
 
-Semantic search may expand or rank discovery results, but all results must pass tenant visibility, approval, active-status, and licensing gates before being returned.
+Semantic search may expand or rank discovery results, but all results must pass instance visibility, approval, active-status, and licensing gates before being returned.
 
 ## Requirements
 
 - Support title, alternate title, scripture, tag, contributor, key, BPM, and arrangement search.
 - Support fuzzy matching and autocomplete for approved visible catalog data.
 - Support semantic discovery using embeddings generated from approved metadata only.
-- Define ranking strategy using lexical match, curated tag match, scripture proximity, popularity/familiarity where tenant policy allows, and semantic similarity.
-- Define indexing strategy for global and tenant-scoped catalog data.
+- Define ranking strategy using lexical match, curated tag match, scripture proximity, popularity/familiarity where church policy allows, and semantic similarity.
+- Define indexing strategy for instance-local catalog data and optional imported seed packages.
 - Keep index updates traceable to catalog changes and approval events.
 - Define scalability boundaries for catalog size, index refresh latency, and query latency.
 - Ensure search explanations expose major ranking factors without leaking private or unapproved data.
@@ -32,7 +32,7 @@ Semantic search may expand or rank discovery results, but all results must pass 
 
 - Search remains performant at large catalog sizes using defined latency targets.
 - Search relevance is explainable through ranking-factor metadata.
-- Semantic search never returns unapproved, inactive, unauthorized, or tenant-private data.
+- Semantic search never returns unapproved, inactive, unauthorized, or instance-private data.
 - Recommendation behavior remains deterministic and independent from nondeterministic semantic exploration.
 - Search indexes can be rebuilt from canonical catalog data.
 

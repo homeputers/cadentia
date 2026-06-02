@@ -22,7 +22,7 @@ Introduce a permission-aware asset management model backed by cloud/object stora
 - Store asset metadata in Cadentia with stable identifiers, checksums, MIME type, size, and storage key.
 - Support asset versioning and immutable historical references.
 - Attach assets to songs, arrangements, services, rehearsal sessions, and service-specific overrides.
-- Enforce tenant, role, and licensing permissions before download or streaming.
+- Enforce instance, role, and licensing permissions before download or streaming.
 - Track licensing metadata, usage restrictions, source, and expiration where applicable.
 - Support asynchronous processing for previews, waveform analysis, virus scanning, and transcoding.
 
@@ -30,7 +30,7 @@ Introduce a permission-aware asset management model backed by cloud/object stora
 
 - Songs and arrangements can attach typed assets.
 - Asset versions are distinguishable and auditable.
-- Download/access decisions are permission-aware and tenant-scoped.
+- Download/access decisions are permission-aware and instance-scoped.
 - Licensing metadata is preserved and visible to authorized users.
 - Recommendations never treat asset presence as approval unless catalog approval gates also pass.
 
@@ -60,5 +60,5 @@ Tradeoffs:
 ## Open Questions
 
 - Which object storage provider is the production baseline?
-- What asset retention policy applies after tenant deletion or service completion?
+- What asset retention policy applies after instance deletion or service completion?
 - Which licensing fields are mandatory by asset type?

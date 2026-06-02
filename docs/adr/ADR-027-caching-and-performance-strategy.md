@@ -9,18 +9,18 @@ Recommendation, catalog browsing, search, and governance screens depend on read-
 
 ## Problem
 
-Naive caching can make Cadentia fast but unsafe if approval, tenant visibility, licensing, or catalog changes are not invalidated immediately. Avoiding caches entirely may make recommendation and search latency unacceptable as catalog size grows.
+Naive caching can make Cadentia fast but unsafe if approval, instance visibility, licensing, or catalog changes are not invalidated immediately. Avoiding caches entirely may make recommendation and search latency unacceptable as catalog size grows.
 
 ## Decision
 
-Adopt explicit cache domains with conservative invalidation for eligibility-sensitive data. Cache keys must include tenant, catalog snapshot/version, scoring profile, request shape where applicable, role/audience, and approval-visible state. Recommendation eligibility must be recomputed or invalidated whenever approval or visibility state changes.
+Adopt explicit cache domains with conservative invalidation for eligibility-sensitive data. Cache keys must include instance identifier, catalog snapshot/version, scoring profile, request shape where applicable, role/audience, and approval-visible state. Recommendation eligibility must be recomputed or invalidated whenever approval or visibility state changes.
 
 ## Requirements
 
 - Define cacheable domains: recommendation candidate pools, search results, read models, tag aggregations, and low-risk reference data.
 - Define non-cacheable or short-lived domains for privileged review notes and highly sensitive personnel details.
-- Include tenant, authorization/audience, catalog version, and policy version in cache keys.
-- Invalidate candidate and search caches on approval, rejection, activation, deactivation, licensing, tenant visibility, arrangement, and taxonomy changes.
+- Include instance identifier, authorization/audience, catalog version, and policy version in cache keys.
+- Invalidate candidate and search caches on approval, rejection, activation, deactivation, licensing, instance visibility, arrangement, and taxonomy changes.
 - Define TTLs by domain, with shorter TTLs for eligibility-sensitive material.
 - Define latency targets for recommendation, search, catalog reads, and administrative dashboards.
 - Provide cache hit/miss metrics and invalidation audit events.
@@ -30,7 +30,7 @@ Adopt explicit cache domains with conservative invalidation for eligibility-sens
 
 - Recommendation latency remains within defined target thresholds for supported catalog sizes.
 - Cache invalidation removes stale eligibility after approval, visibility, or licensing changes.
-- Cached responses cannot expose another tenant's data or unapproved songs.
+- Cached responses cannot expose another instance's data or unapproved songs.
 - Cache behavior is observable through metrics and logs.
 - The system can safely bypass or rebuild caches without changing recommendation correctness.
 

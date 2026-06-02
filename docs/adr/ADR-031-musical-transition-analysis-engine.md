@@ -34,7 +34,7 @@ The engine will recognize same-key, relative major/minor, closely related keys, 
 - Relative key relationships are recognized and explained.
 - Transition compatibility is queryable and explainable per adjacent pair.
 - Low-confidence musical metadata is surfaced as a warning rather than silently treated as truth.
-- The engine never recommends or analyzes unapproved/private arrangements outside the request tenant context.
+- The engine never recommends or analyzes unapproved/private arrangements outside the request instance context.
 
 ## Consequences
 

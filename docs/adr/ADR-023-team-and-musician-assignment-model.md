@@ -13,18 +13,18 @@ Cadentia cannot mature into operational planning if recommendations ignore music
 
 ## Decision
 
-Introduce tenant-scoped team and musician modeling. Musicians, roles, instruments, vocal ranges, skill levels, availability, and service assignments will be represented as first-class operational data. The Recommendation Engine may use this data as deterministic hard filters or scoring inputs according to a versioned recommendation profile.
+Introduce instance-scoped team and musician modeling. Musicians, roles, instruments, vocal ranges, skill levels, availability, and service assignments will be represented as first-class operational data. The Recommendation Engine may use this data as deterministic hard filters or scoring inputs according to a versioned recommendation profile.
 
 ## Requirements
 
-- Model musicians as tenant-scoped people with roles and optional contact/account links.
+- Model musicians as instance-scoped people with roles and optional contact/account links.
 - Model instruments, vocal parts, skill levels, and serving preferences using controlled vocabularies.
 - Track availability and assignment status for services and rehearsals.
 - Associate musicians with services, service positions, and specific songs where needed.
 - Model vocalist range constraints and arrangement lead-vocal suitability.
 - Model arrangement suitability by required instruments, optional instruments, vocal configuration, and minimum skill level.
 - Surface rehearsal readiness for assigned teams without allowing readiness notes to bypass catalog approval gates.
-- Ensure personnel data follows tenant isolation and role-based access rules.
+- Ensure personnel data remains inside the deployed church instance and follows role-based access rules.
 
 ## Acceptance Criteria
 
@@ -32,7 +32,7 @@ Introduce tenant-scoped team and musician modeling. Musicians, roles, instrument
 - Recommendation requests can include team constraints and receive deterministic results.
 - Arrangement suitability is queryable by team capability and service context.
 - Vocalist range and instrumentation conflicts can be explained in recommendation diagnostics.
-- Private musician data is not exposed across tenants or to unauthorized roles.
+- Private musician data is not exposed outside the deployed church instance or to unauthorized roles.
 
 ## Consequences
 

@@ -25,7 +25,7 @@ This directory contains the Architecture Decision Records for Cadentia.
 - [ADR-019: Security, Roles, and Permissions](./ADR-019-security-roles-and-permissions.md)
 - [ADR-020: External Integration Boundaries](./ADR-020-external-integration-boundaries.md)
 - [ADR-021: Recommendation Engine Explainability API](./ADR-021-recommendation-engine-explainability-api.md)
-- [ADR-022: Multi-Tenant and Church Isolation Model](./ADR-022-multi-tenant-and-church-isolation-model.md)
+- [ADR-022: Packaged Deployment and Church Customization Model](./ADR-022-packaged-deployment-and-church-customization-model.md)
 - [ADR-023: Team and Musician Assignment Model](./ADR-023-team-and-musician-assignment-model.md)
 - [ADR-024: Rehearsal and Workflow Lifecycle](./ADR-024-rehearsal-and-workflow-lifecycle.md)
 - [ADR-025: Media and Asset Management](./ADR-025-media-and-asset-management.md)
@@ -74,7 +74,7 @@ Recommended reading order:
 19. ADR-019 — security, roles, and permissions
 20. ADR-020 — external integration boundaries duplicate/rejected decision
 21. ADR-021 — recommendation explainability API
-22. ADR-022 — multi-tenant and church isolation model
+22. ADR-022 — packaged deployment and church customization model
 23. ADR-023 — team and musician assignment model
 24. ADR-024 — rehearsal and workflow lifecycle
 25. ADR-025 — media and asset management
@@ -150,7 +150,7 @@ Phase 4 themes:
 
 1. **Explainability and musical intelligence:** ADR-021, ADR-031, ADR-032, ADR-033, and ADR-034 define structured explanations, transition analysis, energy arcs, arrangement compatibility, and familiarity controls.
 2. **Operational collaboration:** ADR-023 and ADR-024 model people, assignments, rehearsals, readiness, and service-specific workflow.
-3. **Platform scale:** ADR-022, ADR-025, ADR-026, ADR-027, ADR-028, and ADR-029 define tenant isolation, assets, search, caching, events, and telemetry.
+3. **Platform scale:** ADR-022, ADR-025, ADR-026, ADR-027, ADR-028, and ADR-029 define packaged isolated deployments, assets, search, caching, events, and telemetry.
 4. **Extensibility:** ADR-030 defines plugin boundaries while keeping approval gates and deterministic recommendation guarantees centralized.
 
 ## Cross-cutting principles

@@ -18,7 +18,7 @@ Define an Energy Arc Model that assigns approved songs and arrangements determin
 ## Requirements
 
 - Model praise intensity, worship reflectiveness, emotional trajectory, congregation engagement, and service moment suitability using controlled values.
-- Support named arcs such as `rising`, `rise_then_reflect`, `reflective`, `celebration`, `response`, and tenant-configured variants.
+- Support named arcs such as `rising`, `rise_then_reflect`, `reflective`, `celebration`, `response`, and church-configured variants.
 - Evaluate energy movement across adjacent songs and across the full setlist.
 - Prevent abrupt energy discontinuities unless the selected arc or explicit policy allows intentional contrast.
 - Support default praise/worship structure, including 10 praise and 5 worship when requested by default contract.
@@ -40,7 +40,7 @@ Positive:
 
 - Setlists feel more cohesive across the full worship flow.
 - Energy tradeoffs become visible and tunable.
-- Tenants can define preferred service arcs without custom code.
+- Churches can define preferred service arcs without custom code.
 
 Tradeoffs:
 

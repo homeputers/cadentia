@@ -5,7 +5,7 @@ Date: 2026-05-28
 
 ## Context
 
-Cadentia must diagnose recommendation behavior, imports, approval workflows, prompt/intent extraction, background jobs, and multi-tenant authorization. Observability should support operations without leaking sensitive catalog, personnel, or licensing details.
+Cadentia must diagnose recommendation behavior, imports, approval workflows, prompt/intent extraction, background jobs, and packaged deployments, instance authorization. Observability should support operations without leaking sensitive catalog, personnel, or licensing details.
 
 ## Problem
 
@@ -23,15 +23,15 @@ Adopt a privacy-aware observability strategy with structured logging, metrics ta
 - Support approval audit trails and privileged action correlation.
 - Support prompt diagnostics for LLM intent extraction without logging unsafe or unnecessary raw sensitive payloads.
 - Define metrics taxonomy for latency, throughput, errors, queue depth, cache behavior, approval workflow, and recommendation quality signals.
-- Use structured logs with tenant, actor where permitted, request ID, correlation ID, service plan ID, and event/job ID.
-- Redact lyrics excerpts, private notes, credentials, and cross-tenant identifiers from inappropriate sinks.
+- Use structured logs with instance identifier, actor where permitted, request ID, correlation ID, service plan ID, and event/job ID.
+- Redact lyrics excerpts, private notes, credentials, and cross-instance identifiers from inappropriate sinks.
 
 ## Acceptance Criteria
 
 - Recommendation execution is traceable end-to-end.
 - Failures are diagnosable through correlated logs, metrics, traces, and audit records.
 - Metrics support operational debugging and SLO monitoring.
-- Telemetry does not leak unapproved content, private tenant data, secrets, or copyrighted payloads.
+- Telemetry does not leak unapproved content, private church-instance data, secrets, or copyrighted payloads.
 - Prompt diagnostics prove the LLM stayed within the intent-extraction boundary.
 
 ## Consequences
@@ -61,4 +61,4 @@ Tradeoffs:
 
 - Which telemetry backend is the initial production target?
 - What metrics become release-blocking SLOs?
-- How should tenant administrators access their own operational telemetry?
+- How should church instance administrators access their own operational telemetry?

@@ -22,7 +22,7 @@ Extend arrangement modeling with structured compatibility metadata: required and
 - Model choir support, vocal parts, lead vocal range, harmony complexity, and congregation accessibility.
 - Model arrangement complexity, rehearsal difficulty, rhythmic complexity, and technical dependency.
 - Associate arrangement suitability with team capabilities from ADR-023.
-- Allow tenant-specific arrangement compatibility overrides without mutating global catalog defaults.
+- Allow church-specific arrangement compatibility overrides without mutating global catalog defaults.
 - Provide deterministic filtering and scoring based on requested team/instrument constraints.
 - Expose compatibility explanations through ADR-021 reason codes.
 
@@ -45,7 +45,7 @@ Positive:
 Tradeoffs:
 
 - Arrangement metadata entry and review workload increases.
-- Tenant overrides can diverge from global defaults.
+- Church-instance overrides can diverge from global defaults.
 - Strict compatibility filters may reduce available results.
 
 ## Alternatives Considered
@@ -61,4 +61,4 @@ Tradeoffs:
 
 - What minimum compatibility metadata is required before an arrangement can be recommendable?
 - How should instrument substitutions be represented and scored?
-- Should choir suitability be global, tenant-specific, or both?
+- Should choir suitability be global package defaults, church-specific, or both?

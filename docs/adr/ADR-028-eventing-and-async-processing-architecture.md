@@ -18,11 +18,11 @@ Adopt a domain event and async job architecture with durable event records, idem
 ## Requirements
 
 - Support async workflows for imports, parsing, read model refreshes, asset processing, search indexing, cache invalidation, and notifications.
-- Define domain events for catalog approval, arrangement changes, tenant visibility changes, imports, asset uploads, service readiness, and recommendation feedback.
+- Define domain events for catalog approval, arrangement changes, instance visibility/configuration changes, imports, asset uploads, service readiness, and recommendation feedback.
 - Persist events or outbox records transactionally with canonical state changes.
 - Require idempotent handlers with stable event IDs and deduplication.
 - Define retry policies with backoff, retry limits, and dead-letter queues.
-- Provide job status, progress, error reason, and actor/tenant context.
+- Provide job status, progress, error reason, and actor/instance context.
 - Ensure failed jobs can be retried safely without duplicating catalog entries or bypassing approval.
 - Correlate events with observability traces and audit records.
 
