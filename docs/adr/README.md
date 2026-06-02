@@ -17,7 +17,29 @@ This directory contains the Architecture Decision Records for Cadentia.
 - [ADR-011: Admin Review and Catalog Governance UI](./ADR-011-admin-review-catalog-governance-ui.md)
 - [ADR-012: LLM Intent Extraction Contract](./ADR-012-llm-intent-extraction-contract.md)
 - [ADR-013: Recommendation Explanation System](./ADR-013-recommendation-explanation-system.md)
-
+- [ADR-014: LLM Intent Extraction Contract](./ADR-014-llm-intent-extraction-contract.md)
+- [ADR-015: Guided Menu and Conversational Request Flow](./ADR-015-guided-menu-and-conversational-request-flow.md)
+- [ADR-016: Setlist Persistence and Versioning](./ADR-016-setlist-persistence-and-versioning.md)
+- [ADR-017: User Feedback and Recommendation Tuning](./ADR-017-user-feedback-and-recommendation-tuning.md)
+- [ADR-018: Service Plan Integration Model](./ADR-018-service-plan-integration-model.md)
+- [ADR-019: Security, Roles, and Permissions](./ADR-019-security-roles-and-permissions.md)
+- [ADR-020: External Integration Boundaries](./ADR-020-external-integration-boundaries.md)
+- [ADR-021: Recommendation Engine Explainability API](./ADR-021-recommendation-engine-explainability-api.md)
+- [ADR-022: Packaged Deployment and Church Customization Model](./ADR-022-packaged-deployment-and-church-customization-model.md)
+- [ADR-023: Team and Musician Assignment Model](./ADR-023-team-and-musician-assignment-model.md)
+- [ADR-024: Rehearsal and Workflow Lifecycle](./ADR-024-rehearsal-and-workflow-lifecycle.md)
+- [ADR-025: Media and Asset Management](./ADR-025-media-and-asset-management.md)
+- [ADR-026: Search Architecture and Discovery](./ADR-026-search-architecture-and-discovery.md)
+- [ADR-027: Caching and Performance Strategy](./ADR-027-caching-and-performance-strategy.md)
+- [ADR-028: Eventing and Async Processing Architecture](./ADR-028-eventing-and-async-processing-architecture.md)
+- [ADR-029: Observability and Telemetry Strategy](./ADR-029-observability-and-telemetry-strategy.md)
+- [ADR-030: Plugin and Extension Architecture](./ADR-030-plugin-and-extension-architecture.md)
+- [ADR-031: Musical Transition Analysis Engine](./ADR-031-musical-transition-analysis-engine.md)
+- [ADR-032: Energy Arc Modeling](./ADR-032-energy-arc-modeling.md)
+- [ADR-033: Arrangement Compatibility and Instrumentation Modeling](./ADR-033-arrangement-compatibility-and-instrumentation-modeling.md)
+- [ADR-034: Congregational Familiarity Model](./ADR-034-congregational-familiarity-model.md)
+- [ADR-035: Telegram Bot E2E Integration and Operations](./ADR-035-telegram-bot-e2e-integration-and-operations.md)
+- [ADR-036: Administrative Web Interface](./ADR-036-administrative-web-interface.md)
 
 ## Implemented schema artifacts
 
@@ -46,6 +68,29 @@ Recommended reading order:
 11. ADR-011 — admin review and catalog governance UI
 12. ADR-012 — LLM intent extraction contract
 13. ADR-013 — recommendation explanation system
+14. ADR-014 — LLM intent extraction contract revision
+15. ADR-015 — guided menu and conversational request flow
+16. ADR-016 — setlist persistence and versioning
+17. ADR-017 — user feedback and recommendation tuning
+18. ADR-018 — service plan integration model
+19. ADR-019 — security, roles, and permissions
+20. ADR-020 — external integration boundaries duplicate/rejected decision
+21. ADR-021 — recommendation explainability API
+22. ADR-022 — packaged deployment and church customization model
+23. ADR-023 — team and musician assignment model
+24. ADR-024 — rehearsal and workflow lifecycle
+25. ADR-025 — media and asset management
+26. ADR-026 — search architecture and discovery
+27. ADR-027 — caching and performance strategy
+28. ADR-028 — eventing and async processing architecture
+29. ADR-029 — observability and telemetry strategy
+30. ADR-030 — plugin and extension architecture
+31. ADR-031 — musical transition analysis engine
+32. ADR-032 — energy arc modeling
+33. ADR-033 — arrangement compatibility and instrumentation modeling
+34. ADR-034 — congregational familiarity model
+35. ADR-035 — Telegram bot E2E integration and operations
+36. ADR-036 — administrative web interface
 
 ## Phase 2 implementation order plan
 
@@ -99,6 +144,18 @@ flowchart TD
 6. **Explainability last:** implement ADR-013 explanation facts after scoring
    emits stable component scores and transition evidence, so user-facing
    explanations remain grounded in deterministic engine output.
+
+
+## Phase 4 ADR direction
+
+ADR-021 through ADR-036 extend the existing safety and recommendation foundation into operational maturity. They preserve Cadentia's core boundaries: the LLM interprets intent only, the deterministic Recommendation Engine selects and orders songs, recommendations use only curated and approved catalog data, and all eligibility remains approval-gated.
+
+Phase 4 themes:
+
+1. **Explainability and musical intelligence:** ADR-021, ADR-031, ADR-032, ADR-033, and ADR-034 define structured explanations, transition analysis, energy arcs, arrangement compatibility, and familiarity controls.
+2. **Operational collaboration:** ADR-023, ADR-024, ADR-035, and ADR-036 model people, assignments, rehearsals, readiness, Telegram interactions, and administrative web workflows.
+3. **Platform scale:** ADR-022, ADR-025, ADR-026, ADR-027, ADR-028, and ADR-029 define packaged isolated deployments, assets, search, caching, events, and telemetry.
+4. **Extensibility:** ADR-030 defines plugin boundaries while keeping approval gates and deterministic recommendation guarantees centralized.
 
 ## Cross-cutting principles
 
