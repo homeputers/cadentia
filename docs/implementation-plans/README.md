@@ -46,6 +46,7 @@ includes:
 
 - [ADR-021 Implementation Plan: Recommendation Engine Explainability API](./ADR-021-recommendation-engine-explainability-api-plan.md)
 - [ADR-022 Implementation Plan: Packaged Deployment and Church Customization Model](./ADR-022-packaged-deployment-and-church-customization-model-plan.md)
+- [ADR-023 Implementation Plan: Team and Musician Assignment Model](./ADR-023-team-and-musician-assignment-model-plan.md)
 
 ## Operational workflow docs
 
@@ -143,9 +144,14 @@ flowchart TD
 ## Recommended Phase 4 implementation order
 
 1. [ADR-021: Recommendation Engine Explainability API](./ADR-021-recommendation-engine-explainability-api-plan.md)
+2. [ADR-022: Packaged Deployment and Church Customization Model](./ADR-022-packaged-deployment-and-church-customization-model-plan.md)
+3. [ADR-023: Team and Musician Assignment Model](./ADR-023-team-and-musician-assignment-model-plan.md)
 
 Phase 4 starts by making ADR-010 scoring facts and ADR-013 explanation facts
-available through a stable, audience-partitioned API contract. This preserves
+available through a stable, audience-partitioned API contract. ADR-022 then
+hardens instance packaging and local customization boundaries before ADR-023
+adds private, instance-scoped personnel and team-capability data that feeds
+service planning and deterministic recommendation constraints. This preserves
 the deterministic Recommendation Engine boundary while allowing web clients,
 audit views, and localization layers to render explanations from structured
 facts rather than generated prose.
