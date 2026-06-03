@@ -69,6 +69,10 @@ includes:
   observability metrics, structured audit logging expectations, retention/archival
   defaults, conflict retry handling, partial-commit recovery, and restoration
   drill procedures.
+- [Recommendation Explainability API Usage and Operations](../recommendation-explainability-api.md) documents
+  ADR-021 payload examples, audience-mode behavior, reason-code registry
+  ownership, localization workflow, schema migrations, redaction guarantees,
+  and troubleshooting safeguards.
 - [ADR-035 Telegram Bot Operations Runbook](../runbooks/adr-035-telegram-bot-operations.md) documents
   webhook setup, smoke testing, channel telemetry, retry/dead-letter triage,
   credential rotation, and safe channel disablement.
@@ -145,8 +149,11 @@ flowchart TD
 ## Recommended Phase 4 implementation order
 
 1. [ADR-021: Recommendation Engine Explainability API](./ADR-021-recommendation-engine-explainability-api-plan.md)
+   - Usage, migration, localization, and operations guide:
+     [Recommendation Explainability API Usage and Operations](../recommendation-explainability-api.md)
 2. [ADR-022: Packaged Deployment and Church Customization Model](./ADR-022-packaged-deployment-and-church-customization-model-plan.md)
 3. [ADR-023: Team and Musician Assignment Model](./ADR-023-team-and-musician-assignment-model-plan.md)
+4. [ADR-024: Rehearsal and Workflow Lifecycle](./ADR-024-rehearsal-and-workflow-lifecycle-plan.md)
 
 Phase 4 starts by making ADR-010 scoring facts and ADR-013 explanation facts
 available through a stable, audience-partitioned API contract. ADR-022 then
