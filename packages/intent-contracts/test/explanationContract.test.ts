@@ -14,8 +14,21 @@ const recommendationExplanationFixturesRoot = new URL(
   import.meta.url
 );
 
+const recommendationExplanationRegressionRoot = new URL(
+  "../fixtures/v1/recommendation-explanations/regression/",
+  import.meta.url
+);
+
 function parseRecommendationExplanationFixture(name: string): unknown {
   return JSON.parse(readFileSync(new URL(name, recommendationExplanationFixturesRoot), "utf8"));
+}
+
+function parseRecommendationExplanationRegressionFixture(name: string): unknown {
+  return JSON.parse(readFileSync(new URL(name, recommendationExplanationRegressionRoot), "utf8"));
+}
+
+function stableStringify(value: unknown): string {
+  return JSON.stringify(value, null, 2);
 }
 
 describe("recommendation explanation fact contract", () => {
@@ -193,5 +206,158 @@ describe("recommendation explanation v1 response contract", () => {
     expect(() =>
       parseRecommendationExplanation({ ...payload, generatedBy: "LLM" })
     ).toThrow();
+  });
+});
+
+describe("recommendation explanation deterministic regression fixtures", () => {
+  it.each(readdirSync(recommendationExplanationRegressionRoot))(
+    "validates deterministic regression fixture %s against the v1 contract",
+    (fixtureName) => {
+      const parsed = parseRecommendationExplanation(
+        parseRecommendationExplanationRegressionFixture(fixtureName)
+      );
+
+      expect(parsed.schemaVersion).toBe(RECOMMENDATION_EXPLANATION_SCHEMA_VERSION);
+      expect(parsed.generatedBy).toBe("RecommendationEngine");
+      expect(parsed.catalogSnapshotVersion).toBe("catalog-snapshot-fixture-adr021.2026-06-03");
+      expect(parsed.scoringProfileVersion).toBe("scoring-profile-fixture-adr021.1");
+    }
+  );
+
+  it("produces byte-stable payloads for identical request, catalog snapshot, scoring profile, and audience", () => {
+    const first = parseRecommendationExplanation(
+      parseRecommendationExplanationRegressionFixture("deterministic-worship-leader.json")
+    );
+    const second = parseRecommendationExplanation(
+      parseRecommendationExplanationRegressionFixture("deterministic-worship-leader.json")
+    );
+
+    expect(stableStringify(first)).toBe(stableStringify(second));
+    expect(first.requestId).toBe("req-fixture-repro-001");
+    expect(first.recommendationResultId).toBe("rec-fixture-repro-001");
+    expect(first.generatedAt).toBe("2026-06-03T12:30:00Z");
+  });
+
+  it("covers public, worship-leader, and admin audiences for the same underlying recommendation", () => {
+    const publicPayload = parseRecommendationExplanation(
+      parseRecommendationExplanationRegressionFixture("deterministic-public.json")
+    );
+    const worshipLeaderPayload = parseRecommendationExplanation(
+      parseRecommendationExplanationRegressionFixture("deterministic-worship-leader.json")
+    );
+    const adminPayload = parseRecommendationExplanation(
+      parseRecommendationExplanationRegressionFixture("deterministic-admin.json")
+    );
+
+    expect([publicPayload, worshipLeaderPayload, adminPayload].map((payload) => ({
+      recommendationResultId: payload.recommendationResultId,
+      scoringProfileVersion: payload.scoringProfileVersion,
+      catalogSnapshotVersion: payload.catalogSnapshotVersion,
+      requestPolicySummary: payload.requestPolicySummary
+    }))).toEqual([
+      {
+        recommendationResultId: "rec-fixture-repro-001",
+        scoringProfileVersion: "scoring-profile-fixture-adr021.1",
+        catalogSnapshotVersion: "catalog-snapshot-fixture-adr021.2026-06-03",
+        requestPolicySummary: publicPayload.requestPolicySummary
+      },
+      {
+        recommendationResultId: "rec-fixture-repro-001",
+        scoringProfileVersion: "scoring-profile-fixture-adr021.1",
+        catalogSnapshotVersion: "catalog-snapshot-fixture-adr021.2026-06-03",
+        requestPolicySummary: publicPayload.requestPolicySummary
+      },
+      {
+        recommendationResultId: "rec-fixture-repro-001",
+        scoringProfileVersion: "scoring-profile-fixture-adr021.1",
+        catalogSnapshotVersion: "catalog-snapshot-fixture-adr021.2026-06-03",
+        requestPolicySummary: publicPayload.requestPolicySummary
+      }
+    ]);
+
+    expect(publicPayload.selectedSongs.map((entry) => entry.subject.itemId)).toEqual([
+      "item-fixture-001",
+      "item-fixture-001",
+      "item-fixture-002",
+      "item-fixture-002",
+      "item-fixture-003"
+    ]);
+    expect(worshipLeaderPayload.selectedSongs.slice(0, publicPayload.selectedSongs.length))
+      .toEqual(publicPayload.selectedSongs);
+    expect(adminPayload.selectedSongs.map((entry) => entry.subject.itemId).filter(Boolean))
+      .toEqual([
+        "item-fixture-001",
+        "item-fixture-001",
+        "item-fixture-002",
+        "item-fixture-002",
+        "item-fixture-003",
+        "item-fixture-002",
+        "item-fixture-003"
+      ]);
+  });
+
+  it("locks exact tie-break, near-tie, score precision, transition, warning, and redaction ordering", () => {
+    const publicPayload = parseRecommendationExplanation(
+      parseRecommendationExplanationRegressionFixture("deterministic-public.json")
+    );
+    const worshipLeaderPayload = parseRecommendationExplanation(
+      parseRecommendationExplanationRegressionFixture("deterministic-worship-leader.json")
+    );
+    const adminPayload = parseRecommendationExplanation(
+      parseRecommendationExplanationRegressionFixture("deterministic-admin.json")
+    );
+
+    expect(publicPayload.deterministicTieBreaks).toEqual([
+      {
+        rule: "total_score(desc,epsilon=0.0001)",
+        direction: "desc",
+        affectedResultIds: ["item-fixture-002", "item-fixture-003"],
+        values: { "item-fixture-002": 0.84555, "item-fixture-003": 0.84551 },
+        reasonCode: "DETERMINISTIC_TIE_BREAK_APPLIED"
+      },
+      {
+        rule: "normalized_title(asc)",
+        direction: "asc",
+        affectedResultIds: ["item-fixture-002", "item-fixture-003"],
+        values: { "item-fixture-002": "alpha anthem", "item-fixture-003": "zeta hymn" },
+        reasonCode: "DETERMINISTIC_TIE_BREAK_APPLIED"
+      }
+    ]);
+
+    expect(worshipLeaderPayload.selectedSongs
+      .filter((entry) => entry.code.startsWith("SCORE_COMPONENT"))
+      .map((entry) => [entry.code, entry.values.score, entry.scoreImpact]))
+      .toEqual([
+        ["SCORE_COMPONENT_MUSICAL_FIT", 0.84555, 0.25367],
+        ["SCORE_COMPONENT_ENERGY_FIT", 0.84551, 0.16910]
+      ]);
+
+    expect(publicPayload.adjacentTransitions.map((entry) => entry.code)).toEqual([
+      "SAME_KEY_TRANSITION",
+      "TEMPO_POLICY_OK",
+      "TEMPO_TRADEOFF_ACCEPTED",
+      "ENERGY_ARC_MATCH"
+    ]);
+    expect(worshipLeaderPayload.adjacentTransitions.map((entry) => entry.code)).toEqual([
+      "SAME_KEY_TRANSITION",
+      "TEMPO_POLICY_OK",
+      "TEMPO_TRADEOFF_ACCEPTED",
+      "ENERGY_ARC_MATCH",
+      "METER_COMPATIBLE",
+      "MODULATION_PENALTY",
+      "ARRANGEMENT_COMPATIBLE"
+    ]);
+    expect(worshipLeaderPayload.warnings.map((entry) => entry.code)).toEqual([
+      "LOW_CONFIDENCE_METADATA_PRESENT",
+      "TRANSITION_METADATA_MISSING"
+    ]);
+
+    expect(publicPayload.diagnostics).toEqual([]);
+    expect(publicPayload.warnings).toEqual([]);
+    expect(publicPayload.selectedSongs.map((entry) => entry.code)).not.toContain("SCORE_COMPONENT_MUSICAL_FIT");
+    expect(adminPayload.diagnostics.map((entry) => [entry.code, entry.values])).toEqual([
+      ["EXCLUDED_QUOTA_FILLED", { candidateTitle: "Fixture Song Delta", candidateScore: 0.84549 }],
+      ["EXCLUDED_KEY_CENTER_LIMIT", { candidateKey: "F#", maxKeyCenters: 2 }]
+    ]);
   });
 });

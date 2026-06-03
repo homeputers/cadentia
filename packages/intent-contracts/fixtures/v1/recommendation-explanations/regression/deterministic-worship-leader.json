@@ -1,0 +1,565 @@
+{
+  "schemaName": "recommendation_explanation",
+  "schemaVersion": "recommendation_explanation.v1",
+  "generatedBy": "RecommendationEngine",
+  "requestId": "req-fixture-repro-001",
+  "correlationId": "corr-fixture-repro-001",
+  "recommendationResultId": "rec-fixture-repro-001",
+  "setlistId": "setlist-fixture-repro-001",
+  "scoringProfileVersion": "scoring-profile-fixture-adr021.1",
+  "catalogSnapshotVersion": "catalog-snapshot-fixture-adr021.2026-06-03",
+  "generatedAt": "2026-06-03T12:30:00Z",
+  "requestPolicySummary": {
+    "counts": {
+      "praise": 2,
+      "worship": 1
+    },
+    "keyPolicy": {
+      "preferSameKey": true,
+      "allowRelativeMajorMinor": true,
+      "maxKeyCenters": 2
+    },
+    "tempoPolicy": {
+      "maxJumpBpm": 12
+    },
+    "themeHints": [
+      "resurrection",
+      "hope"
+    ],
+    "scriptureReferences": [
+      "Psalm 24:7-10"
+    ],
+    "language": "en",
+    "energyArc": "rising",
+    "serviceMoment": "response",
+    "appliedDefaults": []
+  },
+  "deterministicTieBreaks": [
+    {
+      "rule": "total_score(desc,epsilon=0.0001)",
+      "direction": "desc",
+      "affectedResultIds": [
+        "item-fixture-002",
+        "item-fixture-003"
+      ],
+      "values": {
+        "item-fixture-002": 0.84555,
+        "item-fixture-003": 0.84551
+      },
+      "reasonCode": "DETERMINISTIC_TIE_BREAK_APPLIED"
+    },
+    {
+      "rule": "normalized_title(asc)",
+      "direction": "asc",
+      "affectedResultIds": [
+        "item-fixture-002",
+        "item-fixture-003"
+      ],
+      "values": {
+        "item-fixture-002": "alpha anthem",
+        "item-fixture-003": "zeta hymn"
+      },
+      "reasonCode": "DETERMINISTIC_TIE_BREAK_APPLIED"
+    }
+  ],
+  "selectedSongs": [
+    {
+      "code": "THEME_MATCH",
+      "severity": "info",
+      "scope": "selected_song",
+      "audience": "public",
+      "subject": {
+        "type": "song",
+        "id": "song-fixture-001",
+        "itemId": "item-fixture-001",
+        "songId": "song-fixture-001",
+        "arrangementId": "arr-fixture-001"
+      },
+      "templateKey": "item.theme_match",
+      "values": {
+        "themes": "hope"
+      },
+      "evidence": [
+        {
+          "type": "catalog",
+          "ref": "catalog.fixture.song-001.tags",
+          "field": "theme"
+        },
+        {
+          "type": "score",
+          "ref": "score.item-fixture-001.theme_match"
+        }
+      ],
+      "scoreImpact": 0.42
+    },
+    {
+      "code": "SCRIPTURE_MATCH",
+      "severity": "info",
+      "scope": "selected_song",
+      "audience": "public",
+      "subject": {
+        "type": "song",
+        "id": "song-fixture-001",
+        "itemId": "item-fixture-001",
+        "songId": "song-fixture-001",
+        "arrangementId": "arr-fixture-001"
+      },
+      "templateKey": "item.scripture_match",
+      "values": {
+        "scripture": "Psalm 24:7-10"
+      },
+      "evidence": [
+        {
+          "type": "catalog",
+          "ref": "catalog.fixture.song-001.scripture",
+          "field": "scripture"
+        },
+        {
+          "type": "score",
+          "ref": "score.item-fixture-001.scripture_match"
+        }
+      ],
+      "scoreImpact": 0.18
+    },
+    {
+      "code": "ROLE_FIT",
+      "severity": "info",
+      "scope": "selected_song",
+      "audience": "public",
+      "subject": {
+        "type": "song",
+        "id": "song-fixture-002",
+        "itemId": "item-fixture-002",
+        "songId": "song-fixture-002",
+        "arrangementId": "arr-fixture-002"
+      },
+      "templateKey": "item.role_fit",
+      "values": {
+        "score": 0.33333
+      },
+      "evidence": [
+        {
+          "type": "score",
+          "ref": "score.item-fixture-002.role_fit",
+          "confidence": 0.99
+        }
+      ],
+      "scoreImpact": 0.06667
+    },
+    {
+      "code": "APPROVAL_ELIGIBLE",
+      "severity": "info",
+      "scope": "selected_song",
+      "audience": "public",
+      "subject": {
+        "type": "song",
+        "id": "song-fixture-002",
+        "itemId": "item-fixture-002",
+        "songId": "song-fixture-002",
+        "arrangementId": "arr-fixture-002"
+      },
+      "templateKey": "item.approval_eligible",
+      "values": {
+        "hasProvenance": true
+      },
+      "evidence": [
+        {
+          "type": "approval",
+          "ref": "approvalGate.summary",
+          "field": "approved"
+        }
+      ]
+    },
+    {
+      "code": "ROLE_FIT",
+      "severity": "info",
+      "scope": "selected_song",
+      "audience": "public",
+      "subject": {
+        "type": "song",
+        "id": "song-fixture-003",
+        "itemId": "item-fixture-003",
+        "songId": "song-fixture-003",
+        "arrangementId": "arr-fixture-003"
+      },
+      "templateKey": "item.role_fit",
+      "values": {
+        "score": 0.33333
+      },
+      "evidence": [
+        {
+          "type": "score",
+          "ref": "score.item-fixture-003.role_fit",
+          "confidence": 0.99
+        }
+      ],
+      "scoreImpact": 0.06667
+    },
+    {
+      "code": "SCORE_COMPONENT_MUSICAL_FIT",
+      "severity": "info",
+      "scope": "selected_song",
+      "audience": "worship_leader",
+      "subject": {
+        "type": "song",
+        "id": "song-fixture-002",
+        "itemId": "item-fixture-002",
+        "songId": "song-fixture-002",
+        "arrangementId": "arr-fixture-002"
+      },
+      "templateKey": "item.score_component_musical_fit",
+      "values": {
+        "score": 0.84555
+      },
+      "evidence": [
+        {
+          "type": "score",
+          "ref": "score.item-fixture-002.musical_fit"
+        }
+      ],
+      "scoreImpact": 0.25367
+    },
+    {
+      "code": "SCORE_COMPONENT_ENERGY_FIT",
+      "severity": "info",
+      "scope": "selected_song",
+      "audience": "worship_leader",
+      "subject": {
+        "type": "song",
+        "id": "song-fixture-003",
+        "itemId": "item-fixture-003",
+        "songId": "song-fixture-003",
+        "arrangementId": "arr-fixture-003"
+      },
+      "templateKey": "item.score_component_energy_fit",
+      "values": {
+        "score": 0.84551
+      },
+      "evidence": [
+        {
+          "type": "score",
+          "ref": "score.item-fixture-003.energy_fit"
+        }
+      ],
+      "scoreImpact": 0.1691
+    }
+  ],
+  "adjacentTransitions": [
+    {
+      "code": "SAME_KEY_TRANSITION",
+      "severity": "info",
+      "scope": "adjacent_transition",
+      "audience": "public",
+      "subject": {
+        "type": "transition",
+        "id": "item-fixture-001->item-fixture-002",
+        "sourceItemId": "item-fixture-001",
+        "targetItemId": "item-fixture-002",
+        "sourceArrangementId": "arr-fixture-001",
+        "targetArrangementId": "arr-fixture-002"
+      },
+      "templateKey": "transition.same_key",
+      "values": {
+        "fromKey": "C",
+        "toKey": "C"
+      },
+      "evidence": [
+        {
+          "type": "transition",
+          "ref": "transition.item-fixture-001.item-fixture-002.keyMovement"
+        }
+      ],
+      "scoreImpact": 0.3
+    },
+    {
+      "code": "TEMPO_POLICY_OK",
+      "severity": "info",
+      "scope": "adjacent_transition",
+      "audience": "public",
+      "subject": {
+        "type": "transition",
+        "id": "item-fixture-001->item-fixture-002",
+        "sourceItemId": "item-fixture-001",
+        "targetItemId": "item-fixture-002",
+        "sourceArrangementId": "arr-fixture-001",
+        "targetArrangementId": "arr-fixture-002"
+      },
+      "templateKey": "transition.tempo_policy",
+      "values": {
+        "fromBpm": 96,
+        "toBpm": 108,
+        "maxJumpBpm": 12
+      },
+      "evidence": [
+        {
+          "type": "request",
+          "ref": "request.tempoPolicy.maxJumpBpm"
+        },
+        {
+          "type": "transition",
+          "ref": "transition.item-fixture-001.item-fixture-002.tempo"
+        }
+      ],
+      "scoreImpact": 0.2
+    },
+    {
+      "code": "TEMPO_TRADEOFF_ACCEPTED",
+      "severity": "warning",
+      "scope": "adjacent_transition",
+      "audience": "public",
+      "subject": {
+        "type": "transition",
+        "id": "item-fixture-002->item-fixture-003",
+        "sourceItemId": "item-fixture-002",
+        "targetItemId": "item-fixture-003",
+        "sourceArrangementId": "arr-fixture-002",
+        "targetArrangementId": "arr-fixture-003"
+      },
+      "templateKey": "transition.tempo_tradeoff_accepted",
+      "values": {
+        "fromBpm": 108,
+        "toBpm": 123,
+        "maxJumpBpm": 12,
+        "jumpBpm": 15,
+        "penalty": -0.03
+      },
+      "evidence": [
+        {
+          "type": "request",
+          "ref": "request.tempoPolicy.maxJumpBpm"
+        },
+        {
+          "type": "transition",
+          "ref": "transition.item-fixture-002.item-fixture-003.tempo"
+        }
+      ],
+      "scoreImpact": -0.03
+    },
+    {
+      "code": "ENERGY_ARC_MATCH",
+      "severity": "info",
+      "scope": "adjacent_transition",
+      "audience": "public",
+      "subject": {
+        "type": "transition",
+        "id": "item-fixture-002->item-fixture-003",
+        "sourceItemId": "item-fixture-002",
+        "targetItemId": "item-fixture-003",
+        "sourceArrangementId": "arr-fixture-002",
+        "targetArrangementId": "arr-fixture-003"
+      },
+      "templateKey": "transition.energy_continuity",
+      "values": {
+        "fromEnergy": 58,
+        "toEnergy": 70
+      },
+      "evidence": [
+        {
+          "type": "transition",
+          "ref": "transition.item-fixture-002.item-fixture-003.energy"
+        }
+      ],
+      "scoreImpact": 0.075
+    },
+    {
+      "code": "METER_COMPATIBLE",
+      "severity": "info",
+      "scope": "adjacent_transition",
+      "audience": "worship_leader",
+      "subject": {
+        "type": "transition",
+        "id": "item-fixture-001->item-fixture-002",
+        "sourceItemId": "item-fixture-001",
+        "targetItemId": "item-fixture-002",
+        "sourceArrangementId": "arr-fixture-001",
+        "targetArrangementId": "arr-fixture-002"
+      },
+      "templateKey": "transition.meter_compatibility",
+      "values": {
+        "fromMeter": "4/4",
+        "toMeter": "4/4"
+      },
+      "evidence": [
+        {
+          "type": "transition",
+          "ref": "transition.item-fixture-001.item-fixture-002.meter"
+        }
+      ],
+      "scoreImpact": 0.05
+    },
+    {
+      "code": "MODULATION_PENALTY",
+      "severity": "warning",
+      "scope": "adjacent_transition",
+      "audience": "worship_leader",
+      "subject": {
+        "type": "transition",
+        "id": "item-fixture-002->item-fixture-003",
+        "sourceItemId": "item-fixture-002",
+        "targetItemId": "item-fixture-003",
+        "sourceArrangementId": "arr-fixture-002",
+        "targetArrangementId": "arr-fixture-003"
+      },
+      "templateKey": "transition.modulation_penalty",
+      "values": {
+        "penalty": -0.125
+      },
+      "evidence": [
+        {
+          "type": "transition",
+          "ref": "transition.item-fixture-002.item-fixture-003.keyMovement"
+        }
+      ],
+      "scoreImpact": -0.125
+    },
+    {
+      "code": "ARRANGEMENT_COMPATIBLE",
+      "severity": "info",
+      "scope": "adjacent_transition",
+      "audience": "worship_leader",
+      "subject": {
+        "type": "transition",
+        "id": "item-fixture-002->item-fixture-003",
+        "sourceItemId": "item-fixture-002",
+        "targetItemId": "item-fixture-003",
+        "sourceArrangementId": "arr-fixture-002",
+        "targetArrangementId": "arr-fixture-003"
+      },
+      "templateKey": "transition.arrangement_compatibility",
+      "values": {
+        "compatible": true,
+        "parserConfidence": 0.875
+      },
+      "evidence": [
+        {
+          "type": "transition",
+          "ref": "transition.item-fixture-002.item-fixture-003.arrangementCompatibility",
+          "confidence": 0.875
+        }
+      ],
+      "scoreImpact": 0.04
+    }
+  ],
+  "setLevel": [
+    {
+      "code": "COUNT_TARGET_MET",
+      "severity": "info",
+      "scope": "set_level",
+      "audience": "public",
+      "subject": {
+        "type": "set",
+        "id": "rec-fixture-repro-001"
+      },
+      "templateKey": "set.count_target",
+      "values": {
+        "selected": 3,
+        "target": 3
+      },
+      "evidence": [
+        {
+          "type": "request",
+          "ref": "request.counts"
+        },
+        {
+          "type": "score",
+          "ref": "set.roleDistribution"
+        }
+      ]
+    },
+    {
+      "code": "KEY_CENTER_POLICY_MET",
+      "severity": "info",
+      "scope": "set_level",
+      "audience": "public",
+      "subject": {
+        "type": "set",
+        "id": "rec-fixture-repro-001"
+      },
+      "templateKey": "set.key_centers",
+      "values": {
+        "distinctKeyCenters": 2,
+        "maxKeyCenters": 2
+      },
+      "evidence": [
+        {
+          "type": "request",
+          "ref": "request.keyPolicy.maxKeyCenters"
+        },
+        {
+          "type": "score",
+          "ref": "set.keyCenters"
+        }
+      ]
+    },
+    {
+      "code": "THEME_COVERAGE",
+      "severity": "info",
+      "scope": "set_level",
+      "audience": "public",
+      "subject": {
+        "type": "set",
+        "id": "rec-fixture-repro-001"
+      },
+      "templateKey": "set.theme_coverage",
+      "values": {
+        "coveredItems": 3,
+        "selectedItems": 3,
+        "requestedThemes": "resurrection,hope"
+      },
+      "evidence": [
+        {
+          "type": "request",
+          "ref": "request.themeHints"
+        },
+        {
+          "type": "score",
+          "ref": "set.themeCoverage"
+        }
+      ]
+    }
+  ],
+  "warnings": [
+    {
+      "code": "LOW_CONFIDENCE_METADATA_PRESENT",
+      "severity": "warning",
+      "scope": "warning",
+      "audience": "worship_leader",
+      "subject": {
+        "type": "set",
+        "id": "rec-fixture-repro-001"
+      },
+      "templateKey": "warning.low_confidence_metadata",
+      "values": {
+        "reason": "fixture parser confidence below review threshold"
+      },
+      "evidence": [
+        {
+          "type": "catalog",
+          "ref": "catalog.fixture.metadata-confidence",
+          "field": "transitionMetadata"
+        }
+      ]
+    },
+    {
+      "code": "TRANSITION_METADATA_MISSING",
+      "severity": "warning",
+      "scope": "warning",
+      "audience": "worship_leader",
+      "subject": {
+        "type": "transition",
+        "id": "item-fixture-003->item-fixture-004"
+      },
+      "templateKey": "transition.metadata_missing",
+      "values": {
+        "missingFields": "meter"
+      },
+      "evidence": [
+        {
+          "type": "transition",
+          "ref": "transition.item-fixture-003.item-fixture-004.metadata"
+        }
+      ]
+    }
+  ],
+  "diagnostics": []
+}
