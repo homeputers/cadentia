@@ -31,20 +31,35 @@ public record ScoringDiagnostics(
     }
 
     public ScoringDiagnostics forAudience(DiagnosticsAudience audience) {
-        if (!enabled || audience == DiagnosticsAudience.ADMIN) {
+        DiagnosticsAudience effectiveAudience = audience == null ? DiagnosticsAudience.PUBLIC : audience;
+        if (!enabled || effectiveAudience == DiagnosticsAudience.ADMIN) {
             return this;
+        }
+        if (effectiveAudience == DiagnosticsAudience.WORSHIP_LEADER) {
+            return new ScoringDiagnostics(
+                    true,
+                    retrievedCandidateCount,
+                    eligibleCandidateCount,
+                    excludedCandidateCount,
+                    Map.of(),
+                    ScoreRange.empty(),
+                    transitionScoreRange,
+                    List.of(),
+                    List.of(),
+                    transitionTradeoffCodes,
+                    selectedSetSummary);
         }
         return new ScoringDiagnostics(
                 true,
-                retrievedCandidateCount,
-                eligibleCandidateCount,
-                excludedCandidateCount,
+                0,
+                0,
+                0,
                 Map.of(),
-                candidateScoreRange,
-                transitionScoreRange,
+                ScoreRange.empty(),
+                ScoreRange.empty(),
                 List.of(),
                 List.of(),
-                transitionTradeoffCodes,
+                List.of(),
                 selectedSetSummary);
     }
 

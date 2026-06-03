@@ -2,16 +2,20 @@ package com.cadentia.api.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.cadentia.api.security.RbacAuthorities;
 import com.cadentia.generated.model.GenerateSetlistRequest;
+import com.cadentia.generated.model.KeyPolicy;
 import com.cadentia.generated.model.NaturalLanguageSetlistRequest;
+import com.cadentia.generated.model.SetlistCounts;
 import com.cadentia.generated.model.SetlistProposalResponse;
+import com.cadentia.generated.model.TempoPolicy;
 import com.cadentia.intent.ClarifyRequestIntent;
 import com.cadentia.intent.Counts;
+import com.cadentia.intent.DefaultSessionMergeService;
 import com.cadentia.intent.GenerateSetlistIntent;
 import com.cadentia.intent.GenerateSetlistSlots;
 import com.cadentia.intent.IntentKeyPolicy;
 import com.cadentia.intent.IntentTempoPolicy;
-import com.cadentia.intent.DefaultSessionMergeService;
 import com.cadentia.intent.UnsupportedRequestIntent;
 import com.cadentia.llm.IntentParseResult;
 import com.cadentia.llm.IntentService;
@@ -21,10 +25,19 @@ import com.cadentia.reng.setlist.SetlistVersionRepository;
 import com.cadentia.reng.setlist.SetlistVersionService;
 import java.time.Duration;
 import java.util.List;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 class SetlistControllerTest {
+
+    @AfterEach
+    void clearSecurityContext() {
+        SecurityContextHolder.clearContext();
+    }
 
     @Test
     void naturalLanguageRequestInvokesRecommendationOnlyForValidGenerateSetlistIntent() {
@@ -128,6 +141,78 @@ class SetlistControllerTest {
                 .contains("Intent extraction rejected the request before recommendation.")
                 .contains("I cannot approve songs or update catalog records.");
         assertThat(setlistService.invocationCount).isZero();
+    }
+
+    @Test
+    void structuredRequestRejectsUnauthorizedAdminDiagnostics() {
+        // Arrange
+        SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(
+                "leader",
+                "n/a",
+                List.of(new SimpleGrantedAuthority(RbacAuthorities.ROLE_WORSHIP_LEADER))));
+        CapturingSetlistService setlistService = new CapturingSetlistService();
+        SetlistController controller = new SetlistController(
+                setlistService,
+                new StubIntentService(IntentParseResult.accepted(new UnsupportedRequestIntent("v1", "unused", "unused"), false)),
+                new ValidatedSetlistRequestMapper(),
+                new ConversationSessionFacade(new DefaultSessionMergeService(), new ValidatedSetlistRequestMapper(), Duration.ofMinutes(30), Duration.ofHours(4)),
+                setlistVersionService(),
+                new SetlistVersionDiffService());
+        GenerateSetlistRequest request = new GenerateSetlistRequest()
+                .verseText("Psalm 100")
+                .counts(new SetlistCounts().praise(1).worship(0))
+                .keyPolicy(new KeyPolicy()
+                        .preferSameKey(true)
+                        .allowRelativeMajorMinor(true)
+                        .maxKeyCenters(2))
+                .tempoPolicy(new TempoPolicy().maxJumpBpm(12))
+                .explanationAudience(GenerateSetlistRequest.ExplanationAudienceEnum.ADMIN)
+                .includeAdminDiagnostics(true);
+
+        // Act
+        ResponseEntity<SetlistProposalResponse> response = controller.generateSetlistProposal(request);
+
+        // Assert
+        assertThat(response.getStatusCode().value()).isEqualTo(403);
+        assertThat(setlistService.invocationCount).isZero();
+        assertThat(request.getIncludeAdminDiagnostics()).isFalse();
+        assertThat(request.getExplanationAudience()).isEqualTo(GenerateSetlistRequest.ExplanationAudienceEnum.PUBLIC);
+    }
+
+    @Test
+    void structuredRequestAllowsAuthorizedAdminDiagnosticsWithoutChangingServicePath() {
+        // Arrange
+        SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(
+                "admin",
+                "n/a",
+                List.of(new SimpleGrantedAuthority(RbacAuthorities.ROLE_ADMIN))));
+        CapturingSetlistService setlistService = new CapturingSetlistService();
+        SetlistController controller = new SetlistController(
+                setlistService,
+                new StubIntentService(IntentParseResult.accepted(new UnsupportedRequestIntent("v1", "unused", "unused"), false)),
+                new ValidatedSetlistRequestMapper(),
+                new ConversationSessionFacade(new DefaultSessionMergeService(), new ValidatedSetlistRequestMapper(), Duration.ofMinutes(30), Duration.ofHours(4)),
+                setlistVersionService(),
+                new SetlistVersionDiffService());
+        GenerateSetlistRequest request = new GenerateSetlistRequest()
+                .verseText("Psalm 100")
+                .counts(new SetlistCounts().praise(1).worship(0))
+                .keyPolicy(new KeyPolicy()
+                        .preferSameKey(true)
+                        .allowRelativeMajorMinor(true)
+                        .maxKeyCenters(2))
+                .tempoPolicy(new TempoPolicy().maxJumpBpm(12))
+                .explanationAudience(GenerateSetlistRequest.ExplanationAudienceEnum.ADMIN)
+                .includeAdminDiagnostics(true);
+
+        // Act
+        ResponseEntity<SetlistProposalResponse> response = controller.generateSetlistProposal(request);
+
+        // Assert
+        assertThat(response.getStatusCode().value()).isEqualTo(202);
+        assertThat(setlistService.invocationCount).isEqualTo(1);
+        assertThat(setlistService.lastRequest.getExplanationAudience()).isEqualTo(GenerateSetlistRequest.ExplanationAudienceEnum.ADMIN);
+        assertThat(setlistService.lastRequest.getIncludeAdminDiagnostics()).isTrue();
     }
 
 

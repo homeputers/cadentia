@@ -1402,6 +1402,24 @@ components:
             - sending
             - other
           description: Controlled service moment when supplied by the user.
+        explanationAudience:
+          type: string
+          nullable: true
+          enum:
+            - public
+            - worship_leader
+            - admin
+          default: public
+          description: >-
+            Requested explanation visibility mode. Admin mode requires an authorized
+            admin authority and never changes recommendation selection, ordering, or scores.
+        includeAdminDiagnostics:
+          type: boolean
+          default: false
+          description: >-
+            Requests admin-only diagnostics such as candidate exclusions, near misses,
+            hard-filter reasons, score ranges, tie-break details, and constraint-relaxation rationale.
+            Ignored unless explanationAudience is admin and the caller is authorized.
     SetlistCounts:
       type: object
       additionalProperties: false

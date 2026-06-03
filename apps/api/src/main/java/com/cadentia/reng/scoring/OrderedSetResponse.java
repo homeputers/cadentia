@@ -49,13 +49,22 @@ public record OrderedSetResponse(
     }
 
     public OrderedSetResponse asPublicResponse() {
+        return forAudience(DiagnosticsAudience.PUBLIC);
+    }
+
+    public OrderedSetResponse forAudience(DiagnosticsAudience audience) {
+        DiagnosticsAudience effectiveAudience = audience == null ? DiagnosticsAudience.PUBLIC : audience;
         return new OrderedSetResponse(
                 scoringProfileVersion,
                 candidateSnapshotVersion,
-                items,
-                setExplanationFacts,
-                List.of(),
-                adjacentTransitionExplanations,
+                items.stream().map(item -> item.forAudience(effectiveAudience)).toList(),
+                RecommendationExplanationRedactor.filterFacts(setExplanationFacts, effectiveAudience),
+                effectiveAudience == DiagnosticsAudience.ADMIN
+                        ? RecommendationExplanationRedactor.filterFacts(adminCandidateExplanationFacts, effectiveAudience)
+                        : List.of(),
+                adjacentTransitionExplanations.stream()
+                        .map(entry -> entry.forAudience(effectiveAudience))
+                        .toList(),
                 profileLifecycle,
                 deterministicOrderingRules,
                 totalScore);

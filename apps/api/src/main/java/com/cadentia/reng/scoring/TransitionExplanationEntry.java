@@ -28,6 +28,27 @@ public record TransitionExplanationEntry(
         uiDisplayHints = uiDisplayHints == null ? List.of() : List.copyOf(uiDisplayHints);
     }
 
+    public TransitionExplanationEntry forAudience(DiagnosticsAudience audience) {
+        DiagnosticsAudience effectiveAudience = audience == null ? DiagnosticsAudience.PUBLIC : audience;
+        List<RecommendationExplanationFact> allowedFacts = RecommendationExplanationRedactor.filterFacts(facts, effectiveAudience);
+        return new TransitionExplanationEntry(
+                id,
+                sequence,
+                source,
+                target,
+                allowedFacts.stream().map(RecommendationExplanationFact::code).distinct().toList(),
+                effectiveAudience == DiagnosticsAudience.ADMIN ? scoreComponents : List.of(),
+                totalScore,
+                keyChange,
+                tempoChange,
+                effectiveAudience == DiagnosticsAudience.PUBLIC ? null : meterChange,
+                energyMovement,
+                effectiveAudience == DiagnosticsAudience.ADMIN ? arrangementCompatibility : null,
+                allowedFacts,
+                effectiveAudience == DiagnosticsAudience.PUBLIC ? List.of() : warnings,
+                uiDisplayHints);
+    }
+
     public record TransitionEndpoint(
             String itemId,
             UUID arrangementId,

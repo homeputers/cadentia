@@ -71,7 +71,7 @@ class ScoringDiagnosticsTest {
     }
 
     @Test
-    void publicAudienceRedactsAdminOnlyDiagnosticDetails() {
+    void worshipLeaderAudienceRedactsAdminOnlyDiagnosticDetails() {
         RecommendableArrangement eligible = candidate("G", 120, "4/4");
         RecommendableArrangement excluded = new RecommendableArrangement(
                 UUID.randomUUID(), UUID.randomUUID(), null, "Missing Prov", "en", "A", KeyMode.MAJOR, 110, "4/4", 60,
@@ -87,13 +87,42 @@ class ScoringDiagnosticsTest {
                 OrderedSetResponse.of(scoringProfile(), "snap-v1", List.of(), 1.0d),
                 true);
 
-        ScoringDiagnostics publicView = diagnostics.forAudience(DiagnosticsAudience.PUBLIC);
+        ScoringDiagnostics publicView = diagnostics.forAudience(DiagnosticsAudience.WORSHIP_LEADER);
 
         assertThat(publicView.retrievedCandidateCount()).isEqualTo(diagnostics.retrievedCandidateCount());
         assertThat(publicView.exclusionReasonCounts()).isEmpty();
         assertThat(publicView.searchPruningDecisions()).isEmpty();
         assertThat(publicView.constraintRelaxationSequence()).isEmpty();
         assertThat(publicView.transitionTradeoffCodes()).isEqualTo(diagnostics.transitionTradeoffCodes());
+    }
+
+    @Test
+    void publicAudienceRedactsOperationalAndAdminDiagnosticDetails() {
+        ScoringDiagnostics diagnostics = new ScoringDiagnostics(
+                true,
+                10,
+                8,
+                2,
+                Map.of(HardFilterReasonCode.MISSING_PROVENANCE, 2),
+                new ScoringDiagnostics.ScoreRange(1, 3, 2),
+                new ScoringDiagnostics.ScoreRange(-1, 1, 0),
+                List.of(new ConstraintRelaxationStep(1, "STEP", "RELAXED", "admin note")),
+                List.of(new SearchPruningDecision("arr-1", "MISSING_PROVENANCE", "hard_constraint_filter")),
+                List.of("KEY_MODULATION"),
+                new ScoringDiagnostics.SelectedSetSummary(5, 4.0));
+
+        ScoringDiagnostics publicView = diagnostics.forAudience(DiagnosticsAudience.PUBLIC);
+
+        assertThat(publicView.retrievedCandidateCount()).isZero();
+        assertThat(publicView.eligibleCandidateCount()).isZero();
+        assertThat(publicView.excludedCandidateCount()).isZero();
+        assertThat(publicView.exclusionReasonCounts()).isEmpty();
+        assertThat(publicView.candidateScoreRange()).isEqualTo(ScoringDiagnostics.ScoreRange.empty());
+        assertThat(publicView.transitionScoreRange()).isEqualTo(ScoringDiagnostics.ScoreRange.empty());
+        assertThat(publicView.searchPruningDecisions()).isEmpty();
+        assertThat(publicView.constraintRelaxationSequence()).isEmpty();
+        assertThat(publicView.transitionTradeoffCodes()).isEmpty();
+        assertThat(publicView.selectedSetSummary()).isEqualTo(diagnostics.selectedSetSummary());
     }
 
     @Test
