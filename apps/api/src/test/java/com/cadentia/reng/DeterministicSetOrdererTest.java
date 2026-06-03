@@ -457,6 +457,29 @@ class DeterministicSetOrdererTest {
                 base.transitionMetadata());
     }
 
+    private static UUID arrangementId(String titleSuffix) {
+        return deterministicId("00000000-0000-0000-0000-0000000000", titleSuffix);
+    }
+
+    private static UUID songId(String titleSuffix) {
+        return deterministicId("00000000-0000-0000-0000-0000000001", titleSuffix);
+    }
+
+    private static UUID lyricsDocumentId(String titleSuffix) {
+        return deterministicId("00000000-0000-0000-0000-0000000002", titleSuffix);
+    }
+
+    private static UUID deterministicId(String prefix, String titleSuffix) {
+        int offset = switch (titleSuffix) {
+            case "A" -> 1;
+            case "B" -> 2;
+            case "C" -> 3;
+            case "D" -> 4;
+            default -> 9;
+        };
+        return UUID.fromString(prefix + String.format("%02d", offset));
+    }
+
     private static RecommendableArrangement candidate(
             String titleSuffix,
             String key,
@@ -466,9 +489,9 @@ class DeterministicSetOrdererTest {
             int energy,
             ArrangementTransitionMetadata transitionMetadata) {
         return new RecommendableArrangement(
-                UUID.fromString("00000000-0000-0000-0000-00000000000" + (titleSuffix.equals("A") ? "1" : titleSuffix.equals("B") ? "2" : "3")),
-                UUID.randomUUID(),
-                UUID.randomUUID(),
+                arrangementId(titleSuffix),
+                songId(titleSuffix),
+                lyricsDocumentId(titleSuffix),
                 "Song " + titleSuffix,
                 "en",
                 key,
