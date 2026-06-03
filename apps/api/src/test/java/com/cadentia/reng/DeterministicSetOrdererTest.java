@@ -118,30 +118,95 @@ class DeterministicSetOrdererTest {
     }
 
     @Test
-    void emitsTransitionExplanationFactsForAdjacentItems() {
+    void emitsDirectionalTransitionEntryForAdjacentItems() {
         CandidateFeatureScorer.CandidateFeatureScore first = score(candidate("A", "C", 120), 1.0d);
         CandidateFeatureScorer.CandidateFeatureScore second = score(candidate("B", "G", 150), 0.9d);
 
         OrderedSetResponse ordered = orderer.order(List.of(first, second), request(3), profile(), "snap");
 
         assertThat(ordered.items()).hasSize(2);
-        assertThat(ordered.items().get(1).explanationFacts())
-                .filteredOn(fact -> "transition".equals(fact.scope()))
-                .extracting(fact -> fact.code())
-                .contains(
-                        "SAME_KEY_TRANSITION",
-                        "RELATIVE_KEY_TRANSITION",
-                        "CLOSE_KEY_TRANSITION",
-                        "MODULATION_PENALTY",
-                        "TEMPO_POLICY_OK",
-                        "METER_COMPATIBLE",
-                        "ENERGY_ARC_MATCH");
+        assertThat(ordered.adjacentTransitionExplanations()).hasSize(1);
+        assertThat(ordered.adjacentTransitionExplanations().get(0).source().arrangementId())
+                .isEqualTo(ordered.items().get(0).arrangementId());
+        assertThat(ordered.adjacentTransitionExplanations().get(0).target().arrangementId())
+                .isEqualTo(ordered.items().get(1).arrangementId());
+        assertThat(ordered.adjacentTransitionExplanations().get(0).reasonCodes())
+                .contains("MODULATION_PENALTY", "TEMPO_POLICY_OK", "TEMPO_TRADEOFF_ACCEPTED");
+        assertThat(ordered.adjacentTransitionExplanations().get(0).tempoChange().jumpBpm()).isEqualTo(30);
         assertThat(ordered.items().get(1).explanationFacts())
                 .filteredOn(fact -> "transition".equals(fact.scope()))
                 .allSatisfy(fact -> {
                     assertThat(fact.subject().sourceId()).isEqualTo(ordered.items().get(0).arrangementId().toString());
                     assertThat(fact.subject().targetId()).isEqualTo(ordered.items().get(1).arrangementId().toString());
                 });
+    }
+
+    @Test
+    void emitsAllowedRelativeKeyAndParserCompatibilityFacts() {
+        ArrangementTransitionMetadata parserMetadata = new ArrangementTransitionMetadata(true, 0.92d, "parser-run-1:cadence");
+        CandidateFeatureScorer.CandidateFeatureScore first = score(candidate("A", "C", KeyMode.MAJOR, 100, "4/4", 60, parserMetadata), 1.0d);
+        CandidateFeatureScorer.CandidateFeatureScore second = score(candidate("B", "A", KeyMode.MINOR, 108, "4/4", 65, parserMetadata), 0.9d);
+
+        OrderedSetResponse ordered = orderer.order(List.of(first, second), request(3), profile(), "snap");
+
+        assertThat(ordered.adjacentTransitionExplanations()).hasSize(1);
+        assertThat(ordered.adjacentTransitionExplanations().get(0).reasonCodes())
+                .contains("RELATIVE_KEY_TRANSITION", "ARRANGEMENT_COMPATIBLE")
+                .doesNotContain("MODULATION_PENALTY");
+        assertThat(ordered.adjacentTransitionExplanations().get(0).keyChange().relativeMajorMinor()).isTrue();
+        assertThat(ordered.adjacentTransitionExplanations().get(0).arrangementCompatibility().parserConfidence())
+                .isEqualTo(0.92d);
+    }
+
+    @Test
+    void exposesPenalizedMeterAndEnergyMovementWithoutHidingPenalties() {
+        CandidateFeatureScorer.CandidateFeatureScore first = score(candidate("A", "C", KeyMode.MAJOR, 100, "4/4", 20, null), 1.0d);
+        CandidateFeatureScorer.CandidateFeatureScore second = score(candidate("B", "F#", KeyMode.MAJOR, 108, "6/8", 95, null), 0.9d);
+
+        OrderedSetResponse ordered = orderer.order(List.of(first, second), request(3), profile(), "snap");
+
+        assertThat(ordered.adjacentTransitionExplanations().get(0).reasonCodes())
+                .contains("MODULATION_PENALTY", "METER_COMPATIBLE", "ENERGY_ARC_MATCH");
+        assertThat(ordered.adjacentTransitionExplanations().get(0).meterChange().compatible()).isFalse();
+        assertThat(ordered.adjacentTransitionExplanations().get(0).energyMovement().delta()).isEqualTo(75);
+        assertThat(ordered.adjacentTransitionExplanations().get(0).warnings())
+                .extracting(warning -> warning.code())
+                .contains("MODULATION_PENALTY");
+    }
+
+    @Test
+    void warnsAboutMissingMetadataAndDoesNotInventUnavailableFacts() {
+        CandidateFeatureScorer.CandidateFeatureScore first = score(candidate("A", null, KeyMode.MAJOR, 0, null, 0, null), 1.0d);
+        CandidateFeatureScorer.CandidateFeatureScore second = score(candidate("B", "C", KeyMode.MAJOR, 108, "4/4", 65, null), 0.9d);
+
+        OrderedSetResponse ordered = orderer.order(List.of(first, second), request(3), profile(), "snap");
+
+        assertThat(ordered.adjacentTransitionExplanations()).hasSize(1);
+        assertThat(ordered.adjacentTransitionExplanations().get(0).keyChange()).isNull();
+        assertThat(ordered.adjacentTransitionExplanations().get(0).tempoChange()).isNull();
+        assertThat(ordered.adjacentTransitionExplanations().get(0).meterChange()).isNull();
+        assertThat(ordered.adjacentTransitionExplanations().get(0).warnings())
+                .extracting(warning -> warning.code())
+                .contains("TRANSITION_METADATA_MISSING");
+        assertThat(ordered.adjacentTransitionExplanations().get(0).reasonCodes())
+                .doesNotContain("SAME_KEY_TRANSITION", "TEMPO_POLICY_OK", "METER_COMPATIBLE");
+    }
+
+    @Test
+    void transitionEntriesFollowDeterministicAdjacentOrdering() {
+        CandidateFeatureScorer.CandidateFeatureScore first = score(candidate("A", "C", 100), 1.0d);
+        CandidateFeatureScorer.CandidateFeatureScore second = score(candidate("B", "C", 104), 0.9d);
+        CandidateFeatureScorer.CandidateFeatureScore third = score(candidate("D", "C", 108), 0.8d);
+
+        OrderedSetResponse ordered = orderer.order(List.of(third, first, second), request(3, false, 3), profile(), "snap");
+
+        assertThat(ordered.adjacentTransitionExplanations()).hasSize(2);
+        assertThat(ordered.adjacentTransitionExplanations())
+                .extracting(entry -> entry.id())
+                .containsExactly("transition-1-2", "transition-2-3");
+        assertThat(ordered.adjacentTransitionExplanations())
+                .extracting(entry -> entry.source().position() + "->" + entry.target().position())
+                .containsExactly("1->2", "2->3");
     }
 
     @Test
@@ -193,10 +258,14 @@ class DeterministicSetOrdererTest {
     }
 
     private static ScoringRequest request(int maxKeyCenters, boolean includeAdminExplanations) {
+        return request(maxKeyCenters, includeAdminExplanations, 2);
+    }
+
+    private static ScoringRequest request(int maxKeyCenters, boolean includeAdminExplanations, int praiseCount) {
         return new ScoringRequest(
                 null,
                 List.of(),
-                2,
+                praiseCount,
                 0,
                 new ScoringRequest.KeyPolicy(true, true, maxKeyCenters),
                 new ScoringRequest.TempoPolicy(12),
@@ -215,6 +284,17 @@ class DeterministicSetOrdererTest {
     }
 
     private static RecommendableArrangement candidate(String titleSuffix, String key, int bpm) {
+        return candidate(titleSuffix, key, KeyMode.MAJOR, bpm, "4/4", 70, null);
+    }
+
+    private static RecommendableArrangement candidate(
+            String titleSuffix,
+            String key,
+            KeyMode keyMode,
+            int bpm,
+            String meter,
+            int energy,
+            ArrangementTransitionMetadata transitionMetadata) {
         return new RecommendableArrangement(
                 UUID.fromString("00000000-0000-0000-0000-00000000000" + (titleSuffix.equals("A") ? "1" : titleSuffix.equals("B") ? "2" : "3")),
                 UUID.randomUUID(),
@@ -222,10 +302,10 @@ class DeterministicSetOrdererTest {
                 "Song " + titleSuffix,
                 "en",
                 key,
-                KeyMode.MAJOR,
+                keyMode,
                 bpm,
-                "4/4",
-                70,
+                meter,
+                energy,
                 List.of("praise"),
                 List.of(),
                 List.of(),
@@ -237,6 +317,7 @@ class DeterministicSetOrdererTest {
                         ApprovalStatus.APPROVED,
                         ApprovalStatus.APPROVED,
                         ApprovalStatus.APPROVED,
-                        ApprovalStatus.APPROVED));
+                        ApprovalStatus.APPROVED),
+                transitionMetadata);
     }
 }

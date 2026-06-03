@@ -18,12 +18,46 @@ public record RecommendableArrangement(
         List<String> tags,
         List<RecommendationTag> controlledTags,
         List<RecommendationTag> matchedTags,
-        ApprovalGateSummary approvalGateSummary) {
+        ApprovalGateSummary approvalGateSummary,
+        ArrangementTransitionMetadata transitionMetadata) {
 
     public RecommendableArrangement {
         tags = tags == null ? List.of() : List.copyOf(tags);
         controlledTags = controlledTags == null ? List.of() : List.copyOf(controlledTags);
         matchedTags = matchedTags == null ? List.of() : List.copyOf(matchedTags);
+    }
+
+    public RecommendableArrangement(
+            UUID arrangementId,
+            UUID songId,
+            UUID currentLyricsDocumentId,
+            String title,
+            String language,
+            String musicalKey,
+            KeyMode keyMode,
+            int bpm,
+            String timeSignature,
+            int energy,
+            List<String> tags,
+            List<RecommendationTag> controlledTags,
+            List<RecommendationTag> matchedTags,
+            ApprovalGateSummary approvalGateSummary) {
+        this(
+                arrangementId,
+                songId,
+                currentLyricsDocumentId,
+                title,
+                language,
+                musicalKey,
+                keyMode,
+                bpm,
+                timeSignature,
+                energy,
+                tags,
+                controlledTags,
+                matchedTags,
+                approvalGateSummary,
+                null);
     }
 
     public RecommendableArrangement(
@@ -53,7 +87,8 @@ public record RecommendableArrangement(
                 tags,
                 List.of(),
                 List.of(),
-                approvalGateSummary);
+                approvalGateSummary,
+                null);
     }
 
     RecommendableArrangement withRecommendationTags(
@@ -73,6 +108,7 @@ public record RecommendableArrangement(
                 tags,
                 controlledTags,
                 matchedTags,
-                approvalGateSummary);
+                approvalGateSummary,
+                transitionMetadata);
     }
 }

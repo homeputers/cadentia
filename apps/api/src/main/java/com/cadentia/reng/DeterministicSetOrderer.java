@@ -2,17 +2,18 @@ package com.cadentia.reng;
 
 import com.cadentia.catalog.model.ApprovalStatus;
 import com.cadentia.reng.scoring.CandidateFeatureScorer;
+import com.cadentia.reng.scoring.ItemExplanationFactory;
 import com.cadentia.reng.scoring.OrderedSetItem;
 import com.cadentia.reng.scoring.OrderedSetResponse;
-import com.cadentia.reng.scoring.ItemExplanationFactory;
-import com.cadentia.reng.scoring.RecommendationExplanationFact;
 import com.cadentia.reng.scoring.RecommendationExplanationEvidence;
+import com.cadentia.reng.scoring.RecommendationExplanationFact;
 import com.cadentia.reng.scoring.RecommendationExplanationSubject;
 import com.cadentia.reng.scoring.RecommendationSongExplanation;
-import com.cadentia.reng.scoring.TransitionExplanationFactory;
 import com.cadentia.reng.scoring.ScoringProfile;
 import com.cadentia.reng.scoring.ScoringRequest;
 import com.cadentia.reng.scoring.SetExplanationFactory;
+import com.cadentia.reng.scoring.TransitionExplanationEntry;
+import com.cadentia.reng.scoring.TransitionExplanationFactory;
 import com.cadentia.reng.scoring.TransitionScore;
 import com.cadentia.reng.scoring.TransitionScorer;
 import java.util.ArrayList;
@@ -79,6 +80,7 @@ public class DeterministicSetOrderer implements SetOrderer {
         }
 
         List<OrderedSetItem> items = new ArrayList<>();
+        List<TransitionExplanationEntry> adjacentTransitionExplanations = new ArrayList<>();
         double totalScore = 0.0d;
         CandidateFeatureScorer.CandidateFeatureScore previous = null;
 
@@ -100,7 +102,7 @@ public class DeterministicSetOrderer implements SetOrderer {
 
             RecommendationSongExplanation songExplanation = itemExplanationFactory.buildSongExplanation(
                     current.candidate(), request, current.componentScores(), index + 1);
-            items.add(new OrderedSetItem(
+            OrderedSetItem item = new OrderedSetItem(
                     current.candidate().arrangementId(),
                     current.candidate().songId(),
                     index + 1,
@@ -108,7 +110,12 @@ public class DeterministicSetOrderer implements SetOrderer {
                     current.componentScores(),
                     current.totalScore(),
                     transition,
-                    songExplanation));
+                    songExplanation);
+            items.add(item);
+            if (previous != null && transition != null) {
+                adjacentTransitionExplanations.add(transitionExplanationFactory.buildEntry(
+                        items.get(index - 1), item, previous.candidate(), current.candidate(), transition, request));
+            }
             previous = current;
         }
 
@@ -123,6 +130,7 @@ public class DeterministicSetOrderer implements SetOrderer {
                 items,
                 setExplanationFacts,
                 adminFacts,
+                adjacentTransitionExplanations,
                 profile.lifecycle(),
                 profile.deterministicTieBreakOrder(),
                 totalScore);

@@ -93,6 +93,25 @@ public final class ExplanationCodeRegistry {
                     Set.of("fromEnergy", "toEnergy"),
                     Severity.INFO,
                     Severity.WARNING),
+            transition(
+                    "TEMPO_TRADEOFF_ACCEPTED",
+                    "tradeoffs",
+                    "transition.tempo_tradeoff_accepted",
+                    Set.of("fromBpm", "toBpm", "maxJumpBpm", "jumpBpm", "penalty"),
+                    Severity.WARNING),
+            transitionInternal(
+                    "ARRANGEMENT_COMPATIBLE",
+                    "transitions",
+                    "transition.arrangement_compatibility",
+                    Set.of("compatible", "parserConfidence"),
+                    Severity.INFO,
+                    Severity.WARNING),
+            transitionInternal(
+                    "TRANSITION_METADATA_MISSING",
+                    "warnings",
+                    "transition.metadata_missing",
+                    Set.of("missingFields"),
+                    Severity.WARNING),
             set(
                     "COUNT_TARGET_MET",
                     "set_shape",
