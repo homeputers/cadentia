@@ -2,6 +2,8 @@ package com.cadentia.reng;
 
 import com.cadentia.catalog.model.ApprovalStatus;
 import com.cadentia.reng.scoring.CandidateFeatureScorer;
+import com.cadentia.reng.scoring.EnergyArcEvaluation;
+import com.cadentia.reng.scoring.EnergyArcEvaluator;
 import com.cadentia.reng.scoring.ItemExplanationFactory;
 import com.cadentia.reng.scoring.OrderedSetItem;
 import com.cadentia.reng.scoring.OrderedSetResponse;
@@ -32,24 +34,37 @@ public class DeterministicSetOrderer implements SetOrderer {
     private final ItemExplanationFactory itemExplanationFactory;
     private final TransitionExplanationFactory transitionExplanationFactory;
     private final SetExplanationFactory setExplanationFactory;
+    private final EnergyArcEvaluator energyArcEvaluator;
 
     public DeterministicSetOrderer() {
-        this(new TransitionScorer(), new ItemExplanationFactory(), new TransitionExplanationFactory(), new SetExplanationFactory());
+        this(
+                new TransitionScorer(),
+                new ItemExplanationFactory(),
+                new TransitionExplanationFactory(),
+                new SetExplanationFactory(),
+                new EnergyArcEvaluator());
     }
 
     DeterministicSetOrderer(TransitionScorer transitionScorer) {
-        this(transitionScorer, new ItemExplanationFactory(), new TransitionExplanationFactory(), new SetExplanationFactory());
+        this(
+                transitionScorer,
+                new ItemExplanationFactory(),
+                new TransitionExplanationFactory(),
+                new SetExplanationFactory(),
+                new EnergyArcEvaluator());
     }
 
     DeterministicSetOrderer(
             TransitionScorer transitionScorer,
             ItemExplanationFactory itemExplanationFactory,
             TransitionExplanationFactory transitionExplanationFactory,
-            SetExplanationFactory setExplanationFactory) {
+            SetExplanationFactory setExplanationFactory,
+            EnergyArcEvaluator energyArcEvaluator) {
         this.transitionScorer = transitionScorer;
         this.itemExplanationFactory = itemExplanationFactory;
         this.transitionExplanationFactory = transitionExplanationFactory;
         this.setExplanationFactory = setExplanationFactory;
+        this.energyArcEvaluator = energyArcEvaluator;
     }
 
     @Override
@@ -119,7 +134,12 @@ public class DeterministicSetOrderer implements SetOrderer {
             previous = current;
         }
 
-        List<RecommendationExplanationFact> setExplanationFacts = setExplanationFactory.build(request, selected, sorted, items);
+        EnergyArcEvaluation energyArcEvaluation = energyArcEvaluator.evaluate(
+                selected.stream().map(CandidateFeatureScorer.CandidateFeatureScore::candidate).toList(),
+                request,
+                profile);
+        List<RecommendationExplanationFact> setExplanationFacts = setExplanationFactory.build(
+                request, selected, sorted, items, energyArcEvaluation);
         List<RecommendationExplanationFact> adminFacts = request.includeAdminExplanations()
                 ? buildAdminExclusionFacts(sorted, selected, request)
                 : List.of();
