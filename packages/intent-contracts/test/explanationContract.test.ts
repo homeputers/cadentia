@@ -1,9 +1,21 @@
 import { describe, expect, it } from "vitest";
+import { readFileSync, readdirSync } from "node:fs";
 
 import {
   EXPLANATION_CODES,
-  parseExplanationFact
+  RECOMMENDATION_EXPLANATION_SCHEMA_VERSION,
+  parseExplanationFact,
+  parseRecommendationExplanation
 } from "../src/explanations.js";
+
+const recommendationExplanationFixturesRoot = new URL(
+  "../fixtures/v1/recommendation-explanations/valid/",
+  import.meta.url
+);
+
+function parseRecommendationExplanationFixture(name: string): unknown {
+  return JSON.parse(readFileSync(new URL(name, recommendationExplanationFixturesRoot), "utf8"));
+}
 
 describe("recommendation explanation fact contract", () => {
   it("accepts governed explanation fact payload", () => {
@@ -71,7 +83,59 @@ describe("recommendation explanation fact contract", () => {
       EXCLUDED_KEY_CENTER_LIMIT: "EXCLUDED_KEY_CENTER_LIMIT",
       EXCLUDED_TEMPO_POLICY: "EXCLUDED_TEMPO_POLICY",
       EXCLUDED_WEAKER_SCORE: "EXCLUDED_WEAKER_SCORE",
-      EXCLUDED_QUOTA_FILLED: "EXCLUDED_QUOTA_FILLED"
+      EXCLUDED_QUOTA_FILLED: "EXCLUDED_QUOTA_FILLED",
+      DETERMINISTIC_TIE_BREAK_APPLIED: "DETERMINISTIC_TIE_BREAK_APPLIED"
     });
+  });
+});
+
+
+describe("recommendation explanation v1 response contract", () => {
+  it.each(readdirSync(recommendationExplanationFixturesRoot))(
+    "accepts valid recommendation explanation fixture %s",
+    (fixtureName) => {
+      const parsed = parseRecommendationExplanation(
+        parseRecommendationExplanationFixture(fixtureName)
+      );
+
+      expect(parsed.schemaVersion).toBe(RECOMMENDATION_EXPLANATION_SCHEMA_VERSION);
+      expect(parsed.generatedBy).toBe("RecommendationEngine");
+      expect(parsed.scoringProfileVersion).toContain("scoring-profile");
+      expect(parsed.catalogSnapshotVersion).toContain("catalog-snapshot");
+    }
+  );
+
+  it("distinguishes song, transition, set, warning, and diagnostics sections", () => {
+    const parsed = parseRecommendationExplanation(
+      parseRecommendationExplanationFixture("complete-success.json")
+    );
+
+    expect(parsed.selectedSongs[0].scope).toBe("selected_song");
+    expect(parsed.adjacentTransitions[0].scope).toBe("adjacent_transition");
+    expect(parsed.setLevel[0].scope).toBe("set_level");
+
+    const warningPayload = parseRecommendationExplanation(
+      parseRecommendationExplanationFixture("with-warnings.json")
+    );
+    expect(warningPayload.warnings[0].scope).toBe("warning");
+
+    const adminPayload = parseRecommendationExplanation(
+      parseRecommendationExplanationFixture("with-admin-diagnostics.json")
+    );
+    expect(adminPayload.diagnostics[0]).toMatchObject({
+      scope: "diagnostic",
+      audience: "admin"
+    });
+  });
+
+  it("rejects unversioned or client-generated explanation payloads", () => {
+    const payload = parseRecommendationExplanationFixture("complete-success.json") as Record<string, unknown>;
+
+    expect(() =>
+      parseRecommendationExplanation({ ...payload, schemaVersion: undefined })
+    ).toThrow();
+    expect(() =>
+      parseRecommendationExplanation({ ...payload, generatedBy: "LLM" })
+    ).toThrow();
   });
 });
