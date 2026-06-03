@@ -43,7 +43,8 @@ public class ScoringRequestFactory {
                 request.getEnergyArc() == null ? null : request.getEnergyArc().getValue(),
                 languageDefaulted ? DEFAULT_LANGUAGE : request.getLanguage(),
                 request.getExcludedSongs() == null ? List.of() : request.getExcludedSongs(),
-                false,
+                Boolean.TRUE.equals(request.getIncludeAdminDiagnostics())
+                        && request.getExplanationAudience() == GenerateSetlistRequest.ExplanationAudienceEnum.ADMIN,
                 new ScoringRequest.DefaultsApplied(
                         countsDefaulted,
                         keyPolicyDefaulted,

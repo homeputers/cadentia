@@ -29,6 +29,23 @@ public record RecommendationSongExplanation(
         uiDisplayHints = uiDisplayHints == null ? List.of() : List.copyOf(uiDisplayHints);
     }
 
+    public RecommendationSongExplanation forAudience(DiagnosticsAudience audience) {
+        DiagnosticsAudience effectiveAudience = audience == null ? DiagnosticsAudience.PUBLIC : audience;
+        return new RecommendationSongExplanation(
+                songId,
+                arrangementId,
+                position,
+                RecommendationExplanationRedactor.filterFacts(facts, effectiveAudience),
+                effectiveAudience == DiagnosticsAudience.ADMIN ? scoreComponents : List.of(),
+                catalogMetadataReferences,
+                themeEvidence,
+                scriptureEvidence,
+                approvalEvidence,
+                RecommendationExplanationRedactor.redactEvidence(provenanceEvidence, effectiveAudience),
+                RecommendationExplanationRedactor.filterFacts(warnings, effectiveAudience),
+                uiDisplayHints);
+    }
+
     public record UiDisplayHint(String group, String severity, String templateKey, List<String> reasonCodes) {
 
         public UiDisplayHint {

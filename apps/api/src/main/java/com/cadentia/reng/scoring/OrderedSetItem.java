@@ -42,4 +42,17 @@ public record OrderedSetItem(
             throw new IllegalArgumentException("Song explanation identifiers must match the ordered set item");
         }
     }
+
+    public OrderedSetItem forAudience(DiagnosticsAudience audience) {
+        DiagnosticsAudience effectiveAudience = audience == null ? DiagnosticsAudience.PUBLIC : audience;
+        return new OrderedSetItem(
+                arrangementId,
+                songId,
+                position,
+                RecommendationExplanationRedactor.filterFacts(explanationFacts, effectiveAudience),
+                effectiveAudience == DiagnosticsAudience.ADMIN ? candidateComponentScores : List.of(),
+                candidateTotalScore,
+                transitionFromPrevious,
+                songExplanation == null ? null : songExplanation.forAudience(effectiveAudience));
+    }
 }

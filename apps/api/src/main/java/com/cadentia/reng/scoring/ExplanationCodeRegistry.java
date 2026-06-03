@@ -311,6 +311,24 @@ public final class ExplanationCodeRegistry {
                 .toList();
     }
 
+    public static boolean isAllowedForAudience(String code, DiagnosticsAudience audience) {
+        Entry entry = ENTRIES.get(code);
+        if (entry == null || entry.status() != Status.ACTIVE) {
+            return false;
+        }
+        Audience registryAudience = switch (audience == null ? DiagnosticsAudience.PUBLIC : audience) {
+            case PUBLIC -> Audience.PUBLIC;
+            case WORSHIP_LEADER -> Audience.WORSHIP_LEADER;
+            case ADMIN -> Audience.ADMIN;
+        };
+        return entry.audiences().contains(registryAudience);
+    }
+
+    public static String displayGroup(String code) {
+        Entry entry = ENTRIES.get(code);
+        return entry == null ? null : entry.displayGroup();
+    }
+
     private static Entry item(String code, String group, String key, Set<String> values, Severity... severities) {
         return entry(code, group, key, Set.of(Scope.ITEM), PUBLIC_AUDIENCES, values, severities);
     }

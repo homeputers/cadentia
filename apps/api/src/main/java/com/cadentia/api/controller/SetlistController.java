@@ -1,22 +1,19 @@
 package com.cadentia.api.controller;
 
 import com.cadentia.api.security.RbacAuthorities;
-
 import com.cadentia.generated.api.SetlistsApi;
 import com.cadentia.generated.model.CommitSetlistEditsRequest;
-import com.cadentia.generated.model.CreateSetlistBaselineRequest;
-import com.cadentia.generated.model.GenerateSetlistRequest;
-
 import com.cadentia.generated.model.ConversationClarificationRequest;
 import com.cadentia.generated.model.ConversationConfirmRequest;
 import com.cadentia.generated.model.ConversationRecoveryResponse;
 import com.cadentia.generated.model.ConversationSessionStateResponse;
 import com.cadentia.generated.model.ConversationSlotUpdateRequest;
-import java.util.UUID;
+import com.cadentia.generated.model.CreateSetlistBaselineRequest;
+import com.cadentia.generated.model.GenerateSetlistRequest;
 import com.cadentia.generated.model.NaturalLanguageSetlistRequest;
-import com.cadentia.generated.model.SetlistProposalResponse;
 import com.cadentia.generated.model.SetlistDiffOperation;
 import com.cadentia.generated.model.SetlistItemChangeType;
+import com.cadentia.generated.model.SetlistProposalResponse;
 import com.cadentia.generated.model.SetlistProvenanceType;
 import com.cadentia.generated.model.SetlistVersion;
 import com.cadentia.generated.model.SetlistVersionDiffResponse;
@@ -35,14 +32,17 @@ import com.cadentia.reng.SetlistService;
 import com.cadentia.reng.setlist.SetlistVersionDiffService;
 import com.cadentia.reng.setlist.SetlistVersionModels.SetlistVersionSnapshot;
 import com.cadentia.reng.setlist.SetlistVersionService;
-import java.util.ArrayList;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -74,6 +74,9 @@ public class SetlistController implements SetlistsApi {
     @Override
     @PreAuthorize("hasAnyAuthority(T(com.cadentia.api.security.RbacAuthorities).ROLE_WORSHIP_LEADER, T(com.cadentia.api.security.RbacAuthorities).ROLE_CATALOG_EDITOR, T(com.cadentia.api.security.RbacAuthorities).ROLE_DOCTRINAL_REVIEWER, T(com.cadentia.api.security.RbacAuthorities).ROLE_MUSICAL_REVIEWER, T(com.cadentia.api.security.RbacAuthorities).ROLE_ADMIN)")
     public ResponseEntity<SetlistProposalResponse> generateSetlistProposal(GenerateSetlistRequest request) {
+        if (!authorizeExplanationAudience(request)) {
+            return ResponseEntity.status(403).build();
+        }
         return ResponseEntity.accepted().body(setlistService.generate(request));
     }
 
@@ -88,7 +91,45 @@ public class SetlistController implements SetlistsApi {
 
         GenerateSetlistIntent intent = (GenerateSetlistIntent) parseResult.intent();
         GenerateSetlistRequest validatedRequest = requestMapper.toGenerateSetlistRequest(intent);
+        if (!authorizeExplanationAudience(validatedRequest)) {
+            return ResponseEntity.status(403).build();
+        }
         return ResponseEntity.accepted().body(setlistService.generate(validatedRequest));
+    }
+
+    private boolean authorizeExplanationAudience(GenerateSetlistRequest request) {
+        if (request == null) {
+            return true;
+        }
+        GenerateSetlistRequest.ExplanationAudienceEnum requestedAudience = request.getExplanationAudience();
+        boolean adminDiagnosticsRequested = Boolean.TRUE.equals(request.getIncludeAdminDiagnostics())
+                || requestedAudience == GenerateSetlistRequest.ExplanationAudienceEnum.ADMIN;
+        if (!adminDiagnosticsRequested) {
+            if (request.getIncludeAdminDiagnostics() == null) {
+                request.setIncludeAdminDiagnostics(false);
+            }
+            return true;
+        }
+        if (!currentUserHasAuthority(RbacAuthorities.ROLE_ADMIN)) {
+            request.setIncludeAdminDiagnostics(false);
+            if (requestedAudience == GenerateSetlistRequest.ExplanationAudienceEnum.ADMIN) {
+                request.setExplanationAudience(GenerateSetlistRequest.ExplanationAudienceEnum.PUBLIC);
+            }
+            return false;
+        }
+        request.setExplanationAudience(GenerateSetlistRequest.ExplanationAudienceEnum.ADMIN);
+        request.setIncludeAdminDiagnostics(true);
+        return true;
+    }
+
+    private boolean currentUserHasAuthority(String authority) {
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null) {
+            return false;
+        }
+        return authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch(authority::equals);
     }
 
     @Override

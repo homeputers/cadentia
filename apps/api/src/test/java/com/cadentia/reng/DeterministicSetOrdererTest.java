@@ -374,7 +374,11 @@ class DeterministicSetOrdererTest {
 
         OrderedSetResponse publicView = admin.asPublicResponse();
         assertThat(publicView.adminCandidateExplanationFacts()).isEmpty();
-        assertThat(publicView.items()).containsExactlyElementsOf(admin.items());
+        assertThat(publicView.items()).extracting(item -> item.arrangementId())
+                .containsExactlyElementsOf(admin.items().stream().map(item -> item.arrangementId()).toList());
+        assertThat(publicView.items()).extracting(item -> item.candidateTotalScore())
+                .containsExactlyElementsOf(admin.items().stream().map(item -> item.candidateTotalScore()).toList());
+        assertThat(publicView.totalScore()).isEqualTo(admin.totalScore());
         assertThat(publicView.setExplanationFacts()).containsExactlyElementsOf(admin.setExplanationFacts());
     }
 
