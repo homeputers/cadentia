@@ -45,6 +45,7 @@ includes:
 ### Phase 4 plans
 
 - [ADR-021 Implementation Plan: Recommendation Engine Explainability API](./ADR-021-recommendation-engine-explainability-api-plan.md)
+- [ADR-022 Implementation Plan: Packaged Deployment and Church Customization Model](./ADR-022-packaged-deployment-and-church-customization-model-plan.md)
 
 ## Operational workflow docs
 
