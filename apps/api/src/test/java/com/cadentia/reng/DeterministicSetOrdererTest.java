@@ -4,8 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.cadentia.catalog.model.ApprovalStatus;
 import com.cadentia.catalog.model.KeyMode;
+import com.cadentia.catalog.model.TagType;
 import com.cadentia.reng.scoring.CandidateFeatureScorer;
 import com.cadentia.reng.scoring.OrderedSetResponse;
+import com.cadentia.reng.scoring.RecommendationExplanationFact;
 import com.cadentia.reng.scoring.ScoringComponentScore;
 import com.cadentia.reng.scoring.ScoringProfile;
 import com.cadentia.reng.scoring.ScoringRequest;
@@ -115,6 +117,139 @@ class DeterministicSetOrdererTest {
                     assertThat(fact.severity()).isEqualTo("warning");
                     assertThat(fact.scope()).isEqualTo("set");
                 });
+    }
+
+
+    @Test
+    void setLevelExplanationsRepresentDefaultRequestPolicyAndCoverage() {
+        CandidateFeatureScorer.CandidateFeatureScore first = score(candidateWithMatchedTags(
+                "A",
+                "C",
+                100,
+                List.of(
+                        new RecommendationTag(UUID.randomUUID(), TagType.THEME, "Holiness", "holiness"),
+                        new RecommendationTag(UUID.randomUUID(), TagType.SCRIPTURE, "Psalm 24", "psalm-24"))), 1.0d);
+        CandidateFeatureScorer.CandidateFeatureScore second = score(candidateWithMatchedTags(
+                "B",
+                "C",
+                108,
+                List.of(new RecommendationTag(UUID.randomUUID(), TagType.THEME, "Joy", "joy"))), 0.9d);
+        ScoringRequest defaultRequest = new ScoringRequest(
+                "Psalm 24",
+                List.of("holiness"),
+                10,
+                5,
+                new ScoringRequest.KeyPolicy(true, true, 2),
+                new ScoringRequest.TempoPolicy(12),
+                null,
+                "en",
+                List.of(),
+                false,
+                new ScoringRequest.DefaultsApplied(true, true, true, false));
+
+        OrderedSetResponse ordered = orderer.order(List.of(first, second), defaultRequest, profile(), "snap");
+
+        RecommendationExplanationFact defaults = setFact(ordered, "REQUEST_DEFAULTS_APPLIED");
+        assertThat(defaults.values())
+                .containsEntry("defaultPraise", 10)
+                .containsEntry("defaultWorship", 5)
+                .containsEntry("preferSameKey", true)
+                .containsEntry("allowRelativeMajorMinor", true)
+                .containsEntry("maxKeyCenters", 2)
+                .containsEntry("maxJumpBpm", 12);
+        assertThat(setFact(ordered, "COUNT_TARGET_MET").values())
+                .containsEntry("selected", 2)
+                .containsEntry("target", 15)
+                .containsEntry("selectedPraise", 2)
+                .containsEntry("requestedPraise", 10)
+                .containsEntry("requestedWorship", 5);
+        assertThat(setFact(ordered, "KEY_CENTER_POLICY_MET").values())
+                .containsEntry("preferSameKey", true)
+                .containsEntry("allowRelativeMajorMinor", true)
+                .containsEntry("keyCenters", "c");
+        assertThat(setFact(ordered, "THEME_COVERAGE").values())
+                .containsEntry("coveredThemes", "holiness")
+                .containsEntry("requestedThemes", "holiness");
+        assertThat(setFact(ordered, "SCRIPTURE_COVERAGE").values())
+                .containsEntry("coveredScripture", "psalm-24");
+    }
+
+    @Test
+    void setLevelExplanationsRepresentExplicitPolicyOverridesWithoutDefaultFact() {
+        CandidateFeatureScorer.CandidateFeatureScore first = score(candidate("A", "C", 100), 1.0d);
+        CandidateFeatureScorer.CandidateFeatureScore second = score(candidate("B", "C", KeyMode.MAJOR, 104, "4/4", 60, null), 0.9d);
+        ScoringRequest explicitRequest = new ScoringRequest(
+                null,
+                List.of(),
+                2,
+                0,
+                new ScoringRequest.KeyPolicy(false, false, 1),
+                new ScoringRequest.TempoPolicy(5),
+                "steady",
+                "en",
+                List.of(),
+                false,
+                new ScoringRequest.DefaultsApplied(false, false, false, false));
+
+        OrderedSetResponse ordered = orderer.order(List.of(first, second), explicitRequest, profile(), "snap");
+
+        assertThat(ordered.setExplanationFacts())
+                .extracting(RecommendationExplanationFact::code)
+                .doesNotContain("REQUEST_DEFAULTS_APPLIED");
+        assertThat(setFact(ordered, "KEY_CENTER_POLICY_MET").values())
+                .containsEntry("preferSameKey", false)
+                .containsEntry("allowRelativeMajorMinor", false)
+                .containsEntry("maxKeyCenters", 1);
+        assertThat(setFact(ordered, "TEMPO_POLICY_MET").values())
+                .containsEntry("maxJumpBpm", 5)
+                .containsEntry("maxObservedJumpBpm", 4);
+        assertThat(setFact(ordered, "SET_ENERGY_ARC_MATCH").values())
+                .containsEntry("requestedArc", "steady")
+                .containsEntry("arcVersion", "energy-arc-v1");
+    }
+
+    @Test
+    void setLevelWarningsDistinguishAcceptedTempoAndEnergyTradeoffs() {
+        CandidateFeatureScorer.CandidateFeatureScore first = score(candidate("A", "C", KeyMode.MAJOR, 100, "4/4", 90, null), 1.0d);
+        CandidateFeatureScorer.CandidateFeatureScore second = score(candidate("B", "C", KeyMode.MAJOR, 140, "4/4", 10, null), 0.9d);
+        ScoringRequest tradeoffRequest = new ScoringRequest(
+                null,
+                List.of(),
+                2,
+                0,
+                new ScoringRequest.KeyPolicy(true, true, 2),
+                new ScoringRequest.TempoPolicy(12),
+                "rising",
+                "en",
+                List.of(),
+                false,
+                new ScoringRequest.DefaultsApplied(false, false, false, false));
+
+        OrderedSetResponse ordered = orderer.order(List.of(first, second), tradeoffRequest, profile(), "snap");
+
+        assertThat(setFact(ordered, "COUNT_TARGET_MET").severity()).isEqualTo("info");
+        assertThat(setFact(ordered, "TEMPO_POLICY_MET").severity()).isEqualTo("warning");
+        assertThat(setFact(ordered, "TEMPO_POLICY_MET").values())
+                .containsEntry("maxObservedJumpBpm", 40)
+                .containsEntry("exceededJumps", 1);
+        assertThat(setFact(ordered, "SET_ENERGY_ARC_MATCH").severity()).isEqualTo("warning");
+        assertThat((String) setFact(ordered, "SET_ENERGY_ARC_MATCH").values().get("tradeoffs"))
+                .contains("ENERGY_ARC_SHAPE_MISMATCH");
+    }
+
+    @Test
+    void setLevelWarningsDistinguishInsufficientEligibleCatalog() {
+        CandidateFeatureScorer.CandidateFeatureScore onlyCandidate = score(candidate("A", "C", 120), 1.0d);
+
+        OrderedSetResponse ordered = orderer.order(List.of(onlyCandidate), request(2), profile(), "snap");
+
+        RecommendationExplanationFact insufficient = setFact(ordered, "INSUFFICIENT_CANDIDATES");
+        assertThat(insufficient.severity()).isEqualTo("warning");
+        assertThat(insufficient.values())
+                .containsEntry("selected", 1)
+                .containsEntry("target", 2)
+                .containsEntry("availableCandidates", 1)
+                .containsEntry("limitation", "insufficient_eligible_catalog");
     }
 
     @Test
@@ -243,6 +378,13 @@ class DeterministicSetOrdererTest {
         assertThat(publicView.setExplanationFacts()).containsExactlyElementsOf(admin.setExplanationFacts());
     }
 
+    private static RecommendationExplanationFact setFact(OrderedSetResponse response, String code) {
+        return response.setExplanationFacts().stream()
+                .filter(fact -> code.equals(fact.code()))
+                .findFirst()
+                .orElseThrow();
+    }
+
     private static CandidateFeatureScorer.CandidateFeatureScore score(RecommendableArrangement candidate, double total) {
         return new CandidateFeatureScorer.CandidateFeatureScore(
                 candidate,
@@ -285,6 +427,30 @@ class DeterministicSetOrdererTest {
 
     private static RecommendableArrangement candidate(String titleSuffix, String key, int bpm) {
         return candidate(titleSuffix, key, KeyMode.MAJOR, bpm, "4/4", 70, null);
+    }
+
+    private static RecommendableArrangement candidateWithMatchedTags(
+            String titleSuffix,
+            String key,
+            int bpm,
+            List<RecommendationTag> matchedTags) {
+        RecommendableArrangement base = candidate(titleSuffix, key, bpm);
+        return new RecommendableArrangement(
+                base.arrangementId(),
+                base.songId(),
+                base.currentLyricsDocumentId(),
+                base.title(),
+                base.language(),
+                base.musicalKey(),
+                base.keyMode(),
+                base.bpm(),
+                base.timeSignature(),
+                base.energy(),
+                base.tags(),
+                List.of(),
+                matchedTags,
+                base.approvalGateSummary(),
+                base.transitionMetadata());
     }
 
     private static RecommendableArrangement candidate(
