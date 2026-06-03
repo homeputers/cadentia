@@ -8,6 +8,7 @@ import com.cadentia.reng.scoring.ItemExplanationFactory;
 import com.cadentia.reng.scoring.RecommendationExplanationFact;
 import com.cadentia.reng.scoring.RecommendationExplanationEvidence;
 import com.cadentia.reng.scoring.RecommendationExplanationSubject;
+import com.cadentia.reng.scoring.RecommendationSongExplanation;
 import com.cadentia.reng.scoring.TransitionExplanationFactory;
 import com.cadentia.reng.scoring.ScoringProfile;
 import com.cadentia.reng.scoring.ScoringRequest;
@@ -97,6 +98,8 @@ public class DeterministicSetOrderer implements SetOrderer {
                         previous.candidate(), current.candidate(), transition, request));
             }
 
+            RecommendationSongExplanation songExplanation = itemExplanationFactory.buildSongExplanation(
+                    current.candidate(), request, current.componentScores(), index + 1);
             items.add(new OrderedSetItem(
                     current.candidate().arrangementId(),
                     current.candidate().songId(),
@@ -104,7 +107,8 @@ public class DeterministicSetOrderer implements SetOrderer {
                     explanationFacts,
                     current.componentScores(),
                     current.totalScore(),
-                    transition));
+                    transition,
+                    songExplanation));
             previous = current;
         }
 

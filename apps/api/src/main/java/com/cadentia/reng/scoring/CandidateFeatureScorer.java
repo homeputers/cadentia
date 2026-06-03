@@ -92,7 +92,7 @@ public class CandidateFeatureScorer {
 
     private static ScoringComponentScore componentScore(String code, double raw, Map<String, Double> weights) {
         double weight = weights.getOrDefault(code, 0.0d);
-        return new ScoringComponentScore(code, raw, raw * weight);
+        return new ScoringComponentScore(code, raw, raw * weight, weight, ScoringComponentScore.contributionReasonCodes(raw * weight));
     }
 
     private static double themeMatch(RecommendableArrangement candidate, ScoringRequest request) {

@@ -76,6 +76,12 @@ class DeterministicSetOrdererTest {
         assertThat(ordered.items().get(0).explanationFacts())
                 .extracting(fact -> fact.code())
                 .contains("ROLE_FIT", "APPROVAL_ELIGIBLE");
+        assertThat(ordered.items().get(0).songExplanation()).isNotNull();
+        assertThat(ordered.items().get(0).songExplanation().songId()).isEqualTo(ordered.items().get(0).songId());
+        assertThat(ordered.items().get(0).songExplanation().arrangementId()).isEqualTo(ordered.items().get(0).arrangementId());
+        assertThat(ordered.items().get(0).songExplanation().facts())
+                .extracting(fact -> fact.code())
+                .contains("ROLE_FIT", "APPROVAL_ELIGIBLE");
     }
 
 
