@@ -52,6 +52,90 @@ scoring, policy, transition, and approved catalog evidence. They are not produce
 by an LLM, are not client-supplied rationale, and do not expose internal database
 entities directly as public API objects.
 
+
+## Governed Reason-Code Registry
+
+Every explanation entry in `recommendation_explanation.v1` must use a reason
+code from the governed registry. The registry is owned by the backend
+Recommendation Engine and exported through the API contract package; frontend
+clients may choose which registered entries to render, but must not invent new
+backend reason codes or reinterpret a code for an unrelated meaning.
+
+Each registry entry includes:
+
+- `code`: stable API-safe reason code;
+- `displayGroup`: UI grouping such as `theme_scripture`, `transitions`,
+  `energy_arc`, `score_components`, `warnings`, `tradeoffs`, `near_miss`, or
+  `tie_breaks`;
+- allowed `severity` values: `info`, `warning`, or `blocked`;
+- supported audience partitions: `public`, `worship_leader`, and/or `admin`;
+- `localizationKey`: the template lookup key used by localization bundles;
+- `allowedValueKeys`: the structured payload keys that templates may reference;
+- `stableForClients`: whether clients may rely on the code across compatible v1
+  releases.
+
+The current v1 public registry is additive and stable for clients:
+
+| Code | Display group | Severity | Audience | Localization key | Allowed value keys |
+| --- | --- | --- | --- | --- | --- |
+| `ROLE_FIT` | `item_fit` | `info` | public, worship leader, admin | `item.role_fit` | `score` |
+| `APPROVAL_ELIGIBLE` | `eligibility` | `info` | public, worship leader, admin | `item.approval_eligible` | `hasProvenance` |
+| `THEME_MATCH` | `theme_scripture` | `info` | public, worship leader, admin | `item.theme_match` | `themes` |
+| `SCRIPTURE_MATCH` | `theme_scripture` | `info` | public, worship leader, admin | `item.scripture_match` | `scripture` |
+| `SCORE_COMPONENT_MUSICAL_FIT` | `score_components` | `info` | worship leader, admin | `item.score_component_musical_fit` | `score` |
+| `SCORE_COMPONENT_ENERGY_FIT` | `score_components` | `info` | worship leader, admin | `item.score_component_energy_fit` | `score` |
+| `METADATA_LOW_CONFIDENCE` | `warnings` | `warning` | worship leader, admin | `item.metadata_low_confidence` | `confidence` |
+| `FEEDBACK_TUNING` | `score_components` | `info`, `warning` | worship leader, admin | `item.feedback_tuning` | `feedbackContribution` |
+| `SAME_KEY_TRANSITION` | `transitions` | `info` | public, worship leader, admin | `transition.same_key` | `fromKey`, `toKey` |
+| `RELATIVE_KEY_TRANSITION` | `transitions` | `info` | public, worship leader, admin | `transition.relative_key` | `fromKey`, `toKey`, `allowRelativeMajorMinor` |
+| `CLOSE_KEY_TRANSITION` | `transitions` | `info` | worship leader, admin | `transition.close_key` | `fromKey`, `toKey` |
+| `MODULATION_PENALTY` | `tradeoffs` | `info`, `warning` | worship leader, admin | `transition.modulation_penalty` | `penalty` |
+| `TEMPO_POLICY_OK` | `transitions` | `info`, `warning` | public, worship leader, admin | `transition.tempo_policy` | `fromBpm`, `toBpm`, `maxJumpBpm` |
+| `METER_COMPATIBLE` | `transitions` | `info`, `warning` | worship leader, admin | `transition.meter_compatibility` | `fromMeter`, `toMeter` |
+| `ENERGY_ARC_MATCH` | `energy_arc` | `info`, `warning` | public, worship leader, admin | `transition.energy_continuity` | `fromEnergy`, `toEnergy` |
+| `SET_ENERGY_ARC_MATCH` | `energy_arc` | `info` | public, worship leader, admin | `set.energy_arc` | `requestedArc`, `firstPosition`, `lastPosition` |
+| `COUNT_TARGET_MET` | `set_shape` | `info`, `warning` | public, worship leader, admin | `set.count_target` | `selected`, `target` |
+| `KEY_CENTER_POLICY_MET` | `set_shape` | `info`, `warning` | public, worship leader, admin | `set.key_centers` | `distinctKeyCenters`, `maxKeyCenters` |
+| `THEME_COVERAGE` | `theme_scripture` | `info`, `warning` | public, worship leader, admin | `set.theme_coverage` | `coveredItems`, `selectedItems`, `requestedThemes` |
+| `REQUEST_DEFAULTS_APPLIED` | `policy` | `info` | public, worship leader, admin | `set.defaults_applied` | `countsDefaulted`, `keyPolicyDefaulted`, `tempoPolicyDefaulted`, `languageDefaulted` |
+| `INSUFFICIENT_CANDIDATES` | `warnings` | `warning` | worship leader, admin | `warning.insufficient_candidates` | `selected`, `target`, `availableCandidates` |
+| `LOW_CONFIDENCE_METADATA_PRESENT` | `warnings` | `warning` | worship leader, admin | `warning.low_confidence_metadata` | `reason` |
+| `EXCLUDED_APPROVAL_GATE` | `eligibility` | `blocked` | admin | `diagnostic.excluded_approval_gate` | `gate`, `candidateCount` |
+| `EXCLUDED_MISSING_PROVENANCE` | `eligibility` | `blocked` | admin | `diagnostic.excluded_missing_provenance` | `candidateCount` |
+| `EXCLUDED_LICENSING_CONCERN` | `eligibility` | `blocked` | admin | `diagnostic.excluded_licensing_concern` | `candidateCount` |
+| `EXCLUDED_INACTIVE_ARRANGEMENT` | `eligibility` | `blocked` | admin | `diagnostic.excluded_inactive_arrangement` | `candidateCount` |
+| `EXCLUDED_DUPLICATE_ARRANGEMENT` | `near_miss` | `info` | admin | `diagnostic.excluded_duplicate_arrangement` | `duplicateOfArrangementId` |
+| `EXCLUDED_KEY_CENTER_LIMIT` | `near_miss` | `info` | admin | `diagnostic.excluded_key_center_limit` | `candidateKey`, `maxKeyCenters` |
+| `EXCLUDED_TEMPO_POLICY` | `near_miss` | `warning` | admin | `diagnostic.excluded_tempo_policy` | `fromBpm`, `toBpm`, `maxJumpBpm` |
+| `EXCLUDED_WEAKER_SCORE` | `near_miss` | `info` | admin | `candidate_exclusion.weaker_score` | `candidateTitle`, `candidateScore` |
+| `EXCLUDED_QUOTA_FILLED` | `near_miss` | `info` | admin | `candidate_exclusion.quota_filled` | `candidateTitle`, `candidateScore` |
+| `DETERMINISTIC_TIE_BREAK_APPLIED` | `tie_breaks` | `info` | public, worship leader, admin | `tie_break.deterministic_applied` | `rule`, `direction`, `affectedResultIds` |
+
+Backend fact-code mapping is one-to-one unless the coverage matrix explicitly
+marks an internal signal as omitted. Theme and scripture matches use separate
+reason codes, transition facts use directional transition reason codes, score
+components use score-component reason codes, warning and tradeoff codes remain
+separate, near-miss diagnostics are admin partitioned, and deterministic
+tie-breaks use `DETERMINISTIC_TIE_BREAK_APPLIED`.
+
+Localization bundles translate templates by `localizationKey` and interpolate
+only `allowedValueKeys`. Translating or changing template prose must never change
+selected songs, score calculations, deterministic tie-breaks, or the structured
+fact payload. Locale-specific prose must not be embedded in the deterministic
+fact payload as the only explanation source.
+
+Reason-code lifecycle rules:
+
+- adding a new active code, value key, display group, or audience partition is an
+  additive `recommendation_explanation.v1` change and should be released with
+  fixtures and documentation;
+- public codes marked `stableForClients` must not be renamed or removed within
+  v1;
+- narrowing severity, audience, scope, or value keys is breaking and requires a
+  new schema version or a documented migration window with deprecation metadata;
+- replaced codes must remain parseable until the migration window closes and
+  must identify the replacement code.
+
 ## Requirements
 
 - Define a versioned `RecommendationExplanation` DTO attached to recommendation responses.
@@ -98,6 +182,5 @@ Tradeoffs:
 
 ## Open Questions
 
-- Which reason-code taxonomy should be considered stable for external clients?
-- Should near-miss explanations be part of the default response or admin-only diagnostics?
-- How many historical explanation schema versions must be supported?
+- Should near-miss diagnostics ever be promoted from admin-only diagnostics to worship-leader-visible warnings?
+- How many historical explanation schema versions must be supported after a breaking migration?

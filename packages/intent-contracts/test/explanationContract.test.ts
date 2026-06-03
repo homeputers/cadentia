@@ -3,6 +3,7 @@ import { readFileSync, readdirSync } from "node:fs";
 
 import {
   EXPLANATION_CODES,
+  REASON_CODE_REGISTRY,
   RECOMMENDATION_EXPLANATION_SCHEMA_VERSION,
   parseExplanationFact,
   parseRecommendationExplanation
@@ -63,12 +64,16 @@ describe("recommendation explanation fact contract", () => {
   it("contains required baseline code registry entries", () => {
     expect(EXPLANATION_CODES).toMatchObject({
       THEME_MATCH: "THEME_MATCH",
+      SCRIPTURE_MATCH: "SCRIPTURE_MATCH",
       ROLE_FIT: "ROLE_FIT",
+      SCORE_COMPONENT_MUSICAL_FIT: "SCORE_COMPONENT_MUSICAL_FIT",
+      SCORE_COMPONENT_ENERGY_FIT: "SCORE_COMPONENT_ENERGY_FIT",
       APPROVAL_ELIGIBLE: "APPROVAL_ELIGIBLE",
       SAME_KEY_TRANSITION: "SAME_KEY_TRANSITION",
       RELATIVE_KEY_TRANSITION: "RELATIVE_KEY_TRANSITION",
       TEMPO_POLICY_OK: "TEMPO_POLICY_OK",
       ENERGY_ARC_MATCH: "ENERGY_ARC_MATCH",
+      SET_ENERGY_ARC_MATCH: "SET_ENERGY_ARC_MATCH",
       COUNT_TARGET_MET: "COUNT_TARGET_MET",
       KEY_CENTER_POLICY_MET: "KEY_CENTER_POLICY_MET",
       THEME_COVERAGE: "THEME_COVERAGE",
@@ -86,6 +91,54 @@ describe("recommendation explanation fact contract", () => {
       EXCLUDED_QUOTA_FILLED: "EXCLUDED_QUOTA_FILLED",
       DETERMINISTIC_TIE_BREAK_APPLIED: "DETERMINISTIC_TIE_BREAK_APPLIED"
     });
+  });
+
+  it("publishes UI rendering metadata for every active reason code", () => {
+    expect(Object.values(REASON_CODE_REGISTRY)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "THEME_MATCH",
+          displayGroup: "theme_scripture",
+          localizationKey: "item.theme_match",
+          audiences: expect.arrayContaining(["public"]),
+          allowedValueKeys: expect.arrayContaining(["themes"]),
+          stableForClients: true
+        }),
+        expect.objectContaining({
+          code: "EXCLUDED_WEAKER_SCORE",
+          displayGroup: "near_miss",
+          audiences: ["admin"]
+        })
+      ])
+    );
+  });
+
+  it("rejects mismatched localization keys, audiences, and unregistered value keys", () => {
+    expect(() =>
+      parseExplanationFact({
+        code: EXPLANATION_CODES.THEME_MATCH,
+        severity: "info",
+        scope: "selected_song",
+        audience: "public",
+        subject: { type: "song", id: "song-1" },
+        templateKey: "item.scripture_match",
+        values: { scripture: "Psalm 24" },
+        evidence: [{ type: "score", ref: "score.theme" }]
+      })
+    ).toThrow();
+
+    expect(() =>
+      parseExplanationFact({
+        code: EXPLANATION_CODES.EXCLUDED_WEAKER_SCORE,
+        severity: "info",
+        scope: "diagnostic",
+        audience: "public",
+        subject: { type: "candidate", id: "candidate-1" },
+        templateKey: "candidate_exclusion.weaker_score",
+        values: { candidateTitle: "Example", unrelated: "nope" },
+        evidence: [{ type: "score", ref: "score.candidate" }]
+      })
+    ).toThrow();
   });
 });
 

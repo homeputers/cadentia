@@ -1,6 +1,7 @@
 package com.cadentia.reng.scoring;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.List;
 import java.util.Map;
@@ -12,7 +13,7 @@ class RecommendationExplanationRendererTest {
 
     @Test
     void shouldRenderItemTransitionSetWarningAndAdminExclusionFacts() {
-        RecommendationExplanationFact itemFact = fact("THEME_MATCH", "item.theme_match", Map.of("theme", "holiness", "requestInput", "Psalm 24"));
+        RecommendationExplanationFact itemFact = fact("THEME_MATCH", "item.theme_match", Map.of("themes", "holiness"));
         RecommendationExplanationFact transitionFact = fact(
                 "RELATIVE_KEY_TRANSITION",
                 "transition.relative_key",
@@ -23,15 +24,15 @@ class RecommendationExplanationRendererTest {
                 "warning.insufficient_candidates",
                 Map.of("selected", 10, "target", 15, "availableCandidates", 12));
         RecommendationExplanationFact exclusionFact = fact(
-                "FILLED_QUOTA",
-                "candidate_exclusion.filled_quota",
+                "EXCLUDED_QUOTA_FILLED",
+                "candidate_exclusion.quota_filled",
                 Map.of("candidateTitle", "Example Song"));
 
         List<ExplanationRenderResult> results = renderer.renderAll(List.of(itemFact, transitionFact, setFact, warningFact, exclusionFact));
 
         assertThat(results).hasSize(5);
         assertThat(results).allMatch(result -> !result.hasValidationErrors());
-        assertThat(results.get(0).text()).isEqualTo("Theme holiness matched request input Psalm 24.");
+        assertThat(results.get(0).text()).isEqualTo("Matched theme tags holiness.");
         assertThat(results.get(1).text()).contains("Transition from G to Em");
         assertThat(results.get(2).text()).contains("target 15");
         assertThat(results.get(3).text()).contains("available candidates: 12");
@@ -51,29 +52,26 @@ class RecommendationExplanationRendererTest {
 
     @Test
     void shouldUseDeterministicFallbackWhenLocaleIsBlank() {
-        RecommendationExplanationFact fact = fact("ROLE_FIT", "item.role_fit", Map.of("role", "praise"));
+        RecommendationExplanationFact fact = fact("ROLE_FIT", "item.role_fit", Map.of("score", 1.0d));
 
         ExplanationRenderResult result = renderer.render(fact, " ");
 
-        assertThat(result.text()).isEqualTo("Song fills the praise slot.");
+        assertThat(result.text()).isEqualTo("Role-fit component scored 1.0.");
         assertThat(result.validationErrors()).isEmpty();
     }
 
     @Test
-    void shouldReturnSafeFallbackForUnknownTemplateKey() {
-        RecommendationExplanationFact fact = fact("ROLE_FIT", "unknown.template", Map.of());
-
-        ExplanationRenderResult result = renderer.render(fact);
-
-        assertThat(result.text()).isEqualTo("[ROLE_FIT]");
-        assertThat(result.validationErrors()).contains("Unknown template key: unknown.template");
+    void shouldRejectUnregisteredLocalizationKeyBeforeRendering() {
+        assertThatThrownBy(() -> fact("ROLE_FIT", "unknown.template", Map.of()))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Localization key unknown.template is not registered for code ROLE_FIT");
     }
 
     private static RecommendationExplanationFact fact(String code, String templateKey, Map<String, Object> values) {
         String scope = switch (code) {
             case "RELATIVE_KEY_TRANSITION", "TEMPO_POLICY_OK" -> "transition";
             case "COUNT_TARGET_MET", "INSUFFICIENT_CANDIDATES" -> "set";
-            case "FILLED_QUOTA", "WEAKER_SCORE" -> "candidate_exclusion";
+            case "EXCLUDED_QUOTA_FILLED", "EXCLUDED_WEAKER_SCORE" -> "candidate_exclusion";
             default -> "item";
         };
         String severity = switch (code) {

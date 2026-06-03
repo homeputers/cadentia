@@ -60,7 +60,7 @@ public class SetExplanationFactory {
             OrderedSetItem first = orderedItems.get(0);
             OrderedSetItem last = orderedItems.get(orderedItems.size() - 1);
             facts.add(new RecommendationExplanationFact(
-                    "ENERGY_ARC_MATCH",
+                    "SET_ENERGY_ARC_MATCH",
                     "info",
                     "set",
                     setSubject,

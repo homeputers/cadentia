@@ -135,13 +135,13 @@ public class DeterministicSetOrderer implements SetOrderer {
             if (selectedIds.contains(score.candidate().arrangementId())) {
                 continue;
             }
-            String reason = selected.size() >= targetSize ? "FILLED_QUOTA" : "WEAKER_SCORE";
+            String reason = selected.size() >= targetSize ? "EXCLUDED_QUOTA_FILLED" : "EXCLUDED_WEAKER_SCORE";
             facts.add(new RecommendationExplanationFact(
                     reason,
                     "info",
                     "candidate_exclusion",
                     new RecommendationExplanationSubject("candidate", score.candidate().arrangementId().toString(), null, null),
-                    "candidate_exclusion." + reason.toLowerCase(Locale.ROOT),
+                    reason.equals("EXCLUDED_QUOTA_FILLED") ? "candidate_exclusion.quota_filled" : "candidate_exclusion.weaker_score",
                     Map.of("candidateTitle", score.candidate().title(), "candidateScore", score.totalScore()),
                     List.of(new RecommendationExplanationEvidence("score", "candidate", score.candidate().arrangementId().toString(), score.totalScore())),
                     null));

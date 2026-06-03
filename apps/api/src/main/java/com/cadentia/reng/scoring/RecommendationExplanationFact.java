@@ -16,6 +16,6 @@ public record RecommendationExplanationFact(
     public RecommendationExplanationFact {
         values = values == null ? Map.of() : Map.copyOf(values);
         evidence = evidence == null ? List.of() : List.copyOf(evidence);
-        ExplanationCodeRegistry.validateFact(code, severity, scope);
+        ExplanationCodeRegistry.validateFact(code, severity, scope, templateKey, values.keySet());
     }
 }

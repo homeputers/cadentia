@@ -10,15 +10,24 @@
   "catalogSnapshotVersion": "catalog-snapshot-2026-06-03T00:00:00Z",
   "generatedAt": "2026-06-03T12:00:00Z",
   "requestPolicySummary": {
-    "counts": { "praise": 2, "worship": 1 },
+    "counts": {
+      "praise": 2,
+      "worship": 1
+    },
     "keyPolicy": {
       "preferSameKey": true,
       "allowRelativeMajorMinor": true,
       "maxKeyCenters": 2
     },
-    "tempoPolicy": { "maxJumpBpm": 12 },
-    "themeHints": ["thanksgiving"],
-    "scriptureReferences": ["Psalm 100"],
+    "tempoPolicy": {
+      "maxJumpBpm": 12
+    },
+    "themeHints": [
+      "thanksgiving"
+    ],
+    "scriptureReferences": [
+      "Psalm 100"
+    ],
     "language": null,
     "energyArc": "rising",
     "serviceMoment": "opening",
@@ -28,8 +37,14 @@
     {
       "rule": "arrangement_id",
       "direction": "asc",
-      "affectedResultIds": ["item-002", "item-003"],
-      "values": { "item-002": "arrangement-002", "item-003": "arrangement-003" },
+      "affectedResultIds": [
+        "item-002",
+        "item-003"
+      ],
+      "values": {
+        "item-002": "arrangement-002",
+        "item-003": "arrangement-003"
+      },
       "reasonCode": "DETERMINISTIC_TIE_BREAK_APPLIED"
     }
   ],
@@ -46,11 +61,20 @@
         "songId": "song-001",
         "arrangementId": "arrangement-001"
       },
-      "templateKey": "song.theme_match",
-      "values": { "theme": "thanksgiving", "componentScore": 0.36 },
+      "templateKey": "item.theme_match",
+      "values": {
+        "themes": "thanksgiving"
+      },
       "evidence": [
-        { "type": "catalog", "ref": "catalog.song.song-001.tags", "field": "theme" },
-        { "type": "score", "ref": "score.item-001.theme_match" }
+        {
+          "type": "catalog",
+          "ref": "catalog.song.song-001.tags",
+          "field": "theme"
+        },
+        {
+          "type": "score",
+          "ref": "score.item-001.theme_match"
+        }
       ],
       "scoreImpact": 0.36
     }
@@ -70,10 +94,20 @@
         "targetArrangementId": "arrangement-002"
       },
       "templateKey": "transition.relative_key",
-      "values": { "fromKey": "G", "toKey": "Em", "allowRelativeMajorMinor": true },
+      "values": {
+        "fromKey": "G",
+        "toKey": "Em",
+        "allowRelativeMajorMinor": true
+      },
       "evidence": [
-        { "type": "request", "ref": "request.keyPolicy.allowRelativeMajorMinor" },
-        { "type": "transition", "ref": "transition.item-001.item-002.keyMovement" }
+        {
+          "type": "request",
+          "ref": "request.keyPolicy.allowRelativeMajorMinor"
+        },
+        {
+          "type": "transition",
+          "ref": "transition.item-001.item-002.keyMovement"
+        }
       ],
       "scoreImpact": 1.5
     }
@@ -84,12 +118,24 @@
       "severity": "info",
       "scope": "set_level",
       "audience": "public",
-      "subject": { "type": "set", "id": "rec-result-001" },
-      "templateKey": "set.count_target_met",
-      "values": { "requestedPraise": 2, "requestedWorship": 1, "selectedPraise": 2, "selectedWorship": 1 },
+      "subject": {
+        "type": "set",
+        "id": "rec-result-001"
+      },
+      "templateKey": "set.count_target",
+      "values": {
+        "selected": 3,
+        "target": 3
+      },
       "evidence": [
-        { "type": "request", "ref": "request.counts" },
-        { "type": "score", "ref": "set.roleDistribution" }
+        {
+          "type": "request",
+          "ref": "request.counts"
+        },
+        {
+          "type": "score",
+          "ref": "set.roleDistribution"
+        }
       ]
     }
   ],

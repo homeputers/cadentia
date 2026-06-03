@@ -8,12 +8,27 @@
   "catalogSnapshotVersion": "catalog-snapshot-2026-06-03T00:00:00Z",
   "generatedAt": "2026-06-03T12:10:00Z",
   "requestPolicySummary": {
-    "counts": { "praise": 10, "worship": 5 },
-    "keyPolicy": { "preferSameKey": true, "allowRelativeMajorMinor": true, "maxKeyCenters": 2 },
-    "tempoPolicy": { "maxJumpBpm": 12 },
-    "themeHints": ["advent"],
+    "counts": {
+      "praise": 10,
+      "worship": 5
+    },
+    "keyPolicy": {
+      "preferSameKey": true,
+      "allowRelativeMajorMinor": true,
+      "maxKeyCenters": 2
+    },
+    "tempoPolicy": {
+      "maxJumpBpm": 12
+    },
+    "themeHints": [
+      "advent"
+    ],
     "scriptureReferences": [],
-    "appliedDefaults": ["counts", "keyPolicy", "tempoPolicy"]
+    "appliedDefaults": [
+      "counts",
+      "keyPolicy",
+      "tempoPolicy"
+    ]
   },
   "deterministicTieBreaks": [],
   "selectedSongs": [],
@@ -24,10 +39,23 @@
       "severity": "info",
       "scope": "set_level",
       "audience": "public",
-      "subject": { "type": "policy", "id": "request-policy" },
-      "templateKey": "set.request_defaults_applied",
-      "values": { "counts": "10 praise + 5 worship", "maxJumpBpm": 12 },
-      "evidence": [{ "type": "request", "ref": "request.defaults" }]
+      "subject": {
+        "type": "policy",
+        "id": "request-policy"
+      },
+      "templateKey": "set.defaults_applied",
+      "values": {
+        "countsDefaulted": true,
+        "keyPolicyDefaulted": true,
+        "tempoPolicyDefaulted": true,
+        "languageDefaulted": false
+      },
+      "evidence": [
+        {
+          "type": "request",
+          "ref": "request.defaults"
+        }
+      ]
     }
   ],
   "warnings": [
@@ -36,10 +64,22 @@
       "severity": "warning",
       "scope": "warning",
       "audience": "worship_leader",
-      "subject": { "type": "set", "id": "rec-result-002" },
+      "subject": {
+        "type": "set",
+        "id": "rec-result-002"
+      },
       "templateKey": "warning.insufficient_candidates",
-      "values": { "requested": 15, "eligible": 12 },
-      "evidence": [{ "type": "diagnostic", "ref": "candidateRetrieval.eligibleCount" }]
+      "values": {
+        "selected": 12,
+        "target": 15,
+        "availableCandidates": 12
+      },
+      "evidence": [
+        {
+          "type": "diagnostic",
+          "ref": "candidateRetrieval.eligibleCount"
+        }
+      ]
     }
   ],
   "diagnostics": []

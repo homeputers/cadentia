@@ -67,7 +67,7 @@ public class ItemExplanationFactory {
                     .toList();
             if (!scriptures.isEmpty()) {
                 facts.add(new RecommendationExplanationFact(
-                        "THEME_MATCH",
+                        "SCRIPTURE_MATCH",
                         "info",
                         "item",
                         subject,
@@ -77,6 +77,33 @@ public class ItemExplanationFactory {
                         findImpact(componentScores, CandidateFeatureScorer.SCRIPTURE_MATCH)));
             }
         }
+
+
+        componentScores.stream()
+                .filter(score -> CandidateFeatureScorer.MUSICAL_FIT.equals(score.componentCode()))
+                .findFirst()
+                .ifPresent(score -> facts.add(new RecommendationExplanationFact(
+                        "SCORE_COMPONENT_MUSICAL_FIT",
+                        "info",
+                        "item",
+                        subject,
+                        "item.score_component_musical_fit",
+                        Map.of("score", score.rawScore()),
+                        List.of(new RecommendationExplanationEvidence("score", "candidate.musical_fit", "raw", null)),
+                        score.weightedContribution())));
+
+        componentScores.stream()
+                .filter(score -> CandidateFeatureScorer.ENERGY_FIT.equals(score.componentCode()))
+                .findFirst()
+                .ifPresent(score -> facts.add(new RecommendationExplanationFact(
+                        "SCORE_COMPONENT_ENERGY_FIT",
+                        "info",
+                        "item",
+                        subject,
+                        "item.score_component_energy_fit",
+                        Map.of("score", score.rawScore()),
+                        List.of(new RecommendationExplanationEvidence("score", "candidate.energy_fit", "raw", null)),
+                        score.weightedContribution())));
 
         componentScores.stream()
                 .filter(score -> CandidateFeatureScorer.METADATA_CONFIDENCE.equals(score.componentCode()))
