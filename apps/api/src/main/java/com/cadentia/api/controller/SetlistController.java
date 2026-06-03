@@ -97,40 +97,6 @@ public class SetlistController implements SetlistsApi {
         return ResponseEntity.accepted().body(setlistService.generate(validatedRequest));
     }
 
-    private boolean authorizeExplanationAudience(GenerateSetlistRequest request) {
-        if (request == null) {
-            return true;
-        }
-        GenerateSetlistRequest.ExplanationAudienceEnum requestedAudience = request.getExplanationAudience();
-        boolean adminDiagnosticsRequested = Boolean.TRUE.equals(request.getIncludeAdminDiagnostics())
-                || requestedAudience == GenerateSetlistRequest.ExplanationAudienceEnum.ADMIN;
-        if (!adminDiagnosticsRequested) {
-            if (request.getIncludeAdminDiagnostics() == null) {
-                request.setIncludeAdminDiagnostics(false);
-            }
-            return true;
-        }
-        if (!currentUserHasAuthority(RbacAuthorities.ROLE_ADMIN)) {
-            request.setIncludeAdminDiagnostics(false);
-            if (requestedAudience == GenerateSetlistRequest.ExplanationAudienceEnum.ADMIN) {
-                request.setExplanationAudience(GenerateSetlistRequest.ExplanationAudienceEnum.PUBLIC);
-            }
-            return false;
-        }
-        request.setExplanationAudience(GenerateSetlistRequest.ExplanationAudienceEnum.ADMIN);
-        request.setIncludeAdminDiagnostics(true);
-        return true;
-    }
-
-    private boolean currentUserHasAuthority(String authority) {
-        var authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null) {
-            return false;
-        }
-        return authentication.getAuthorities().stream()
-                .map(GrantedAuthority::getAuthority)
-                .anyMatch(authority::equals);
-    }
 
     @Override
     public ResponseEntity<ConversationSessionStateResponse> getConversationSessionState(UUID sessionId) {
@@ -209,6 +175,41 @@ public class SetlistController implements SetlistsApi {
     @Override
     public ResponseEntity<SetlistVersionEnvelope> commitSetlistEdits(UUID setlistId, CommitSetlistEditsRequest commitSetlistEditsRequest) {
         return ResponseEntity.status(501).build();
+    }
+
+    private boolean authorizeExplanationAudience(GenerateSetlistRequest request) {
+        if (request == null) {
+            return true;
+        }
+        GenerateSetlistRequest.ExplanationAudienceEnum requestedAudience = request.getExplanationAudience();
+        boolean adminDiagnosticsRequested = Boolean.TRUE.equals(request.getIncludeAdminDiagnostics())
+                || requestedAudience == GenerateSetlistRequest.ExplanationAudienceEnum.ADMIN;
+        if (!adminDiagnosticsRequested) {
+            if (request.getIncludeAdminDiagnostics() == null) {
+                request.setIncludeAdminDiagnostics(false);
+            }
+            return true;
+        }
+        if (!currentUserHasAuthority(RbacAuthorities.ROLE_ADMIN)) {
+            request.setIncludeAdminDiagnostics(false);
+            if (requestedAudience == GenerateSetlistRequest.ExplanationAudienceEnum.ADMIN) {
+                request.setExplanationAudience(GenerateSetlistRequest.ExplanationAudienceEnum.PUBLIC);
+            }
+            return false;
+        }
+        request.setExplanationAudience(GenerateSetlistRequest.ExplanationAudienceEnum.ADMIN);
+        request.setIncludeAdminDiagnostics(true);
+        return true;
+    }
+
+    private boolean currentUserHasAuthority(String authority) {
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null) {
+            return false;
+        }
+        return authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch(authority::equals);
     }
 
     private SetlistVersion toApiVersion(SetlistVersionSnapshot snapshot) {
