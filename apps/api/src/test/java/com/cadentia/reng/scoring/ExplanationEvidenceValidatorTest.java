@@ -38,7 +38,7 @@ class ExplanationEvidenceValidatorTest {
                 "item",
                 new RecommendationExplanationSubject("arrangement", "arr-1"),
                 "item.theme_match",
-                Map.of("theme", "Holiness", "requestInput", "Psalm 24"),
+                Map.of("themes", "holiness"),
                 evidence,
                 0.3d);
     }

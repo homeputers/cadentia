@@ -1,7 +1,10 @@
 package com.cadentia.reng.scoring;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 
@@ -40,5 +43,33 @@ class ExplanationGovernanceTest {
         assertThat(ExplanationCoverageMatrix.rows())
                 .filteredOn(row -> row.coverageMode() == ExplanationCoverageMatrix.CoverageMode.INTENTIONAL_OMISSION)
                 .allSatisfy(row -> assertThat(row.omissionReasonCode()).isNotBlank());
+    }
+
+    @Test
+    void activeRegistryEntriesExposeUiLocalizationAndAudienceMetadata() {
+        assertThat(ExplanationCodeRegistry.activeEntries())
+                .allSatisfy(entry -> {
+                    assertThat(entry.displayGroup()).isNotBlank();
+                    assertThat(entry.localizationKey()).isNotBlank();
+                    assertThat(entry.allowedSeverities()).isNotEmpty();
+                    assertThat(entry.audiences()).isNotEmpty();
+                    assertThat(entry.introducedInVersion()).isEqualTo("v1");
+                    assertThat(entry.stableForClients()).isTrue();
+                });
+    }
+
+    @Test
+    void backendFactsCannotUseUnregisteredValueKeysOrLocalizationKeys() {
+        assertThatThrownBy(() -> new RecommendationExplanationFact(
+                        "ROLE_FIT",
+                        "info",
+                        "item",
+                        new RecommendationExplanationSubject("arrangement", "arr-1"),
+                        "item.theme_match",
+                        Map.of("theme", "holiness"),
+                        List.of(new RecommendationExplanationEvidence("score", "candidate.role_fit", "raw", null)),
+                        0.5d))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Localization key item.theme_match is not registered for code ROLE_FIT");
     }
 }

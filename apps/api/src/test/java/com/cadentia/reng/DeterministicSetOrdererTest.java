@@ -164,7 +164,7 @@ class DeterministicSetOrdererTest {
                 .containsExactlyElementsOf(baseline.items().stream().map(item -> item.arrangementId()).toList());
         assertThat(admin.adminCandidateExplanationFacts())
                 .extracting(fact -> fact.code())
-                .contains("FILLED_QUOTA");
+                .contains("EXCLUDED_QUOTA_FILLED");
 
         OrderedSetResponse publicView = admin.asPublicResponse();
         assertThat(publicView.adminCandidateExplanationFacts()).isEmpty();

@@ -10,10 +10,10 @@ public final class ExplanationCoverageMatrix {
 
     private static final Map<String, CoverageRow> ROWS = List.of(
                     required(CandidateFeatureScorer.THEME_MATCH, ComponentType.SCORING, "THEME_MATCH"),
-                    intentionalOmission(CandidateFeatureScorer.SCRIPTURE_MATCH, ComponentType.SCORING, "SCRIPTURE_SURFACED_VIA_THEME_MATCH"),
+                    required(CandidateFeatureScorer.SCRIPTURE_MATCH, ComponentType.SCORING, "SCRIPTURE_MATCH"),
                     required(CandidateFeatureScorer.ROLE_FIT, ComponentType.SCORING, "ROLE_FIT"),
-                    intentionalOmission(CandidateFeatureScorer.MUSICAL_FIT, ComponentType.SCORING, "INTERNAL_RANKING_SIGNAL"),
-                    intentionalOmission(CandidateFeatureScorer.ENERGY_FIT, ComponentType.SCORING, "INTERNAL_RANKING_SIGNAL"),
+                    required(CandidateFeatureScorer.MUSICAL_FIT, ComponentType.SCORING, "SCORE_COMPONENT_MUSICAL_FIT"),
+                    required(CandidateFeatureScorer.ENERGY_FIT, ComponentType.SCORING, "SCORE_COMPONENT_ENERGY_FIT"),
                     required(CandidateFeatureScorer.METADATA_CONFIDENCE, ComponentType.SCORING, "METADATA_LOW_CONFIDENCE"),
                     required(TransitionScorer.KEY_SAME, ComponentType.TRANSITION, "SAME_KEY_TRANSITION"),
                     required(TransitionScorer.KEY_RELATIVE, ComponentType.TRANSITION, "RELATIVE_KEY_TRANSITION"),
