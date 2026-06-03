@@ -1,6 +1,6 @@
 # ADR-021: Recommendation Engine Explainability API
 
-Status: Accepted  
+Status: Implemented
 Date: 2026-05-28
 
 ## Context
@@ -180,7 +180,22 @@ Tradeoffs:
 3. Store explanation text in the catalog.
    - Rejected: explanations depend on request context, transitions, and scoring profile.
 
-## Open Questions
+## Resolved Questions
 
-- Should near-miss diagnostics ever be promoted from admin-only diagnostics to worship-leader-visible warnings?
-- How many historical explanation schema versions must be supported after a breaking migration?
+- Near-miss diagnostics remain admin-only in `recommendation_explanation.v1`.
+  Promotion to worship-leader-visible warnings requires a new or explicitly
+  audience-expanded reason-code entry, redaction review, localization review, and
+  contract fixtures proving that no unapproved songs, private review notes, raw
+  provenance payloads, or hidden candidate lists are exposed.
+- Cadentia supports the current explanation schema version and one immediately
+  previous breaking schema version during a documented migration window. The
+  migration window must publish a retirement date, side-by-side fixtures, client
+  fallback guidance, and monitoring for parse failures before the older version
+  can be removed.
+
+## Usage, Migration, and Operations Documentation
+
+Client usage examples, audience-mode behavior, reason-code ownership,
+localization workflow, migration rules, redaction guarantees, and operational
+troubleshooting are documented in
+[`docs/recommendation-explainability-api.md`](../recommendation-explainability-api.md).
