@@ -1,0 +1,36 @@
+{
+  "schemaName": "recommendation_explanation",
+  "schemaVersion": "recommendation_explanation.v1",
+  "generatedBy": "RecommendationEngine",
+  "requestId": "req-2026-06-03-003",
+  "correlationId": "trace-abc-123",
+  "recommendationResultId": "rec-result-003",
+  "scoringProfileVersion": "scoring-profile-2026.05.1",
+  "catalogSnapshotVersion": "catalog-snapshot-2026-06-03T00:00:00Z",
+  "generatedAt": "2026-06-03T12:20:00Z",
+  "requestPolicySummary": {
+    "counts": { "praise": 1, "worship": 1 },
+    "keyPolicy": { "preferSameKey": true, "allowRelativeMajorMinor": false, "maxKeyCenters": 1 },
+    "tempoPolicy": { "maxJumpBpm": 8 },
+    "themeHints": ["surrender"],
+    "scriptureReferences": ["John 4:23-24"],
+    "appliedDefaults": []
+  },
+  "deterministicTieBreaks": [],
+  "selectedSongs": [],
+  "adjacentTransitions": [],
+  "setLevel": [],
+  "warnings": [],
+  "diagnostics": [
+    {
+      "code": "EXCLUDED_APPROVAL_GATE",
+      "severity": "blocked",
+      "scope": "diagnostic",
+      "audience": "admin",
+      "subject": { "type": "candidate", "id": "candidate-redacted-001" },
+      "templateKey": "diagnostic.excluded_approval_gate",
+      "values": { "gate": "approval_status", "candidateCount": 4 },
+      "evidence": [{ "type": "approval", "ref": "approvalGate.summary", "field": "candidateCount" }]
+    }
+  ]
+}
