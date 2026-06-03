@@ -9,41 +9,195 @@ import java.util.stream.Collectors;
 
 public final class ExplanationCodeRegistry {
 
-    private static final Map<String, Entry> ENTRIES = List.of(
-                    item("ROLE_FIT", "item_fit", "item.role_fit", Set.of("score")),
-                    item("APPROVAL_ELIGIBLE", "eligibility", "item.approval_eligible", Set.of("hasProvenance")),
-                    item("THEME_MATCH", "theme_scripture", "item.theme_match", Set.of("themes")),
-                    item("SCRIPTURE_MATCH", "theme_scripture", "item.scripture_match", Set.of("scripture")),
-                    itemInternal("SCORE_COMPONENT_MUSICAL_FIT", "score_components", "item.score_component_musical_fit", Set.of("score")),
-                    itemInternal("SCORE_COMPONENT_ENERGY_FIT", "score_components", "item.score_component_energy_fit", Set.of("score")),
-                    itemInternal("METADATA_LOW_CONFIDENCE", "warnings", "item.metadata_low_confidence", Set.of("confidence"), Severity.WARNING),
-                    itemInternal("FEEDBACK_TUNING", "score_components", "item.feedback_tuning", Set.of("feedbackContribution"), Severity.INFO, Severity.WARNING),
-                    transition("SAME_KEY_TRANSITION", "transitions", "transition.same_key", Set.of("fromKey", "toKey")),
-                    transition("RELATIVE_KEY_TRANSITION", "transitions", "transition.relative_key", Set.of("fromKey", "toKey", "allowRelativeMajorMinor")),
-                    transitionInternal("CLOSE_KEY_TRANSITION", "transitions", "transition.close_key", Set.of("fromKey", "toKey")),
-                    transitionInternal("MODULATION_PENALTY", "tradeoffs", "transition.modulation_penalty", Set.of("penalty"), Severity.INFO, Severity.WARNING),
-                    transition("TEMPO_POLICY_OK", "transitions", "transition.tempo_policy", Set.of("fromBpm", "toBpm", "maxJumpBpm"), Severity.INFO, Severity.WARNING),
-                    transitionInternal("METER_COMPATIBLE", "transitions", "transition.meter_compatibility", Set.of("fromMeter", "toMeter"), Severity.INFO, Severity.WARNING),
-                    transition("ENERGY_ARC_MATCH", "energy_arc", "transition.energy_continuity", Set.of("fromEnergy", "toEnergy"), Severity.INFO, Severity.WARNING),
-                    set("COUNT_TARGET_MET", "set_shape", "set.count_target", Set.of("selected", "target"), Severity.INFO, Severity.WARNING),
-                    set("INSUFFICIENT_CANDIDATES", "warnings", "warning.insufficient_candidates", Set.of("selected", "target", "availableCandidates"), Severity.WARNING),
-                    set("KEY_CENTER_POLICY_MET", "set_shape", "set.key_centers", Set.of("distinctKeyCenters", "maxKeyCenters"), Severity.INFO, Severity.WARNING),
-                    set("SET_ENERGY_ARC_MATCH", "energy_arc", "set.energy_arc", Set.of("requestedArc", "firstPosition", "lastPosition")),
-                    set("THEME_COVERAGE", "theme_scripture", "set.theme_coverage", Set.of("coveredItems", "selectedItems", "requestedThemes"), Severity.INFO, Severity.WARNING),
-                    set("REQUEST_DEFAULTS_APPLIED", "policy", "set.defaults_applied", Set.of("countsDefaulted", "keyPolicyDefaulted", "tempoPolicyDefaulted", "languageDefaulted")),
-                    set("LOW_CONFIDENCE_METADATA_PRESENT", "warnings", "warning.low_confidence_metadata", Set.of("reason"), Severity.WARNING),
-                    diagnostic("EXCLUDED_APPROVAL_GATE", "eligibility", "diagnostic.excluded_approval_gate", Set.of("gate", "candidateCount"), Severity.BLOCKED),
-                    diagnostic("EXCLUDED_MISSING_PROVENANCE", "eligibility", "diagnostic.excluded_missing_provenance", Set.of("candidateCount"), Severity.BLOCKED),
-                    diagnostic("EXCLUDED_LICENSING_CONCERN", "eligibility", "diagnostic.excluded_licensing_concern", Set.of("candidateCount"), Severity.BLOCKED),
-                    diagnostic("EXCLUDED_INACTIVE_ARRANGEMENT", "eligibility", "diagnostic.excluded_inactive_arrangement", Set.of("candidateCount"), Severity.BLOCKED),
-                    diagnostic("EXCLUDED_DUPLICATE_ARRANGEMENT", "near_miss", "diagnostic.excluded_duplicate_arrangement", Set.of("duplicateOfArrangementId"), Severity.INFO),
-                    diagnostic("EXCLUDED_KEY_CENTER_LIMIT", "near_miss", "diagnostic.excluded_key_center_limit", Set.of("candidateKey", "maxKeyCenters"), Severity.INFO),
-                    diagnostic("EXCLUDED_TEMPO_POLICY", "near_miss", "diagnostic.excluded_tempo_policy", Set.of("fromBpm", "toBpm", "maxJumpBpm"), Severity.WARNING),
-                    candidateExclusion("EXCLUDED_WEAKER_SCORE", "near_miss", "candidate_exclusion.weaker_score", Set.of("candidateTitle", "candidateScore")),
-                    candidateExclusion("EXCLUDED_QUOTA_FILLED", "near_miss", "candidate_exclusion.quota_filled", Set.of("candidateTitle", "candidateScore")),
-                    tieBreak("DETERMINISTIC_TIE_BREAK_APPLIED", "tie_breaks", "tie_break.deterministic_applied", Set.of("rule", "direction", "affectedResultIds")))
-            .stream()
+    private static final Set<Audience> PUBLIC_AUDIENCES = Set.of(
+            Audience.PUBLIC,
+            Audience.WORSHIP_LEADER,
+            Audience.ADMIN);
+    private static final Set<Audience> INTERNAL_AUDIENCES = Set.of(
+            Audience.WORSHIP_LEADER,
+            Audience.ADMIN);
+    private static final Set<Audience> ADMIN_AUDIENCE = Set.of(Audience.ADMIN);
+
+    private static final Map<String, Entry> ENTRIES = registryEntries().stream()
             .collect(Collectors.toUnmodifiableMap(Entry::code, Function.identity()));
+
+    private static List<Entry> registryEntries() {
+        return List.of(
+            item("ROLE_FIT", "item_fit", "item.role_fit", Set.of("score")),
+            item("APPROVAL_ELIGIBLE", "eligibility", "item.approval_eligible", Set.of("hasProvenance")),
+            item("THEME_MATCH", "theme_scripture", "item.theme_match", Set.of("themes")),
+            item("SCRIPTURE_MATCH", "theme_scripture", "item.scripture_match", Set.of("scripture")),
+            itemInternal(
+                    "SCORE_COMPONENT_MUSICAL_FIT",
+                    "score_components",
+                    "item.score_component_musical_fit",
+                    Set.of("score")),
+            itemInternal(
+                    "SCORE_COMPONENT_ENERGY_FIT",
+                    "score_components",
+                    "item.score_component_energy_fit",
+                    Set.of("score")),
+            itemInternal(
+                    "METADATA_LOW_CONFIDENCE",
+                    "warnings",
+                    "item.metadata_low_confidence",
+                    Set.of("confidence"),
+                    Severity.WARNING),
+            itemInternal(
+                    "FEEDBACK_TUNING",
+                    "score_components",
+                    "item.feedback_tuning",
+                    Set.of("feedbackContribution"),
+                    Severity.INFO,
+                    Severity.WARNING),
+            transition(
+                    "SAME_KEY_TRANSITION",
+                    "transitions",
+                    "transition.same_key",
+                    Set.of("fromKey", "toKey")),
+            transition(
+                    "RELATIVE_KEY_TRANSITION",
+                    "transitions",
+                    "transition.relative_key",
+                    Set.of("fromKey", "toKey", "allowRelativeMajorMinor")),
+            transitionInternal(
+                    "CLOSE_KEY_TRANSITION",
+                    "transitions",
+                    "transition.close_key",
+                    Set.of("fromKey", "toKey")),
+            transitionInternal(
+                    "MODULATION_PENALTY",
+                    "tradeoffs",
+                    "transition.modulation_penalty",
+                    Set.of("penalty"),
+                    Severity.INFO,
+                    Severity.WARNING),
+            transition(
+                    "TEMPO_POLICY_OK",
+                    "transitions",
+                    "transition.tempo_policy",
+                    Set.of("fromBpm", "toBpm", "maxJumpBpm"),
+                    Severity.INFO,
+                    Severity.WARNING),
+            transitionInternal(
+                    "METER_COMPATIBLE",
+                    "transitions",
+                    "transition.meter_compatibility",
+                    Set.of("fromMeter", "toMeter"),
+                    Severity.INFO,
+                    Severity.WARNING),
+            transition(
+                    "ENERGY_ARC_MATCH",
+                    "energy_arc",
+                    "transition.energy_continuity",
+                    Set.of("fromEnergy", "toEnergy"),
+                    Severity.INFO,
+                    Severity.WARNING),
+            set(
+                    "COUNT_TARGET_MET",
+                    "set_shape",
+                    "set.count_target",
+                    Set.of("selected", "target"),
+                    Severity.INFO,
+                    Severity.WARNING),
+            set(
+                    "INSUFFICIENT_CANDIDATES",
+                    "warnings",
+                    "warning.insufficient_candidates",
+                    Set.of("selected", "target", "availableCandidates"),
+                    Severity.WARNING),
+            set(
+                    "KEY_CENTER_POLICY_MET",
+                    "set_shape",
+                    "set.key_centers",
+                    Set.of("distinctKeyCenters", "maxKeyCenters"),
+                    Severity.INFO,
+                    Severity.WARNING),
+            set(
+                    "SET_ENERGY_ARC_MATCH",
+                    "energy_arc",
+                    "set.energy_arc",
+                    Set.of("requestedArc", "firstPosition", "lastPosition")),
+            set(
+                    "THEME_COVERAGE",
+                    "theme_scripture",
+                    "set.theme_coverage",
+                    Set.of("coveredItems", "selectedItems", "requestedThemes"),
+                    Severity.INFO,
+                    Severity.WARNING),
+            set(
+                    "REQUEST_DEFAULTS_APPLIED",
+                    "policy",
+                    "set.defaults_applied",
+                    Set.of(
+                            "countsDefaulted",
+                            "keyPolicyDefaulted",
+                            "tempoPolicyDefaulted",
+                            "languageDefaulted")),
+            set(
+                    "LOW_CONFIDENCE_METADATA_PRESENT",
+                    "warnings",
+                    "warning.low_confidence_metadata",
+                    Set.of("reason"),
+                    Severity.WARNING),
+            diagnostic(
+                    "EXCLUDED_APPROVAL_GATE",
+                    "eligibility",
+                    "diagnostic.excluded_approval_gate",
+                    Set.of("gate", "candidateCount"),
+                    Severity.BLOCKED),
+            diagnostic(
+                    "EXCLUDED_MISSING_PROVENANCE",
+                    "eligibility",
+                    "diagnostic.excluded_missing_provenance",
+                    Set.of("candidateCount"),
+                    Severity.BLOCKED),
+            diagnostic(
+                    "EXCLUDED_LICENSING_CONCERN",
+                    "eligibility",
+                    "diagnostic.excluded_licensing_concern",
+                    Set.of("candidateCount"),
+                    Severity.BLOCKED),
+            diagnostic(
+                    "EXCLUDED_INACTIVE_ARRANGEMENT",
+                    "eligibility",
+                    "diagnostic.excluded_inactive_arrangement",
+                    Set.of("candidateCount"),
+                    Severity.BLOCKED),
+            diagnostic(
+                    "EXCLUDED_DUPLICATE_ARRANGEMENT",
+                    "near_miss",
+                    "diagnostic.excluded_duplicate_arrangement",
+                    Set.of("duplicateOfArrangementId"),
+                    Severity.INFO),
+            diagnostic(
+                    "EXCLUDED_KEY_CENTER_LIMIT",
+                    "near_miss",
+                    "diagnostic.excluded_key_center_limit",
+                    Set.of("candidateKey", "maxKeyCenters"),
+                    Severity.INFO),
+            diagnostic(
+                    "EXCLUDED_TEMPO_POLICY",
+                    "near_miss",
+                    "diagnostic.excluded_tempo_policy",
+                    Set.of("fromBpm", "toBpm", "maxJumpBpm"),
+                    Severity.WARNING),
+            candidateExclusion(
+                    "EXCLUDED_WEAKER_SCORE",
+                    "near_miss",
+                    "candidate_exclusion.weaker_score",
+                    Set.of("candidateTitle", "candidateScore")),
+            candidateExclusion(
+                    "EXCLUDED_QUOTA_FILLED",
+                    "near_miss",
+                    "candidate_exclusion.quota_filled",
+                    Set.of("candidateTitle", "candidateScore")),
+            tieBreak(
+                    "DETERMINISTIC_TIE_BREAK_APPLIED",
+                    "tie_breaks",
+                    "tie_break.deterministic_applied",
+                    Set.of("rule", "direction", "affectedResultIds")));
+    }
 
     private ExplanationCodeRegistry() {}
 
@@ -60,6 +214,7 @@ public final class ExplanationCodeRegistry {
         if (entry.status() != Status.ACTIVE) {
             throw new IllegalArgumentException("Non-active explanation code emission is not allowed: " + code);
         }
+
         Scope parsedScope = Scope.fromWireValue(scope);
         Severity parsedSeverity = Severity.fromWireValue(severity);
         if (!entry.allowedScopes().contains(parsedScope)) {
@@ -69,8 +224,10 @@ public final class ExplanationCodeRegistry {
             throw new IllegalArgumentException("Severity " + parsedSeverity + " is not allowed for code " + code);
         }
         if (!entry.localizationKey().equals(localizationKey)) {
-            throw new IllegalArgumentException("Localization key " + localizationKey + " is not registered for code " + code);
+            throw new IllegalArgumentException(
+                    "Localization key " + localizationKey + " is not registered for code " + code);
         }
+
         Set<String> unexpectedValueKeys = Set.copyOf(valueKeys == null ? Set.of() : valueKeys).stream()
                 .filter(valueKey -> !entry.allowedValueKeys().contains(valueKey))
                 .collect(Collectors.toUnmodifiableSet());
@@ -94,35 +251,69 @@ public final class ExplanationCodeRegistry {
     }
 
     private static Entry item(String code, String group, String key, Set<String> values, Severity... severities) {
-        return entry(code, group, key, Set.of(Scope.ITEM), Set.of(Audience.PUBLIC, Audience.WORSHIP_LEADER, Audience.ADMIN), values, severities);
+        return entry(code, group, key, Set.of(Scope.ITEM), PUBLIC_AUDIENCES, values, severities);
     }
 
-    private static Entry itemInternal(String code, String group, String key, Set<String> values, Severity... severities) {
-        return entry(code, group, key, Set.of(Scope.ITEM), Set.of(Audience.WORSHIP_LEADER, Audience.ADMIN), values, severities);
+    private static Entry itemInternal(
+            String code,
+            String group,
+            String key,
+            Set<String> values,
+            Severity... severities) {
+        return entry(code, group, key, Set.of(Scope.ITEM), INTERNAL_AUDIENCES, values, severities);
     }
 
-    private static Entry transition(String code, String group, String key, Set<String> values, Severity... severities) {
-        return entry(code, group, key, Set.of(Scope.TRANSITION), Set.of(Audience.PUBLIC, Audience.WORSHIP_LEADER, Audience.ADMIN), values, severities);
+    private static Entry transition(
+            String code,
+            String group,
+            String key,
+            Set<String> values,
+            Severity... severities) {
+        return entry(code, group, key, Set.of(Scope.TRANSITION), PUBLIC_AUDIENCES, values, severities);
     }
 
-    private static Entry transitionInternal(String code, String group, String key, Set<String> values, Severity... severities) {
-        return entry(code, group, key, Set.of(Scope.TRANSITION), Set.of(Audience.WORSHIP_LEADER, Audience.ADMIN), values, severities);
+    private static Entry transitionInternal(
+            String code,
+            String group,
+            String key,
+            Set<String> values,
+            Severity... severities) {
+        return entry(code, group, key, Set.of(Scope.TRANSITION), INTERNAL_AUDIENCES, values, severities);
     }
 
     private static Entry set(String code, String group, String key, Set<String> values, Severity... severities) {
-        return entry(code, group, key, Set.of(Scope.SET), Set.of(Audience.PUBLIC, Audience.WORSHIP_LEADER, Audience.ADMIN), values, severities);
+        return entry(code, group, key, Set.of(Scope.SET), PUBLIC_AUDIENCES, values, severities);
     }
 
-    private static Entry diagnostic(String code, String group, String key, Set<String> values, Severity... severities) {
-        return entry(code, group, key, Set.of(Scope.DIAGNOSTIC), Set.of(Audience.ADMIN), values, severities);
+    private static Entry diagnostic(
+            String code,
+            String group,
+            String key,
+            Set<String> values,
+            Severity... severities) {
+        return entry(code, group, key, Set.of(Scope.DIAGNOSTIC), ADMIN_AUDIENCE, values, severities);
     }
 
     private static Entry candidateExclusion(String code, String group, String key, Set<String> values) {
-        return entry(code, group, key, Set.of(Scope.CANDIDATE_EXCLUSION, Scope.DIAGNOSTIC), Set.of(Audience.ADMIN), values, Severity.INFO);
+        return entry(
+                code,
+                group,
+                key,
+                Set.of(Scope.CANDIDATE_EXCLUSION, Scope.DIAGNOSTIC),
+                ADMIN_AUDIENCE,
+                values,
+                Severity.INFO);
     }
 
     private static Entry tieBreak(String code, String group, String key, Set<String> values) {
-        return entry(code, group, key, Set.of(Scope.SET, Scope.DIAGNOSTIC), Set.of(Audience.PUBLIC, Audience.WORSHIP_LEADER, Audience.ADMIN), values, Severity.INFO);
+        return entry(
+                code,
+                group,
+                key,
+                Set.of(Scope.SET, Scope.DIAGNOSTIC),
+                PUBLIC_AUDIENCES,
+                values,
+                Severity.INFO);
     }
 
     private static Entry entry(
@@ -149,7 +340,11 @@ public final class ExplanationCodeRegistry {
                 null);
     }
 
-    public enum Status {ACTIVE, DEPRECATED, REPLACED}
+    public enum Status {
+        ACTIVE,
+        DEPRECATED,
+        REPLACED
+    }
 
     public enum Scope {
         ITEM("item"),
@@ -160,9 +355,13 @@ public final class ExplanationCodeRegistry {
 
         private final String wireValue;
 
-        Scope(String wireValue) {this.wireValue = wireValue;}
+        Scope(String wireValue) {
+            this.wireValue = wireValue;
+        }
 
-        public String wireValue() {return wireValue;}
+        public String wireValue() {
+            return wireValue;
+        }
 
         static Scope fromWireValue(String value) {
             for (Scope scope : values()) {
@@ -178,9 +377,17 @@ public final class ExplanationCodeRegistry {
         INFO("info"),
         WARNING("warning"),
         BLOCKED("blocked");
+
         private final String wireValue;
-        Severity(String wireValue) {this.wireValue = wireValue;}
-        public String wireValue() {return wireValue;}
+
+        Severity(String wireValue) {
+            this.wireValue = wireValue;
+        }
+
+        public String wireValue() {
+            return wireValue;
+        }
+
         static Severity fromWireValue(String value) {
             for (Severity severity : values()) {
                 if (severity.wireValue.equals(value)) {
@@ -195,9 +402,16 @@ public final class ExplanationCodeRegistry {
         PUBLIC("public"),
         WORSHIP_LEADER("worship_leader"),
         ADMIN("admin");
+
         private final String wireValue;
-        Audience(String wireValue) {this.wireValue = wireValue;}
-        public String wireValue() {return wireValue;}
+
+        Audience(String wireValue) {
+            this.wireValue = wireValue;
+        }
+
+        public String wireValue() {
+            return wireValue;
+        }
     }
 
     public record Entry(
