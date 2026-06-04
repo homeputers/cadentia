@@ -23,3 +23,7 @@ cadentia:
     session:
       inactivity-timeout: ${CADENTIA_CONVERSATION_INACTIVITY_TIMEOUT:PT30M}
       absolute-lifetime: ${CADENTIA_CONVERSATION_ABSOLUTE_LIFETIME:PT4H}
+  application:
+    version: ${CADENTIA_APPLICATION_VERSION:0.1.0}
+  church-config:
+    path: ${CADENTIA_CHURCH_CONFIG_PATH:}

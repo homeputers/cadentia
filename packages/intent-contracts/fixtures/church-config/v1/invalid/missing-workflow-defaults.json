@@ -1,0 +1,218 @@
+{
+  "package": {
+    "schemaVersion": "church-config.v1",
+    "packageVersion": "1.2.3",
+    "generatedAt": "2026-06-03T00:00:00.000Z",
+    "applicationCompatibility": {
+      "minVersion": "0.1.0",
+      "maxExclusiveVersion": "1.0.0"
+    }
+  },
+  "instance": {
+    "instanceId": "river-city-worship",
+    "displayName": "River City Worship",
+    "environment": "staging",
+    "region": "us-east-1",
+    "timezone": "America/New_York",
+    "locale": "en-US",
+    "supportContact": "ops@example.org"
+  },
+  "modules": {
+    "recommendation": {
+      "enabled": true
+    },
+    "catalogImport": {
+      "enabled": true,
+      "allowedSources": [
+        "local_fixture",
+        "denominational_seed"
+      ]
+    },
+    "servicePlanning": {
+      "enabled": true
+    },
+    "teamScheduling": {
+      "enabled": true
+    },
+    "feedbackTuning": {
+      "enabled": false
+    },
+    "externalMessaging": {
+      "enabled": true,
+      "channels": [
+        "telegram",
+        "email"
+      ]
+    }
+  },
+  "policies": {
+    "recommendationPolicy": {
+      "counts": {
+        "praise": 10,
+        "worship": 5
+      },
+      "keyPolicy": {
+        "preferSameKey": true,
+        "allowRelativeMajorMinor": true,
+        "maxKeyCenters": 2
+      },
+      "tempoPolicy": {
+        "maxJumpBpm": 12
+      },
+      "requireApprovedOnly": true,
+      "requireDatasetReferences": true
+    },
+    "dataRetentionPolicy": {
+      "auditLogDays": 365,
+      "exportRetentionDays": 30,
+      "backupRetentionDays": 90
+    },
+    "securityPolicy": {
+      "requireMfaForAdmins": true,
+      "sessionTimeoutMinutes": 60
+    }
+  },
+  "scoringProfiles": {
+    "activeProfile": "balanced-default",
+    "profiles": [
+      {
+        "id": "balanced-default",
+        "label": "Balanced default",
+        "weights": {
+          "themeFit": 3,
+          "scriptureFit": 3,
+          "musicalFit": 2,
+          "energyFit": 1,
+          "familiarity": 1
+        },
+        "deterministicTieBreakers": [
+          "approval_date",
+          "title",
+          "arrangement_id"
+        ]
+      }
+    ]
+  },
+  "vocabularies": {
+    "themeTags": [
+      {
+        "id": "hope",
+        "label": "Hope"
+      },
+      {
+        "id": "adoration",
+        "label": "Adoration"
+      }
+    ],
+    "serviceMoments": [
+      "opening",
+      "response",
+      "sending"
+    ],
+    "languages": [
+      "en-US"
+    ],
+    "energyArcs": [
+      "steady",
+      "rising"
+    ]
+  },
+  "approvalGates": {
+    "requireLyricsProvenance": true,
+    "requireDoctrinalReview": true,
+    "requireLicensingReview": true,
+    "minimumReviewers": 2,
+    "allowedReviewerRoles": [
+      "worship_admin",
+      "pastor",
+      "copyright_admin"
+    ],
+    "blockRecommendationStatuses": [
+      "pending",
+      "rejected",
+      "expired"
+    ]
+  },
+  "branding": {
+    "displayName": "River City Worship",
+    "primaryColor": "#174EA6",
+    "secondaryColor": "#F9AB00",
+    "logoAssetRef": "assets/branding/river-city-logo.svg",
+    "supportUrl": "https://support.example.org/river-city"
+  },
+  "integrations": {
+    "providers": [
+      {
+        "ref": "telegram.bot.v1",
+        "type": "messaging",
+        "enabled": true,
+        "secretRef": "secret-manager:/cadentia/river-city/telegram-token"
+      },
+      {
+        "ref": "planning.calendar.v1",
+        "type": "calendar",
+        "enabled": true,
+        "secretRef": "env:PLANNING_CENTER_TOKEN",
+        "endpoint": "https://calendar.example.org/api"
+      }
+    ]
+  },
+  "pluginAllowList": {
+    "plugins": [
+      {
+        "ref": "@cadentia/export-csv@1.0.0",
+        "enabled": true,
+        "permissions": [
+          "read_catalog",
+          "write_exports"
+        ]
+      }
+    ]
+  },
+  "assetStorage": {
+    "provider": "s3",
+    "bucketOrContainer": "cadentia-river-city-assets",
+    "namespacePrefix": "river-city-worship",
+    "encryptionKeyRef": "aws-sm:/cadentia/river-city/assets-kms-key",
+    "publicAssetsBaseUrl": "https://assets.example.org/river-city/"
+  },
+  "featureFlags": {
+    "rehearsal-lifecycle": true,
+    "feedback-tuning": false
+  },
+  "observability": {
+    "metrics": {
+      "enabled": true,
+      "namespace": "river-city-worship"
+    },
+    "logs": {
+      "level": "INFO",
+      "redactSecrets": true
+    },
+    "traces": {
+      "enabled": true,
+      "exporter": "otlp"
+    },
+    "exports": {
+      "enabled": true,
+      "destinationRef": "exports/river-city",
+      "secretRef": "secret-manager:/cadentia/river-city/export-writer"
+    }
+  },
+  "moduleSpecific": {
+    "catalogImport": {
+      "seedPackageRefs": [
+        "seed-packages/denomination-baseline-2026.06.json"
+      ]
+    },
+    "servicePlanning": {
+      "calendarIntegrationRef": "planning.calendar.v1"
+    },
+    "teamScheduling": {
+      "messagingIntegrationRef": "telegram.bot.v1"
+    }
+  },
+  "extensions": {
+    "operatorNotes": "Synthetic fixture with no church secrets."
+  }
+}

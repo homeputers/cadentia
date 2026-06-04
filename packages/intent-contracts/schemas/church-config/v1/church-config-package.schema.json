@@ -1,0 +1,121 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://cadentia.local/schemas/church-config/v1/church-config-package.schema.json",
+  "title": "Cadentia Church Configuration Package v1",
+  "description": "Canonical ADR-022 isolated-instance church configuration package contract. Mandatory policy, approval, scoring, storage, module, vocabulary, workflow, branding, integration, plugin, feature flag, and observability sections must be supplied explicitly and are not replaced by application defaults.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "package",
+    "instance",
+    "modules",
+    "policies",
+    "scoringProfiles",
+    "vocabularies",
+    "approvalGates",
+    "workflowDefaults",
+    "branding",
+    "integrations",
+    "pluginAllowList",
+    "assetStorage",
+    "featureFlags",
+    "observability"
+  ],
+  "properties": {
+    "package": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion", "packageVersion", "generatedAt", "applicationCompatibility"],
+      "properties": {
+        "schemaVersion": { "const": "church-config.v1" },
+        "packageVersion": { "$ref": "#/definitions/semver" },
+        "generatedAt": { "type": "string", "format": "date-time" },
+        "applicationCompatibility": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["minVersion", "maxExclusiveVersion"],
+          "properties": {
+            "minVersion": { "$ref": "#/definitions/semver" },
+            "maxExclusiveVersion": { "$ref": "#/definitions/semver" },
+            "deprecatedAfterVersion": { "$ref": "#/definitions/semver" }
+          }
+        }
+      }
+    },
+    "instance": { "$ref": "#/definitions/instance" },
+    "modules": { "$ref": "#/definitions/modules" },
+    "policies": { "$ref": "#/definitions/policies" },
+    "scoringProfiles": { "$ref": "#/definitions/scoringProfiles" },
+    "vocabularies": { "$ref": "#/definitions/vocabularies" },
+    "approvalGates": { "$ref": "#/definitions/approvalGates" },
+    "workflowDefaults": { "$ref": "#/definitions/workflowDefaults" },
+    "branding": { "$ref": "#/definitions/branding" },
+    "integrations": { "$ref": "#/definitions/integrations" },
+    "pluginAllowList": { "$ref": "#/definitions/pluginAllowList" },
+    "assetStorage": { "$ref": "#/definitions/assetStorage" },
+    "featureFlags": {
+      "type": "object",
+      "propertyNames": { "pattern": "^[a-z][a-z0-9-]*$" },
+      "additionalProperties": { "type": "boolean" }
+    },
+    "observability": { "$ref": "#/definitions/observability" },
+    "moduleSpecific": { "$ref": "#/definitions/moduleSpecific" },
+    "extensions": { "type": "object", "description": "Non-critical operator annotations. Core application behavior must not depend on extensions." }
+  },
+  "definitions": {
+    "id": { "type": "string", "minLength": 3, "maxLength": 80, "pattern": "^[a-z][a-z0-9-]*[a-z0-9]$" },
+    "semver": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+(?:[-+][0-9A-Za-z.-]+)?$" },
+    "secretRef": { "type": "string", "minLength": 8, "maxLength": 250, "pattern": "^(secret-manager|env|vault|aws-sm|gcp-sm|azure-kv):[A-Za-z0-9_./:@-]+$" },
+    "resourceRef": { "type": "string", "minLength": 3, "maxLength": 200, "pattern": "^[A-Za-z0-9][A-Za-z0-9_./:@-]*$" },
+    "integrationRef": { "type": "string", "minLength": 5, "maxLength": 120, "pattern": "^[a-z][a-z0-9-]*\\.[a-z][a-z0-9-]*(?:\\.v\\d+)?$" },
+    "pluginRef": { "type": "string", "minLength": 5, "maxLength": 120, "pattern": "^@[a-z0-9-]+/[a-z][a-z0-9-]*(?:@\\d+\\.\\d+\\.\\d+)?$" },
+    "instance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["instanceId", "displayName", "environment", "region", "timezone", "locale", "supportContact"],
+      "properties": {
+        "instanceId": { "$ref": "#/definitions/id" },
+        "displayName": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "environment": { "enum": ["development", "staging", "production"] },
+        "region": { "type": "string", "minLength": 2, "maxLength": 60 },
+        "timezone": { "type": "string", "minLength": 3, "maxLength": 80 },
+        "locale": { "type": "string", "pattern": "^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$" },
+        "supportContact": { "type": "string", "format": "email" }
+      }
+    },
+    "modules": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["recommendation", "catalogImport", "servicePlanning", "teamScheduling", "feedbackTuning", "externalMessaging"],
+      "properties": {
+        "recommendation": { "type": "object", "additionalProperties": false, "required": ["enabled"], "properties": { "enabled": { "const": true } } },
+        "catalogImport": { "type": "object", "additionalProperties": false, "required": ["enabled", "allowedSources"], "properties": { "enabled": { "type": "boolean" }, "allowedSources": { "type": "array", "minItems": 1, "items": { "enum": ["local_fixture", "ccli", "songselect", "denominational_seed"] } } } },
+        "servicePlanning": { "$ref": "#/definitions/enabledModule" },
+        "teamScheduling": { "$ref": "#/definitions/enabledModule" },
+        "feedbackTuning": { "$ref": "#/definitions/enabledModule" },
+        "externalMessaging": { "type": "object", "additionalProperties": false, "required": ["enabled"], "properties": { "enabled": { "type": "boolean" }, "channels": { "type": "array", "items": { "enum": ["telegram", "whatsapp", "email"] } } } }
+      }
+    },
+    "enabledModule": { "type": "object", "additionalProperties": false, "required": ["enabled"], "properties": { "enabled": { "type": "boolean" } } },
+    "policies": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["recommendationPolicy", "dataRetentionPolicy", "securityPolicy"],
+      "properties": {
+        "recommendationPolicy": { "type": "object", "additionalProperties": false, "required": ["counts", "keyPolicy", "tempoPolicy", "requireApprovedOnly", "requireDatasetReferences"] },
+        "dataRetentionPolicy": { "type": "object", "additionalProperties": false, "required": ["auditLogDays", "exportRetentionDays", "backupRetentionDays"] },
+        "securityPolicy": { "type": "object", "additionalProperties": false, "required": ["requireMfaForAdmins", "sessionTimeoutMinutes"] }
+      }
+    },
+    "scoringProfiles": { "type": "object", "additionalProperties": false, "required": ["activeProfile", "profiles"] },
+    "vocabularies": { "type": "object", "additionalProperties": false, "required": ["themeTags", "serviceMoments", "languages", "energyArcs"] },
+    "approvalGates": { "type": "object", "additionalProperties": false, "required": ["requireLyricsProvenance", "requireDoctrinalReview", "requireLicensingReview", "minimumReviewers", "allowedReviewerRoles", "blockRecommendationStatuses"] },
+    "workflowDefaults": { "type": "object", "additionalProperties": false, "required": ["servicePlanLeadDays", "rehearsalReminderHours", "defaultSetLengthMinutes", "defaultServiceMoments"] },
+    "branding": { "type": "object", "additionalProperties": false, "required": ["displayName", "primaryColor", "secondaryColor"] },
+    "integrations": { "type": "object", "additionalProperties": false, "required": ["providers"], "properties": { "providers": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["ref", "type", "enabled"], "properties": { "ref": { "$ref": "#/definitions/integrationRef" }, "type": { "enum": ["messaging", "lyrics", "calendar", "identity", "export"] }, "enabled": { "type": "boolean" }, "secretRef": { "$ref": "#/definitions/secretRef" }, "endpoint": { "type": "string", "format": "uri" } } } } } },
+    "pluginAllowList": { "type": "object", "additionalProperties": false, "required": ["plugins"], "properties": { "plugins": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["ref", "enabled"], "properties": { "ref": { "$ref": "#/definitions/pluginRef" }, "enabled": { "type": "boolean" }, "permissions": { "type": "array" } } } } } },
+    "assetStorage": { "type": "object", "additionalProperties": false, "required": ["provider", "bucketOrContainer", "namespacePrefix", "encryptionKeyRef"] },
+    "observability": { "type": "object", "additionalProperties": false, "required": ["metrics", "logs", "traces", "exports"] },
+    "moduleSpecific": { "type": "object", "additionalProperties": false }
+  }
+}

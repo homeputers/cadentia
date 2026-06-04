@@ -125,3 +125,4 @@ export function parseIntentOutput(payload: unknown): IntentOutput {
 }
 
 export * from "./explanations.js";
+export * from "./churchConfig.js";

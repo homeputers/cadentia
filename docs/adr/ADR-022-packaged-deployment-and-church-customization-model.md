@@ -41,6 +41,61 @@ The application code may continue to use an `instanceId` or deployment identifie
 - Configuration packages are versioned, reviewable, and reproducible across environments.
 - Operators can provision, upgrade, back up, restore, and export a church instance without introducing shared runtime catalog eligibility.
 
+
+## Church Configuration Package Contract
+
+Each isolated Cadentia instance is driven by a canonical church configuration
+package. The v1 contract is published as
+`packages/intent-contracts/schemas/church-config/v1/church-config-package.schema.json`
+and is validated by the `@cadentia/intent-contracts` local tooling before
+provisioning or API startup. A package is a reviewable artifact with this
+layout:
+
+```text
+church-config/
+  cadentia-church-package.json
+  overlays/development.json
+  overlays/staging.json
+  overlays/production.json
+  assets/
+  REVIEW.md
+```
+
+The required base package sections are `package`, `instance`, `modules`,
+`policies`, `scoringProfiles`, `vocabularies`, `approvalGates`,
+`workflowDefaults`, `branding`, `integrations`, `pluginAllowList`,
+`assetStorage`, `featureFlags`, and `observability`. Optional
+`moduleSpecific` sections configure enabled modules without creating code forks.
+Optional `extensions` may hold non-critical review notes, but unknown critical
+top-level sections are rejected so operators cannot accidentally introduce a
+parallel customization mechanism.
+
+Version fields are explicit:
+
+- `package.schemaVersion` is the schema contract version. Application release
+  `0.1.x` supports `church-config.v1`; versions not in the supported set are
+  rejected, deprecated versions emit validation warnings, and explicitly
+  rejected versions fail validation.
+- `package.packageVersion` is the semantic version of the church package
+  content and changes whenever reviewed configuration changes.
+- `package.applicationCompatibility.minVersion` and `maxExclusiveVersion`
+  define the application release interval allowed to consume the package.
+
+Environment overlays are applied only after the base package validates and must
+be validated again after merge. Overlays may change environment-specific
+resource bindings, endpoints, feature flags, branding assets, and observability
+destinations, but they must not remove mandatory policy, approval, scoring, or
+storage sections. Operators promote the exact reviewed artifact from
+development to staging to production by validating, producing a JSON diff,
+recording human approval in `REVIEW.md`, and archiving the promoted artifact.
+
+Validation fails for missing required sections, unknown critical sections,
+malformed integration references, malformed plugin allow-list entries, plaintext
+secret values, active scoring profiles that do not exist, module-specific
+integration bindings that do not reference declared integrations, and
+application releases outside the declared compatibility range. Secrets are never
+embedded in the package; only secret keys or secret-manager paths are allowed.
+
 ## Consequences
 
 Positive:
@@ -74,3 +129,14 @@ Tradeoffs:
 - Which configuration changes require restart, migration, or governance approval?
 - How should denominational catalog packages publish updates into existing church instances without bypassing local review?
 - What managed-service tooling is required to operate many isolated instances efficiently?
+
+## Validation Enforcement
+
+Local tooling and application startup share the same contract intent. Operators
+run the TypeScript validator from `@cadentia/intent-contracts` during package
+review and provisioning. The API also exposes a startup guard controlled by
+`CADENTIA_CHURCH_CONFIG_PATH`; when set, the Spring Boot process reads the
+package file and rejects startup if required sections are missing, unknown
+critical sections are present, integration or plugin references are malformed,
+plaintext secret values are embedded, mandatory approval gates are disabled, or
+the running application version is outside the package compatibility interval.
