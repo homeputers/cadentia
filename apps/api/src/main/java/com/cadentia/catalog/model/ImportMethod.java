@@ -8,5 +8,6 @@ public enum ImportMethod {
     MARKDOWN_IMPORT,
     API_IMPORT,
     SCRAPER_REVIEWED,
+    STARTER_PACKAGE_IMPORT,
     TEST_FIXTURE
 }

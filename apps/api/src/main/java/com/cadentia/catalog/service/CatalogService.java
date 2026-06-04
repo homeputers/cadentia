@@ -1,17 +1,23 @@
 package com.cadentia.catalog.service;
 
+import com.cadentia.catalog.entity.ApprovalRecord;
 import com.cadentia.catalog.entity.Arrangement;
 import com.cadentia.catalog.entity.LyricsDocument;
 import com.cadentia.catalog.entity.Song;
 import com.cadentia.catalog.entity.Tag;
+import com.cadentia.catalog.model.ApprovalStatus;
+import com.cadentia.catalog.model.ApprovalType;
 import com.cadentia.catalog.model.LyricsParseStatus;
+import com.cadentia.catalog.model.SongStatus;
 import com.cadentia.catalog.model.TagAssignmentTarget;
 import com.cadentia.catalog.repository.SongRepository;
 import com.cadentia.catalog.transposition.DeterministicTransposer;
 import com.cadentia.catalog.transposition.MusicalKey;
 import java.util.Comparator;
+import java.util.EnumSet;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -33,6 +39,25 @@ public class CatalogService {
 
     public Optional<Song> findSong(UUID id) {
         return songRepository.findById(id);
+    }
+
+    public Optional<Song> findApprovedSong(UUID id) {
+        if (id == null) {
+            throw new IllegalArgumentException("id is required");
+        }
+        return songRepository.findById(id)
+                .filter(song -> song.songStatus() != SongStatus.ARCHIVED)
+                .filter(song -> hasApprovedSongGates(song.id()));
+    }
+
+    private boolean hasApprovedSongGates(UUID songId) {
+        EnumSet<ApprovalType> approvedTypes = songRepository.findApprovalRecordsForSong(songId).stream()
+                .filter(record -> record.status() == ApprovalStatus.APPROVED)
+                .map(ApprovalRecord::approvalType)
+                .collect(Collectors.toCollection(() -> EnumSet.noneOf(ApprovalType.class)));
+        return approvedTypes.contains(ApprovalType.DOCTRINAL)
+                && approvedTypes.contains(ApprovalType.EDITORIAL)
+                && approvedTypes.contains(ApprovalType.LICENSING);
     }
 
     public Tag assignTag(TagAssignmentTarget target, UUID targetId, UUID tagId) {

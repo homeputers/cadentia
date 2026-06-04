@@ -11,14 +11,20 @@ import com.cadentia.catalog.model.ApprovalType;
 import com.cadentia.catalog.model.ArrangementSourceType;
 import com.cadentia.catalog.model.CreateApprovalRecordCommand;
 import com.cadentia.catalog.model.CreateArrangementCommand;
+import com.cadentia.catalog.model.CreateImportBatchCommand;
 import com.cadentia.catalog.model.CreateLyricsDocumentCommand;
+import com.cadentia.catalog.model.CreateProvenanceRecordCommand;
 import com.cadentia.catalog.model.CreateSongCommand;
 import com.cadentia.catalog.model.CreateTagCommand;
+import com.cadentia.catalog.model.ImportBatchStatus;
+import com.cadentia.catalog.model.ImportMethod;
 import com.cadentia.catalog.model.KeyMode;
+import com.cadentia.catalog.model.LicenseType;
 import com.cadentia.catalog.model.LyricsFormat;
 import com.cadentia.catalog.model.SongStatus;
 import com.cadentia.catalog.model.TagType;
 import com.cadentia.catalog.repository.JdbcSongRepository;
+import java.math.BigDecimal;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -77,6 +83,37 @@ class JdbcCandidateRetrieverIntegrationTest {
         assertThat(candidates)
                 .extracting(RecommendableArrangement::arrangementId)
                 .doesNotContain(arrangement.id());
+    }
+
+    @Test
+    void findCandidatesExcludesSeededCatalogContentUntilApprovedByLocalInstance() {
+        // Arrange
+        CatalogContent seeded = createCatalogContent("seeded-unapproved");
+        var seedBatch = songRepository.createImportBatch(new CreateImportBatchCommand(
+                "starter-package:global:baseline:2026.06",
+                "seed-admin@example.test",
+                ImportBatchStatus.COMPLETED,
+                "{\"packageName\":\"baseline\",\"packageVersion\":\"2026.06\"}"));
+        songRepository.createProvenanceRecord(new CreateProvenanceRecordCommand(
+                seeded.song().id(),
+                null,
+                null,
+                seedBatch.id(),
+                "starter-package:global:baseline",
+                "package://global/baseline/2026.06#song=seeded-unapproved",
+                "Global starter package 2026.06",
+                LicenseType.CCLI,
+                "Starter package provenance; local approval still required",
+                ImportMethod.STARTER_PACKAGE_IMPORT,
+                new BigDecimal("1.0000")));
+
+        // Act
+        List<RecommendableArrangement> candidates = candidateRetriever.findCandidates(defaultCriteria());
+
+        // Assert
+        assertThat(candidates)
+                .extracting(RecommendableArrangement::arrangementId)
+                .doesNotContain(seeded.arrangement().id());
     }
 
     @ParameterizedTest
