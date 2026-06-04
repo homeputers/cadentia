@@ -1,0 +1,252 @@
+{
+  "package": {
+    "schemaVersion": "church-config.v1",
+    "packageVersion": "7.0.0",
+    "generatedAt": "2026-06-04T00:00:00.000Z",
+    "applicationCompatibility": {
+      "minVersion": "0.1.0",
+      "maxExclusiveVersion": "1.0.0"
+    }
+  },
+  "instance": {
+    "instanceId": "river-city-isolation",
+    "displayName": "River City Isolation Fixture",
+    "environment": "staging",
+    "region": "us-east-1",
+    "timezone": "America/New_York",
+    "locale": "en-US",
+    "supportContact": "ops-river-city-isolation@example.test"
+  },
+  "modules": {
+    "recommendation": {
+      "enabled": true
+    },
+    "catalogImport": {
+      "enabled": true,
+      "allowedSources": [
+        "local_fixture",
+        "denominational_seed"
+      ]
+    },
+    "servicePlanning": {
+      "enabled": true
+    },
+    "teamScheduling": {
+      "enabled": true
+    },
+    "feedbackTuning": {
+      "enabled": false
+    },
+    "externalMessaging": {
+      "enabled": true,
+      "channels": [
+        "telegram",
+        "email"
+      ]
+    }
+  },
+  "policies": {
+    "recommendationPolicy": {
+      "counts": {
+        "praise": 2,
+        "worship": 1
+      },
+      "keyPolicy": {
+        "preferSameKey": true,
+        "allowRelativeMajorMinor": true,
+        "maxKeyCenters": 2
+      },
+      "tempoPolicy": {
+        "maxJumpBpm": 12
+      },
+      "requireApprovedOnly": true,
+      "requireDatasetReferences": true
+    },
+    "dataRetentionPolicy": {
+      "auditLogDays": 365,
+      "exportRetentionDays": 30,
+      "backupRetentionDays": 90
+    },
+    "securityPolicy": {
+      "requireMfaForAdmins": true,
+      "sessionTimeoutMinutes": 60
+    }
+  },
+  "scoringProfiles": {
+    "activeProfile": "river-theme-first",
+    "profiles": [
+      {
+        "id": "river-theme-first",
+        "label": "River City Isolation Fixture deterministic fixture profile",
+        "weights": {
+          "themeFit": 5,
+          "scriptureFit": 1,
+          "musicalFit": 1,
+          "energyFit": 1,
+          "familiarity": 1
+        },
+        "deterministicTieBreakers": [
+          "approval_date",
+          "title",
+          "arrangement_id"
+        ]
+      }
+    ]
+  },
+  "vocabularies": {
+    "themeTags": [
+      {
+        "id": "adoration",
+        "label": "Adoration"
+      }
+    ],
+    "serviceMoments": [
+      "opening",
+      "response",
+      "sending"
+    ],
+    "languages": [
+      "en-US"
+    ],
+    "energyArcs": [
+      "steady",
+      "rising"
+    ]
+  },
+  "approvalGates": {
+    "requireLyricsProvenance": true,
+    "requireDoctrinalReview": true,
+    "requireLicensingReview": true,
+    "minimumReviewers": 2,
+    "allowedReviewerRoles": [
+      "worship_admin",
+      "pastor",
+      "copyright_admin"
+    ],
+    "blockRecommendationStatuses": [
+      "pending",
+      "rejected",
+      "expired"
+    ]
+  },
+  "workflowDefaults": {
+    "servicePlanLeadDays": 14,
+    "rehearsalReminderHours": 48,
+    "defaultSetLengthMinutes": 35,
+    "defaultServiceMoments": [
+      "opening",
+      "response",
+      "sending"
+    ]
+  },
+  "branding": {
+    "displayName": "River City Isolation Fixture",
+    "primaryColor": "#174EA6",
+    "secondaryColor": "#F9AB00",
+    "logoAssetRef": "assets/branding/river-city-isolation-logo.svg",
+    "supportUrl": "https://support.example.test/river-city-isolation"
+  },
+  "integrations": {
+    "providers": [
+      {
+        "ref": "telegram.bot.v1",
+        "type": "messaging",
+        "enabled": true,
+        "secretRef": "env:RIVER_TELEGRAM_TOKEN"
+      }
+    ]
+  },
+  "pluginAllowList": {
+    "plugins": [
+      {
+        "ref": "@cadentia/export-csv@1.0.0",
+        "enabled": true,
+        "permissions": [
+          "read_catalog",
+          "write_exports"
+        ]
+      }
+    ]
+  },
+  "assetStorage": {
+    "provider": "local",
+    "bucketOrContainer": "cadentia-river-city-isolation-assets-fixture",
+    "namespacePrefix": "river-city-isolation",
+    "encryptionKeyRef": "env:CADENTIA_RIVER_CITY_ISOLATION_ASSET_KEY_REF"
+  },
+  "featureFlags": {
+    "rehearsal-lifecycle": true,
+    "feedback-tuning": false
+  },
+  "observability": {
+    "metrics": {
+      "enabled": true,
+      "namespace": "river-city-isolation"
+    },
+    "logs": {
+      "level": "INFO",
+      "redactSecrets": true
+    },
+    "traces": {
+      "enabled": true,
+      "exporter": "otlp"
+    },
+    "exports": {
+      "enabled": true,
+      "destinationRef": "exports/river-city-isolation",
+      "secretRef": "env:CADENTIA_RIVER_CITY_ISOLATION_EXPORT_WRITER"
+    }
+  },
+  "moduleSpecific": {
+    "catalogImport": {
+      "seedPackageRefs": [
+        "seed-packages/river-city-isolation-starter-2026.06.json"
+      ]
+    },
+    "servicePlanning": {
+      "calendarIntegrationRef": "telegram.bot.v1"
+    },
+    "teamScheduling": {
+      "messagingIntegrationRef": "telegram.bot.v1"
+    }
+  },
+  "extensions": {
+    "operatorNotes": "Synthetic ADR-022 isolation regression fixture with no real credentials, private data, or copyrighted lyrics.",
+    "deterministicFixtureCatalog": [
+      {
+        "songId": "river-song-dawn",
+        "arrangementId": "river-arrangement-dawn",
+        "title": "River Praise of Dawn",
+        "approved": true,
+        "seeded": false,
+        "themes": [
+          "adoration"
+        ],
+        "scriptureTags": [
+          "psalm-100"
+        ],
+        "key": "G",
+        "bpm": 104,
+        "energy": 72
+      },
+      {
+        "songId": "river-song-seed",
+        "arrangementId": "river-arrangement-seed",
+        "title": "River Starter Pending",
+        "approved": false,
+        "seeded": true,
+        "themes": [
+          "adoration"
+        ],
+        "scriptureTags": [
+          "psalm-100"
+        ],
+        "key": "G",
+        "bpm": 100,
+        "energy": 65
+      }
+    ],
+    "defaultServiceId": "river-city-isolation-sunday-am",
+    "fixturePeopleDirectory": "people/river-city-isolation.json"
+  }
+}

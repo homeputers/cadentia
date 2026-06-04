@@ -1,0 +1,252 @@
+{
+  "package": {
+    "schemaVersion": "church-config.v1",
+    "packageVersion": "7.0.0",
+    "generatedAt": "2026-06-04T00:00:00.000Z",
+    "applicationCompatibility": {
+      "minVersion": "0.1.0",
+      "maxExclusiveVersion": "1.0.0"
+    }
+  },
+  "instance": {
+    "instanceId": "hillside-isolation",
+    "displayName": "Hillside Isolation Fixture",
+    "environment": "staging",
+    "region": "us-east-1",
+    "timezone": "America/New_York",
+    "locale": "en-US",
+    "supportContact": "ops-hillside-isolation@example.test"
+  },
+  "modules": {
+    "recommendation": {
+      "enabled": true
+    },
+    "catalogImport": {
+      "enabled": true,
+      "allowedSources": [
+        "local_fixture",
+        "denominational_seed"
+      ]
+    },
+    "servicePlanning": {
+      "enabled": true
+    },
+    "teamScheduling": {
+      "enabled": true
+    },
+    "feedbackTuning": {
+      "enabled": false
+    },
+    "externalMessaging": {
+      "enabled": true,
+      "channels": [
+        "telegram",
+        "email"
+      ]
+    }
+  },
+  "policies": {
+    "recommendationPolicy": {
+      "counts": {
+        "praise": 1,
+        "worship": 2
+      },
+      "keyPolicy": {
+        "preferSameKey": true,
+        "allowRelativeMajorMinor": true,
+        "maxKeyCenters": 2
+      },
+      "tempoPolicy": {
+        "maxJumpBpm": 6
+      },
+      "requireApprovedOnly": true,
+      "requireDatasetReferences": true
+    },
+    "dataRetentionPolicy": {
+      "auditLogDays": 365,
+      "exportRetentionDays": 30,
+      "backupRetentionDays": 90
+    },
+    "securityPolicy": {
+      "requireMfaForAdmins": true,
+      "sessionTimeoutMinutes": 60
+    }
+  },
+  "scoringProfiles": {
+    "activeProfile": "hills-scripture-first",
+    "profiles": [
+      {
+        "id": "hills-scripture-first",
+        "label": "Hillside Isolation Fixture deterministic fixture profile",
+        "weights": {
+          "themeFit": 1,
+          "scriptureFit": 5,
+          "musicalFit": 1,
+          "energyFit": 1,
+          "familiarity": 1
+        },
+        "deterministicTieBreakers": [
+          "approval_date",
+          "title",
+          "arrangement_id"
+        ]
+      }
+    ]
+  },
+  "vocabularies": {
+    "themeTags": [
+      {
+        "id": "mercy",
+        "label": "Mercy"
+      }
+    ],
+    "serviceMoments": [
+      "opening",
+      "response",
+      "sending"
+    ],
+    "languages": [
+      "en-US"
+    ],
+    "energyArcs": [
+      "steady",
+      "rising"
+    ]
+  },
+  "approvalGates": {
+    "requireLyricsProvenance": true,
+    "requireDoctrinalReview": true,
+    "requireLicensingReview": true,
+    "minimumReviewers": 2,
+    "allowedReviewerRoles": [
+      "worship_admin",
+      "pastor",
+      "copyright_admin"
+    ],
+    "blockRecommendationStatuses": [
+      "pending",
+      "rejected",
+      "expired"
+    ]
+  },
+  "workflowDefaults": {
+    "servicePlanLeadDays": 14,
+    "rehearsalReminderHours": 48,
+    "defaultSetLengthMinutes": 35,
+    "defaultServiceMoments": [
+      "opening",
+      "response",
+      "sending"
+    ]
+  },
+  "branding": {
+    "displayName": "Hillside Isolation Fixture",
+    "primaryColor": "#0B8043",
+    "secondaryColor": "#D93025",
+    "logoAssetRef": "assets/branding/hillside-isolation-logo.svg",
+    "supportUrl": "https://support.example.test/hillside-isolation"
+  },
+  "integrations": {
+    "providers": [
+      {
+        "ref": "email.digest.v1",
+        "type": "messaging",
+        "enabled": true,
+        "secretRef": "env:HILLS_EMAIL_TOKEN"
+      }
+    ]
+  },
+  "pluginAllowList": {
+    "plugins": [
+      {
+        "ref": "@cadentia/planning-export@1.1.0",
+        "enabled": true,
+        "permissions": [
+          "read_service_plans",
+          "write_exports"
+        ]
+      }
+    ]
+  },
+  "assetStorage": {
+    "provider": "local",
+    "bucketOrContainer": "cadentia-hillside-isolation-assets-fixture",
+    "namespacePrefix": "hillside-isolation",
+    "encryptionKeyRef": "env:CADENTIA_HILLSIDE_ISOLATION_ASSET_KEY_REF"
+  },
+  "featureFlags": {
+    "rehearsal-lifecycle": true,
+    "feedback-tuning": false
+  },
+  "observability": {
+    "metrics": {
+      "enabled": true,
+      "namespace": "hillside-isolation"
+    },
+    "logs": {
+      "level": "INFO",
+      "redactSecrets": true
+    },
+    "traces": {
+      "enabled": true,
+      "exporter": "otlp"
+    },
+    "exports": {
+      "enabled": true,
+      "destinationRef": "exports/hillside-isolation",
+      "secretRef": "env:CADENTIA_HILLSIDE_ISOLATION_EXPORT_WRITER"
+    }
+  },
+  "moduleSpecific": {
+    "catalogImport": {
+      "seedPackageRefs": [
+        "seed-packages/hillside-isolation-starter-2026.06.json"
+      ]
+    },
+    "servicePlanning": {
+      "calendarIntegrationRef": "email.digest.v1"
+    },
+    "teamScheduling": {
+      "messagingIntegrationRef": "email.digest.v1"
+    }
+  },
+  "extensions": {
+    "operatorNotes": "Synthetic ADR-022 isolation regression fixture with no real credentials, private data, or copyrighted lyrics.",
+    "deterministicFixtureCatalog": [
+      {
+        "songId": "hills-song-mercy",
+        "arrangementId": "hills-arrangement-mercy",
+        "title": "Hills Mercy Response",
+        "approved": true,
+        "seeded": false,
+        "themes": [
+          "mercy"
+        ],
+        "scriptureTags": [
+          "romans-8"
+        ],
+        "key": "D",
+        "bpm": 88,
+        "energy": 48
+      },
+      {
+        "songId": "hills-song-seed",
+        "arrangementId": "hills-arrangement-seed",
+        "title": "Hills Starter Pending",
+        "approved": false,
+        "seeded": true,
+        "themes": [
+          "mercy"
+        ],
+        "scriptureTags": [
+          "romans-8"
+        ],
+        "key": "D",
+        "bpm": 92,
+        "energy": 52
+      }
+    ],
+    "defaultServiceId": "hillside-isolation-sunday-am",
+    "fixturePeopleDirectory": "people/hillside-isolation.json"
+  }
+}
