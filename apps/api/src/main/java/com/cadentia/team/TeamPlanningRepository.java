@@ -51,6 +51,12 @@ public interface TeamPlanningRepository {
             VocalPartCode vocalPartCode,
             AssignmentStatusCode statusCode);
 
+    Optional<ServiceAssignmentRecord> findServiceAssignment(UUID assignmentId);
+
+    List<ServiceAssignmentRecord> listUpcomingServiceAssignmentsForMusician(UUID musicianId, Instant fromInclusive);
+
+    Optional<ServiceAssignmentRecord> updateServiceAssignmentStatus(UUID assignmentId, AssignmentStatusCode statusCode);
+
     RehearsalEventRecord createRehearsalEvent(
             UUID servicePlanId,
             Instant startsAt,

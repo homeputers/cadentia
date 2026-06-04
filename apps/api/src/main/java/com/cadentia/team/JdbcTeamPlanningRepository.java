@@ -181,6 +181,56 @@ public class JdbcTeamPlanningRepository implements TeamPlanningRepository {
     }
 
     @Override
+    public Optional<ServiceAssignmentRecord> findServiceAssignment(UUID assignmentId) {
+        List<ServiceAssignmentRecord> rows = jdbcTemplate.query(
+                """
+                SELECT id, service_plan_id, musician_id, role_code, instrument_code, vocal_part_code, status_code
+                FROM service_team_assignments
+                WHERE id = :assignmentId
+                """,
+                Map.of("assignmentId", assignmentId),
+                (rs, rowNum) -> mapServiceAssignment(rs));
+        return rows.stream().findFirst();
+    }
+
+    @Override
+    public List<ServiceAssignmentRecord> listUpcomingServiceAssignmentsForMusician(UUID musicianId, Instant fromInclusive) {
+        return jdbcTemplate.query(
+                """
+                SELECT service_team_assignments.id, service_team_assignments.service_plan_id,
+                       service_team_assignments.musician_id, service_team_assignments.role_code,
+                       service_team_assignments.instrument_code, service_team_assignments.vocal_part_code,
+                       service_team_assignments.status_code
+                FROM service_team_assignments
+                JOIN service_plans ON service_plans.id = service_team_assignments.service_plan_id
+                WHERE service_team_assignments.musician_id = :musicianId
+                  AND service_plans.service_date_time >= :fromInclusive
+                ORDER BY service_plans.service_date_time ASC, service_team_assignments.created_at ASC
+                """,
+                new MapSqlParameterSource()
+                        .addValue("musicianId", musicianId)
+                        .addValue("fromInclusive", Timestamp.from(fromInclusive)),
+                (rs, rowNum) -> mapServiceAssignment(rs));
+    }
+
+    @Override
+    public Optional<ServiceAssignmentRecord> updateServiceAssignmentStatus(
+            UUID assignmentId, AssignmentStatusCode statusCode) {
+        List<ServiceAssignmentRecord> rows = jdbcTemplate.query(
+                """
+                UPDATE service_team_assignments
+                SET status_code = :statusCode, updated_at = now()
+                WHERE id = :assignmentId
+                RETURNING id, service_plan_id, musician_id, role_code, instrument_code, vocal_part_code, status_code
+                """,
+                new MapSqlParameterSource()
+                        .addValue("assignmentId", assignmentId)
+                        .addValue("statusCode", enumName(statusCode)),
+                (rs, rowNum) -> mapServiceAssignment(rs));
+        return rows.stream().findFirst();
+    }
+
+    @Override
     public RehearsalEventRecord createRehearsalEvent(
             UUID servicePlanId,
             Instant startsAt,
@@ -263,6 +313,17 @@ public class JdbcTeamPlanningRepository implements TeamPlanningRepository {
                 instrumentCode,
                 vocalPartCode,
                 statusCode);
+    }
+
+    private ServiceAssignmentRecord mapServiceAssignment(ResultSet rs) throws SQLException {
+        return new ServiceAssignmentRecord(
+                rs.getObject("id", UUID.class),
+                rs.getObject("service_plan_id", UUID.class),
+                rs.getObject("musician_id", UUID.class),
+                enumValue(MusicianRoleCode.class, rs.getString("role_code")),
+                enumValue(InstrumentCode.class, rs.getString("instrument_code")),
+                enumValue(VocalPartCode.class, rs.getString("vocal_part_code")),
+                enumValue(AssignmentStatusCode.class, rs.getString("status_code")));
     }
 
     private List<ControlledVocabularyEntry> listVocabulary(String tableName) {
