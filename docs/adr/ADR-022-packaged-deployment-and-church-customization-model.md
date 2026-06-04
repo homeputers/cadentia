@@ -1,7 +1,8 @@
 # ADR-022: Packaged Deployment and Church Customization Model
 
-Status: Accepted  
-Date: 2026-06-02
+Status: Implemented  
+Date: 2026-06-02  
+Implemented: 2026-06-04
 
 ## Context
 
@@ -40,6 +41,31 @@ The application code may continue to use an `instanceId` or deployment identifie
 - Global or denominational starter catalog packages are not recommendable until accepted by the instance's configured approval workflow.
 - Configuration packages are versioned, reviewable, and reproducible across environments.
 - Operators can provision, upgrade, back up, restore, and export a church instance without introducing shared runtime catalog eligibility.
+
+## Implementation Summary
+
+ADR-022 is implemented through the versioned church configuration package
+contract, local validation tooling, isolated-instance provisioning automation,
+lifecycle workflow planning, operator-only administration tooling, guardrail
+checks, package governance documentation, and provisioning/lifecycle runbooks.
+The implementation preserves the ADR decision that customization comes from
+isolated deployments plus reviewed packages, while shared tenant-filtered
+recommendation eligibility remains forbidden.
+
+Implemented artifacts include:
+
+- `packages/intent-contracts/schemas/church-config/v1/church-config-package.schema.json`
+  and `@cadentia/intent-contracts` validation tooling for package review.
+- `@cadentia/provisioning` commands for isolated provisioning, smoke checks,
+  lifecycle planning, lifecycle verification, and operator-only administration.
+- ADR-022 runtime and operator guardrail scripts that reject tenant-row
+  recommendation eligibility and normal-user cross-instance administration
+  surfaces.
+- `docs/runbooks/adr-022-isolated-instance-provisioning.md` for provisioning,
+  upgrade, backup, restore, export, staging clone, and operator audit workflows.
+- `docs/runbooks/adr-022-package-governance.md` for package authoring,
+  promotion, seed catalog governance, contributor rules, and testing
+  expectations.
 
 
 ## Church Configuration Package Contract
@@ -123,12 +149,20 @@ Tradeoffs:
 4. Separate deployment per church with no reusable packaging.
    - Rejected: isolation is desirable, but repeatable packaging and upgrade automation are required.
 
-## Open Questions
+## Resolved Implementation Questions
 
-- What is the initial packaging format for church configuration: YAML files, database seed bundles, Helm values, or a combined release artifact?
-- Which configuration changes require restart, migration, or governance approval?
-- How should denominational catalog packages publish updates into existing church instances without bypassing local review?
-- What managed-service tooling is required to operate many isolated instances efficiently?
+- The initial church configuration format is the versioned
+  `cadentia-church-package.json` contract validated by `@cadentia/intent-contracts`,
+  with optional reviewed environment overlays and archived promotion artifacts.
+- Compatibility, migration, restart, and governance impacts are handled through
+  package validation, provisioning manifests, lifecycle plans, smoke checks, and
+  documented operator change records.
+- Denominational and global catalog updates are imported or synchronized into the
+  local instance governance workflow and remain unrecommendable until local
+  approval gates accept them.
+- Managed operation is supported by explicit provisioning, lifecycle, and
+  operator-administration tooling rather than normal-user multi-instance API
+  paths.
 
 ## Validation Enforcement
 

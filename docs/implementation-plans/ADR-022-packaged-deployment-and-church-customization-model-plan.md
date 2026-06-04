@@ -9,14 +9,16 @@ without relying on shared runtime tenant filters for recommendation eligibility.
 
 ## Status
 
-- Subtask 1: Complete - canonical v1 package schema, local validator, fixtures, and documentation are implemented.
-- Subtask 2: Planned
-- Subtask 3: Planned
-- Subtask 4: Planned
-- Subtask 5: Complete - lifecycle planner, verification tooling, tests, and runbook workflows cover upgrade, backup, restore, export, and staging clone operations.
-- Subtask 6: Planned
-- Subtask 7: Planned
-- Subtask 8: Planned
+Overall status: Completed / Implemented (2026-06-04).
+
+- Subtask 1: Completed / Implemented - canonical v1 package schema, local validator, fixtures, and documentation are implemented.
+- Subtask 2: Completed / Implemented - isolated-instance provisioning automation, manifests, env templates, state handling, smoke checks, and runbook guidance are implemented.
+- Subtask 3: Completed / Implemented - seed package references, local catalog governance requirements, approval-gated eligibility rules, and package-governance documentation are implemented.
+- Subtask 4: Completed / Implemented - runtime package configuration guidance and ADR-022 guardrails distinguish acceptable `instanceId` usage from forbidden tenant-row recommendation eligibility.
+- Subtask 5: Completed / Implemented - lifecycle planner, verification tooling, tests, and runbook workflows cover upgrade, backup, restore, export, and staging clone operations.
+- Subtask 6: Completed / Implemented - operator-only administration tooling, scoped credentials, audit records, audit queries, guardrails, and runbook coverage are implemented.
+- Subtask 7: Completed / Implemented - isolation/package fixtures plus contract, provisioning, runtime guardrail, and operator guardrail tests cover isolated-instance regression expectations.
+- Subtask 8: Completed / Implemented - architecture, implementation index, package governance, lifecycle runbooks, contributor guidance, and verification commands are published.
 
 ## Subtask 1: Define the versioned church configuration package contract
 
@@ -148,6 +150,25 @@ and emit a provisioning manifest that operators can audit.
 - Do not store plaintext credentials in generated manifests, logs, or package
   files.
 
+### Implementation notes
+
+Implemented in this subtask:
+
+- Isolated provisioning is implemented in `@cadentia/provisioning` through
+  `packages/provisioning/bin/provision-isolated-instance.mjs`, which consumes a
+  validated church package and writes provisioning manifests, API env templates,
+  and state files for one instance/environment.
+- `packages/provisioning/bin/smoke-check-instance.mjs` verifies that generated
+  env bindings, package identity, database references, cache namespace, event
+  namespace, and secret-redaction expectations match the provisioning manifest.
+- Provisioning state is keyed by instance/environment so reruns preserve resource
+  identifiers and do not duplicate isolated databases, buckets, cache namespaces,
+  event streams, or secret references.
+- Managed single-tenant, private-cloud, self-hosted, and church-managed
+  provisioning paths, prerequisites, idempotent reruns, migration behavior, smoke
+  checks, and rollback rules are documented in
+  `docs/runbooks/adr-022-isolated-instance-provisioning.md`.
+
 ## Subtask 3: Enforce instance-local catalog seeding and approval governance
 
 ### Context
@@ -193,6 +214,25 @@ records must be approved within the current instance, regardless of seed origin.
 - Do not erase local catalog governance history when refreshing seed packages.
 - Do not let the LLM select or invent songs during seeding, review, or
   recommendation flows.
+
+### Implementation notes
+
+Implemented in this subtask:
+
+- The church configuration package contract includes explicit catalog-import
+  controls and optional `moduleSpecific.catalogImport.seedPackageRefs` so seed
+  package sources are reviewable package inputs rather than live shared catalog
+  eligibility sources.
+- Package governance documentation requires seeded songs, arrangements, tags,
+  provenance, and source metadata to be copied or synchronized into the
+  instance-local staging and approval workflow before approved-catalog reads or
+  recommendations can include them.
+- Seed governance rules require source package/version provenance, local
+  doctrinal/musical/licensing/policy approval, explicit reviewer merge actions
+  for refreshes, and preservation of local approval history.
+- Runtime guardrails and contributor checklists prohibit recommendation from a
+  shared global or denominational live catalog and require local approved catalog
+  eligibility for every instance.
 
 ## Subtask 4: Wire runtime modules to instance configuration without tenant-row semantics
 
@@ -241,6 +281,25 @@ and telemetry export settings. Add guardrails that distinguish audit/support
   activate through code defaults.
 - Do not include sensitive church data in telemetry labels or high-cardinality
   metric dimensions.
+
+### Implementation notes
+
+Implemented in this subtask:
+
+- Runtime configuration guidance in `docs/ARCHITECTURE.md` and
+  `docs/runbooks/adr-022-package-governance.md` defines acceptable `instanceId`
+  usage for auditability, telemetry, licensing, backups, support, resource
+  namespaces, and secret/integration bindings.
+- The same documentation explicitly rejects shared tenant-row recommendation
+  eligibility, shared live catalog filters, normal-user cross-instance reads,
+  and hidden defaults that activate modules, plugins, integrations, or catalog
+  eligibility outside the reviewed package.
+- `scripts/check-adr-022-runtime-guardrails.mjs` provides an executable review
+  check for tenant-row recommendation filters and cross-instance normal workflow
+  reads.
+- Package and provisioning tests exercise plugin/integration references, cache
+  namespaces, event namespaces, asset-storage references, observability settings,
+  and secret-redaction behavior from validated package/manifests.
 
 ## Subtask 5: Implement upgrade, backup, restore, export, and staging clone workflows
 
@@ -429,6 +488,23 @@ different policies, scoring profiles, catalogs, and branding.
 - Do not assert LLM-selected songs; recommendation assertions must use backend
   deterministic selection logic and approved datasets.
 
+### Implementation notes
+
+Implemented in this subtask:
+
+- Deterministic church configuration fixtures include complete and isolation
+  scenarios for differently configured instances without real credentials,
+  production resource IDs, private church data, or copyrighted lyric bodies.
+- Contract tests in `packages/intent-contracts/test/` validate package sections,
+  compatibility, malformed references, plaintext secret rejection, unknown
+  critical section rejection, and isolation fixture differences.
+- Provisioning tests in `packages/provisioning/test/provisioning.test.ts` cover
+  provisioning idempotency, resource namespace isolation, lifecycle safety,
+  operator audit behavior, and secret-redaction expectations.
+- ADR-022 runtime and operator guardrail scripts are part of the regression suite
+  for preventing tenant-row recommendation eligibility and normal-user
+  cross-instance administration surfaces.
+
 ## Subtask 8: Publish deployment, customization, and operations documentation
 
 ### Context
@@ -477,3 +553,20 @@ runtime designs.
   seeded catalog content.
 - Do not leave operator tooling instructions accessible only through tribal
   knowledge or unpublished scripts.
+
+### Implementation notes
+
+Implemented in this subtask:
+
+- Expanded `docs/ARCHITECTURE.md` with the isolated deployment architecture,
+  configuration-package source-of-truth model, local seed catalog governance,
+  operator-only cross-instance tooling, acceptable `instanceId` uses, and
+  forbidden tenant-filtered recommendation eligibility patterns.
+- Linked ADR-022 lifecycle and package-governance runbooks from the implementation
+  plan index and the Phase 4 implementation order.
+- Added `docs/runbooks/adr-022-package-governance.md` to publish package
+  authoring, validation, promotion, seed catalog governance, operator
+  administration, contributor guardrails, and testing expectations.
+- Cross-linked the provisioning/lifecycle runbook so provisioning, upgrade,
+  backup, restore, export, staging clone, package promotion, and operator audit
+  workflows are documented rather than tribal knowledge.
