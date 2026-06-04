@@ -360,6 +360,28 @@ cross-instance action.
 - Do not bypass local instance approval/governance workflows through operator
   catalog edits.
 
+
+### Implementation notes
+
+Implemented in this subtask:
+
+- Operator-only administration model in `@cadentia/provisioning` with explicit
+  actions for list, inspect, upgrade, backup, restore, export, and clone.
+- `packages/provisioning/bin/operator-admin.mjs` requires an operator credential,
+  explicit target instance, reason, and optional manifest/lifecycle references;
+  it is not wired into the normal church admin UI or API.
+- Operator credentials are short-lived, scope-bearing, instance-scoped JSON
+  documents with a separate break-glass role that requires incident metadata.
+- Operator audit records use `cadentia.operator-audit.v1`,
+  `activityType=operator-support`, target manifest digests, before/after or
+  lifecycle references, redaction flags, query keys, and a hash chain.
+- Audit query tooling filters by operator, instance, action, and time window.
+- `scripts/check-adr-022-operator-admin-guardrails.mjs` proves normal
+  application controllers and normal RBAC authorities do not expose
+  cross-instance operator administration surfaces.
+- Runbook coverage defines credential issuance, rotation, break-glass,
+  incident response, audit queries, and guardrail checks.
+
 ## Subtask 7: Add isolation, configuration, and recommendation regression tests
 
 ### Context

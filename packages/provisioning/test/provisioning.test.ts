@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -242,5 +242,153 @@ describe("isolated instance lifecycle workflows", () => {
       "Replace every secret binding with staging-safe references; do not copy production secret values.",
       "Disable or override outbound integrations, telemetry exports, webhooks, and scheduled jobs for staging."
     ]));
+  });
+});
+
+
+describe("cross-instance operator administration", () => {
+  it("requires scoped operator credentials, explicit target instance, reason, and writes hash-chained support audit records", async () => {
+    const tempDir = mkdtempSync(join(tmpdir(), "cadentia-operator-admin-"));
+    tempDirs.push(tempDir);
+    const provisioned = await provisionCadentiaInstance({
+      packagePath,
+      outputDir: join(tempDir, "out"),
+      stateDir: join(tempDir, "state"),
+      applicationVersion: "0.1.0",
+      operatorId: "provisioner@example.org",
+      now: new Date("2026-06-04T12:00:00.000Z")
+    });
+    const credentialPath = join(tempDir, "operator-credential.json");
+    writeFileSync(credentialPath, JSON.stringify({
+      credentialVersion: "cadentia.operator-credential.v1",
+      credentialId: "cred-2026-06-04T12",
+      operatorId: "ops@example.org",
+      role: "cadentia-operator",
+      issuedAt: "2026-06-04T11:00:00.000Z",
+      expiresAt: "2026-06-04T15:00:00.000Z",
+      scopes: ["operator.instances.inspect", "operator.instances.backup", "operator.audit.query"],
+      allowedInstanceIds: ["river-city-worship"],
+      issuer: "security@example.org",
+      publicKeyRef: "kms:/cadentia/operators/ops@example.org/2026-06-04"
+    }, null, 2));
+    const { queryOperatorAuditRecords, runOperatorAdminAction } = await import("../src/index.js");
+
+    const inspect = await runOperatorAdminAction({
+      action: "inspect",
+      credentialPath,
+      targetInstanceId: "river-city-worship",
+      reason: "support ticket SUP-100 inspect package version",
+      outputDir: join(tempDir, "out"),
+      manifestPath: provisioned.manifestPath,
+      now: new Date("2026-06-04T12:05:00.000Z")
+    });
+    const backup = await runOperatorAdminAction({
+      action: "backup",
+      credentialPath,
+      targetInstanceId: "river-city-worship",
+      reason: "support ticket SUP-100 pre-maintenance backup",
+      outputDir: join(tempDir, "out"),
+      manifestPath: provisioned.manifestPath,
+      beforeRef: provisioned.manifestPath,
+      now: new Date("2026-06-04T12:10:00.000Z")
+    });
+
+    expect(inspect.auditRecord).toMatchObject({
+      recordVersion: "cadentia.operator-audit.v1",
+      activityType: "operator-support",
+      action: "inspect",
+      operator: { id: "ops@example.org", credentialId: "cred-2026-06-04T12" },
+      target: { instanceId: "river-city-worship", environment: "staging" },
+      dataPolicy: {
+        secretValuesLogged: false,
+        privateLyricsLogged: false,
+        sensitivePersonalDataLogged: false,
+        normalChurchUserRoleAllowed: false,
+        localApprovalBypassAllowed: false
+      }
+    });
+    expect(backup.auditRecord.previousRecordHash).toBe(inspect.auditRecord.recordHash);
+    expect(backup.auditRecord.references.beforeHash).toMatch(/^sha256:/);
+    expect(readFileSync(backup.auditLogPath, "utf8")).not.toMatch(/password\s*=/i);
+
+    const queried = queryOperatorAuditRecords({
+      auditLogPath: backup.auditLogPath,
+      operatorId: "ops@example.org",
+      instanceId: "river-city-worship",
+      action: "backup",
+      from: "2026-06-04T12:00:00.000Z",
+      to: "2026-06-04T12:30:00.000Z"
+    });
+    expect(queried).toHaveLength(1);
+    expect(queried[0].operationId).toBe(backup.auditRecord.operationId);
+  });
+
+  it("rejects normal church roles, missing scopes, expired credentials, and mismatched target manifests", async () => {
+    const tempDir = mkdtempSync(join(tmpdir(), "cadentia-operator-admin-"));
+    tempDirs.push(tempDir);
+    const provisioned = await provisionCadentiaInstance({
+      packagePath,
+      outputDir: join(tempDir, "out"),
+      stateDir: join(tempDir, "state"),
+      applicationVersion: "0.1.0",
+      operatorId: "provisioner@example.org"
+    });
+    const { runOperatorAdminAction } = await import("../src/index.js");
+    const baseCredential = {
+      credentialVersion: "cadentia.operator-credential.v1",
+      credentialId: "cred-test",
+      operatorId: "ops@example.org",
+      role: "cadentia-operator",
+      issuedAt: "2026-06-04T11:00:00.000Z",
+      expiresAt: "2026-06-04T15:00:00.000Z",
+      scopes: ["operator.instances.inspect"],
+      allowedInstanceIds: ["river-city-worship"],
+      issuer: "security@example.org"
+    };
+    const credentialPath = join(tempDir, "credential.json");
+    const writeCredential = (credential: Record<string, unknown>) => writeFileSync(credentialPath, JSON.stringify(credential, null, 2));
+
+    writeCredential({ ...baseCredential, role: "role.admin" });
+    await expect(runOperatorAdminAction({
+      action: "inspect",
+      credentialPath,
+      targetInstanceId: "river-city-worship",
+      reason: "support ticket SUP-200 role rejection",
+      outputDir: join(tempDir, "out"),
+      manifestPath: provisioned.manifestPath,
+      now: new Date("2026-06-04T12:05:00.000Z")
+    })).rejects.toThrow("Normal church user roles");
+
+    writeCredential({ ...baseCredential, expiresAt: "2026-06-04T12:00:00.000Z" });
+    await expect(runOperatorAdminAction({
+      action: "inspect",
+      credentialPath,
+      targetInstanceId: "river-city-worship",
+      reason: "support ticket SUP-200 expired credential",
+      outputDir: join(tempDir, "out"),
+      manifestPath: provisioned.manifestPath,
+      now: new Date("2026-06-04T12:05:00.000Z")
+    })).rejects.toThrow("not valid");
+
+    writeCredential(baseCredential);
+    await expect(runOperatorAdminAction({
+      action: "backup",
+      credentialPath,
+      targetInstanceId: "river-city-worship",
+      reason: "support ticket SUP-200 missing scope",
+      outputDir: join(tempDir, "out"),
+      manifestPath: provisioned.manifestPath,
+      now: new Date("2026-06-04T12:05:00.000Z")
+    })).rejects.toThrow("missing required scope operator.instances.backup");
+
+    await expect(runOperatorAdminAction({
+      action: "inspect",
+      credentialPath,
+      targetInstanceId: "other-church",
+      reason: "support ticket SUP-200 target mismatch",
+      outputDir: join(tempDir, "out"),
+      manifestPath: provisioned.manifestPath,
+      now: new Date("2026-06-04T12:05:00.000Z")
+    })).rejects.toThrow("not scoped to target instance other-church");
   });
 });

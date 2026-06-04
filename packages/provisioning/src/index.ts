@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, writeFileSync } from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, readFileSync, readdirSync, renameSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 
 import {
@@ -90,6 +90,113 @@ export type LifecycleWorkflowPlan = {
     integrations: "disabled-or-overridden";
     provenance: string;
   };
+};
+
+export type OperatorAdminAction = "list" | "inspect" | "upgrade" | "backup" | "restore" | "export" | "clone";
+export type OperatorAuditAction = OperatorAdminAction | "query-audit";
+
+export type OperatorScope =
+  | "operator.instances.list"
+  | "operator.instances.inspect"
+  | "operator.instances.upgrade"
+  | "operator.instances.backup"
+  | "operator.instances.restore"
+  | "operator.instances.export"
+  | "operator.instances.clone"
+  | "operator.audit.query";
+
+export type OperatorCredential = {
+  credentialVersion: "cadentia.operator-credential.v1";
+  credentialId: string;
+  operatorId: string;
+  role: "cadentia-operator" | "cadentia-break-glass-operator";
+  issuedAt: string;
+  expiresAt: string;
+  scopes: OperatorScope[];
+  allowedInstanceIds: string[];
+  issuer: string;
+  publicKeyRef?: string;
+  breakGlass?: {
+    incidentId: string;
+    approvedBy: string;
+  };
+};
+
+export type OperatorAdminOptions = {
+  action: OperatorAdminAction;
+  credentialPath: string;
+  targetInstanceId: string;
+  reason: string;
+  outputDir: string;
+  manifestPath?: string;
+  packagePath?: string;
+  beforeRef?: string;
+  afterRef?: string;
+  lifecyclePlanPath?: string;
+  now?: Date;
+};
+
+export type OperatorAuditQuery = {
+  auditLogPath: string;
+  operatorId?: string;
+  instanceId?: string;
+  action?: OperatorAuditAction;
+  from?: string;
+  to?: string;
+};
+
+export type OperatorAuditRecord = {
+  recordVersion: "cadentia.operator-audit.v1";
+  activityType: "operator-support";
+  action: OperatorAuditAction;
+  operationId: string;
+  operator: {
+    id: string;
+    credentialId: string;
+    credentialRole: OperatorCredential["role"];
+    credentialScopes: OperatorScope[];
+  };
+  target: {
+    instanceId: string;
+    environment?: string;
+    manifestPath?: string;
+    manifestDigest?: string;
+  };
+  reason: string;
+  occurredAt: string;
+  references: {
+    beforeRef?: string;
+    beforeHash?: string;
+    afterRef?: string;
+    afterHash?: string;
+    lifecyclePlanPath?: string;
+    lifecyclePlanDigest?: string;
+  };
+  dataPolicy: {
+    secretValuesLogged: false;
+    privateLyricsLogged: false;
+    sensitivePersonalDataLogged: false;
+    normalChurchUserRoleAllowed: false;
+    localApprovalBypassAllowed: false;
+  };
+  queryKeys: {
+    operatorId: string;
+    instanceId: string;
+    action: OperatorAuditAction;
+    occurredAt: string;
+  };
+  previousRecordHash: string | null;
+  recordHash: string;
+};
+
+export type OperatorAdminResult = {
+  ok: true;
+  action: OperatorAdminAction;
+  targetInstanceId: string;
+  operatorId: string;
+  auditLogPath: string;
+  auditRecord: OperatorAuditRecord;
+  summary: Record<string, unknown>;
 };
 
 
@@ -395,6 +502,260 @@ function writeTextAtomic(path: string, text: string): void {
   const temporaryPath = `${path}.${process.pid}.tmp`;
   writeFileSync(temporaryPath, text, "utf8");
   renameSync(temporaryPath, path);
+}
+
+export async function runOperatorAdminAction(options: OperatorAdminOptions): Promise<OperatorAdminResult> {
+  const credential = readOperatorCredential(options.credentialPath);
+  const occurredAt = (options.now ?? new Date()).toISOString();
+  validateOperatorCredential(credential, options.action, options.targetInstanceId, occurredAt, options.reason);
+  if (!options.manifestPath && !options.beforeRef && !options.afterRef && !options.lifecyclePlanPath) {
+    throw new Error("Operator action requires a manifest, lifecycle plan, or before/after reference");
+  }
+  const manifestInfo = options.manifestPath ? readManifestSummary(options.manifestPath, options.targetInstanceId) : undefined;
+  const targetEnvironment = manifestInfo?.environment;
+  const auditLogPath = resolve(options.outputDir, "operator-audit", "operator-audit.jsonl");
+  const references = readOperatorReferences(options.beforeRef, options.afterRef, options.lifecyclePlanPath);
+  const operationId = `${options.action}-${options.targetInstanceId}-${sha256(`${occurredAt}:${credential.credentialId}:${options.reason}`).slice(7, 19)}`;
+  const previousRecordHash = lastOperatorAuditHash(auditLogPath);
+  const unsignedRecord = {
+    recordVersion: "cadentia.operator-audit.v1" as const,
+    activityType: "operator-support" as const,
+    action: options.action,
+    operationId,
+    operator: {
+      id: credential.operatorId,
+      credentialId: credential.credentialId,
+      credentialRole: credential.role,
+      credentialScopes: credential.scopes
+    },
+    target: {
+      instanceId: options.targetInstanceId,
+      environment: targetEnvironment,
+      manifestPath: options.manifestPath ? resolve(options.manifestPath) : undefined,
+      manifestDigest: manifestInfo?.digest
+    },
+    reason: options.reason,
+    occurredAt,
+    references,
+    dataPolicy: {
+      secretValuesLogged: false as const,
+      privateLyricsLogged: false as const,
+      sensitivePersonalDataLogged: false as const,
+      normalChurchUserRoleAllowed: false as const,
+      localApprovalBypassAllowed: false as const
+    },
+    queryKeys: {
+      operatorId: credential.operatorId,
+      instanceId: options.targetInstanceId,
+      action: options.action,
+      occurredAt
+    },
+    previousRecordHash
+  };
+  const recordHash = sha256(stableJson(unsignedRecord));
+  const auditRecord: OperatorAuditRecord = { ...unsignedRecord, recordHash };
+  rejectSensitiveOperatorAuditRecord(auditRecord);
+  appendOperatorAuditRecord(auditLogPath, auditRecord);
+  return {
+    ok: true,
+    action: options.action,
+    targetInstanceId: options.targetInstanceId,
+    operatorId: credential.operatorId,
+    auditLogPath,
+    auditRecord,
+    summary: operatorSummary(options.action, manifestInfo, references)
+  };
+}
+
+export function queryOperatorAuditRecords(query: OperatorAuditQuery): OperatorAuditRecord[] {
+  const auditLogPath = resolve(query.auditLogPath);
+  if (!existsSync(auditLogPath)) {
+    return [];
+  }
+  const from = query.from ? Date.parse(query.from) : Number.NEGATIVE_INFINITY;
+  const to = query.to ? Date.parse(query.to) : Number.POSITIVE_INFINITY;
+  return readFileSync(auditLogPath, "utf8")
+    .split("\n")
+    .filter((line) => line.trim().length > 0)
+    .map((line) => JSON.parse(line) as OperatorAuditRecord)
+    .filter((record) => !query.operatorId || record.queryKeys.operatorId === query.operatorId)
+    .filter((record) => !query.instanceId || record.queryKeys.instanceId === query.instanceId)
+    .filter((record) => !query.action || record.queryKeys.action === query.action)
+    .filter((record) => {
+      const occurred = Date.parse(record.queryKeys.occurredAt);
+      return occurred >= from && occurred <= to;
+    });
+}
+
+export function authorizeOperatorAuditQuery(credentialPath: string, instanceId?: string, now: Date = new Date()): { operatorId: string; credentialId: string } {
+  const credential = readOperatorCredential(credentialPath);
+  const normalChurchRoles = new Set(["role.worship_leader", "role.catalog_editor", "role.doctrinal_reviewer", "role.musical_reviewer", "role.admin"]);
+  if (normalChurchRoles.has(credential.role)) {
+    throw new Error("Normal church user roles cannot authorize operator audit queries");
+  }
+  if (credential.role !== "cadentia-operator" && credential.role !== "cadentia-break-glass-operator") {
+    throw new Error(`Unsupported operator credential role: ${credential.role}`);
+  }
+  const occurredAt = now.toISOString();
+  const timestamp = Date.parse(occurredAt);
+  if (Date.parse(credential.issuedAt) > timestamp || Date.parse(credential.expiresAt) <= timestamp) {
+    throw new Error("Operator credential is not valid at the audit query timestamp");
+  }
+  if (!credential.scopes.includes("operator.audit.query")) {
+    throw new Error("Operator credential is missing required scope operator.audit.query");
+  }
+  if (instanceId && !credential.allowedInstanceIds.includes(instanceId) && !credential.allowedInstanceIds.includes("*")) {
+    throw new Error(`Operator credential is not scoped to audit query instance ${instanceId}`);
+  }
+  if (credential.role === "cadentia-break-glass-operator" && (!credential.breakGlass?.incidentId || !credential.breakGlass.approvedBy)) {
+    throw new Error("Break-glass operator credentials require incident id and approver");
+  }
+  return { operatorId: credential.operatorId, credentialId: credential.credentialId };
+}
+
+function readOperatorCredential(path: string): OperatorCredential {
+  const credential = JSON.parse(readFileSync(resolve(path), "utf8")) as OperatorCredential;
+  if (credential.credentialVersion !== "cadentia.operator-credential.v1") {
+    throw new Error("Operator credential must use cadentia.operator-credential.v1");
+  }
+  return credential;
+}
+
+function validateOperatorCredential(
+  credential: OperatorCredential,
+  action: OperatorAdminAction,
+  targetInstanceId: string,
+  occurredAt: string,
+  reason: string
+): void {
+  const normalChurchRoles = new Set(["role.worship_leader", "role.catalog_editor", "role.doctrinal_reviewer", "role.musical_reviewer", "role.admin"]);
+  if (normalChurchRoles.has(credential.role)) {
+    throw new Error("Normal church user roles cannot authorize operator administration");
+  }
+  if (credential.role !== "cadentia-operator" && credential.role !== "cadentia-break-glass-operator") {
+    throw new Error(`Unsupported operator credential role: ${credential.role}`);
+  }
+  if (!credential.operatorId || !credential.credentialId) {
+    throw new Error("Operator credential requires operator identity and credential id");
+  }
+  if (!targetInstanceId || targetInstanceId.trim().length === 0) {
+    throw new Error("Operator action requires explicit target instance selection");
+  }
+  if (!reason || reason.trim().length < 12) {
+    throw new Error("Operator action requires a non-empty reason of at least 12 characters");
+  }
+  const now = Date.parse(occurredAt);
+  if (Date.parse(credential.issuedAt) > now || Date.parse(credential.expiresAt) <= now) {
+    throw new Error("Operator credential is not valid at the action timestamp");
+  }
+  const requiredScope = scopeForAction(action);
+  if (!credential.scopes.includes(requiredScope)) {
+    throw new Error(`Operator credential is missing required scope ${requiredScope}`);
+  }
+  if (!credential.allowedInstanceIds.includes(targetInstanceId) && !credential.allowedInstanceIds.includes("*")) {
+    throw new Error(`Operator credential is not scoped to target instance ${targetInstanceId}`);
+  }
+  if (credential.role === "cadentia-break-glass-operator" && (!credential.breakGlass?.incidentId || !credential.breakGlass.approvedBy)) {
+    throw new Error("Break-glass operator credentials require incident id and approver");
+  }
+}
+
+function scopeForAction(action: OperatorAdminAction): OperatorScope {
+  const scopes: Record<OperatorAdminAction, OperatorScope> = {
+    list: "operator.instances.list",
+    inspect: "operator.instances.inspect",
+    upgrade: "operator.instances.upgrade",
+    backup: "operator.instances.backup",
+    restore: "operator.instances.restore",
+    export: "operator.instances.export",
+    clone: "operator.instances.clone"
+  };
+  return scopes[action];
+}
+
+function readManifestSummary(manifestPath: string, targetInstanceId: string): { digest: string; environment: string; packageVersion: string; applicationVersion: string } {
+  const resolved = resolve(manifestPath);
+  const rawManifest = readFileSync(resolved, "utf8");
+  rejectPlaintextCredentialText(rawManifest, "operator manifest input");
+  const manifest = JSON.parse(rawManifest) as ProvisioningManifest;
+  if (manifest.instanceId !== targetInstanceId) {
+    throw new Error(`Manifest instance ${manifest.instanceId} does not match explicit target ${targetInstanceId}`);
+  }
+  return {
+    digest: sha256(rawManifest),
+    environment: manifest.environment,
+    packageVersion: manifest.packageVersion,
+    applicationVersion: manifest.applicationVersion
+  };
+}
+
+function readOperatorReferences(beforeRef?: string, afterRef?: string, lifecyclePlanPath?: string): OperatorAuditRecord["references"] {
+  return {
+    beforeRef,
+    beforeHash: beforeRef && existsSync(resolve(beforeRef)) ? sha256(readFileSync(resolve(beforeRef), "utf8")) : undefined,
+    afterRef,
+    afterHash: afterRef && existsSync(resolve(afterRef)) ? sha256(readFileSync(resolve(afterRef), "utf8")) : undefined,
+    lifecyclePlanPath: lifecyclePlanPath ? resolve(lifecyclePlanPath) : undefined,
+    lifecyclePlanDigest: lifecyclePlanPath && existsSync(resolve(lifecyclePlanPath)) ? sha256(readFileSync(resolve(lifecyclePlanPath), "utf8")) : undefined
+  };
+}
+
+function operatorSummary(
+  action: OperatorAdminAction,
+  manifestInfo: { environment: string; packageVersion: string; applicationVersion: string } | undefined,
+  references: OperatorAuditRecord["references"]
+): Record<string, unknown> {
+  return {
+    operatorToolOnly: true,
+    normalChurchUserRoleAllowed: false,
+    action,
+    manifest: manifestInfo,
+    references,
+    catalogApprovalBypassAllowed: false
+  };
+}
+
+function appendOperatorAuditRecord(auditLogPath: string, record: OperatorAuditRecord): void {
+  mkdirSync(dirname(auditLogPath), { recursive: true });
+  appendFileSync(auditLogPath, `${JSON.stringify(record)}\n`, "utf8");
+}
+
+function lastOperatorAuditHash(auditLogPath: string): string | null {
+  if (!existsSync(auditLogPath)) {
+    return null;
+  }
+  const lines = readFileSync(auditLogPath, "utf8").split("\n").filter((line) => line.trim().length > 0);
+  if (lines.length === 0) {
+    return null;
+  }
+  return (JSON.parse(lines.at(-1) ?? "{}") as Partial<OperatorAuditRecord>).recordHash ?? null;
+}
+
+function rejectSensitiveOperatorAuditRecord(record: OperatorAuditRecord): void {
+  rejectPlaintextCredentialText(JSON.stringify(record), "operator audit record");
+}
+
+function rejectPlaintextCredentialText(text: string, label: string): void {
+  const redFlags = [/password\s*=/i, /authorization\s*[:=]/i, /api[_-]?key\s*[:=]/i, /token\s*[:=]\s*[A-Za-z0-9_-]{16,}/i, /secret\s*[:=]\s*[A-Za-z0-9_-]{16,}/i, /jdbc:postgresql:\/\/[^\n]+:[^\n@]+@/i];
+  for (const redFlag of redFlags) {
+    if (redFlag.test(text)) {
+      throw new Error(`${label} appears to contain sensitive credential material matching ${redFlag}`);
+    }
+  }
+}
+
+function stableJson(value: unknown): string {
+  if (Array.isArray(value)) {
+    return `[${value.map(stableJson).join(",")}]`;
+  }
+  if (value && typeof value === "object") {
+    return `{${Object.entries(value as Record<string, unknown>)
+      .filter(([, entryValue]) => entryValue !== undefined)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([key, entryValue]) => `${JSON.stringify(key)}:${stableJson(entryValue)}`)
+      .join(",")}}`;
+  }
+  return JSON.stringify(value);
 }
 
 export async function createLifecycleWorkflowPlan(options: LifecycleWorkflowOptions): Promise<{ plan: LifecycleWorkflowPlan; planPath: string }> {

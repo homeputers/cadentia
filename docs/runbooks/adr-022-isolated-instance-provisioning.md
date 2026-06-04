@@ -484,3 +484,131 @@ Failure triage:
 
 Retention: retain staging clones for the approved test window, normally no more
 than 30 days, then destroy or refresh from a new backup.
+
+## Operator-only cross-instance administration
+
+Cross-instance administration is not part of the normal church admin UI or API.
+Operators must use the explicit `cadentia-operator-admin` CLI after the
+provisioning package has been built. The tool records support/operations audit
+evidence separately from church-local user audit events and refuses normal church
+RBAC roles such as worship leader, catalog editor, reviewer, or church admin.
+
+### Credential issuance and scope
+
+Security issues short-lived JSON credentials with this shape:
+
+```json
+{
+  "credentialVersion": "cadentia.operator-credential.v1",
+  "credentialId": "cred-2026-06-04T12",
+  "operatorId": "ops@example.org",
+  "role": "cadentia-operator",
+  "issuedAt": "2026-06-04T11:00:00.000Z",
+  "expiresAt": "2026-06-04T15:00:00.000Z",
+  "scopes": ["operator.instances.inspect", "operator.instances.backup"],
+  "allowedInstanceIds": ["river-city-worship"],
+  "issuer": "security@example.org",
+  "publicKeyRef": "kms:/cadentia/operators/ops@example.org/2026-06-04"
+}
+```
+
+Rules:
+
+- Prefer one credential per ticket, scoped to the specific instance and action.
+- Set expirations in hours, not days. Do not issue broad, long-lived credentials
+  when action-scoped and instance-scoped credentials are possible.
+- Use `allowedInstanceIds` for explicit targets. A wildcard is reserved for
+  incident response leadership and must be documented in the incident record.
+- Store credential material outside the repository; do not commit credentials,
+  secret values, tokens, database URLs, private lyrics, or personal data.
+- Rotate issuer signing keys and operator KMS/public-key references on the
+  security calendar and immediately after any suspected disclosure.
+
+### Required operator command pattern
+
+Every operator action requires the credential, explicit target instance, reason,
+and (where applicable) manifest and lifecycle evidence:
+
+```bash
+npm run build --workspace @cadentia/provisioning
+node packages/provisioning/bin/operator-admin.mjs \
+  --action=<list|inspect|upgrade|backup|restore|export|clone> \
+  --credential=/secure/operator-credentials/<credential-id>.json \
+  --target-instance=<instance-id> \
+  --manifest=deployment/provisioned/manifests/<instance>.<environment>.provisioning-manifest.json \
+  --lifecycle-plan=deployment/provisioned/lifecycle/<operation-id>.json \
+  --output-dir=deployment/provisioned \
+  --reason="ticket or incident reason"
+```
+
+The CLI writes JSONL records to
+`deployment/provisioned/operator-audit/operator-audit.jsonl`. Each record has
+`activityType=operator-support`, the operator identity, credential ID, explicit
+instance target, reason, timestamp, manifest digest, before/after or lifecycle
+references, and a hash chain (`previousRecordHash` and `recordHash`) to make
+removal or reordering evident.
+
+The `list` action is intentionally operator-only. It is used to confirm a scoped
+instance from provisioning manifests, not to expose an application API that normal
+church users can call to enumerate other churches.
+
+### Audit queries
+
+Operator audit can be queried by operator, instance, action, and time window with an operator credential that includes `operator.audit.query`:
+
+```bash
+node packages/provisioning/bin/operator-admin.mjs \
+  --action=query-audit \
+  --credential=/secure/operator-credentials/<credential-id>.json \
+  --audit-log=deployment/provisioned/operator-audit/operator-audit.jsonl \
+  --operator=ops@example.org \
+  --target-instance=<instance-id> \
+  --filter-action=backup \
+  --from=2026-06-04T00:00:00.000Z \
+  --to=2026-06-05T00:00:00.000Z
+```
+
+Attach the query output to support tickets, change requests, incident records,
+and church-requested export/restore evidence as appropriate.
+
+### Break-glass procedure
+
+Break-glass credentials must use `role=cadentia-break-glass-operator` and include
+`breakGlass.incidentId` plus `breakGlass.approvedBy`. They are only valid for a
+live incident where normal scoped issuance would delay containment or recovery.
+After use:
+
+1. Preserve the operator audit log and lifecycle plans.
+2. Rotate affected operator credentials and any infrastructure credentials that
+   may have been exposed.
+3. Review every record for the incident time window by operator, instance, and
+   action.
+4. Notify church stakeholders according to the incident severity and contract.
+5. File a post-incident review explaining why break-glass was needed and what
+   follow-up controls will prevent unnecessary future use.
+
+### Incident response and failure handling
+
+If operator tooling fails authorization, scope checks, manifest identity checks,
+secret-redaction checks, or audit writes, stop before touching infrastructure.
+Do not retry with normal church user credentials and do not move the operation
+into the church admin UI. Preserve command output, revoke or rotate the failing
+credential if compromise is possible, and escalate to security for triage.
+
+Operator records must not log secret values, private lyrics, or sensitive
+personal data. Operator catalog changes cannot mark shared or starter catalog
+items recommendable; seeded content still has to pass the target instance's local
+approval and governance workflow.
+
+### Guardrail checks
+
+Run the normal-path isolation check before release:
+
+```bash
+npm run check:adr-022-operator-admin-guardrails
+```
+
+The check verifies that normal application controllers and normal RBAC authority
+constants do not expose operator administration roles, scopes, or cross-instance
+operator APIs, and that the operator CLI requires explicit credentials, target
+instance, reason capture, query support, and hash-chained audit records.
