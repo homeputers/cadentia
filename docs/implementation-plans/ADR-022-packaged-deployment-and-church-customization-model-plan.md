@@ -13,7 +13,7 @@ without relying on shared runtime tenant filters for recommendation eligibility.
 - Subtask 2: Planned
 - Subtask 3: Planned
 - Subtask 4: Planned
-- Subtask 5: Planned
+- Subtask 5: Complete - lifecycle planner, verification tooling, tests, and runbook workflows cover upgrade, backup, restore, export, and staging clone operations.
 - Subtask 6: Planned
 - Subtask 7: Planned
 - Subtask 8: Planned
@@ -285,6 +285,35 @@ audit evidence, and provide deterministic verification commands after completion
 - Do not perform migrations without a validated backup and compatibility check.
 - Do not treat shared starter catalog packages as live eligibility sources after
   restore, export, or clone operations.
+
+### Implementation notes
+
+Implemented in this subtask:
+
+- Lifecycle workflow planner exported by `@cadentia/provisioning` and exposed as
+  `packages/provisioning/bin/plan-instance-lifecycle.mjs`. It accepts a reviewed
+  church package and provisioning manifest for upgrade, backup, restore, export,
+  and staging-clone workflows.
+- Lifecycle verification command
+  `packages/provisioning/bin/verify-lifecycle-workflow.mjs` checks compatibility
+  status, audit evidence, instance-scoped resource policy, secret redaction,
+  export isolation policy, and staging-clone safety policy.
+- Upgrade and restore planning require a backup manifest before any migration or
+  restore steps are emitted. Upgrade plans capture manifest/application package
+  versions plus current and target Flyway migration files.
+- Backup plans enumerate database, object-storage namespace, church package,
+  provisioning manifest, API env template, and non-secret secret-reference
+  inventory as rebuild inputs.
+- Export plans explicitly mark church-owned-data-only scope and exclude operator
+  secrets and other instances. Staging clone plans reject production targets,
+  record source manifest provenance, require disabled or overridden integrations,
+  and state that production secrets are not copied.
+- Tests in `packages/provisioning/test/provisioning.test.ts` cover lifecycle
+  planning, required backup validation before upgrades, export redaction policy,
+  and staging clone provenance/safety rules.
+- Operational steps, verification commands, rollback guidance, retention
+  expectations, and failure triage are documented in
+  `docs/runbooks/adr-022-isolated-instance-provisioning.md`.
 
 ## Subtask 6: Create explicit cross-instance operator administration and audit tooling
 

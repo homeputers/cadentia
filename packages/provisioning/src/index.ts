@@ -10,6 +10,88 @@ import {
 
 export type DeploymentMode = "self-hosted" | "private-cloud" | "managed-single-tenant" | "church-managed";
 export type ProvisioningAction = "provision" | "upgrade" | "reconcile" | "rollback";
+export type LifecycleWorkflowType = "upgrade" | "backup" | "restore" | "export" | "staging-clone";
+
+export type LifecycleWorkflowOptions = {
+  workflow: LifecycleWorkflowType;
+  packagePath: string;
+  manifestPath: string;
+  outputDir: string;
+  applicationVersion?: string;
+  operatorId: string;
+  reason: string;
+  backupManifestPath?: string;
+  restoreBackupPath?: string;
+  sourceManifestPath?: string;
+  now?: Date;
+};
+
+export type LifecycleWorkflowPlan = {
+  workflowVersion: "cadentia.lifecycle.v1";
+  workflow: LifecycleWorkflowType;
+  instanceId: string;
+  environment: string;
+  operator: {
+    id: string;
+    reason: string;
+    plannedAt: string;
+  };
+  inputs: {
+    packagePath: string;
+    packageDigest: string;
+    provisioningManifestPath: string;
+    provisioningManifestDigest: string;
+    backupManifestPath?: string;
+    backupManifestDigest?: string;
+    restoreBackupPath?: string;
+    sourceManifestPath?: string;
+    sourceManifestDigest?: string;
+  };
+  compatibility: {
+    status: "validated";
+    applicationVersion: string;
+    packageSchemaVersion: string;
+    packageVersion: string;
+    manifestPackageVersion: string;
+    manifestApplicationVersion: string;
+    currentSchemaMigration: string | null;
+    targetSchemaMigration: string | null;
+    backupValidated: boolean;
+  };
+  auditEvidence: {
+    operationId: string;
+    evidencePath: string;
+    records: string[];
+  };
+  resourceScope: {
+    database: string;
+    objectStorage: string;
+    objectStorageNamespace: string;
+    cacheNamespace: string;
+    eventNamespace: string;
+    secretReferencesOnly: true;
+    crossInstanceNormalUserReadsAllowed: false;
+    starterCatalogEligibility: "instance-local-approval-required";
+  };
+  steps: string[];
+  verificationCommands: string[];
+  rollbackSteps: string[];
+  retention: string;
+  failureTriage: string[];
+  exportPolicy?: {
+    churchOwnedDataOnly: true;
+    excludesOperatorSecrets: true;
+    excludesOtherInstances: true;
+  };
+  clonePolicy?: {
+    sourceInstanceId: string;
+    sourceEnvironment: string;
+    productionSecretsCopied: false;
+    integrations: "disabled-or-overridden";
+    provenance: string;
+  };
+};
+
 
 export type ProvisioningOptions = {
   packagePath: string;
@@ -271,8 +353,12 @@ function renderApiEnv(manifest: ProvisioningManifest): string {
 }
 
 function findLatestKnownMigration(): string | null {
-  const migrationDir = resolve("apps/api/src/main/resources/db/migration");
-  if (!existsSync(migrationDir)) {
+  const candidateDirs = [
+    resolve("apps/api/src/main/resources/db/migration"),
+    resolve("../../apps/api/src/main/resources/db/migration")
+  ];
+  const migrationDir = candidateDirs.find((candidate) => existsSync(candidate));
+  if (!migrationDir) {
     return null;
   }
   const migrations = readdirSync(migrationDir)
@@ -309,4 +395,239 @@ function writeTextAtomic(path: string, text: string): void {
   const temporaryPath = `${path}.${process.pid}.tmp`;
   writeFileSync(temporaryPath, text, "utf8");
   renameSync(temporaryPath, path);
+}
+
+export async function createLifecycleWorkflowPlan(options: LifecycleWorkflowOptions): Promise<{ plan: LifecycleWorkflowPlan; planPath: string }> {
+  const supportedWorkflows: LifecycleWorkflowType[] = ["upgrade", "backup", "restore", "export", "staging-clone"];
+  if (!supportedWorkflows.includes(options.workflow)) {
+    throw new Error(`Unsupported lifecycle workflow: ${options.workflow}`);
+  }
+  if (options.reason.trim().length === 0) {
+    throw new Error("Lifecycle workflow requires an operator reason");
+  }
+  const applicationVersion = options.applicationVersion ?? DEFAULT_CHURCH_CONFIG_APP_VERSION;
+  const packagePath = resolve(options.packagePath);
+  const rawPackage = readFileSync(packagePath, "utf8");
+  const validationResult = validateChurchConfigPackage(JSON.parse(rawPackage) as unknown, applicationVersion as typeof DEFAULT_CHURCH_CONFIG_APP_VERSION);
+  if (!validationResult.ok) {
+    throw new Error(`Church configuration package failed validation: ${validationResult.errors.map((error) => `${error.path} ${error.message}`).join("; ")}`);
+  }
+
+  const churchPackage = validationResult.package;
+  const manifestPath = resolve(options.manifestPath);
+  const rawManifest = readFileSync(manifestPath, "utf8");
+  const manifest = JSON.parse(rawManifest) as ProvisioningManifest;
+  validateManifestForPackage(manifest, churchPackage, options.workflow);
+
+  const backup = options.backupManifestPath ? readOptionalInputDigest(options.backupManifestPath) : undefined;
+  if ((options.workflow === "upgrade" || options.workflow === "restore" || options.workflow === "staging-clone") && !backup) {
+    throw new Error(`${options.workflow} workflow requires --backup-manifest before changes are planned`);
+  }
+  if (options.workflow === "restore" && !options.restoreBackupPath) {
+    throw new Error("restore workflow requires --restore-backup=<backup artifact URI or path>");
+  }
+  const source = options.sourceManifestPath ? readOptionalInputDigest(options.sourceManifestPath) : undefined;
+  if (options.workflow === "staging-clone") {
+    if (!source) {
+      throw new Error("staging-clone workflow requires --source-manifest=<production manifest>");
+    }
+    if (churchPackage.instance.environment === "production") {
+      throw new Error("staging-clone target package must be non-production");
+    }
+  }
+
+  const plannedAt = (options.now ?? new Date()).toISOString();
+  const operationId = `${options.workflow}-${churchPackage.instance.instanceId}-${churchPackage.instance.environment}-${sha256(`${plannedAt}:${options.operatorId}:${options.reason}`).slice(7, 19)}`;
+  const evidencePath = resolve(options.outputDir, "lifecycle", `${operationId}.json`);
+  const plan: LifecycleWorkflowPlan = {
+    workflowVersion: "cadentia.lifecycle.v1",
+    workflow: options.workflow,
+    instanceId: churchPackage.instance.instanceId,
+    environment: churchPackage.instance.environment,
+    operator: {
+      id: options.operatorId,
+      reason: options.reason,
+      plannedAt
+    },
+    inputs: {
+      packagePath,
+      packageDigest: sha256(rawPackage),
+      provisioningManifestPath: manifestPath,
+      provisioningManifestDigest: sha256(rawManifest),
+      backupManifestPath: backup?.path,
+      backupManifestDigest: backup?.digest,
+      restoreBackupPath: options.restoreBackupPath,
+      sourceManifestPath: source?.path,
+      sourceManifestDigest: source?.digest
+    },
+    compatibility: {
+      status: "validated",
+      applicationVersion,
+      packageSchemaVersion: churchPackage.package.schemaVersion,
+      packageVersion: churchPackage.package.packageVersion,
+      manifestPackageVersion: manifest.packageVersion,
+      manifestApplicationVersion: manifest.applicationVersion,
+      currentSchemaMigration: manifest.migrationState.latestKnownMigration,
+      targetSchemaMigration: findLatestKnownMigration(),
+      backupValidated: Boolean(backup)
+    },
+    auditEvidence: {
+      operationId,
+      evidencePath,
+      records: auditRecordsFor(options.workflow)
+    },
+    resourceScope: {
+      database: manifest.resources.database.identifier,
+      objectStorage: manifest.resources.objectStorage.identifier,
+      objectStorageNamespace: manifest.resources.objectStorage.namespacePrefix,
+      cacheNamespace: manifest.resources.cache.namespace,
+      eventNamespace: manifest.resources.eventStreams.namespace,
+      secretReferencesOnly: true,
+      crossInstanceNormalUserReadsAllowed: false,
+      starterCatalogEligibility: "instance-local-approval-required"
+    },
+    steps: stepsFor(options.workflow),
+    verificationCommands: verificationCommandsFor(options.workflow, evidencePath, manifestPath),
+    rollbackSteps: rollbackStepsFor(options.workflow),
+    retention: retentionFor(options.workflow),
+    failureTriage: failureTriageFor(options.workflow),
+    exportPolicy: options.workflow === "export" ? {
+      churchOwnedDataOnly: true,
+      excludesOperatorSecrets: true,
+      excludesOtherInstances: true
+    } : undefined,
+    clonePolicy: options.workflow === "staging-clone" && source ? {
+      sourceInstanceId: readProvisioningManifest(source.path).instanceId,
+      sourceEnvironment: readProvisioningManifest(source.path).environment,
+      productionSecretsCopied: false,
+      integrations: "disabled-or-overridden",
+      provenance: `cloned-from:${source.digest}`
+    } : undefined
+  };
+  rejectPlaintextSecretMaterial(JSON.stringify(plan), "lifecycle workflow plan");
+  writeJsonAtomic(evidencePath, plan);
+  return { plan, planPath: evidencePath };
+}
+
+function validateManifestForPackage(manifest: ProvisioningManifest, churchPackage: ChurchConfigPackage, workflow: LifecycleWorkflowType): void {
+  if (manifest.manifestVersion !== "cadentia.provisioning.v1") {
+    throw new Error("Provisioning manifest must be cadentia.provisioning.v1");
+  }
+  if (manifest.instanceId !== churchPackage.instance.instanceId) {
+    throw new Error(`Manifest instance ${manifest.instanceId} does not match package instance ${churchPackage.instance.instanceId}`);
+  }
+  if (manifest.environment !== churchPackage.instance.environment) {
+    throw new Error(`Manifest environment ${manifest.environment} does not match package environment ${churchPackage.instance.environment}`);
+  }
+  if (workflow !== "upgrade" && manifest.packageVersion !== churchPackage.package.packageVersion) {
+    throw new Error(`Manifest package version ${manifest.packageVersion} must match package version ${churchPackage.package.packageVersion} for ${workflow}`);
+  }
+}
+
+function readOptionalInputDigest(path: string): { path: string; digest: string } {
+  const resolved = resolve(path);
+  return { path: resolved, digest: sha256(readFileSync(resolved, "utf8")) };
+}
+
+function auditRecordsFor(workflow: LifecycleWorkflowType): string[] {
+  return [
+    "validated church package digest and provisioning manifest digest",
+    "operator identity, reason, and timestamp",
+    `${workflow} step transcript and verification output`,
+    "pre/post package, application, schema, and backup artifact references"
+  ];
+}
+
+function stepsFor(workflow: LifecycleWorkflowType): string[] {
+  const common = [
+    "Validate church package against the target application version.",
+    "Validate provisioning manifest identity, isolated resources, and secret references.",
+    "Write this lifecycle plan to immutable operator audit evidence."
+  ];
+  const byWorkflow: Record<LifecycleWorkflowType, string[]> = {
+    upgrade: [
+      "Verify the referenced backup manifest was completed and restorable for this instance.",
+      "Stop background workers, place the API in maintenance mode, and record pre-migration Flyway state.",
+      "Deploy the target application artifact and package, then allow Spring Flyway to migrate the isolated database only.",
+      "Record post-migration Flyway state, package version, application version, and smoke-check output."
+    ],
+    backup: [
+      "Snapshot the isolated database using the database resource identifier from the manifest.",
+      "Copy object storage assets under the manifest namespace prefix only.",
+      "Archive the church package, provisioning manifest, API env template, and non-secret secret reference inventory.",
+      "Write backup checksums and retention metadata to audit evidence."
+    ],
+    restore: [
+      "Verify the backup artifact checksum and manifest identity before restore.",
+      "Restore database and asset namespace into resources owned by this instance only.",
+      "Restore package, provisioning manifest, API env template, and non-secret reference inventory.",
+      "Start API with resolved environment-specific secrets and verify local approval-gated catalog eligibility."
+    ],
+    export: [
+      "Use operator-scoped export credentials for this instance only, never normal user credentials.",
+      "Export church-owned catalog metadata, arrangements, service plans, approval history, and assets as allowed by policy.",
+      "Exclude operator secrets, secret values, other instances, cache data, and event-stream operational internals.",
+      "Write export checksums and a redaction report."
+    ],
+    "staging-clone": [
+      "Restore production backup into isolated non-production resources for the target manifest only.",
+      "Replace every secret binding with staging-safe references; do not copy production secret values.",
+      "Disable or override outbound integrations, telemetry exports, webhooks, and scheduled jobs for staging.",
+      "Record source manifest digest, backup digest, target package digest, and clone provenance."
+    ]
+  };
+  return [...common, ...byWorkflow[workflow]];
+}
+
+function verificationCommandsFor(workflow: LifecycleWorkflowType, evidencePath: string, manifestPath: string): string[] {
+  return [
+    `node packages/provisioning/bin/verify-lifecycle-workflow.mjs --plan=${evidencePath}`,
+    `node packages/provisioning/bin/smoke-check-instance.mjs --manifest=${manifestPath}`,
+    workflow === "upgrade" ? "flyway info -url=$CADENTIA_DB_URL -table=flyway_schema_history" : "jq '.compatibility.status,.resourceScope.starterCatalogEligibility' < " + evidencePath
+  ];
+}
+
+function rollbackStepsFor(workflow: LifecycleWorkflowType): string[] {
+  const common = ["Keep rollback within the same instance resources; never point at another church instance."];
+  const byWorkflow: Record<LifecycleWorkflowType, string[]> = {
+    upgrade: ["Stop the upgraded API, restore the validated pre-upgrade backup, redeploy the prior package/application artifact, and rerun smoke checks."],
+    backup: ["Delete incomplete backup artifacts, keep prior successful backups, and rerun backup from the unchanged source instance."],
+    restore: ["Stop the restored API, preserve failed restore evidence, and restore from the previous known-good backup or rebuild from provisioning manifest."],
+    export: ["Revoke the export artifact, delete partial files, preserve redaction logs, and rerun export after fixing scope/redaction failures."],
+    "staging-clone": ["Destroy the staging clone resources or restore the prior staging backup; never reconnect staging to production secrets."]
+  };
+  return [...common, ...byWorkflow[workflow]];
+}
+
+function retentionFor(workflow: LifecycleWorkflowType): string {
+  const byWorkflow: Record<LifecycleWorkflowType, string> = {
+    upgrade: "Retain upgrade evidence, pre/post version records, and the pre-upgrade backup per the production backup retention schedule, at least 35 days.",
+    backup: "Retain daily backups for 35 days, monthly backups for 13 months, and annual backups for 7 years unless church policy requires longer.",
+    restore: "Retain restore evidence and source backup checksums for the same period as the restored backup artifact.",
+    export: "Retain export artifacts only for the church-approved delivery window; delete operator working copies within 7 days after acceptance.",
+    "staging-clone": "Retain staging clones for the approved test window, normally no more than 30 days, then destroy or refresh from a new backup."
+  };
+  return byWorkflow[workflow];
+}
+
+function failureTriageFor(workflow: LifecycleWorkflowType): string[] {
+  return [
+    "Stop before making further changes if package validation, manifest identity, backup validation, or secret-redaction checks fail.",
+    "Compare package, manifest, backup, and schema digests recorded in the lifecycle plan.",
+    "Confirm tooling is scoped to one instance resource set and is using operator credentials rather than normal user credentials.",
+    `Follow the ${workflow} rollback steps and attach command output to the operator audit record.`
+  ];
+}
+
+function rejectPlaintextSecretMaterial(text: string, label: string): void {
+  const redFlags = [/password\s*=/i, /token\s*[:=]\s*[A-Za-z0-9_-]{16,}/i, /secret\s*[:=]\s*[A-Za-z0-9_-]{16,}/i, /jdbc:postgresql:\/\/[^\n]+:[^\n@]+@/i];
+  for (const redFlag of redFlags) {
+    if (redFlag.test(text)) {
+      throw new Error(`${label} appears to contain plaintext credential material matching ${redFlag}`);
+    }
+  }
+}
+
+function readProvisioningManifest(path: string): ProvisioningManifest {
+  return JSON.parse(readFileSync(path, "utf8")) as ProvisioningManifest;
 }
