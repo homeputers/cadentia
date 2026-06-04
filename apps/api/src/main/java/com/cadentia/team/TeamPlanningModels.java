@@ -23,7 +23,10 @@ public final class TeamPlanningModels {
         KEYS,
         BASS,
         DRUMS,
-        PERCUSSION
+        PERCUSSION,
+        BRASS,
+        WINDS,
+        OTHER
     }
 
     public enum VocalPartCode {

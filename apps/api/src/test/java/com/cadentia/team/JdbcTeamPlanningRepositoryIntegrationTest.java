@@ -63,6 +63,9 @@ class JdbcTeamPlanningRepositoryIntegrationTest {
                 .extracting("code")
                 .contains("WORSHIP_LEADER", "VOCALIST", "INSTRUMENTALIST", "MUSIC_DIRECTOR");
         assertThat(repository.listInstruments())
+                .extracting("code")
+                .contains("BRASS", "WINDS", "OTHER");
+        assertThat(repository.listInstruments())
                 .filteredOn(entry -> entry.code().equals("ACOUSTIC_GUITAR"))
                 .singleElement()
                 .satisfies(entry -> {
