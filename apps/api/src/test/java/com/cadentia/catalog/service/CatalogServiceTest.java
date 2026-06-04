@@ -7,10 +7,13 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.cadentia.catalog.entity.ApprovalRecord;
 import com.cadentia.catalog.entity.Arrangement;
 import com.cadentia.catalog.entity.LyricsDocument;
 import com.cadentia.catalog.entity.Song;
 import com.cadentia.catalog.entity.Tag;
+import com.cadentia.catalog.model.ApprovalStatus;
+import com.cadentia.catalog.model.ApprovalType;
 import com.cadentia.catalog.model.ArrangementSourceType;
 import com.cadentia.catalog.model.CreateArrangementCommand;
 import com.cadentia.catalog.model.KeyMode;
@@ -35,6 +38,42 @@ class CatalogServiceTest {
 
     @Mock
     private SongRepository songRepository;
+
+    @Test
+    void findApprovedSongRequiresLocalSongApprovalGates() {
+        // Arrange
+        Song song = song();
+        when(songRepository.findById(song.id())).thenReturn(Optional.of(song));
+        when(songRepository.findApprovalRecordsForSong(song.id())).thenReturn(List.of(
+                approvalRecord(song.id(), ApprovalType.DOCTRINAL, ApprovalStatus.APPROVED),
+                approvalRecord(song.id(), ApprovalType.EDITORIAL, ApprovalStatus.APPROVED),
+                approvalRecord(song.id(), ApprovalType.LICENSING, ApprovalStatus.APPROVED)));
+        CatalogService service = new CatalogService(songRepository);
+
+        // Act
+        Optional<Song> result = service.findApprovedSong(song.id());
+
+        // Assert
+        assertThat(result).contains(song);
+    }
+
+    @Test
+    void findApprovedSongExcludesImportedSeedContentUntilLocalApprovalsExist() {
+        // Arrange
+        Song song = song();
+        when(songRepository.findById(song.id())).thenReturn(Optional.of(song));
+        when(songRepository.findApprovalRecordsForSong(song.id())).thenReturn(List.of(
+                approvalRecord(song.id(), ApprovalType.DOCTRINAL, ApprovalStatus.APPROVED),
+                approvalRecord(song.id(), ApprovalType.EDITORIAL, ApprovalStatus.PENDING),
+                approvalRecord(song.id(), ApprovalType.LICENSING, ApprovalStatus.APPROVED)));
+        CatalogService service = new CatalogService(songRepository);
+
+        // Act
+        Optional<Song> result = service.findApprovedSong(song.id());
+
+        // Assert
+        assertThat(result).isEmpty();
+    }
 
     @Test
     void assignTagAddsActiveControlledTagToSong() {
@@ -203,6 +242,20 @@ class CatalogServiceTest {
                 2026,
                 SongStatus.APPROVED,
                 "Fixture doctrinal notes",
+                Instant.parse("2026-05-15T00:00:00Z"),
+                Instant.parse("2026-05-15T00:00:00Z"));
+    }
+
+    private static ApprovalRecord approvalRecord(UUID songId, ApprovalType approvalType, ApprovalStatus status) {
+        return new ApprovalRecord(
+                UUID.randomUUID(),
+                songId,
+                null,
+                null,
+                approvalType,
+                status,
+                "local-reviewer@example.test",
+                "Instance-local approval decision",
                 Instant.parse("2026-05-15T00:00:00Z"),
                 Instant.parse("2026-05-15T00:00:00Z"));
     }
