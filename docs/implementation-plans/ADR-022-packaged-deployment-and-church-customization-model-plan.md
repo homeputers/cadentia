@@ -9,7 +9,7 @@ without relying on shared runtime tenant filters for recommendation eligibility.
 
 ## Status
 
-- Subtask 1: Planned
+- Subtask 1: Complete - canonical v1 package schema, local validator, fixtures, and documentation are implemented.
 - Subtask 2: Planned
 - Subtask 3: Planned
 - Subtask 4: Planned
@@ -69,6 +69,36 @@ before provisioning or application startup.
 - Do not introduce runtime song recommendation behavior that depends on a shared
   tenant table or cross-tenant filter.
 - Do not create one-off per-church code forks as the customization mechanism.
+
+### Implementation notes
+
+Implemented in this subtask:
+
+- Canonical schema artifact:
+  `packages/intent-contracts/schemas/church-config/v1/church-config-package.schema.json`.
+- Shared validation helpers and compatibility rules:
+  `packages/intent-contracts/src/churchConfig.ts`.
+- Local validator command:
+  `npm --workspace @cadentia/intent-contracts run validate:church-config -- <package> --app-version=<semver>`.
+- Deterministic fixtures covering one complete valid package and invalid
+  missing-section, unknown critical section, malformed integration/plugin,
+  plaintext secret-reference, and incompatible application-version cases under
+  `packages/intent-contracts/fixtures/church-config/v1/`.
+- Contract tests in
+  `packages/intent-contracts/test/churchConfigContract.test.ts`.
+
+The v1 package requires explicit instance identity, modules, policies, scoring
+profiles, vocabularies, approval gates, workflow defaults, branding,
+integrations, plugin allow-lists, asset storage, feature flags, and
+observability/export settings. Validation intentionally rejects missing
+mandatory policy, approval, scoring, and storage sections rather than replacing
+them with runtime defaults.
+
+Operator review and promotion are documented in ADR-022 and the architecture
+document: validate the base package, apply one environment overlay, validate the
+merged package for the target application version, diff against the previously
+promoted artifact, record review notes, and promote the same artifact from
+development to staging to production.
 
 ## Subtask 2: Build isolated-instance provisioning and deployment automation
 

@@ -8,7 +8,8 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "test": "vitest run",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "validate:church-config": "npm run build && node bin/validate-church-config.mjs"
   },
   "dependencies": {
     "zod": "3.23.8"
@@ -18,14 +19,19 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
-    "./schemas/v1/intent.schema.json": "./schemas/v1/intent.schema.json"
+    "./schemas/v1/intent.schema.json": "./schemas/v1/intent.schema.json",
+    "./schemas/church-config/v1/church-config-package.schema.json": "./schemas/church-config/v1/church-config-package.schema.json"
   },
   "files": [
     "dist",
     "schemas",
-    "fixtures"
+    "fixtures",
+    "bin"
   ],
   "devDependencies": {
     "ajv": "^8.17.1"
+  },
+  "bin": {
+    "cadentia-validate-church-config": "./bin/validate-church-config.mjs"
   }
 }

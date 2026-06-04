@@ -416,3 +416,86 @@ privilege elevation, and approved+active content visibility boundaries.
 Incident triage, emergency remediation, and elevated-access revoke/rotate
 procedures are documented in
 `docs/runbooks/adr-019-security-observability-and-response.md`.
+
+## ADR-022 Church Configuration Packages
+
+ADR-022 customization is expressed through a versioned, reviewable church
+configuration package, not through shared tenant filters or per-church code
+forks. The canonical package contract is published at
+`packages/intent-contracts/schemas/church-config/v1/church-config-package.schema.json`
+and the executable validator is exported by `@cadentia/intent-contracts`.
+
+### Package file layout
+
+A promoted package directory must be committed or archived as an immutable unit:
+
+```text
+church-config/
+  cadentia-church-package.json        # Required base package validated by schema
+  overlays/
+    development.json                  # Optional environment overlay
+    staging.json                      # Optional environment overlay
+    production.json                   # Optional environment overlay
+  assets/                             # Optional reviewed branding or seed refs only
+  REVIEW.md                           # Human approval notes and diff summary
+```
+
+The base file contains explicit semantic version metadata:
+
+- `package.schemaVersion` is the contract version, currently
+  `church-config.v1`.
+- `package.packageVersion` is the operator-owned semantic version for the
+  package content.
+- `package.applicationCompatibility.minVersion` and
+  `maxExclusiveVersion` define the application release range that may start or
+  provision from this package.
+- The application supports `church-config.v1`, warns for versions listed as
+  deprecated by the validator, and rejects unsupported, explicitly rejected, or
+  application-incompatible packages before provisioning or startup.
+
+### Required sections
+
+Every package must explicitly define `instance`, `modules`, `policies`,
+`scoringProfiles`, `vocabularies`, `approvalGates`, `workflowDefaults`,
+`branding`, `integrations`, `pluginAllowList`, `assetStorage`, `featureFlags`,
+and `observability`. Mandatory policy, approval, scoring, and storage sections
+must not be silently replaced by application defaults. Integration and plugin
+references are allow-list identifiers; secret values are forbidden and must be
+expressed as `secret-manager:`, `env:`, `vault:`, `aws-sm:`, `gcp-sm:`, or
+`azure-kv:` references.
+
+Optional `moduleSpecific` settings may configure enabled modules, such as seed
+package references or calendar/messaging integration bindings. Optional
+`extensions` are reserved for non-critical operator annotations; core runtime
+behavior must not depend on unknown extension data.
+
+### Overlay and promotion workflow
+
+Environment overlays may only narrow deployment-specific metadata and resource
+bindings after the base package validates. Operators should review overlays as
+JSON merge patches with these rules:
+
+1. Validate the base package.
+2. Apply exactly one environment overlay for development, staging, or
+   production.
+3. Validate the merged package again with the target application version.
+4. Diff the previously promoted package against the candidate package and record
+   the diff summary in `REVIEW.md`.
+5. Promote the exact reviewed artifact from development to staging to
+   production; production must not be hand-edited.
+
+Use the local validator before provisioning or startup:
+
+```bash
+npm --workspace @cadentia/intent-contracts run validate:church-config -- \
+  packages/intent-contracts/fixtures/church-config/v1/valid/complete-package.json \
+  --app-version=0.1.0
+```
+
+Provisioning tools must consume the validated package as the source of instance
+identity, isolated database/object-storage/cache/event/secret resource names,
+plugin and integration allow-lists, observability/export destinations, and local
+catalog governance settings. Recommendation eligibility remains instance-local:
+`instanceId` is acceptable for auditability, telemetry, licensing, backups, and
+support correlation, but not as a runtime tenant filter over a shared
+recommendation catalog.
