@@ -53,6 +53,31 @@ describe("church configuration package contract", () => {
     expect(() => parseChurchConfigPackage(payload)).not.toThrow();
   });
 
+  it("accepts distinct isolated-instance package fixtures for ADR-022 regression coverage", () => {
+    const river = fixture("valid", "river-city-isolation-package.json");
+    const hillside = fixture("valid", "hillside-isolation-package.json");
+
+    const riverResult = validateChurchConfigPackage(river, "0.1.0");
+    const hillsideResult = validateChurchConfigPackage(hillside, "0.1.0");
+
+    expect(riverResult.ok).toBe(true);
+    expect(hillsideResult.ok).toBe(true);
+    if (riverResult.ok && hillsideResult.ok) {
+      expect(riverResult.package.instance.instanceId).toBe("river-city-isolation");
+      expect(hillsideResult.package.instance.instanceId).toBe("hillside-isolation");
+      expect(riverResult.package.policies.recommendationPolicy.counts).not.toEqual(
+        hillsideResult.package.policies.recommendationPolicy.counts
+      );
+      expect(riverResult.package.scoringProfiles.activeProfile).not.toBe(
+        hillsideResult.package.scoringProfiles.activeProfile
+      );
+      expect(riverResult.package.branding.primaryColor).not.toBe(hillsideResult.package.branding.primaryColor);
+      expect(riverResult.package.assetStorage.namespacePrefix).not.toBe(
+        hillsideResult.package.assetStorage.namespacePrefix
+      );
+    }
+  });
+
   it.each(readdirSync(new URL("invalid/", fixturesRoot)))
     ("rejects invalid package fixture %s before provisioning or startup", (fixtureName) => {
       const payload = fixture("invalid", fixtureName);
