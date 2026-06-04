@@ -11,7 +11,8 @@
     "build": "npm run build --workspaces",
     "test": "npm run test --workspaces",
     "typecheck": "npm run typecheck --workspaces",
-    "check:adr-governance": "node scripts/check-adr-governance.mjs"
+    "check:adr-governance": "node scripts/check-adr-governance.mjs",
+    "check:adr-022-runtime-guardrails": "node scripts/check-adr-022-runtime-guardrails.mjs"
   },
   "engines": {
     "node": ">=20.11.0",

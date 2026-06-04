@@ -4,19 +4,37 @@ import com.cadentia.generated.model.GenerateSetlistRequest;
 import com.cadentia.generated.model.KeyPolicy;
 import com.cadentia.generated.model.SetlistCounts;
 import com.cadentia.generated.model.TempoPolicy;
+import com.cadentia.runtime.InstanceConfiguration;
+import com.cadentia.runtime.InstanceConfigurationProvider;
+import com.cadentia.runtime.StaticInstanceConfigurationProvider;
 import java.util.List;
+import org.springframework.stereotype.Component;
 
+@Component
 public class ScoringRequestFactory {
 
-    private static final int DEFAULT_PRAISE_COUNT = 10;
-    private static final int DEFAULT_WORSHIP_COUNT = 5;
-    private static final ScoringRequest.KeyPolicy DEFAULT_KEY_POLICY =
-            new ScoringRequest.KeyPolicy(true, true, 2);
-    private static final ScoringRequest.TempoPolicy DEFAULT_TEMPO_POLICY =
-            new ScoringRequest.TempoPolicy(12);
     private static final String DEFAULT_LANGUAGE = "en";
 
+    private final InstanceConfigurationProvider configurationProvider;
+
+    public ScoringRequestFactory() {
+        this(new StaticInstanceConfigurationProvider(InstanceConfiguration.localDevelopment(
+                "local-development",
+                "local",
+                "cadentia-local-assets",
+                "local-development",
+                "env:CADENTIA_LOCAL_ASSET_KEY_REF",
+                "cadentia:local:development",
+                "local.development",
+                List.of("local.development.audit-events", "local.development.recommendation-events"))));
+    }
+
+    public ScoringRequestFactory(InstanceConfigurationProvider configurationProvider) {
+        this.configurationProvider = configurationProvider;
+    }
+
     public ScoringRequest fromValidatedRequest(GenerateSetlistRequest request) {
+        InstanceConfiguration.RecommendationPolicy defaults = configurationProvider.current().recommendationPolicy();
         SetlistCounts counts = request.getCounts();
         KeyPolicy keyPolicy = request.getKeyPolicy();
         TempoPolicy tempoPolicy = request.getTempoPolicy();
@@ -29,16 +47,19 @@ public class ScoringRequestFactory {
         return new ScoringRequest(
                 request.getVerseText(),
                 request.getThemeHints() == null ? List.of() : request.getThemeHints(),
-                countsDefaulted ? DEFAULT_PRAISE_COUNT : counts.getPraise(),
-                countsDefaulted ? DEFAULT_WORSHIP_COUNT : counts.getWorship(),
+                countsDefaulted ? defaults.praiseCount() : counts.getPraise(),
+                countsDefaulted ? defaults.worshipCount() : counts.getWorship(),
                 keyPolicyDefaulted
-                        ? DEFAULT_KEY_POLICY
+                        ? new ScoringRequest.KeyPolicy(
+                                defaults.keyPolicy().preferSameKey(),
+                                defaults.keyPolicy().allowRelativeMajorMinor(),
+                                defaults.keyPolicy().maxKeyCenters())
                         : new ScoringRequest.KeyPolicy(
                                 Boolean.TRUE.equals(keyPolicy.getPreferSameKey()),
                                 Boolean.TRUE.equals(keyPolicy.getAllowRelativeMajorMinor()),
                                 keyPolicy.getMaxKeyCenters()),
                 tempoPolicyDefaulted
-                        ? DEFAULT_TEMPO_POLICY
+                        ? new ScoringRequest.TempoPolicy(defaults.tempoPolicy().maxJumpBpm())
                         : new ScoringRequest.TempoPolicy(tempoPolicy.getMaxJumpBpm()),
                 request.getEnergyArc() == null ? null : request.getEnergyArc().getValue(),
                 languageDefaulted ? DEFAULT_LANGUAGE : request.getLanguage(),
