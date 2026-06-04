@@ -175,3 +175,46 @@ Minimum CI checks for ADR-019 security boundaries:
 - Primary owner: Platform/API team.
 - Security co-owner: Governance & compliance.
 - Review cadence: monthly and after every security incident.
+
+## ADR-023 Personnel Data Authorization and Privacy Controls
+
+### Personnel-data classification
+
+Personnel records introduced by ADR-023 are instance-scoped church operational data and must remain inside the deployed church instance. Treat the following fields as restricted personnel data:
+
+- **Contact and account data:** account principals, email addresses, phone numbers, and any emergency contact references.
+- **Capability and preference data:** skill levels, serving preferences, instrument capability, vocal parts, vocal ranges, and comfortable note boundaries.
+- **Scheduling data:** availability windows, assignment response status, substitution links, and scheduler override references.
+- **Sensitive notes:** availability notes, team-readiness notes, pastoral comments, medical information, and other free-text context that could identify private needs.
+
+Only the centralized personnel authorization policy may decide access to these fields. Controllers, background jobs, internal services, imports, and synchronization entry points must call the policy-backed service layer instead of adding local role checks. Read-only/reporting users may receive roster identity summaries, but private contact details, sensitive range/skill values, availability notes, and readiness notes must be redacted unless the policy grants access.
+
+### Role-based access expectations
+
+- **Administrators** may read and mutate personnel data for incident response and local governance.
+- **Worship leaders** may read roster, contact, skill/range, availability, assignment, substitution, and readiness context needed for worship planning.
+- **Team schedulers** may manage availability, assignments, substitutions, self-service response workflows, and readiness operational updates, but should not bypass approval gates or catalog governance.
+- **Reviewers** may receive roster summaries only when needed for approval or reporting context; they must not receive private contact details, sensitive skill/range fields, availability notes, or readiness notes.
+- **Assigned musicians** may view their own profile and upcoming assignment context and may update allowed response fields without broad roster permissions.
+- **Read-only/reporting users** may view redacted roster summaries and aggregate reports only.
+
+Authorization denial messages for private musician records must stay generic (`Access denied.`) so responses do not reveal whether a private record exists.
+
+### Audit and telemetry rules
+
+Privileged personnel mutations are non-optional audit events in `privileged_action_audit_events`. Role, skill-level, vocal-range, contact, availability, substitution, assignment, and readiness-note changes must include actor, actor roles, controlled action, target type, target ID, occurrence timestamp, reason/reference metadata, and before/after snapshot references with hashes.
+
+Do not place contact details, medical information, pastoral notes, availability-note text, readiness-note text, or other sensitive free-text content in telemetry labels, audit summaries, reason strings, or changed-field metadata. Store only controlled reason codes, request/reference IDs, changed field names, and snapshot references.
+
+### Retention expectations
+
+Personnel audit rows follow the privileged-audit retention window defined by ADR-019 (`retention_until`, currently at least 400 days from recording). Churches may retain operational personnel records according to their local policy, but deactivated users, old availability windows, and historical assignment notes should be reviewed during periodic access recertification. Snapshot references used by audit rows must remain resolvable until the audit row retention date passes.
+
+### Emergency access revocation
+
+1. Remove the affected account from administrator, worship leader, team scheduler, reviewer, assigned musician, and reporting groups in the church identity provider.
+2. Rotate any session-signing keys, API credentials, import tokens, or synchronization credentials that could still authorize personnel-data access.
+3. Disable or unlink the musician `account_principal` if the user should retain a musician record but no longer self-service assignment access.
+4. Review recent `privileged_action_audit_events` for personnel actions by the revoked actor and preserve evidence before retention cleanup.
+5. Re-run roster, assignment, and reporting smoke tests with the revoked identity to verify private fields are redacted or denied.
+6. Notify local church administrators of any unauthorized access, following the church incident-response and pastoral-care process.
