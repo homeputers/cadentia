@@ -19,7 +19,8 @@
     "cadentia-provision-instance": "./bin/provision-isolated-instance.mjs",
     "cadentia-smoke-check-instance": "./bin/smoke-check-instance.mjs",
     "cadentia-plan-instance-lifecycle": "./bin/plan-instance-lifecycle.mjs",
-    "cadentia-verify-lifecycle-workflow": "./bin/verify-lifecycle-workflow.mjs"
+    "cadentia-verify-lifecycle-workflow": "./bin/verify-lifecycle-workflow.mjs",
+    "cadentia-operator-admin": "./bin/operator-admin.mjs"
   },
   "files": [
     "bin",
