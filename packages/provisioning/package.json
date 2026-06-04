@@ -1,0 +1,25 @@
+{
+  "name": "@cadentia/provisioning",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "npm run build --workspace @cadentia/intent-contracts && tsc -p tsconfig.json",
+    "test": "npm run build --workspace @cadentia/intent-contracts && vitest run",
+    "typecheck": "npm run build --workspace @cadentia/intent-contracts && tsc -p tsconfig.json --noEmit",
+    "provision": "npm run build --workspace @cadentia/intent-contracts && node bin/provision-isolated-instance.mjs"
+  },
+  "dependencies": {
+    "@cadentia/intent-contracts": "file:../intent-contracts"
+  },
+  "bin": {
+    "cadentia-provision-instance": "./bin/provision-isolated-instance.mjs",
+    "cadentia-smoke-check-instance": "./bin/smoke-check-instance.mjs"
+  },
+  "files": [
+    "bin",
+    "dist"
+  ]
+}

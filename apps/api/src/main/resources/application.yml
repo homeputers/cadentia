@@ -27,3 +27,19 @@ cadentia:
     version: ${CADENTIA_APPLICATION_VERSION:0.1.0}
   church-config:
     path: ${CADENTIA_CHURCH_CONFIG_PATH:}
+
+  instance:
+    id: ${CADENTIA_INSTANCE_ID:local-development}
+  asset-storage:
+    provider: ${CADENTIA_ASSET_STORAGE_PROVIDER:local}
+    bucket: ${CADENTIA_ASSET_STORAGE_BUCKET:cadentia-local-assets}
+    namespace: ${CADENTIA_ASSET_STORAGE_NAMESPACE:local-development}
+    encryption-key-ref: ${CADENTIA_ASSET_STORAGE_ENCRYPTION_KEY_REF:env:CADENTIA_LOCAL_ASSET_KEY_REF}
+  cache:
+    namespace: ${CADENTIA_CACHE_NAMESPACE:cadentia:local:development}
+    url-ref: ${CADENTIA_CACHE_URL_REF:env:CADENTIA_LOCAL_CACHE_URL}
+  events:
+    namespace: ${CADENTIA_EVENT_NAMESPACE:local.development}
+    streams: ${CADENTIA_EVENT_STREAMS:local.development.audit-events,local.development.catalog-import,local.development.recommendation-events}
+  provisioning:
+    manifest: ${CADENTIA_PROVISIONING_MANIFEST:}
