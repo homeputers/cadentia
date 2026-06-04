@@ -9,14 +9,17 @@
     "build": "npm run build --workspace @cadentia/intent-contracts && tsc -p tsconfig.json",
     "test": "npm run build --workspace @cadentia/intent-contracts && vitest run",
     "typecheck": "npm run build --workspace @cadentia/intent-contracts && tsc -p tsconfig.json --noEmit",
-    "provision": "npm run build --workspace @cadentia/intent-contracts && node bin/provision-isolated-instance.mjs"
+    "provision": "npm run build --workspace @cadentia/intent-contracts && node bin/provision-isolated-instance.mjs",
+    "lifecycle": "npm run build --workspace @cadentia/provisioning && node bin/plan-instance-lifecycle.mjs"
   },
   "dependencies": {
     "@cadentia/intent-contracts": "file:../intent-contracts"
   },
   "bin": {
     "cadentia-provision-instance": "./bin/provision-isolated-instance.mjs",
-    "cadentia-smoke-check-instance": "./bin/smoke-check-instance.mjs"
+    "cadentia-smoke-check-instance": "./bin/smoke-check-instance.mjs",
+    "cadentia-plan-instance-lifecycle": "./bin/plan-instance-lifecycle.mjs",
+    "cadentia-verify-lifecycle-workflow": "./bin/verify-lifecycle-workflow.mjs"
   },
   "files": [
     "bin",

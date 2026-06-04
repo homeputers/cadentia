@@ -101,3 +101,146 @@ describe("isolated instance provisioning", () => {
     })).rejects.toThrow("failed validation");
   });
 });
+
+describe("isolated instance lifecycle workflows", () => {
+  it("plans backup and upgrade with compatibility, audit evidence, and deterministic verification commands", async () => {
+    const tempDir = mkdtempSync(join(tmpdir(), "cadentia-lifecycle-"));
+    tempDirs.push(tempDir);
+    const provisioned = await provisionCadentiaInstance({
+      packagePath,
+      outputDir: join(tempDir, "out"),
+      stateDir: join(tempDir, "state"),
+      applicationVersion: "0.1.0",
+      operatorId: "ops@example.org",
+      action: "provision",
+      now: new Date("2026-06-04T12:00:00.000Z")
+    });
+    const { createLifecycleWorkflowPlan } = await import("../src/index.js");
+
+    const backup = await createLifecycleWorkflowPlan({
+      workflow: "backup",
+      packagePath,
+      manifestPath: provisioned.manifestPath,
+      outputDir: join(tempDir, "out"),
+      applicationVersion: "0.1.0",
+      operatorId: "ops@example.org",
+      reason: "nightly backup before package upgrade",
+      now: new Date("2026-06-04T12:30:00.000Z")
+    });
+    expect(backup.plan.workflow).toBe("backup");
+    expect(backup.plan.resourceScope).toMatchObject({
+      secretReferencesOnly: true,
+      crossInstanceNormalUserReadsAllowed: false,
+      starterCatalogEligibility: "instance-local-approval-required"
+    });
+    expect(backup.plan.steps).toEqual(expect.arrayContaining([
+      "Snapshot the isolated database using the database resource identifier from the manifest.",
+      "Copy object storage assets under the manifest namespace prefix only."
+    ]));
+
+    const upgrade = await createLifecycleWorkflowPlan({
+      workflow: "upgrade",
+      packagePath,
+      manifestPath: provisioned.manifestPath,
+      outputDir: join(tempDir, "out"),
+      applicationVersion: "0.1.0",
+      operatorId: "ops@example.org",
+      reason: "change request CR-22",
+      backupManifestPath: backup.planPath,
+      now: new Date("2026-06-04T13:00:00.000Z")
+    });
+
+    expect(upgrade.plan.compatibility).toMatchObject({
+      status: "validated",
+      packageVersion: "1.2.3",
+      manifestPackageVersion: "1.2.3",
+      manifestApplicationVersion: "0.1.0",
+      backupValidated: true
+    });
+    expect(upgrade.plan.compatibility.currentSchemaMigration).toMatch(/^V\d+__.+\.sql$/);
+    expect(upgrade.plan.compatibility.targetSchemaMigration).toMatch(/^V\d+__.+\.sql$/);
+    expect(upgrade.plan.verificationCommands).toEqual(expect.arrayContaining([
+      `node packages/provisioning/bin/verify-lifecycle-workflow.mjs --plan=${upgrade.planPath}`,
+      `node packages/provisioning/bin/smoke-check-instance.mjs --manifest=${provisioned.manifestPath}`
+    ]));
+    expect(JSON.stringify(upgrade.plan)).not.toMatch(/password\s*=/i);
+  });
+
+  it("requires a validated backup before upgrade or restore planning", async () => {
+    const tempDir = mkdtempSync(join(tmpdir(), "cadentia-lifecycle-"));
+    tempDirs.push(tempDir);
+    const provisioned = await provisionCadentiaInstance({
+      packagePath,
+      outputDir: join(tempDir, "out"),
+      stateDir: join(tempDir, "state"),
+      applicationVersion: "0.1.0",
+      operatorId: "ops@example.org"
+    });
+    const { createLifecycleWorkflowPlan } = await import("../src/index.js");
+
+    await expect(createLifecycleWorkflowPlan({
+      workflow: "upgrade",
+      packagePath,
+      manifestPath: provisioned.manifestPath,
+      outputDir: join(tempDir, "out"),
+      operatorId: "ops@example.org",
+      reason: "unsafe migration"
+    })).rejects.toThrow("requires --backup-manifest");
+  });
+
+  it("plans exports and staging clones without operator secrets or production secret copying", async () => {
+    const tempDir = mkdtempSync(join(tmpdir(), "cadentia-lifecycle-"));
+    tempDirs.push(tempDir);
+    const provisioned = await provisionCadentiaInstance({
+      packagePath,
+      outputDir: join(tempDir, "out"),
+      stateDir: join(tempDir, "state"),
+      applicationVersion: "0.1.0",
+      operatorId: "ops@example.org"
+    });
+    const { createLifecycleWorkflowPlan } = await import("../src/index.js");
+    const backup = await createLifecycleWorkflowPlan({
+      workflow: "backup",
+      packagePath,
+      manifestPath: provisioned.manifestPath,
+      outputDir: join(tempDir, "out"),
+      operatorId: "ops@example.org",
+      reason: "source backup for clone"
+    });
+
+    const exportPlan = await createLifecycleWorkflowPlan({
+      workflow: "export",
+      packagePath,
+      manifestPath: provisioned.manifestPath,
+      outputDir: join(tempDir, "out"),
+      operatorId: "ops@example.org",
+      reason: "church-requested data portability"
+    });
+    expect(exportPlan.plan.exportPolicy).toEqual({
+      churchOwnedDataOnly: true,
+      excludesOperatorSecrets: true,
+      excludesOtherInstances: true
+    });
+
+    const clonePlan = await createLifecycleWorkflowPlan({
+      workflow: "staging-clone",
+      packagePath,
+      manifestPath: provisioned.manifestPath,
+      outputDir: join(tempDir, "out"),
+      operatorId: "ops@example.org",
+      reason: "release candidate staging validation",
+      backupManifestPath: backup.planPath,
+      sourceManifestPath: provisioned.manifestPath
+    });
+    expect(clonePlan.plan.clonePolicy).toMatchObject({
+      sourceInstanceId: "river-city-worship",
+      sourceEnvironment: "staging",
+      productionSecretsCopied: false,
+      integrations: "disabled-or-overridden"
+    });
+    expect(clonePlan.plan.steps).toEqual(expect.arrayContaining([
+      "Replace every secret binding with staging-safe references; do not copy production secret values.",
+      "Disable or override outbound integrations, telemetry exports, webhooks, and scheduled jobs for staging."
+    ]));
+  });
+});

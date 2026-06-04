@@ -146,3 +146,341 @@ Preferred rollback order:
 
 Never roll back by sharing another instance's database, object storage bucket,
 cache namespace, event stream namespace, or secret references.
+
+## Lifecycle workflow planner
+
+Use the lifecycle workflow planner before upgrade, backup, restore, export, or
+staging-clone work. The planner is intentionally a planning and audit-evidence
+step: it validates the reviewed church package and provisioning manifest, checks
+resource scope, records package/application/schema versions, and emits
+verification commands before the operator runs infrastructure-specific database
+or object-storage commands.
+
+```bash
+npm run build --workspace @cadentia/provisioning
+node packages/provisioning/bin/plan-instance-lifecycle.mjs \
+  --workflow=<upgrade|backup|restore|export|staging-clone> \
+  --package=path/to/cadentia-church-package.json \
+  --manifest=deployment/provisioned/manifests/<instance>.<environment>.provisioning-manifest.json \
+  --output-dir=deployment/provisioned \
+  --app-version=0.1.0 \
+  --operator=ops@example.org \
+  --reason="change request or ticket"
+```
+
+Every generated lifecycle plan is written under
+`deployment/provisioned/lifecycle/` and must be attached to the operator change
+record. Verify the plan before proceeding:
+
+```bash
+node packages/provisioning/bin/verify-lifecycle-workflow.mjs \
+  --plan=deployment/provisioned/lifecycle/<operation-id>.json
+```
+
+The verification command confirms that compatibility was validated, the workflow
+is scoped to one provisioning manifest, secret references remain references, and
+starter catalog eligibility remains `instance-local-approval-required`.
+Lifecycle tooling must use operator-scoped infrastructure credentials. Do not
+use normal church user credentials for restore or export, because those paths
+must never be able to enumerate multiple instances through the application data
+plane.
+
+## Upgrade workflow
+
+Inputs:
+
+- Reviewed target church package.
+- Current provisioning manifest for the same instance and environment.
+- Completed backup lifecycle plan for the same instance.
+- Target application artifact and migration set under
+  `apps/api/src/main/resources/db/migration`.
+
+Plan the pre-upgrade backup first:
+
+```bash
+node packages/provisioning/bin/plan-instance-lifecycle.mjs \
+  --workflow=backup \
+  --package=path/to/cadentia-church-package.json \
+  --manifest=deployment/provisioned/manifests/<instance>.<environment>.provisioning-manifest.json \
+  --output-dir=deployment/provisioned \
+  --operator=ops@example.org \
+  --reason="pre-upgrade backup for CR-1234"
+```
+
+Then plan the upgrade with the backup evidence:
+
+```bash
+node packages/provisioning/bin/plan-instance-lifecycle.mjs \
+  --workflow=upgrade \
+  --package=path/to/cadentia-church-package.json \
+  --manifest=deployment/provisioned/manifests/<instance>.<environment>.provisioning-manifest.json \
+  --backup-manifest=deployment/provisioned/lifecycle/<backup-operation-id>.json \
+  --output-dir=deployment/provisioned \
+  --app-version=0.1.0 \
+  --operator=ops@example.org \
+  --reason="CR-1234 package/application upgrade"
+```
+
+Do not start migrations unless the upgrade plan shows package validation,
+manifest identity validation, a validated backup, current schema migration, and
+target schema migration. Record pre-migration Flyway state, place the API and
+workers in maintenance mode, deploy the target package/application artifact, and
+allow Spring Flyway to migrate only the isolated database referenced by the
+manifest's database secret reference.
+
+Verification:
+
+```bash
+node packages/provisioning/bin/verify-lifecycle-workflow.mjs \
+  --plan=deployment/provisioned/lifecycle/<upgrade-operation-id>.json
+node packages/provisioning/bin/smoke-check-instance.mjs \
+  --manifest=deployment/provisioned/manifests/<instance>.<environment>.provisioning-manifest.json
+flyway info -url="$CADENTIA_DB_URL" -table=flyway_schema_history
+```
+
+Record pre/post package version, application version, package digest, manifest
+digest, and Flyway migration version in the change record.
+
+Rollback:
+
+1. Stop the upgraded API and background workers.
+2. Restore the validated pre-upgrade database and asset backup for the same
+   instance.
+3. Restore the previous package, application artifact, provisioning manifest,
+   and API env template.
+4. Re-run provisioning with `--action=rollback` against the previous package.
+5. Re-run lifecycle verification and smoke checks before returning traffic.
+
+Failure triage:
+
+- Stop immediately if package validation, backup validation, schema version
+  capture, or secret-redaction checks fail.
+- Compare package digest, manifest digest, backup digest, and Flyway history.
+- Confirm the API resolved the database secret reference from this manifest only.
+- Do not point the instance at another church database as a rollback shortcut.
+
+Retention: retain upgrade evidence, pre/post version records, and the
+pre-upgrade backup per the production backup retention schedule, at least 35
+days.
+
+## Backup workflow
+
+Backups must cover all rebuild inputs without storing plaintext secrets:
+
+- Isolated database snapshot from `resources.database.identifier`.
+- Object storage assets under `resources.objectStorage.namespacePrefix` only.
+- Reviewed church package and provisioning manifest.
+- Generated API env template.
+- Secret reference inventory from `resources.secrets[]`, not secret values.
+- Checksums, backup time, operator identity, and retention class.
+
+Plan and verify:
+
+```bash
+node packages/provisioning/bin/plan-instance-lifecycle.mjs \
+  --workflow=backup \
+  --package=path/to/cadentia-church-package.json \
+  --manifest=deployment/provisioned/manifests/<instance>.<environment>.provisioning-manifest.json \
+  --output-dir=deployment/provisioned \
+  --operator=ops@example.org \
+  --reason="scheduled backup"
+node packages/provisioning/bin/verify-lifecycle-workflow.mjs \
+  --plan=deployment/provisioned/lifecycle/<backup-operation-id>.json
+```
+
+Example deterministic infrastructure checks after provider-specific backup
+commands complete:
+
+```bash
+sha256sum backups/<instance>/<timestamp>/database.dump
+sha256sum backups/<instance>/<timestamp>/assets.tar.zst
+jq '.resourceScope.database,.resourceScope.objectStorageNamespace' \
+  deployment/provisioned/lifecycle/<backup-operation-id>.json
+```
+
+Rollback for a failed backup is to delete incomplete artifacts, retain the last
+known-good backup, preserve the failed plan and command output, and rerun backup
+from the unchanged source instance.
+
+Failure triage:
+
+- Confirm database dump source matches the manifest database identifier.
+- Confirm object copy source is limited to the manifest namespace prefix.
+- Confirm archived config contains secret references only.
+- Confirm checksum files were generated after upload/copy completion.
+
+Retention: retain daily backups for 35 days, monthly backups for 13 months, and
+annual backups for 7 years unless the church-approved policy requires longer.
+
+## Restore workflow
+
+Restores must rebuild one isolated instance from a validated backup and must not
+introduce shared runtime starter catalog eligibility. Seeded starter catalog
+records remain copied data subject to local approval gates after restore.
+
+Plan and verify before restore:
+
+```bash
+node packages/provisioning/bin/plan-instance-lifecycle.mjs \
+  --workflow=restore \
+  --package=path/to/cadentia-church-package.json \
+  --manifest=deployment/provisioned/manifests/<instance>.<environment>.provisioning-manifest.json \
+  --backup-manifest=deployment/provisioned/lifecycle/<backup-operation-id>.json \
+  --restore-backup=backups/<instance>/<timestamp>/backup-manifest.json \
+  --output-dir=deployment/provisioned \
+  --operator=ops@example.org \
+  --reason="restore request IR-456"
+node packages/provisioning/bin/verify-lifecycle-workflow.mjs \
+  --plan=deployment/provisioned/lifecycle/<restore-operation-id>.json
+```
+
+Restore sequence:
+
+1. Stop the API and background workers for the target instance.
+2. Verify backup checksums and manifest identity.
+3. Restore the database into the target instance database resource only.
+4. Restore assets into the target object-storage namespace only.
+5. Restore the reviewed package, provisioning manifest, API env template, and
+   secret reference inventory.
+6. Resolve current environment secrets through the secret manager; do not import
+   plaintext secret values from the backup.
+7. Start the API and verify local approval-gated catalog eligibility.
+
+Post-restore verification:
+
+```bash
+node packages/provisioning/bin/smoke-check-instance.mjs \
+  --manifest=deployment/provisioned/manifests/<instance>.<environment>.provisioning-manifest.json
+jq '.resourceScope.starterCatalogEligibility' \
+  deployment/provisioned/lifecycle/<restore-operation-id>.json
+flyway info -url="$CADENTIA_DB_URL" -table=flyway_schema_history
+```
+
+Rollback for a failed restore is to stop the restored API, preserve failed
+restore evidence, restore the previous known-good backup, and rerun smoke checks
+against the same isolated resources.
+
+Failure triage:
+
+- Stop if the backup manifest, package, or provisioning manifest identity does
+  not match the target instance.
+- Confirm no restore command used credentials that can read multiple instances
+  through normal application paths.
+- Confirm object storage restore did not write outside the target namespace.
+- Confirm starter catalog records are not treated as live shared eligibility
+  sources.
+
+Retention: retain restore evidence and source backup checksums for the same
+period as the restored backup artifact.
+
+## Export workflow
+
+Exports are for church-owned data portability and must exclude other instances,
+operator secrets, secret values, caches, and operational event internals. Export
+tooling must use operator-scoped credentials limited to the target instance's
+resource set, not normal user credentials.
+
+Plan and verify:
+
+```bash
+node packages/provisioning/bin/plan-instance-lifecycle.mjs \
+  --workflow=export \
+  --package=path/to/cadentia-church-package.json \
+  --manifest=deployment/provisioned/manifests/<instance>.<environment>.provisioning-manifest.json \
+  --output-dir=deployment/provisioned \
+  --operator=ops@example.org \
+  --reason="church data export request"
+node packages/provisioning/bin/verify-lifecycle-workflow.mjs \
+  --plan=deployment/provisioned/lifecycle/<export-operation-id>.json
+```
+
+Export scope should include church-owned catalog metadata, local arrangements,
+service plans, approval history, locally uploaded assets, and non-secret
+configuration references allowed by the church export policy. The export must not
+include operator credentials, secret values, another instance's records, shared
+starter package live catalog reads, cache data, or private telemetry internals.
+
+Deterministic checks after export generation:
+
+```bash
+sha256sum exports/<instance>/<timestamp>/cadentia-export.tar.zst
+jq '.exportPolicy' deployment/provisioned/lifecycle/<export-operation-id>.json
+jq -e '.resourceScope.crossInstanceNormalUserReadsAllowed == false' \
+  deployment/provisioned/lifecycle/<export-operation-id>.json
+```
+
+Rollback for a failed export is to revoke the export artifact, delete partial
+files, preserve redaction logs, and rerun export after fixing scope or redaction
+failures.
+
+Failure triage:
+
+- Confirm export queries use the isolated database from the manifest.
+- Confirm asset export reads only the manifest namespace prefix.
+- Scan export metadata for secret values before delivery.
+- Confirm export redaction report states that other instances and operator
+  secrets were excluded.
+
+Retention: retain export artifacts only for the church-approved delivery window;
+delete operator working copies within 7 days after acceptance.
+
+## Staging clone workflow
+
+A staging clone is a non-production copy for validation. It must use staging-safe
+secret references, disabled or overridden integrations, and explicit clone
+provenance. Never copy production secret values into staging.
+
+Plan with a source manifest and a backup plan:
+
+```bash
+node packages/provisioning/bin/plan-instance-lifecycle.mjs \
+  --workflow=staging-clone \
+  --package=path/to/staging/cadentia-church-package.json \
+  --manifest=deployment/provisioned/manifests/<instance>.staging.provisioning-manifest.json \
+  --source-manifest=deployment/provisioned/manifests/<instance>.production.provisioning-manifest.json \
+  --backup-manifest=deployment/provisioned/lifecycle/<production-backup-operation-id>.json \
+  --output-dir=deployment/provisioned \
+  --operator=ops@example.org \
+  --reason="release candidate staging clone"
+node packages/provisioning/bin/verify-lifecycle-workflow.mjs \
+  --plan=deployment/provisioned/lifecycle/<clone-operation-id>.json
+```
+
+Clone sequence:
+
+1. Provision or reconcile the staging package and manifest so resources are
+   non-production and isolated.
+2. Restore the source backup into staging database and asset resources only.
+3. Replace every secret binding with staging-safe references; do not copy
+   production secret values.
+4. Disable or override outbound integrations, telemetry exports, webhooks,
+   scheduled notifications, and any destructive automation.
+5. Record source manifest digest, backup digest, target package digest, and
+   clone provenance.
+6. Start staging and run smoke checks against the staging manifest.
+
+Post-clone verification:
+
+```bash
+node packages/provisioning/bin/smoke-check-instance.mjs \
+  --manifest=deployment/provisioned/manifests/<instance>.staging.provisioning-manifest.json
+jq '.clonePolicy.productionSecretsCopied,.clonePolicy.integrations,.clonePolicy.provenance' \
+  deployment/provisioned/lifecycle/<clone-operation-id>.json
+jq -e '.environment != "production"' \
+  deployment/provisioned/lifecycle/<clone-operation-id>.json
+```
+
+Rollback for a failed staging clone is to destroy the staging clone resources or
+restore the prior staging backup. Never reconnect staging to production secrets
+or production outbound integrations.
+
+Failure triage:
+
+- Stop if the target package environment is `production`.
+- Confirm staging database, asset namespace, cache namespace, and event
+  namespace differ from production resources.
+- Confirm secret references point to staging-safe paths or environment bindings.
+- Confirm integrations are disabled or overridden before any staging API startup.
+
+Retention: retain staging clones for the approved test window, normally no more
+than 30 days, then destroy or refresh from a new backup.
