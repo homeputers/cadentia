@@ -499,3 +499,85 @@ catalog governance settings. Recommendation eligibility remains instance-local:
 `instanceId` is acceptable for auditability, telemetry, licensing, backups, and
 support correlation, but not as a runtime tenant filter over a shared
 recommendation catalog.
+
+### Isolated deployment architecture
+
+An ADR-022 church instance is a complete deployment boundary, not a row-level
+partition inside a shared recommendation data plane. Each production church has
+its own application runtime, database/schema identity, object-storage namespace,
+cache namespace, event-stream namespace, secret references, package artifact, and
+operator lifecycle manifest. Managed single-tenant, private-cloud,
+self-hosted, and church-managed deployments may differ in hosting ownership, but
+all of them must preserve those isolation boundaries.
+
+Configuration packages are the source of customization. A package selects local
+policies, enabled modules, scoring profiles, controlled vocabularies, approval
+gates, branding, plugin allow-lists, integration references, storage bindings,
+feature flags, and observability destinations for exactly one instance and
+environment. The package and its generated provisioning manifest are the
+reviewable source of truth for why an instance behaves differently from another
+church.
+
+Local catalog governance is mandatory. Global or denominational seed packages may
+provide starter metadata, tags, provenance, or arrangement suggestions, but those
+records must be imported or synchronized into the church's local staging and
+approval workflow before they can become visible to approved-catalog reads or
+recommendation candidate selection. A trusted seed origin is evidence for review;
+it is never live shared eligibility.
+
+Operator-only tooling is the only supported cross-instance surface. Operators may
+list, inspect, upgrade, back up, restore, export, or clone instances with scoped,
+time-bound credentials and hash-chained audit records. Those tools must remain
+outside normal church admin UI/API paths and must not bypass local approval,
+licensing, doctrinal, or musical governance.
+
+### Runtime identifier rules
+
+`instanceId` and deployment identifiers are acceptable when they improve
+accountability or operability:
+
+- Audit logs, operator audit records, and support tickets may include the target
+  instance identifier.
+- Telemetry may include low-cardinality instance/deployment labels when those
+  labels do not expose private church data, lyrics, people, or secrets.
+- Licensing, entitlement checks, backup manifests, restore plans, export
+  packages, staging-clone provenance, and customer-support correlation may use
+  `instanceId`.
+- Secret, cache, event, asset, and integration clients may use instance-specific
+  resource identifiers or namespaces from the validated package and manifest.
+
+`instanceId` is not acceptable as a shared-runtime tenant filter for normal
+recommendation eligibility or catalog visibility. Do not add tenant columns to
+shared song, arrangement, lyrics, approval, or recommendation tables as a
+substitute for isolated deployments. Do not query a shared global or
+denominational live catalog with `WHERE tenant_id = ...` and then mark those
+rows recommendable. The Recommendation Engine must read the local approved
+catalog, local policies, local scoring profile, and local service context for
+the current isolated instance.
+
+### Contributor and review checklist
+
+Before merging changes that touch provisioning, catalog import, recommendation,
+integrations, assets, jobs, telemetry, or support tooling, reviewers must verify:
+
+1. Package schema changes remain versioned and reject plaintext secrets, private
+   church data, and copyrighted lyric bodies in committed examples or fixtures.
+2. Runtime defaults do not silently enable modules, plugins, integrations,
+   telemetry exports, or storage bindings omitted from the package.
+3. Seed catalog imports preserve source package/version provenance and require
+   local approval before approved-catalog reads or recommendations can include
+   the content.
+4. Normal API/UI paths cannot enumerate or read other church instances.
+5. Operator-only workflows require scoped credentials, explicit target instance,
+   reason capture, manifest/lifecycle evidence, and audit records.
+6. Regression checks include package validation plus ADR-022 runtime and operator
+   guardrails:
+
+```bash
+npm --workspace @cadentia/intent-contracts run validate:church-config -- \
+  packages/intent-contracts/fixtures/church-config/v1/valid/complete-package.json \
+  --app-version=0.1.0
+npm run check:adr-022-runtime-guardrails
+npm run check:adr-022-operator-admin-guardrails
+```
+

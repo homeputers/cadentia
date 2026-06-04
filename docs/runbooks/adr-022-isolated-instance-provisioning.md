@@ -5,6 +5,10 @@ instance from a validated church configuration package. It supports managed
 single-tenant, private-cloud, self-hosted, and church-managed deployments without
 a shared SaaS control plane.
 
+For package authoring, seed catalog governance, promotion review, and
+contributor guardrails, use
+`docs/runbooks/adr-022-package-governance.md` alongside this lifecycle runbook.
+
 ## Isolation model
 
 Cadentia treats the deployed instance as the church boundary. Provisioning must

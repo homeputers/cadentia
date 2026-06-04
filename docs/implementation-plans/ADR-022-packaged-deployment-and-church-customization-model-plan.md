@@ -477,3 +477,20 @@ runtime designs.
   seeded catalog content.
 - Do not leave operator tooling instructions accessible only through tribal
   knowledge or unpublished scripts.
+
+### Implementation notes
+
+Implemented in this subtask:
+
+- Expanded `docs/ARCHITECTURE.md` with the isolated deployment architecture,
+  configuration-package source-of-truth model, local seed catalog governance,
+  operator-only cross-instance tooling, acceptable `instanceId` uses, and
+  forbidden tenant-filtered recommendation eligibility patterns.
+- Linked ADR-022 lifecycle and package-governance runbooks from the implementation
+  plan index and the Phase 4 implementation order.
+- Added `docs/runbooks/adr-022-package-governance.md` to publish package
+  authoring, validation, promotion, seed catalog governance, operator
+  administration, contributor guardrails, and testing expectations.
+- Cross-linked the provisioning/lifecycle runbook so provisioning, upgrade,
+  backup, restore, export, staging clone, package promotion, and operator audit
+  workflows are documented rather than tribal knowledge.

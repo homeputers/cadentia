@@ -79,6 +79,13 @@ includes:
 - [ADR-036 Administrative Web Interface Operations Runbook](../runbooks/adr-036-admin-interface-operations.md) documents
   admin UI deployment checks, role-access smoke tests, frontend/API contract
   mismatch triage, high-risk action monitoring, and UI rollback procedures.
+- [ADR-022 Isolated Instance Provisioning Runbook](../runbooks/adr-022-isolated-instance-provisioning.md) documents
+  provisioning, upgrade, backup, restore, export, staging clone, operator audit,
+  and guardrail workflows for isolated church deployments.
+- [ADR-022 Package Governance, Promotion, and Contributor Runbook](../runbooks/adr-022-package-governance.md) documents
+  package authoring, validation, promotion, seed catalog governance, accepted
+  `instanceId` usage, and contributor rules that prohibit shared tenant-filtered
+  recommendation eligibility.
 
 ## Recommended foundation implementation order
 
@@ -152,6 +159,10 @@ flowchart TD
    - Usage, migration, localization, and operations guide:
      [Recommendation Explainability API Usage and Operations](../recommendation-explainability-api.md)
 2. [ADR-022: Packaged Deployment and Church Customization Model](./ADR-022-packaged-deployment-and-church-customization-model-plan.md)
+   - Provisioning and lifecycle operations runbook:
+     [ADR-022 Isolated Instance Provisioning Runbook](../runbooks/adr-022-isolated-instance-provisioning.md)
+   - Package authoring, promotion, seed governance, and contributor guardrails:
+     [ADR-022 Package Governance, Promotion, and Contributor Runbook](../runbooks/adr-022-package-governance.md)
 3. [ADR-023: Team and Musician Assignment Model](./ADR-023-team-and-musician-assignment-model-plan.md)
 4. [ADR-024: Rehearsal and Workflow Lifecycle](./ADR-024-rehearsal-and-workflow-lifecycle-plan.md)
 
