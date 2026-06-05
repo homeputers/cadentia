@@ -1497,6 +1497,9 @@ components:
       type: object
       required: [servicePlanId, assignments, staffingGaps, availabilityConflicts]
       properties:
+        readinessSummary:
+          $ref: '#/components/schemas/ReadinessSummary'
+          nullable: true
         servicePlanId: { type: string, format: uuid }
         assignments:
           type: array
@@ -2560,6 +2563,8 @@ components:
               type: array
               items:
                 $ref: '#/components/schemas/SetlistVersionItem'
+            readinessSummary:
+              $ref: '#/components/schemas/ReadinessSummary'
     SetlistVersionItem:
       type: object
       additionalProperties: false
@@ -3197,6 +3202,34 @@ components:
           items: { $ref: '#/components/schemas/ServicePlanSetlistAttachmentResponse' }
         effectiveSequenceSnapshot:
           $ref: '#/components/schemas/ServicePlanEffectiveSequenceSnapshot'
+          nullable: true
+        readinessSummary:
+          $ref: '#/components/schemas/ReadinessSummary'
+          nullable: true
+    ReadinessStatus:
+      type: string
+      enum: [UNKNOWN, READY, AT_RISK, BLOCKED]
+    ReadinessSummary:
+      type: object
+      required: [status, objectiveBlockers, missingPeople, unresolvedArrangementConflicts, privateNoteCount]
+      properties:
+        status:
+          $ref: '#/components/schemas/ReadinessStatus'
+        objectiveBlockers:
+          type: array
+          items: { type: string }
+        missingPeople:
+          type: array
+          items: { type: string }
+        unresolvedArrangementConflicts:
+          type: array
+          items: { type: string }
+        privateNoteCount:
+          type: integer
+          minimum: 0
+        lastUpdatedAt:
+          type: string
+          format: date-time
           nullable: true
     PublishServicePlanRequest:
       type: object

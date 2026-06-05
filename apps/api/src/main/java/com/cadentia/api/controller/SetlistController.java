@@ -11,6 +11,8 @@ import com.cadentia.generated.model.ConversationSlotUpdateRequest;
 import com.cadentia.generated.model.CreateSetlistBaselineRequest;
 import com.cadentia.generated.model.GenerateSetlistRequest;
 import com.cadentia.generated.model.NaturalLanguageSetlistRequest;
+import com.cadentia.generated.model.ReadinessStatus;
+import com.cadentia.generated.model.ReadinessSummary;
 import com.cadentia.generated.model.SetlistDiffOperation;
 import com.cadentia.generated.model.SetlistItemChangeType;
 import com.cadentia.generated.model.SetlistProposalResponse;
@@ -223,7 +225,25 @@ public class SetlistController implements SetlistsApi {
                 .parentVersionId(snapshot.parentVersionId())
                 .createdAt(snapshot.createdAt().atOffset(ZoneOffset.UTC))
                 .parsedIntent(Collections.emptyMap())
-                .explanationFacts(List.of());
+                .explanationFacts(List.of())
+                .readinessSummary(toReadinessSummary(snapshot.readinessSummary()));
+    }
+
+    private ReadinessSummary toReadinessSummary(
+            com.cadentia.serviceplan.ServicePlanModels.ReadinessSummary summary) {
+        if (summary == null) {
+            return null;
+        }
+        ReadinessSummary response = new ReadinessSummary(
+                ReadinessStatus.fromValue(summary.status().name()),
+                summary.objectiveBlockers(),
+                summary.missingPeople(),
+                summary.unresolvedArrangementConflicts(),
+                summary.privateNoteCount());
+        if (summary.lastUpdatedAt() != null) {
+            response.setLastUpdatedAt(summary.lastUpdatedAt().atOffset(ZoneOffset.UTC));
+        }
+        return response;
     }
 
     private SetlistProposalResponse safeIntentResponse(IntentParseResult parseResult) {

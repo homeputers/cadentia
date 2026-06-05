@@ -48,7 +48,9 @@ class ServicePlanControllerIntegrationTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.servicePlanId").value("11111111-1111-1111-1111-111111111111"))
                 .andExpect(jsonPath("$.title").value("Sunday Service"))
-                .andExpect(jsonPath("$.status").value("draft"));
+                .andExpect(jsonPath("$.status").value("draft"))
+                .andExpect(jsonPath("$.readinessSummary.status").value("UNKNOWN"))
+                .andExpect(jsonPath("$.readinessSummary.privateNoteCount").value(0));
     }
 
     @TestConfiguration
@@ -123,6 +125,11 @@ class ServicePlanControllerIntegrationTest {
 
         @Override
         public boolean hasNewerSetlistVersion(UUID setlistId, UUID setlistVersionId) {
+            return false;
+        }
+
+        @Override
+        public boolean hasUnapprovedPlannedCatalogContent(UUID servicePlanId) {
             return false;
         }
     }

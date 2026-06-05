@@ -6,6 +6,8 @@ import com.cadentia.generated.api.ServicePlansApi;
 import com.cadentia.generated.model.AttachSetlistVersionRequest;
 import com.cadentia.generated.model.CreateServicePlanRequest;
 import com.cadentia.generated.model.PublishServicePlanRequest;
+import com.cadentia.generated.model.ReadinessStatus;
+import com.cadentia.generated.model.ReadinessSummary;
 import com.cadentia.generated.model.ReorderServicePlanBlocksRequest;
 import com.cadentia.generated.model.ServicePlanPublishResponse;
 import com.cadentia.generated.model.ServicePlanResponse;
@@ -122,6 +124,24 @@ public class ServicePlanController implements ServicePlansApi {
         response.setScripture(r.scripture());
         response.setNotes(r.notes());
         response.setStatus(toStatus(r));
+        response.setReadinessSummary(toReadinessSummary(r.readinessSummary()));
+        return response;
+    }
+
+    private ReadinessSummary toReadinessSummary(
+            com.cadentia.serviceplan.ServicePlanModels.ReadinessSummary summary) {
+        if (summary == null) {
+            return null;
+        }
+        ReadinessSummary response = new ReadinessSummary(
+                ReadinessStatus.fromValue(summary.status().name()),
+                summary.objectiveBlockers(),
+                summary.missingPeople(),
+                summary.unresolvedArrangementConflicts(),
+                summary.privateNoteCount());
+        if (summary.lastUpdatedAt() != null) {
+            response.setLastUpdatedAt(OffsetDateTime.ofInstant(summary.lastUpdatedAt(), ZoneOffset.UTC));
+        }
         return response;
     }
 

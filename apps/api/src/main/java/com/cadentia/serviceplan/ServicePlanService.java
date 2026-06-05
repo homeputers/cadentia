@@ -74,6 +74,18 @@ public class ServicePlanService {
     public ServicePlanRecord publish(UUID id, String publishedBy, String publishNote) {
         ServicePlanRecord current = get(id);
         String beforeSequence = sequenceBlockIds(current);
+        if (repository.hasUnapprovedPlannedCatalogContent(id)) {
+            counter("cadentia_service_plan_publish_failures_total", "reason", "unapproved_catalog_content").increment();
+            emitPublishAudit(
+                    "SERVICE_PLAN_PUBLISH_CONFLICT_UNAPPROVED_CATALOG",
+                    id,
+                    publishedBy,
+                    beforeSequence,
+                    beforeSequence,
+                    "conflict");
+            throw new ServicePlanPublishConflictException(
+                    "Cannot publish: planned songs or arrangements must pass catalog approval gates before final publication.");
+        }
         for (var attachment : current.attachments()) {
             if (!repository.setlistVersionExists(attachment.setlistId(), attachment.setlistVersionId())) {
                 counter("cadentia_service_plan_publish_failures_total", "reason", "missing_setlist_version").increment();

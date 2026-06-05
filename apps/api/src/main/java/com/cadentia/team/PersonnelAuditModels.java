@@ -65,7 +65,8 @@ public final class PersonnelAuditModels {
         PERSONNEL_AVAILABILITY_CHANGED,
         PERSONNEL_ASSIGNMENT_CHANGED,
         PERSONNEL_SUBSTITUTION_CHANGED,
-        PERSONNEL_READINESS_NOTE_CHANGED
+        PERSONNEL_READINESS_NOTE_CHANGED,
+        PERSONNEL_READINESS_OVERRIDE_CHANGED
     }
 
     public enum PersonnelAuditTargetType {
@@ -74,6 +75,7 @@ public final class PersonnelAuditModels {
         SERVICE_ASSIGNMENT,
         REHEARSAL_ASSIGNMENT,
         SONG_ASSIGNMENT_OVERRIDE,
-        SERVICE_TEAM_READINESS
+        SERVICE_TEAM_READINESS,
+        READINESS_NOTE
     }
 }

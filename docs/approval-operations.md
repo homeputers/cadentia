@@ -154,3 +154,27 @@ flag, fallback query, or LLM-driven eligibility decision for unapproved content.
   gating; [`DoctrinalReviewServiceTest.java`](../apps/api/src/test/java/com/cadentia/catalog/review/DoctrinalReviewServiceTest.java)
   covers doctrinal operations, queues, eligibility delegation, and LLM reviewer
   rejection.
+
+## Rehearsal readiness boundary
+
+Rehearsal readiness is operational planning data for service teams. The
+readiness model records status (`UNKNOWN`, `READY`, `AT_RISK`, or `BLOCKED`),
+structured blockers, missing people, unresolved arrangement conflicts,
+rehearsal attendance or response state, and optional human notes with a privacy
+classification. Readiness is owned by worship leaders and team schedulers, and
+should be reviewed after assignment responses, after each rehearsal, and before
+service-plan publication.
+
+Readiness must not be treated as a catalog governance decision. A readiness
+entry, note, or override does not approve a song, arrangement, lyrics document,
+doctrinal review, musical review, or licensing clearance. Publication paths that
+require approved catalog content still check `v_recommendable_arrangements`, and
+setlist readiness summaries are scoped to approved planned arrangements only.
+
+Readiness summaries expose objective structured blockers, staffing gaps, and
+conflict labels separately from human note text. Private notes are redacted
+unless policy grants the viewer access. LLM-facing recommendation explanations
+must not receive or summarize private readiness notes; they may only receive
+approved-catalog facts and explicitly allowed structured readiness signals.
+Privileged readiness-note changes and operational overrides are audit events so
+leaders can distinguish readiness risk management from catalog approval.
