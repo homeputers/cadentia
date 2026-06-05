@@ -117,11 +117,49 @@ COMMENT ON VIEW v_approved_arrangement_suitability_profiles IS
     'Suitability profiles exposed only after v_recommendable_arrangements approval gates admit the arrangement.';
 COMMENT ON VIEW v_approved_arrangement_suitability_slots IS
     'Queryable suitability slots for approved recommendation candidates; unapproved catalog records are intentionally absent.';
-COMMENT ON COLUMN arrangement_suitability_profiles.governance_action_ref IS
-    'Catalog governance action, ticket, or audit reference that explains why this suitability version was created.';
+COMMENT ON COLUMN arrangement_suitability_profiles.id IS
+    'Stable arrangement suitability profile identifier.';
+COMMENT ON COLUMN arrangement_suitability_profiles.arrangement_id IS
+    'Arrangement this suitability profile describes; deleting the arrangement removes local suitability metadata.';
+COMMENT ON COLUMN arrangement_suitability_profiles.version_number IS
+    'Monotonic version number for suitability metadata within one arrangement.';
+COMMENT ON COLUMN arrangement_suitability_profiles.is_current IS
+    'True when this is the active suitability version used by deterministic service-team evaluation.';
+COMMENT ON COLUMN arrangement_suitability_profiles.vocal_configuration IS
+    'Structured vocal configuration such as solo lead, lead with backing vocals, choir, instrumental, or congregational.';
+COMMENT ON COLUMN arrangement_suitability_profiles.lead_vocal_low_midi_note IS
+    'Optional lowest MIDI note expected of the lead vocalist for this arrangement version.';
+COMMENT ON COLUMN arrangement_suitability_profiles.lead_vocal_high_midi_note IS
+    'Optional highest MIDI note expected of the lead vocalist for this arrangement version.';
+COMMENT ON COLUMN arrangement_suitability_profiles.required_backing_vocal_count IS
+    'Minimum number of backing or harmony vocal assignments required outside the lead vocal.';
 COMMENT ON COLUMN arrangement_suitability_profiles.review_notes IS
     'Human-review suitability notes; not a substitute for structured instruments, vocal parts, ranges, or skill levels.';
+COMMENT ON COLUMN arrangement_suitability_profiles.governance_action_ref IS
+    'Catalog governance action, ticket, or audit reference that explains why this suitability version was created.';
+COMMENT ON COLUMN arrangement_suitability_profiles.created_by IS
+    'Actor identifier that created this suitability profile version.';
+COMMENT ON COLUMN arrangement_suitability_profiles.created_at IS
+    'Timestamp when this suitability profile version was created.';
+COMMENT ON COLUMN arrangement_suitability_slots.id IS
+    'Stable arrangement suitability slot identifier.';
+COMMENT ON COLUMN arrangement_suitability_slots.suitability_profile_id IS
+    'Suitability profile version that owns this structured requirement slot.';
 COMMENT ON COLUMN arrangement_suitability_slots.requirement_type IS
     'Whether the structured slot is required for a pass or optional for a warning/recommendation.';
+COMMENT ON COLUMN arrangement_suitability_slots.role_code IS
+    'Optional controlled musician role required or preferred for this slot.';
+COMMENT ON COLUMN arrangement_suitability_slots.instrument_code IS
+    'Optional controlled instrument required or preferred for this slot.';
+COMMENT ON COLUMN arrangement_suitability_slots.vocal_part_code IS
+    'Optional controlled vocal part required or preferred for this slot.';
+COMMENT ON COLUMN arrangement_suitability_slots.minimum_skill_level_code IS
+    'Optional minimum controlled skill level that a matching assignment must satisfy.';
+COMMENT ON COLUMN arrangement_suitability_slots.minimum_count IS
+    'Minimum number of matching service-team assignments required to satisfy this slot.';
 COMMENT ON COLUMN arrangement_suitability_slots.coverage_rule IS
     'Deterministic coverage rule used when counting matching service-team assignments.';
+COMMENT ON COLUMN arrangement_suitability_slots.review_notes IS
+    'Human-review explanation for this structured slot; not used as deterministic requirement data.';
+COMMENT ON COLUMN arrangement_suitability_slots.sort_order IS
+    'Deterministic display and evaluation order for slots within a suitability profile.';
