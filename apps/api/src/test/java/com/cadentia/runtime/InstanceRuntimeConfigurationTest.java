@@ -3,8 +3,11 @@ package com.cadentia.runtime;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.cadentia.reng.scoring.TeamConstraintCode;
+import com.cadentia.reng.scoring.TeamConstraintMode;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -40,6 +43,30 @@ class InstanceRuntimeConfigurationTest {
         assertThat(configuration.scoringProfile().version()).isEqualTo("balanced-default");
         assertThat(configuration.assetStorage().namespacePrefix()).isEqualTo("river-city-worship");
         assertThat(configuration.telemetryExport().metricsNamespace()).isEqualTo("river-city-worship");
+    }
+
+    @Test
+    void parsesVersionedTeamConstraintModesFromScoringProfile() throws IOException {
+        // Arrange
+        ObjectNode root = (ObjectNode) objectMapper.readTree(Files.readString(FIXTURE));
+        ObjectNode activeProfile = (ObjectNode) root.path("scoringProfiles").path("profiles").get(0);
+        activeProfile.set("teamConstraints", objectMapper.createObjectNode()
+                .put("MISSING_REQUIRED_INSTRUMENT", "HARD_FILTER")
+                .put("OPTIONAL_INSTRUMENT_FIT", "SCORING_INPUT")
+                .put("INCOMPLETE_TEAM", "WARNING_ONLY"));
+
+        // Act
+        InstanceConfiguration configuration = InstanceConfiguration.fromPackage(root);
+
+        // Assert
+        assertThat(configuration.scoringProfile().teamConstraintMode(TeamConstraintCode.MISSING_REQUIRED_INSTRUMENT))
+                .isEqualTo(TeamConstraintMode.HARD_FILTER);
+        assertThat(configuration.scoringProfile().teamConstraintMode(TeamConstraintCode.OPTIONAL_INSTRUMENT_FIT))
+                .isEqualTo(TeamConstraintMode.SCORING_INPUT);
+        assertThat(configuration.scoringProfile().teamConstraintMode(TeamConstraintCode.INCOMPLETE_TEAM))
+                .isEqualTo(TeamConstraintMode.WARNING_ONLY);
+        assertThat(configuration.scoringProfile().teamConstraintMode(TeamConstraintCode.LEAD_VOCAL_RANGE_MISMATCH))
+                .isEqualTo(TeamConstraintMode.DISABLED);
     }
 
     @Test

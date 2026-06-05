@@ -87,7 +87,21 @@ const scoringProfilesSchema = z
                 familiarity: z.number().min(0)
               })
               .strict(),
-            deterministicTieBreakers: z.array(z.enum(["approval_date", "title", "arrangement_id"])).min(1)
+            deterministicTieBreakers: z.array(z.enum(["approval_date", "title", "arrangement_id"])).min(1),
+            teamConstraints: z
+              .record(
+                z.enum([
+                  "MISSING_REQUIRED_INSTRUMENT",
+                  "INSUFFICIENT_SKILL_COVERAGE",
+                  "LEAD_VOCAL_RANGE_MISMATCH",
+                  "MISSING_VOCAL_CONFIGURATION",
+                  "UNAVAILABLE_ASSIGNED_MUSICIAN",
+                  "OPTIONAL_INSTRUMENT_FIT",
+                  "INCOMPLETE_TEAM"
+                ]),
+                z.enum(["HARD_FILTER", "SCORING_INPUT", "WARNING_ONLY", "DISABLED"])
+              )
+              .optional()
           })
           .strict()
       )

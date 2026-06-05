@@ -9,6 +9,8 @@ import com.cadentia.reng.RecommendableArrangement;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -30,6 +32,24 @@ class ScoringPerformanceTest {
         assertThat(samples).as("matrix " + catalogSize + " should have samples").hasSize(7);
         assertThat(measuredP50).as("p50 slo for " + catalogSize).isLessThanOrEqualTo(p50Ms);
         assertThat(measuredP95).as("p95 slo for " + catalogSize).isLessThanOrEqualTo(p95Ms);
+    }
+
+    @Test
+    void teamSuitabilityScoringDoesNotRegressRepresentativeCandidateRetrieval() {
+        int candidateCount = 1500;
+        List<RecommendableArrangement> candidates = buildCandidates(candidateCount);
+        ScoringRequest request = teamSuitabilityRequest(candidates);
+        HardConstraintFilter filter = new HardConstraintFilter();
+        CandidateFeatureScorer scorer = new CandidateFeatureScorer();
+
+        long started = System.nanoTime();
+        HardFilterResult filtered = filter.filter(candidates, request, teamSuitabilityProfile());
+        List<CandidateFeatureScorer.CandidateFeatureScore> scores =
+                scorer.scoreCandidates(filtered.eligibleCandidates(), request, teamSuitabilityProfile());
+        long elapsedMs = (System.nanoTime() - started) / 1_000_000;
+
+        assertThat(scores).hasSize(candidateCount);
+        assertThat(elapsedMs).isLessThanOrEqualTo(650);
     }
 
     @Test
@@ -73,6 +93,69 @@ class ScoringPerformanceTest {
             elapsedMs.add(elapsed);
         }
         return elapsedMs;
+    }
+
+    private static ScoringRequest teamSuitabilityRequest(List<RecommendableArrangement> candidates) {
+        Map<UUID, TeamSuitabilityModels.ArrangementTeamRequirement> requirements = candidates.stream()
+                .collect(Collectors.toUnmodifiableMap(
+                        RecommendableArrangement::arrangementId,
+                        candidate -> new TeamSuitabilityModels.ArrangementTeamRequirement(
+                                List.of(new TeamSuitabilityModels.TeamRequirementSlot(null, "DRUMS", null, 2, 1)),
+                                List.of(new TeamSuitabilityModels.TeamRequirementSlot(null, "ELECTRIC_GUITAR", null, 0, 1)),
+                                "LEAD_WITH_BACKING",
+                                true,
+                                48,
+                                72,
+                                1)));
+        TeamSuitabilityModels.ExplicitTeamConstraints constraints = new TeamSuitabilityModels.ExplicitTeamConstraints(
+                UUID.randomUUID(),
+                List.of(
+                        new TeamSuitabilityModels.TeamAssignment(
+                                UUID.randomUUID(),
+                                TeamSuitabilityModels.AssignmentStatus.ACCEPTED,
+                                true,
+                                Set.of("INSTRUMENTALIST"),
+                                Set.of("DRUMS"),
+                                Set.of(),
+                                Map.of("DRUMS", 3),
+                                Map.of(),
+                                null,
+                                null),
+                        new TeamSuitabilityModels.TeamAssignment(
+                                UUID.randomUUID(),
+                                TeamSuitabilityModels.AssignmentStatus.ACCEPTED,
+                                true,
+                                Set.of("VOCALIST", "INSTRUMENTALIST"),
+                                Set.of("ELECTRIC_GUITAR"),
+                                Set.of("LEAD", "BACKGROUND"),
+                                Map.of("ELECTRIC_GUITAR", 2),
+                                Map.of("LEAD", 3, "BACKGROUND", 2),
+                                45,
+                                76)),
+                requirements,
+                false);
+        return new ScoringRequest("Psalm 24", List.of("holiness"), 10, 5,
+                new ScoringRequest.KeyPolicy(true, true, 2), new ScoringRequest.TempoPolicy(12),
+                null, "en", List.of(), false, new ScoringRequest.DefaultsApplied(false, false, false, false),
+                null, constraints);
+    }
+
+    private static ScoringProfile teamSuitabilityProfile() {
+        return new ScoringProfile("team-v1", Map.of(
+                CandidateFeatureScorer.THEME_MATCH, 0.3d,
+                CandidateFeatureScorer.SCRIPTURE_MATCH, 0.2d,
+                CandidateFeatureScorer.ROLE_FIT, 0.2d,
+                CandidateFeatureScorer.MUSICAL_FIT, 0.1d,
+                CandidateFeatureScorer.ENERGY_FIT, 0.1d,
+                CandidateFeatureScorer.METADATA_CONFIDENCE, 0.1d,
+                CandidateFeatureScorer.TEAM_SUITABILITY, 0.2d), List.of("total_score"),
+                ScoringProfileLifecycle.active(),
+                Map.of(
+                        TeamConstraintCode.OPTIONAL_INSTRUMENT_FIT, TeamConstraintMode.SCORING_INPUT,
+                        TeamConstraintCode.MISSING_REQUIRED_INSTRUMENT, TeamConstraintMode.WARNING_ONLY,
+                        TeamConstraintCode.MISSING_VOCAL_CONFIGURATION, TeamConstraintMode.WARNING_ONLY,
+                        TeamConstraintCode.LEAD_VOCAL_RANGE_MISMATCH, TeamConstraintMode.WARNING_ONLY,
+                        TeamConstraintCode.INSUFFICIENT_SKILL_COVERAGE, TeamConstraintMode.WARNING_ONLY));
     }
 
     private static List<RecommendableArrangement> buildCandidates(int count) {

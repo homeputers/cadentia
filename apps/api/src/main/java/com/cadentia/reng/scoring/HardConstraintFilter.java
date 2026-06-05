@@ -11,7 +11,13 @@ import java.util.UUID;
 
 public class HardConstraintFilter {
 
+    private final TeamSuitabilityEvaluator teamSuitabilityEvaluator = new TeamSuitabilityEvaluator();
+
     public HardFilterResult filter(List<RecommendableArrangement> candidates, ScoringRequest request) {
+        return filter(candidates, request, null);
+    }
+
+    public HardFilterResult filter(List<RecommendableArrangement> candidates, ScoringRequest request, ScoringProfile profile) {
         List<RecommendableArrangement> eligible = new ArrayList<>();
         List<HardFilterResult.ExcludedCandidate> excluded = new ArrayList<>();
         Set<UUID> excludedSongIds = request.excludedSongIds().stream()
@@ -19,7 +25,10 @@ public class HardConstraintFilter {
                 .collect(java.util.stream.Collectors.toSet());
 
         for (RecommendableArrangement candidate : candidates) {
-            List<HardFilterReasonCode> reasons = exclusionReasons(candidate, request.language(), excludedSongIds);
+            List<HardFilterReasonCode> reasons = new ArrayList<>(exclusionReasons(candidate, request.language(), excludedSongIds));
+            if (reasons.isEmpty()) {
+                reasons.addAll(teamExclusionReasons(candidate, request, profile));
+            }
             if (reasons.isEmpty()) {
                 eligible.add(candidate);
             } else {
@@ -31,6 +40,27 @@ public class HardConstraintFilter {
                 eligible,
                 excluded,
                 new HardFilterResult.CountRequirement(request.praiseCount(), request.worshipCount()));
+    }
+
+    private List<HardFilterReasonCode> teamExclusionReasons(
+            RecommendableArrangement candidate, ScoringRequest request, ScoringProfile profile) {
+        if (profile == null || request.explicitTeamConstraints() == null) {
+            return List.of();
+        }
+        return teamSuitabilityEvaluator.evaluate(candidate, request).facts().stream()
+                .filter(fact -> fact.status() == TeamSuitabilityModels.FactStatus.FAIL)
+                .filter(fact -> profile.teamConstraintMode(fact.code()) == TeamConstraintMode.HARD_FILTER)
+                .map(fact -> switch (fact.code()) {
+                    case MISSING_REQUIRED_INSTRUMENT -> HardFilterReasonCode.TEAM_MISSING_REQUIRED_INSTRUMENT;
+                    case INSUFFICIENT_SKILL_COVERAGE -> HardFilterReasonCode.TEAM_INSUFFICIENT_SKILL_COVERAGE;
+                    case LEAD_VOCAL_RANGE_MISMATCH -> HardFilterReasonCode.TEAM_LEAD_VOCAL_RANGE_MISMATCH;
+                    case MISSING_VOCAL_CONFIGURATION -> HardFilterReasonCode.TEAM_MISSING_VOCAL_CONFIGURATION;
+                    case UNAVAILABLE_ASSIGNED_MUSICIAN -> HardFilterReasonCode.TEAM_UNAVAILABLE_ASSIGNED_MUSICIAN;
+                    case INCOMPLETE_TEAM -> HardFilterReasonCode.TEAM_INCOMPLETE;
+                    case OPTIONAL_INSTRUMENT_FIT -> HardFilterReasonCode.TEAM_MISSING_REQUIRED_INSTRUMENT;
+                })
+                .distinct()
+                .toList();
     }
 
     private static List<HardFilterReasonCode> exclusionReasons(
