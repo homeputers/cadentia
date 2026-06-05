@@ -223,7 +223,10 @@ public class SetlistController implements SetlistsApi {
                 .parentVersionId(snapshot.parentVersionId())
                 .createdAt(snapshot.createdAt().atOffset(ZoneOffset.UTC))
                 .parsedIntent(Collections.emptyMap())
-                .explanationFacts(List.of());
+                .explanationFacts(List.of())
+                .readinessSummary(snapshot.readinessSummary() == null
+                        ? null
+                        : snapshot.readinessSummary().toReadinessSummary());
     }
 
     private SetlistProposalResponse safeIntentResponse(IntentParseResult parseResult) {

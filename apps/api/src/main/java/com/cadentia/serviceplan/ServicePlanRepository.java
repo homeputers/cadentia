@@ -39,4 +39,6 @@ public interface ServicePlanRepository {
     boolean setlistVersionExists(UUID setlistId, UUID setlistVersionId);
 
     boolean hasNewerSetlistVersion(UUID setlistId, UUID setlistVersionId);
+
+    boolean hasUnapprovedPlannedCatalogContent(UUID servicePlanId);
 }

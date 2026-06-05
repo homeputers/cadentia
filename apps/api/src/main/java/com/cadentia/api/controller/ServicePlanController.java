@@ -1,7 +1,6 @@
 package com.cadentia.api.controller;
 
 import com.cadentia.api.security.RbacAuthorities;
-
 import com.cadentia.generated.api.ServicePlansApi;
 import com.cadentia.generated.model.AttachSetlistVersionRequest;
 import com.cadentia.generated.model.CreateServicePlanRequest;
@@ -122,6 +121,9 @@ public class ServicePlanController implements ServicePlansApi {
         response.setScripture(r.scripture());
         response.setNotes(r.notes());
         response.setStatus(toStatus(r));
+        if (r.readinessSummary() != null) {
+            response.setReadinessSummary(r.readinessSummary().toReadinessSummary());
+        }
         return response;
     }
 

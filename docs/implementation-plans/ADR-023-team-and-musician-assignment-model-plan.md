@@ -495,3 +495,23 @@ policies, and troubleshooting workflows.
 - Explanation generation is downstream of candidate eligibility and scoring; it
   does not change recommendation ordering and cannot make unapproved songs or
   arrangements recommendable.
+
+### Subtask 7 implementation notes
+
+Rehearsal readiness is now modeled as operational data scoped to service teams,
+rehearsals, musician assignments, song-assignment overrides, and arrangement
+conflicts. Readiness captures status, objective blockers, missing people,
+unresolved arrangement conflicts, rehearsal response state, optional human
+notes, privacy classification, and operational override markers.
+
+Readiness ownership belongs to worship leaders and team schedulers. Review
+cadence should include assignment-response review, rehearsal follow-up, and a
+final pre-service publication check. Readiness summaries are designed to show
+staffing gaps and operational risk without disclosing private notes to musicians
+or public consumers.
+
+Readiness never bypasses catalog governance. Recommendation eligibility,
+approved planned-arrangement visibility, exports that claim approval, and final
+publication paths continue to depend on the approval-gated catalog read model;
+readiness notes and overrides are not doctrinal, musical, editorial, copyright,
+or catalog-inclusion approvals.

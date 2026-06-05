@@ -3,6 +3,7 @@ package com.cadentia.serviceplan;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.cadentia.serviceplan.ServicePlanModels.ServicePlanRecord;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -34,7 +35,7 @@ class JdbcServicePlanRepositoryIntegrationTest {
         jdbcTemplate.getJdbcTemplate().execute("CREATE EXTENSION IF NOT EXISTS pgcrypto");
         Flyway.configure().dataSource(dataSource).load().migrate();
 
-        repository = new JdbcServicePlanRepository(jdbcTemplate);
+        repository = new JdbcServicePlanRepository(jdbcTemplate, new ObjectMapper());
     }
 
     @Test

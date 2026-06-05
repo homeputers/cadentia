@@ -1,13 +1,18 @@
 package com.cadentia.serviceplan;
 
+import com.cadentia.serviceplan.ServicePlanModels.OperationalReadinessSummary;
+import com.cadentia.serviceplan.ServicePlanModels.ReadinessStatus;
 import com.cadentia.serviceplan.ServicePlanModels.ServicePlanBlock;
 import com.cadentia.serviceplan.ServicePlanModels.ServicePlanRecord;
 import com.cadentia.serviceplan.ServicePlanModels.ServicePlanStatus;
 import com.cadentia.serviceplan.ServicePlanModels.SetlistAttachment;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -21,14 +26,17 @@ import org.springframework.transaction.annotation.Transactional;
 public class JdbcServicePlanRepository implements ServicePlanRepository {
 
     private final NamedParameterJdbcTemplate jdbcTemplate;
+    private final ObjectMapper objectMapper;
 
-    public JdbcServicePlanRepository(NamedParameterJdbcTemplate jdbcTemplate) {
+    public JdbcServicePlanRepository(NamedParameterJdbcTemplate jdbcTemplate, ObjectMapper objectMapper) {
         this.jdbcTemplate = jdbcTemplate;
+        this.objectMapper = objectMapper;
     }
 
     @Override
     @Transactional
-    public ServicePlanRecord create(Instant serviceDateTime, String title, String theme, String scripture, String notes) {
+    public ServicePlanRecord create(
+            Instant serviceDateTime, String title, String theme, String scripture, String notes) {
         UUID id = jdbcTemplate.queryForObject(
                 """
                 INSERT INTO service_plans (service_date_time, title, theme, scripture, notes)
@@ -36,7 +44,7 @@ public class JdbcServicePlanRepository implements ServicePlanRepository {
                 RETURNING id
                 """,
                 new MapSqlParameterSource()
-                         .addValue("serviceDateTime", Timestamp.from(serviceDateTime))
+                        .addValue("serviceDateTime", Timestamp.from(serviceDateTime))
                         .addValue("title", title)
                         .addValue("theme", theme)
                         .addValue("scripture", scripture)
@@ -66,7 +74,8 @@ public class JdbcServicePlanRepository implements ServicePlanRepository {
 
     @Override
     @Transactional
-    public ServicePlanRecord updateMetadata(UUID id, Instant serviceDateTime, String title, String theme, String scripture, String notes) {
+    public ServicePlanRecord updateMetadata(
+            UUID id, Instant serviceDateTime, String title, String theme, String scripture, String notes) {
         jdbcTemplate.update(
                 """
                 UPDATE service_plans
@@ -80,7 +89,7 @@ public class JdbcServicePlanRepository implements ServicePlanRepository {
                 """,
                 new MapSqlParameterSource()
                         .addValue("id", id)
-                         .addValue("serviceDateTime", Timestamp.from(serviceDateTime))
+                        .addValue("serviceDateTime", Timestamp.from(serviceDateTime))
                         .addValue("title", title)
                         .addValue("theme", theme)
                         .addValue("scripture", scripture)
@@ -199,6 +208,32 @@ public class JdbcServicePlanRepository implements ServicePlanRepository {
         return newerCount != null && newerCount > 0;
     }
 
+    @Override
+    public boolean hasUnapprovedPlannedCatalogContent(UUID servicePlanId) {
+        Integer unapprovedCount = jdbcTemplate.queryForObject(
+                """
+                SELECT COUNT(*)
+                FROM (
+                    SELECT blocks.arrangement_id
+                    FROM service_plan_blocks blocks
+                    WHERE blocks.service_plan_id = :servicePlanId
+                      AND blocks.arrangement_id IS NOT NULL
+                    UNION ALL
+                    SELECT items.catalog_arrangement_id
+                    FROM service_plan_setlist_attachments attachments
+                    JOIN setlist_version_items items
+                      ON items.version_id = attachments.setlist_version_id
+                    WHERE attachments.service_plan_id = :servicePlanId
+                ) planned
+                LEFT JOIN v_recommendable_arrangements recommendable
+                  ON recommendable.arrangement_id = planned.arrangement_id
+                WHERE recommendable.arrangement_id IS NULL
+                """,
+                Map.of("servicePlanId", servicePlanId),
+                Integer.class);
+        return unapprovedCount != null && unapprovedCount > 0;
+    }
+
     private ServicePlanRecord getRequired(UUID id) {
         return findById(id).orElseThrow();
     }
@@ -216,7 +251,52 @@ public class JdbcServicePlanRepository implements ServicePlanRepository {
                 rs.getTimestamp("published_at") == null ? null : rs.getTimestamp("published_at").toInstant(),
                 rs.getString("published_by"),
                 listBlocks(id),
-                listAttachments(id));
+                listAttachments(id),
+                readinessSummary(id));
+    }
+
+    private OperationalReadinessSummary readinessSummary(UUID servicePlanId) {
+        return jdbcTemplate.query(
+                "SELECT * FROM v_service_plan_readiness_summary WHERE service_plan_id = :servicePlanId",
+                Map.of("servicePlanId", servicePlanId),
+                (rs, rowNum) -> new OperationalReadinessSummary(
+                        ReadinessStatus.valueOf(rs.getString("readiness_status_code")),
+                        readJsonStrings(rs.getString("objective_blockers")),
+                        readJsonStrings(rs.getString("missing_people")),
+                        readJsonStrings(rs.getString("unresolved_arrangement_conflicts")),
+                        rs.getInt("private_note_count"),
+                        rs.getTimestamp("last_updated_at") == null
+                                ? null
+                                : rs.getTimestamp("last_updated_at").toInstant()))
+                .stream()
+                .findFirst()
+                .orElse(OperationalReadinessSummary.unknown());
+    }
+
+    private List<String> readJsonStrings(String json) {
+        if (json == null || json.isBlank()) {
+            return List.of();
+        }
+        try {
+            List<String> values = new ArrayList<>();
+            collectJsonStrings(objectMapper.readTree(json), values);
+            return values;
+        } catch (Exception exception) {
+            throw new IllegalArgumentException("Unable to read readiness summary JSON.", exception);
+        }
+    }
+
+    private void collectJsonStrings(JsonNode node, List<String> values) {
+        if (node == null || node.isNull()) {
+            return;
+        }
+        if (node.isTextual()) {
+            values.add(node.asText());
+            return;
+        }
+        if (node.isArray()) {
+            node.forEach(child -> collectJsonStrings(child, values));
+        }
     }
 
     private List<ServicePlanBlock> listBlocks(UUID id) {

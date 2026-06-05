@@ -48,6 +48,33 @@ class ServicePlanServiceTest {
     }
 
     @Test
+    void publishRejectsUnapprovedCatalogContentDespiteReadiness() {
+        // Arrange
+        UUID planId = UUID.randomUUID();
+        ServicePlanRecord current = new ServicePlanRecord(
+                planId,
+                Instant.parse("2026-06-01T10:00:00Z"),
+                "Sunday Service",
+                "Faith",
+                "Hebrews 11",
+                "notes",
+                ServicePlanStatus.DRAFT,
+                null,
+                null,
+                List.of(),
+                List.of());
+        when(repository.findById(planId)).thenReturn(java.util.Optional.of(current));
+        when(repository.hasUnapprovedPlannedCatalogContent(planId)).thenReturn(true);
+
+        ServicePlanService service = new ServicePlanService(repository);
+
+        // Act / Assert
+        assertThatThrownBy(() -> service.publish(planId, "system", "readiness says ready"))
+                .isInstanceOf(ServicePlanPublishConflictException.class)
+                .hasMessageContaining("catalog approval gates");
+    }
+
+    @Test
     void publishRejectsWhenAttachmentHasNewerVersion() {
         UUID planId = UUID.randomUUID();
         UUID setlistId = UUID.randomUUID();

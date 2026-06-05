@@ -1,5 +1,11 @@
 package com.cadentia.team;
 
+import com.cadentia.serviceplan.ServicePlanModels.ReadinessStatus;
+import com.cadentia.team.ReadinessModels.ReadinessNoteRecord;
+import com.cadentia.team.ReadinessModels.ReadinessPrivacyClassification;
+import com.cadentia.team.ReadinessModels.ReadinessScopeType;
+import com.cadentia.team.ReadinessModels.RecordReadinessCommand;
+import com.cadentia.team.ReadinessModels.RehearsalResponseState;
 import com.cadentia.team.TeamPlanningModels.AssignmentChangeHistoryRecord;
 import com.cadentia.team.TeamPlanningModels.AssignmentStatusCode;
 import com.cadentia.team.TeamPlanningModels.AssignmentType;
@@ -17,6 +23,9 @@ import com.cadentia.team.TeamPlanningModels.SkillLevelCode;
 import com.cadentia.team.TeamPlanningModels.SongAssignmentOverrideRecord;
 import com.cadentia.team.TeamPlanningModels.VocalPartCode;
 import com.cadentia.team.TeamPlanningModels.VocalRangeCode;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
@@ -33,10 +42,14 @@ import org.springframework.transaction.annotation.Transactional;
 @Repository
 public class JdbcTeamPlanningRepository implements TeamPlanningRepository {
 
-    private final NamedParameterJdbcTemplate jdbcTemplate;
+    private static final TypeReference<List<String>> STRING_LIST = new TypeReference<>() {};
 
-    public JdbcTeamPlanningRepository(NamedParameterJdbcTemplate jdbcTemplate) {
+    private final NamedParameterJdbcTemplate jdbcTemplate;
+    private final ObjectMapper objectMapper;
+
+    public JdbcTeamPlanningRepository(NamedParameterJdbcTemplate jdbcTemplate, ObjectMapper objectMapper) {
         this.jdbcTemplate = jdbcTemplate;
+        this.objectMapper = objectMapper;
     }
 
     @Override
@@ -543,6 +556,58 @@ public class JdbcTeamPlanningRepository implements TeamPlanningRepository {
                 rs.getTimestamp("changed_at").toInstant());
     }
 
+
+    @Override
+    @Transactional
+    public ReadinessNoteRecord recordReadiness(RecordReadinessCommand command) {
+        UUID noteId = jdbcTemplate.queryForObject(
+                """
+                INSERT INTO readiness_notes (
+                    scope_type, scope_id, service_plan_id, rehearsal_event_id, service_assignment_id,
+                    song_assignment_override_id, service_plan_block_id, arrangement_id, readiness_status_code,
+                    objective_blockers, missing_people, unresolved_arrangement_conflicts, rehearsal_response_state,
+                    human_note, privacy_classification, override_action, updated_by
+                )
+                VALUES (
+                    :scopeType, :scopeId, :servicePlanId, :rehearsalEventId, :serviceAssignmentId,
+                    :songAssignmentOverrideId, :servicePlanBlockId, :arrangementId, :readinessStatusCode,
+                    CAST(:objectiveBlockers AS jsonb), CAST(:missingPeople AS jsonb),
+                    CAST(:unresolvedArrangementConflicts AS jsonb), :rehearsalResponseState, :humanNote,
+                    :privacyClassification, :overrideAction, :updatedBy
+                )
+                ON CONFLICT (scope_type, scope_id) DO UPDATE SET
+                    readiness_status_code = EXCLUDED.readiness_status_code,
+                    objective_blockers = EXCLUDED.objective_blockers,
+                    missing_people = EXCLUDED.missing_people,
+                    unresolved_arrangement_conflicts = EXCLUDED.unresolved_arrangement_conflicts,
+                    rehearsal_response_state = EXCLUDED.rehearsal_response_state,
+                    human_note = EXCLUDED.human_note,
+                    privacy_classification = EXCLUDED.privacy_classification,
+                    override_action = EXCLUDED.override_action,
+                    updated_by = EXCLUDED.updated_by,
+                    updated_at = NOW()
+                RETURNING id
+                """,
+                readinessParameters(command),
+                UUID.class);
+        return findReadinessNote(noteId).orElseThrow();
+    }
+
+    @Override
+    public List<ReadinessNoteRecord> listReadinessNotes(UUID servicePlanId) {
+        return jdbcTemplate.query(
+                "SELECT * FROM readiness_notes WHERE service_plan_id = :servicePlanId ORDER BY updated_at DESC",
+                Map.of("servicePlanId", servicePlanId),
+                (rs, rowNum) -> mapReadinessNote(rs));
+    }
+
+    private Optional<ReadinessNoteRecord> findReadinessNote(UUID readinessNoteId) {
+        return jdbcTemplate.query(
+                "SELECT * FROM readiness_notes WHERE id = :id",
+                Map.of("id", readinessNoteId),
+                (rs, rowNum) -> mapReadinessNote(rs)).stream().findFirst();
+    }
+
     private List<ControlledVocabularyEntry> listVocabulary(String tableName) {
         return jdbcTemplate.query(
                 "SELECT code, display_name, active, sort_order, system_default, local_extension FROM "
@@ -600,6 +665,64 @@ public class JdbcTeamPlanningRepository implements TeamPlanningRepository {
                 .addValue("changedBy", changedBy)
                 .addValue("reasonCode", reasonCode)
                 .addValue("reference", reference);
+    }
+
+    private MapSqlParameterSource readinessParameters(RecordReadinessCommand command) {
+        return new MapSqlParameterSource()
+                .addValue("scopeType", enumName(command.scopeType()))
+                .addValue("scopeId", command.scopeId())
+                .addValue("servicePlanId", command.servicePlanId())
+                .addValue("rehearsalEventId", command.rehearsalEventId())
+                .addValue("serviceAssignmentId", command.serviceAssignmentId())
+                .addValue("songAssignmentOverrideId", command.songAssignmentOverrideId())
+                .addValue("servicePlanBlockId", command.servicePlanBlockId())
+                .addValue("arrangementId", command.arrangementId())
+                .addValue("readinessStatusCode", enumName(command.readinessStatus()))
+                .addValue("objectiveBlockers", toJson(command.objectiveBlockers()))
+                .addValue("missingPeople", toJson(command.missingPeople()))
+                .addValue("unresolvedArrangementConflicts", toJson(command.unresolvedArrangementConflicts()))
+                .addValue("rehearsalResponseState", enumName(command.rehearsalResponseState()))
+                .addValue("humanNote", command.humanNote())
+                .addValue("privacyClassification", enumName(command.privacyClassification()))
+                .addValue("overrideAction", command.overrideAction())
+                .addValue("updatedBy", command.updatedBy());
+    }
+
+    private ReadinessNoteRecord mapReadinessNote(ResultSet rs) throws SQLException {
+        return new ReadinessNoteRecord(
+                rs.getObject("id", UUID.class),
+                enumValue(ReadinessScopeType.class, rs.getString("scope_type")),
+                rs.getObject("scope_id", UUID.class),
+                rs.getObject("service_plan_id", UUID.class),
+                enumValue(ReadinessStatus.class, rs.getString("readiness_status_code")),
+                readStringList(rs.getString("objective_blockers")),
+                readStringList(rs.getString("missing_people")),
+                readStringList(rs.getString("unresolved_arrangement_conflicts")),
+                enumValue(RehearsalResponseState.class, rs.getString("rehearsal_response_state")),
+                rs.getString("human_note"),
+                enumValue(ReadinessPrivacyClassification.class, rs.getString("privacy_classification")),
+                rs.getBoolean("override_action"),
+                rs.getString("updated_by"),
+                rs.getTimestamp("updated_at").toInstant());
+    }
+
+    private String toJson(List<String> values) {
+        try {
+            return objectMapper.writeValueAsString(values == null ? List.of() : values);
+        } catch (JsonProcessingException exception) {
+            throw new IllegalArgumentException("Unable to serialize readiness values.", exception);
+        }
+    }
+
+    private List<String> readStringList(String json) {
+        if (json == null || json.isBlank()) {
+            return List.of();
+        }
+        try {
+            return objectMapper.readValue(json, STRING_LIST);
+        } catch (JsonProcessingException exception) {
+            throw new IllegalArgumentException("Unable to read readiness values.", exception);
+        }
     }
 
     private MusicianRecord mapMusician(ResultSet rs) throws SQLException {

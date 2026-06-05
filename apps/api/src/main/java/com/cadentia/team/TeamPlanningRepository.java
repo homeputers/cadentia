@@ -15,6 +15,8 @@ import com.cadentia.team.TeamPlanningModels.ServiceAssignmentRecord;
 import com.cadentia.team.TeamPlanningModels.SkillLevelCode;
 import com.cadentia.team.TeamPlanningModels.SongAssignmentOverrideRecord;
 import com.cadentia.team.TeamPlanningModels.VocalPartCode;
+import com.cadentia.team.ReadinessModels.ReadinessNoteRecord;
+import com.cadentia.team.ReadinessModels.RecordReadinessCommand;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -159,4 +161,8 @@ public interface TeamPlanningRepository {
             String reference);
 
     List<AssignmentChangeHistoryRecord> listAssignmentHistory(UUID servicePlanId);
+
+    ReadinessNoteRecord recordReadiness(RecordReadinessCommand command);
+
+    List<ReadinessNoteRecord> listReadinessNotes(UUID servicePlanId);
 }

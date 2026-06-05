@@ -1,5 +1,6 @@
 package com.cadentia.reng.setlist;
 
+import com.cadentia.serviceplan.ServicePlanModels.OperationalReadinessSummary;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -62,7 +63,24 @@ public final class SetlistVersionModels {
             String engineVersion,
             Instant createdAt,
             String createdBy,
-            List<SetlistVersionItemSnapshot> items) {}
+            List<SetlistVersionItemSnapshot> items,
+            OperationalReadinessSummary readinessSummary) {
+
+        public SetlistVersionSnapshot(
+                UUID setlistId,
+                UUID versionId,
+                UUID parentVersionId,
+                int versionNumber,
+                String provenanceType,
+                String scoringProfileVersion,
+                String engineVersion,
+                Instant createdAt,
+                String createdBy,
+                List<SetlistVersionItemSnapshot> items) {
+            this(setlistId, versionId, parentVersionId, versionNumber, provenanceType, scoringProfileVersion,
+                    engineVersion, createdAt, createdBy, items, OperationalReadinessSummary.unknown());
+        }
+    }
 
     public record SetlistVersionItemSnapshot(
             UUID id,
