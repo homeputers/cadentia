@@ -459,3 +459,22 @@ policies, and troubleshooting workflows.
   readiness or musician preference.
 - Do not omit the LLM boundary: LLMs parse intent only and must not select songs,
   infer suitability, or generate private personnel facts.
+
+### Implementation notes for Subtask 4
+
+- Arrangement suitability is now stored in versioned `arrangement_suitability_profiles` rows with
+  `governance_action_ref`, `version_number`, `is_current`, vocal configuration, lead-vocal MIDI
+  bounds, backing-vocal counts, and human review notes.
+- Structured suitability slots live in `arrangement_suitability_slots` and carry required/optional
+  status, role, instrument, vocal part, minimum skill floor, minimum count, and coverage rule. Review
+  notes may explain the decision but never replace these structured fields.
+- `v_approved_arrangement_suitability_profiles` and `v_approved_arrangement_suitability_slots` join
+  through `v_recommendable_arrangements`, so team suitability is evaluated only after doctrinal,
+  musical, licensing, editorial, active-arrangement, and current-lyrics approval gates have already
+  admitted the arrangement.
+- `JdbcArrangementSuitabilityRepository` evaluates a supplied service plan roster against the current
+  approved suitability profile and returns deterministic pass/fail/warning facts for approval gating,
+  instrumentation, vocal coverage, skill floors, and lead-vocal range conflicts.
+- Suitability metadata is planning compatibility data. It is explicitly separate from doctrinal,
+  musical, licensing, editorial, administrative, and catalog approval semantics, and it cannot make an
+  unapproved arrangement eligible for recommendation.

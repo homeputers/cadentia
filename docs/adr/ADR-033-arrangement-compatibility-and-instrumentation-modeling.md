@@ -34,6 +34,12 @@ Extend arrangement modeling with structured compatibility metadata: required and
 - Compatibility conflicts are explainable and auditable.
 - Approval gates still determine whether an arrangement is recommendable.
 
+## Implementation Alignment
+
+ADR-023 team suitability metadata is represented as versioned arrangement suitability profiles and structured suitability slots. Profiles carry human review notes and governance references, while slots carry deterministic role, instrument, vocal part, skill-floor, count, and coverage-rule fields. Queryable approved-suitability views intentionally join through the approval-gated recommendation read model before exposing suitability rows.
+
+Suitability answers whether an already-approved arrangement can be served by a supplied team/service context. It does not replace doctrinal review, musical review, licensing review, editorial review, active catalog status, administrative approval, lyrics approval, or provenance controls. LLM components must not infer suitability fields from lyrics, titles, notes, charts, or musician profiles; humans or deterministic import/review workflows must maintain the structured metadata.
+
 ## Consequences
 
 Positive:
