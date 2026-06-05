@@ -46,7 +46,7 @@ includes:
 
 - [ADR-021 Implementation Plan: Recommendation Engine Explainability API](./ADR-021-recommendation-engine-explainability-api-plan.md)
 - [ADR-022 Implementation Plan: Packaged Deployment and Church Customization Model](./ADR-022-packaged-deployment-and-church-customization-model-plan.md)
-- [ADR-023 Implementation Plan: Team and Musician Assignment Model](./ADR-023-team-and-musician-assignment-model-plan.md)
+- [ADR-023 Implementation Plan: Team and Musician Assignment Model](./ADR-023-team-and-musician-assignment-model-plan.md) — completed 2026-06-05
 - [ADR-024 Implementation Plan: Rehearsal and Workflow Lifecycle](./ADR-024-rehearsal-and-workflow-lifecycle-plan.md)
 
 ## Operational workflow docs
@@ -168,7 +168,7 @@ flowchart TD
      [ADR-022 Isolated Instance Provisioning Runbook](../runbooks/adr-022-isolated-instance-provisioning.md)
    - Package authoring, promotion, seed governance, and contributor guardrails:
      [ADR-022 Package Governance, Promotion, and Contributor Runbook](../runbooks/adr-022-package-governance.md)
-3. [ADR-023: Team and Musician Assignment Model](./ADR-023-team-and-musician-assignment-model-plan.md)
+3. [ADR-023: Team and Musician Assignment Model](./ADR-023-team-and-musician-assignment-model-plan.md) — completed 2026-06-05
 4. [ADR-024: Rehearsal and Workflow Lifecycle](./ADR-024-rehearsal-and-workflow-lifecycle-plan.md)
 
 Phase 4 starts by making ADR-010 scoring facts and ADR-013 explanation facts
