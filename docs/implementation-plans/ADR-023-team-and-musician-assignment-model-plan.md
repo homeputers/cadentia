@@ -478,3 +478,20 @@ policies, and troubleshooting workflows.
 - Suitability metadata is planning compatibility data. It is explicitly separate from doctrinal,
   musical, licensing, editorial, administrative, and catalog approval semantics, and it cannot make an
   unapproved arrangement eligible for recommendation.
+
+### Implementation notes for Subtask 6
+
+- Recommendation explanations now include additive `team_suitability` facts for
+  required instrumentation, optional instrumentation, vocal configuration,
+  lead-vocal range fit, minimum skill coverage, assignment status, availability
+  status, and incomplete-team readiness warnings.
+- These facts cite `arrangement_suitability` and `service_assignment` evidence
+  references and use structured counts/status values. They do not use LLM prose
+  or free-form private personnel notes as diagnostic evidence.
+- Public explanation views redact team diagnostics. Worship-leader and admin
+  views receive aggregate staffing gaps suitable for action while avoiding
+  private contact details, availability notes, readiness notes, exact musician
+  range values, or raw skill records.
+- Explanation generation is downstream of candidate eligibility and scoring; it
+  does not change recommendation ordering and cannot make unapproved songs or
+  arrangements recommendable.

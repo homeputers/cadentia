@@ -57,6 +57,7 @@ public class HardConstraintFilter {
                     case MISSING_VOCAL_CONFIGURATION -> HardFilterReasonCode.TEAM_MISSING_VOCAL_CONFIGURATION;
                     case UNAVAILABLE_ASSIGNED_MUSICIAN -> HardFilterReasonCode.TEAM_UNAVAILABLE_ASSIGNED_MUSICIAN;
                     case INCOMPLETE_TEAM -> HardFilterReasonCode.TEAM_INCOMPLETE;
+                    case ASSIGNMENT_STATUS -> HardFilterReasonCode.TEAM_INCOMPLETE;
                     case OPTIONAL_INSTRUMENT_FIT -> HardFilterReasonCode.TEAM_MISSING_REQUIRED_INSTRUMENT;
                 })
                 .distinct()

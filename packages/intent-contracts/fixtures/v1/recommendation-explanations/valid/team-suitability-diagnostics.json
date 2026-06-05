@@ -1,0 +1,118 @@
+{
+  "schemaName": "recommendation_explanation",
+  "schemaVersion": "recommendation_explanation.v1",
+  "generatedBy": "RecommendationEngine",
+  "requestId": "req-2026-06-05-team-001",
+  "correlationId": "trace-team-001",
+  "recommendationResultId": "rec-result-team-001",
+  "scoringProfileVersion": "scoring-profile-2026.06.team.1",
+  "catalogSnapshotVersion": "catalog-snapshot-2026-06-05T00:00:00Z",
+  "generatedAt": "2026-06-05T12:00:00Z",
+  "requestPolicySummary": {
+    "counts": { "praise": 1, "worship": 0 },
+    "keyPolicy": { "preferSameKey": true, "allowRelativeMajorMinor": true, "maxKeyCenters": 2 },
+    "tempoPolicy": { "maxJumpBpm": 12 },
+    "themeHints": ["holiness"],
+    "scriptureReferences": ["Psalm 24"],
+    "appliedDefaults": []
+  },
+  "deterministicTieBreaks": [],
+  "selectedSongs": [
+    {
+      "code": "TEAM_REQUIRED_INSTRUMENT_COVERAGE",
+      "severity": "blocked",
+      "scope": "selected_song",
+      "audience": "worship_leader",
+      "subject": { "type": "arrangement", "id": "arr-team-001", "songId": "song-team-001" },
+      "templateKey": "team.required_instrument_coverage",
+      "values": { "status": "fail", "targetCode": "DRUMS", "requiredCount": 1, "actualCount": 0, "minimumSkillRank": 0 },
+      "evidence": [
+        { "type": "arrangement_suitability", "ref": "arrangement:arr-team-001", "field": "required_instrument_coverage", "confidence": 1 },
+        { "type": "service_assignment", "ref": "service_assignment_summary", "field": "required_instrument_coverage", "confidence": 1 }
+      ]
+    },
+    {
+      "code": "TEAM_LEAD_VOCAL_RANGE_FIT",
+      "severity": "blocked",
+      "scope": "selected_song",
+      "audience": "worship_leader",
+      "subject": { "type": "arrangement", "id": "arr-team-001", "songId": "song-team-001" },
+      "templateKey": "team.lead_vocal_range_fit",
+      "values": { "status": "fail", "rangeRequirement": "configured", "fitCount": 0 },
+      "evidence": [
+        { "type": "arrangement_suitability", "ref": "arrangement:arr-team-001", "field": "lead_vocal_range", "confidence": 1 },
+        { "type": "service_assignment", "ref": "service_assignment_summary", "field": "lead_vocal_range", "confidence": 1 }
+      ]
+    },
+    {
+      "code": "TEAM_SKILL_LEVEL_FLOOR",
+      "severity": "blocked",
+      "scope": "selected_song",
+      "audience": "worship_leader",
+      "subject": { "type": "arrangement", "id": "arr-team-001", "songId": "song-team-001" },
+      "templateKey": "team.skill_level_floor",
+      "values": { "status": "fail", "targetCode": "GUITAR", "requiredCount": 1, "actualCount": 0, "minimumSkillRank": 4 },
+      "evidence": [
+        { "type": "arrangement_suitability", "ref": "arrangement:arr-team-001", "field": "skill_level_floor", "confidence": 1 },
+        { "type": "service_assignment", "ref": "service_assignment_summary", "field": "skill_level_floor", "confidence": 1 }
+      ]
+    },
+    {
+      "code": "TEAM_OPTIONAL_INSTRUMENT_FIT",
+      "severity": "info",
+      "scope": "selected_song",
+      "audience": "worship_leader",
+      "subject": { "type": "arrangement", "id": "arr-team-001", "songId": "song-team-001" },
+      "templateKey": "team.optional_instrument_fit",
+      "values": { "status": "pass", "targetCode": "CELLO", "requiredCount": 1, "actualCount": 1, "minimumSkillRank": 0 },
+      "evidence": [
+        { "type": "arrangement_suitability", "ref": "arrangement:arr-team-001", "field": "optional_instrument_fit", "confidence": 1 },
+        { "type": "service_assignment", "ref": "service_assignment_summary", "field": "optional_instrument_fit", "confidence": 1 }
+      ]
+    },
+    {
+      "code": "TEAM_AVAILABILITY_STATUS",
+      "severity": "blocked",
+      "scope": "selected_song",
+      "audience": "worship_leader",
+      "subject": { "type": "arrangement", "id": "arr-team-001", "songId": "song-team-001" },
+      "templateKey": "team.availability_status",
+      "values": { "status": "fail", "unavailableCount": 1, "activeAssignmentCount": 2 },
+      "evidence": [
+        { "type": "arrangement_suitability", "ref": "arrangement:arr-team-001", "field": "assignment_availability_status", "confidence": 1 },
+        { "type": "service_assignment", "ref": "service_assignment_summary", "field": "assignment_availability_status", "confidence": 1 }
+      ]
+    },
+    {
+      "code": "TEAM_ASSIGNMENT_STATUS",
+      "severity": "info",
+      "scope": "selected_song",
+      "audience": "worship_leader",
+      "subject": { "type": "arrangement", "id": "arr-team-001", "songId": "song-team-001" },
+      "templateKey": "team.assignment_status",
+      "values": { "status": "pass", "assignedCount": 3, "activeAssignmentCount": 2 },
+      "evidence": [
+        { "type": "arrangement_suitability", "ref": "arrangement:arr-team-001", "field": "assignment_status", "confidence": 1 },
+        { "type": "service_assignment", "ref": "service_assignment_summary", "field": "assignment_status", "confidence": 1 }
+      ]
+    }
+  ],
+  "adjacentTransitions": [],
+  "setLevel": [],
+  "warnings": [
+    {
+      "code": "TEAM_READINESS_WARNING",
+      "severity": "warning",
+      "scope": "warning",
+      "audience": "worship_leader",
+      "subject": { "type": "arrangement", "id": "arr-team-001", "songId": "song-team-001" },
+      "templateKey": "team.readiness_warning",
+      "values": { "status": "warning", "warningCount": 1 },
+      "evidence": [
+        { "type": "arrangement_suitability", "ref": "arrangement:arr-team-001", "field": "readiness_status", "confidence": 1 },
+        { "type": "service_assignment", "ref": "service_assignment_summary", "field": "readiness_status", "confidence": 1 }
+      ]
+    }
+  ],
+  "diagnostics": []
+}

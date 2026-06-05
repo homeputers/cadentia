@@ -329,3 +329,21 @@ documentation that points clients to recommendation response contracts.
   copyrighted lyric excerpts, or invented catalog facts.
 - Do not imply localization templates are allowed to add new factual claims.
 - Do not leave ADR-021 unlinked from the implementation-plan index.
+
+### Migration note: ADR-023 team-suitability diagnostics
+
+ADR-023 extends the existing `recommendation_explanation.v1` reason-code registry
+without changing the top-level payload shape. Existing consumers remain backward
+compatible because team diagnostics are additive reason codes emitted in the
+existing `selectedSongs`, `warnings`, and `diagnostics` sections.
+
+- New `team_suitability` reason codes cover required-instrument coverage,
+  optional-instrument fit, vocal configuration, lead-vocal range fit, skill-level
+  floors, assignment status, availability status, and readiness warnings.
+- New evidence types `arrangement_suitability` and `service_assignment` cite
+  backend dataset records; localization templates may render those facts but may
+  not add staffing claims that are absent from `values` or `evidence`.
+- Public clients can ignore the new codes. Public views do not receive these
+  internal staffing diagnostics. Worship-leader and admin views may receive
+  aggregate, actionable gaps; private notes, contacts, exact musician vocal
+  ranges, and raw skill records remain outside the public contract.
