@@ -17,7 +17,7 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 @Testcontainers(disabledWithoutDocker = true)
-class Adr023TeamAssignmentFixtureRegressionTest {
+class TeamAssignmentFixtureRegressionTest {
 
     @Container
     private static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine");
@@ -35,8 +35,8 @@ class Adr023TeamAssignmentFixtureRegressionTest {
         Flyway.configure().dataSource(dataSource).load().migrate();
 
         ResourceDatabasePopulator populator = new ResourceDatabasePopulator(
-                new ClassPathResource("db/fixtures/reset_adr023_team_assignment_fixture.sql"),
-                new ClassPathResource("db/fixtures/adr023_team_assignment_fixture.sql"));
+                new ClassPathResource("db/fixtures/reset_team_assignment_fixture.sql"),
+                new ClassPathResource("db/fixtures/team_assignment_fixture.sql"));
         populator.execute(dataSource);
     }
 
@@ -122,7 +122,7 @@ class Adr023TeamAssignmentFixtureRegressionTest {
                         """,
                 Map.of(),
                 Integer.class);
-        String fixtureSql = new ClassPathResource("db/fixtures/adr023_team_assignment_fixture.sql")
+        String fixtureSql = new ClassPathResource("db/fixtures/team_assignment_fixture.sql")
                 .getContentAsString(StandardCharsets.UTF_8);
 
         // Assert

@@ -6,12 +6,12 @@
 -- service_assignment evidence only. LLMs parse intent only and must not select
 -- songs, infer suitability, or generate private personnel facts.
 
--- Run reset_adr023_team_assignment_fixture.sql before reloading this fixture in automated tests.
+-- Run reset_team_assignment_fixture.sql before reloading this fixture in automated tests.
 
 INSERT INTO import_batches (id, source_system, initiated_by, status, summary_json, completed_at)
 VALUES (
     '23900000-0000-0000-0000-000000000001',
-    'adr-023-team-assignment-test-fixture',
+    'team-assignment-test-fixture',
     'test-fixture-loader',
     'COMPLETED',
     '{"fixture":"ADR-023 team assignment", "productionApproved":false, "personnelData":"synthetic"}'::jsonb,
@@ -38,17 +38,17 @@ VALUES
 INSERT INTO lyrics_documents (id, arrangement_id, format, content, content_hash, version_number,
                               is_current, contains_chords, contains_sections, source_reference, created_by)
 VALUES
-    ('23600000-0000-0000-0000-000000000001', '23700000-0000-0000-0000-000000000001', 'plain_text', E'Synthetic mercy fixture line\n', 'sha256:adr023-sparse', 1, true, false, false, 'fixture://adr-023/sparse', 'test-fixture-loader'),
-    ('23600000-0000-0000-0000-000000000002', '23700000-0000-0000-0000-000000000002', 'plain_text', E'Synthetic praise fixture line\n', 'sha256:adr023-full-band', 1, true, false, false, 'fixture://adr-023/full-band', 'test-fixture-loader'),
-    ('23600000-0000-0000-0000-000000000003', '23700000-0000-0000-0000-000000000003', 'plain_text', E'Synthetic benediction fixture line\n', 'sha256:adr023-vocal', 1, true, false, false, 'fixture://adr-023/vocal-led', 'test-fixture-loader'),
-    ('23600000-0000-0000-0000-000000000004', '23700000-0000-0000-0000-000000000004', 'plain_text', E'Synthetic unapproved fixture line\n', 'sha256:adr023-unapproved', 1, true, false, false, 'fixture://adr-023/unapproved', 'test-fixture-loader');
+    ('23600000-0000-0000-0000-000000000001', '23700000-0000-0000-0000-000000000001', 'plain_text', E'Synthetic mercy fixture line\n', 'sha256:team-assignment-sparse', 1, true, false, false, 'fixture://adr-023/sparse', 'test-fixture-loader'),
+    ('23600000-0000-0000-0000-000000000002', '23700000-0000-0000-0000-000000000002', 'plain_text', E'Synthetic praise fixture line\n', 'sha256:team-assignment-full-band', 1, true, false, false, 'fixture://adr-023/full-band', 'test-fixture-loader'),
+    ('23600000-0000-0000-0000-000000000003', '23700000-0000-0000-0000-000000000003', 'plain_text', E'Synthetic benediction fixture line\n', 'sha256:team-assignment-vocal', 1, true, false, false, 'fixture://adr-023/vocal-led', 'test-fixture-loader'),
+    ('23600000-0000-0000-0000-000000000004', '23700000-0000-0000-0000-000000000004', 'plain_text', E'Synthetic unapproved fixture line\n', 'sha256:team-assignment-unapproved', 1, true, false, false, 'fixture://adr-023/unapproved', 'test-fixture-loader');
 
 INSERT INTO provenance_records (id, song_id, arrangement_id, lyrics_document_id, import_batch_id,
                                 source_system, source_uri, source_label, license_type, license_notes,
                                 import_method, confidence_score)
 VALUES
-    ('23500000-0000-0000-0000-000000000001', '23800000-0000-0000-0000-000000000001', NULL, NULL, '23900000-0000-0000-0000-000000000001', 'adr-023-team-assignment-test-fixture', 'fixture://adr-023/sparse/song', 'Synthetic song fixture.', 'NOT_APPLICABLE', 'Synthetic.', 'TEST_FIXTURE', 1.0),
-    ('23500000-0000-0000-0000-000000000002', NULL, '23700000-0000-0000-0000-000000000001', NULL, '23900000-0000-0000-0000-000000000001', 'adr-023-team-assignment-test-fixture', 'fixture://adr-023/sparse/arrangement', 'Synthetic arrangement fixture.', 'NOT_APPLICABLE', 'Synthetic.', 'TEST_FIXTURE', 1.0);
+    ('23500000-0000-0000-0000-000000000001', '23800000-0000-0000-0000-000000000001', NULL, NULL, '23900000-0000-0000-0000-000000000001', 'team-assignment-test-fixture', 'fixture://adr-023/sparse/song', 'Synthetic song fixture.', 'NOT_APPLICABLE', 'Synthetic.', 'TEST_FIXTURE', 1.0),
+    ('23500000-0000-0000-0000-000000000002', NULL, '23700000-0000-0000-0000-000000000001', NULL, '23900000-0000-0000-0000-000000000001', 'team-assignment-test-fixture', 'fixture://adr-023/sparse/arrangement', 'Synthetic arrangement fixture.', 'NOT_APPLICABLE', 'Synthetic.', 'TEST_FIXTURE', 1.0);
 
 -- Approved-only gates: first three arrangements are recommendable; fourth remains non-recommendable.
 INSERT INTO approval_records (id, song_id, arrangement_id, lyrics_document_id, approval_type, status, reviewer, review_notes)
@@ -117,7 +117,7 @@ VALUES
     ('23100000-0000-0000-0000-000000000007', '[TEST FIXTURE] Gray Substitute', NULL, NULL, NULL, 'AVAILABLE', NULL, 'test-fixture-loader', 'test-fixture-loader');
 
 INSERT INTO teams (id, code, display_name)
-VALUES ('23200000-0000-0000-0000-000000000001', 'ADR023_FIXTURE_TEAM', '[TEST FIXTURE] ADR-023 Worship Team');
+VALUES ('23200000-0000-0000-0000-000000000001', 'TEAM_ASSIGNMENT_FIXTURE_TEAM', '[TEST FIXTURE] ADR-023 Worship Team');
 
 INSERT INTO team_memberships (team_id, musician_id, role_code, started_on)
 SELECT '23200000-0000-0000-0000-000000000001', id, 'INSTRUMENTALIST', DATE '2026-01-01'

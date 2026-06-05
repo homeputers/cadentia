@@ -118,9 +118,9 @@ reviewed convention with explicit licensing, provenance, and approval semantics.
 ## ADR-023 Team Assignment Fixture Data
 
 The ADR-023 team assignment fixture lives at
-`apps/api/src/test/resources/db/fixtures/adr023_team_assignment_fixture.sql`,
+`apps/api/src/test/resources/db/fixtures/team_assignment_fixture.sql`,
 with a matching reset script at
-`apps/api/src/test/resources/db/fixtures/reset_adr023_team_assignment_fixture.sql`.
+`apps/api/src/test/resources/db/fixtures/reset_team_assignment_fixture.sql`.
 It is test-scoped and intentionally uses synthetic display names only; there are
 no real contact details, private availability notes, or sensitive pastoral notes.
 

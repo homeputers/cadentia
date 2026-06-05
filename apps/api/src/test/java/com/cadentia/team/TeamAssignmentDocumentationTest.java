@@ -9,13 +9,13 @@ import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.io.ClassPathResource;
 
-class Adr023TeamAssignmentDocumentationTest {
+class TeamAssignmentDocumentationTest {
 
     @Test
     void fixtureDocumentsRepresentativeScenariosAndPrivacySafeDiagnostics() throws IOException {
         // Arrange
-        String fixtureSql = readResource("db/fixtures/adr023_team_assignment_fixture.sql");
-        String resetSql = readResource("db/fixtures/reset_adr023_team_assignment_fixture.sql");
+        String fixtureSql = readResource("db/fixtures/team_assignment_fixture.sql");
+        String resetSql = readResource("db/fixtures/reset_team_assignment_fixture.sql");
 
         // Act / Assert
         assertThat(fixtureSql)
