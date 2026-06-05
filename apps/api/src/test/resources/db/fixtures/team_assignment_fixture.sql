@@ -38,10 +38,10 @@ VALUES
 INSERT INTO lyrics_documents (id, arrangement_id, format, content, content_hash, version_number,
                               is_current, contains_chords, contains_sections, source_reference, created_by)
 VALUES
-    ('23600000-0000-0000-0000-000000000001', '23700000-0000-0000-0000-000000000001', 'PLAIN_TEXT', E'Synthetic mercy fixture line\n', 'sha256:team-assignment-sparse', 1, true, false, false, 'fixture://adr-023/sparse', 'test-fixture-loader'),
-    ('23600000-0000-0000-0000-000000000002', '23700000-0000-0000-0000-000000000002', 'PLAIN_TEXT', E'Synthetic praise fixture line\n', 'sha256:team-assignment-full-band', 1, true, false, false, 'fixture://adr-023/full-band', 'test-fixture-loader'),
-    ('23600000-0000-0000-0000-000000000003', '23700000-0000-0000-0000-000000000003', 'PLAIN_TEXT', E'Synthetic benediction fixture line\n', 'sha256:team-assignment-vocal', 1, true, false, false, 'fixture://adr-023/vocal-led', 'test-fixture-loader'),
-    ('23600000-0000-0000-0000-000000000004', '23700000-0000-0000-0000-000000000004', 'PLAIN_TEXT', E'Synthetic unapproved fixture line\n', 'sha256:team-assignment-unapproved', 1, true, false, false, 'fixture://adr-023/unapproved', 'test-fixture-loader');
+    ('23600000-0000-0000-0000-000000000001', '23700000-0000-0000-0000-000000000001', 'plain_text', E'Synthetic mercy fixture line\n', 'sha256:team-assignment-sparse', 1, true, false, false, 'fixture://adr-023/sparse', 'test-fixture-loader'),
+    ('23600000-0000-0000-0000-000000000002', '23700000-0000-0000-0000-000000000002', 'plain_text', E'Synthetic praise fixture line\n', 'sha256:team-assignment-full-band', 1, true, false, false, 'fixture://adr-023/full-band', 'test-fixture-loader'),
+    ('23600000-0000-0000-0000-000000000003', '23700000-0000-0000-0000-000000000003', 'plain_text', E'Synthetic benediction fixture line\n', 'sha256:team-assignment-vocal', 1, true, false, false, 'fixture://adr-023/vocal-led', 'test-fixture-loader'),
+    ('23600000-0000-0000-0000-000000000004', '23700000-0000-0000-0000-000000000004', 'plain_text', E'Synthetic unapproved fixture line\n', 'sha256:team-assignment-unapproved', 1, true, false, false, 'fixture://adr-023/unapproved', 'test-fixture-loader');
 
 INSERT INTO provenance_records (id, song_id, arrangement_id, lyrics_document_id, import_batch_id,
                                 source_system, source_uri, source_label, license_type, license_notes,

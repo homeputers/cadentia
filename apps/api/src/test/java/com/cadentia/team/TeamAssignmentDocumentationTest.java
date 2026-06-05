@@ -30,6 +30,8 @@ class TeamAssignmentDocumentationTest {
                 .contains("INSERT INTO rehearsal_events")
                 .contains("INSERT INTO rehearsal_team_assignments")
                 .contains("INSERT INTO readiness_notes")
+                .contains("'plain_text'")
+                .doesNotContain("'PLAIN_TEXT'")
                 .contains("arrangement_suitability")
                 .contains("service_assignment")
                 .contains("unapproved arrangement remains excluded")
