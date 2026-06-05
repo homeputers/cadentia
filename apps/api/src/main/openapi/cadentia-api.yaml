@@ -15,6 +15,8 @@ tags:
     description: Recommendation feedback ingestion, inspection, and reset operations
   - name: ServicePlans
     description: Service-plan composition, attachment, and publish operations
+  - name: TeamAssignments
+    description: Worship team service, rehearsal, and musician assignment workflows
 paths:
   /feedback/events:
     post:
@@ -1105,13 +1107,430 @@ paths:
         '409':
           description: Service plan cannot be published due to validation or stale references.
 
+  /team-assignments/services/{servicePlanId}:
+    post:
+      tags: [TeamAssignments]
+      operationId: createServiceTeamAssignment
+      security:
+        - bearerAuth: []
+      x-required-roles: [WORSHIP_LEADER, TEAM_SCHEDULER, ADMIN]
+      summary: Create a service team assignment
+      description: >
+        Creates a structured assignment using controlled role, instrument, vocal part,
+        and assignment-status values. Unavailable musicians require an explicit override.
+      parameters:
+        - $ref: '#/components/parameters/ServicePlanId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TeamServiceAssignmentRequest'
+      responses:
+        '201':
+          description: Service assignment created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeamServiceAssignmentResponse'
+  /team-assignments/services/{servicePlanId}/assignments/{assignmentId}:
+    put:
+      tags: [TeamAssignments]
+      operationId: updateServiceTeamAssignment
+      security:
+        - bearerAuth: []
+      x-required-roles: [WORSHIP_LEADER, TEAM_SCHEDULER, ADMIN]
+      summary: Update a service team assignment
+      parameters:
+        - $ref: '#/components/parameters/ServicePlanId'
+        - $ref: '#/components/parameters/AssignmentId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TeamServiceAssignmentRequest'
+      responses:
+        '200':
+          description: Service assignment updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeamServiceAssignmentResponse'
+    delete:
+      tags: [TeamAssignments]
+      operationId: removeServiceTeamAssignment
+      security:
+        - bearerAuth: []
+      x-required-roles: [WORSHIP_LEADER, TEAM_SCHEDULER, ADMIN]
+      summary: Remove a service team assignment without deleting history
+      parameters:
+        - $ref: '#/components/parameters/ServicePlanId'
+        - $ref: '#/components/parameters/AssignmentId'
+        - in: query
+          name: reasonCode
+          schema: { type: string, default: remove_assignment }
+        - in: query
+          name: reference
+          schema: { type: string, nullable: true }
+      responses:
+        '204':
+          description: Assignment removed from the active roster.
+  /team-assignments/services/{servicePlanId}/assignments/{assignmentId}/substitute:
+    post:
+      tags: [TeamAssignments]
+      operationId: substituteServiceTeamAssignment
+      security:
+        - bearerAuth: []
+      x-required-roles: [WORSHIP_LEADER, TEAM_SCHEDULER, ADMIN]
+      summary: Add a substitute for a service assignment
+      description: Creates a substitute row linked to the original assignment rather than overwriting history.
+      parameters:
+        - $ref: '#/components/parameters/ServicePlanId'
+        - $ref: '#/components/parameters/AssignmentId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TeamSubstituteAssignmentRequest'
+      responses:
+        '201':
+          description: Substitute assignment created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeamServiceAssignmentResponse'
+  /team-assignments/services/{servicePlanId}/reorder:
+    post:
+      tags: [TeamAssignments]
+      operationId: reorderServiceTeamAssignments
+      security:
+        - bearerAuth: []
+      x-required-roles: [WORSHIP_LEADER, TEAM_SCHEDULER, ADMIN]
+      summary: Reorder service team assignments
+      parameters:
+        - $ref: '#/components/parameters/ServicePlanId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TeamReorderAssignmentsRequest'
+      responses:
+        '200':
+          description: Ordered service assignments.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TeamServiceAssignmentResponse'
+  /team-assignments/rehearsals/{rehearsalEventId}:
+    post:
+      tags: [TeamAssignments]
+      operationId: createRehearsalTeamAssignment
+      security:
+        - bearerAuth: []
+      x-required-roles: [WORSHIP_LEADER, TEAM_SCHEDULER, ADMIN]
+      summary: Create a rehearsal team assignment
+      description: >
+        Optionally links rehearsal participation to a service assignment while preserving
+        separate rehearsal response/readiness status.
+      parameters:
+        - in: path
+          name: rehearsalEventId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TeamRehearsalAssignmentRequest'
+      responses:
+        '201':
+          description: Rehearsal assignment created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeamRehearsalAssignmentResponse'
+  /team-assignments/services/{servicePlanId}/song-overrides:
+    post:
+      tags: [TeamAssignments]
+      operationId: createSongTeamAssignmentOverride
+      security:
+        - bearerAuth: []
+      x-required-roles: [WORSHIP_LEADER, TEAM_SCHEDULER, ADMIN]
+      summary: Create a song-specific assignment override
+      description: Assigns a controlled responsibility for a specific song block without changing catalog approval gates.
+      parameters:
+        - $ref: '#/components/parameters/ServicePlanId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TeamSongAssignmentOverrideRequest'
+      responses:
+        '201':
+          description: Song-specific override created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeamSongAssignmentOverrideResponse'
+  /team-assignments/services/{servicePlanId}/roster:
+    get:
+      tags: [TeamAssignments]
+      operationId: getServiceTeamRoster
+      security:
+        - bearerAuth: []
+      x-required-roles: [WORSHIP_LEADER, TEAM_SCHEDULER, REPORTING_VIEWER, ADMIN]
+      summary: Get a privacy-aware service roster summary
+      parameters:
+        - $ref: '#/components/parameters/ServicePlanId'
+      responses:
+        '200':
+          description: Service roster summary.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeamServiceRosterResponse'
+  /team-assignments/musicians/{musicianId}/upcoming:
+    get:
+      tags: [TeamAssignments]
+      operationId: listUpcomingTeamAssignmentsForMusician
+      security:
+        - bearerAuth: []
+      x-required-roles: [ASSIGNED_MUSICIAN, WORSHIP_LEADER, TEAM_SCHEDULER, ADMIN]
+      summary: List upcoming service assignments for a musician
+      parameters:
+        - in: path
+          name: musicianId
+          required: true
+          schema: { type: string, format: uuid }
+        - in: query
+          name: fromInclusive
+          required: true
+          schema: { type: string, format: date-time }
+      responses:
+        '200':
+          description: Upcoming service assignments.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TeamServiceAssignmentResponse'
+  /team-assignments/services/{servicePlanId}/history:
+    get:
+      tags: [TeamAssignments]
+      operationId: listTeamAssignmentHistory
+      security:
+        - bearerAuth: []
+      x-required-roles: [WORSHIP_LEADER, TEAM_SCHEDULER, REPORTING_VIEWER, ADMIN]
+      summary: List assignment change history for a service
+      parameters:
+        - $ref: '#/components/parameters/ServicePlanId'
+      responses:
+        '200':
+          description: Assignment change history.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TeamAssignmentHistoryResponse'
+
 components:
+  parameters:
+    ServicePlanId:
+      in: path
+      name: servicePlanId
+      required: true
+      schema: { type: string, format: uuid }
+    AssignmentId:
+      in: path
+      name: assignmentId
+      required: true
+      schema: { type: string, format: uuid }
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
   schemas:
+
+    TeamMusicianRoleCode:
+      type: string
+      enum: [WORSHIP_LEADER, VOCALIST, INSTRUMENTALIST, MUSIC_DIRECTOR, TECH]
+    TeamInstrumentCode:
+      type: string
+      enum: [ACOUSTIC_GUITAR, ELECTRIC_GUITAR, PIANO, KEYS, BASS, DRUMS, PERCUSSION, BRASS, WINDS, OTHER]
+    TeamVocalPartCode:
+      type: string
+      enum: [LEAD, ALTO, TENOR, BARITONE, SOPRANO, BACKGROUND]
+    TeamAssignmentStatusCode:
+      type: string
+      enum: [REQUESTED, TENTATIVE, ACCEPTED, DECLINED, UNAVAILABLE, SUBSTITUTE]
+    TeamAssignmentType:
+      type: string
+      enum: [SERVICE, REHEARSAL, SONG_OVERRIDE]
+    TeamServiceAssignmentRequest:
+      type: object
+      additionalProperties: false
+      required: [musicianId, roleCode, statusCode]
+      properties:
+        musicianId: { type: string, format: uuid }
+        roleCode: { $ref: '#/components/schemas/TeamMusicianRoleCode' }
+        instrumentCode:
+          $ref: '#/components/schemas/TeamInstrumentCode'
+        vocalPartCode:
+          $ref: '#/components/schemas/TeamVocalPartCode'
+        statusCode: { $ref: '#/components/schemas/TeamAssignmentStatusCode' }
+        assignmentOrder: { type: integer, minimum: 0, nullable: true }
+        overrideUnavailable: { type: boolean, default: false }
+        reasonCode: { type: string, nullable: true }
+        reference: { type: string, nullable: true }
+    TeamServiceAssignmentResponse:
+      type: object
+      required: [assignmentId, servicePlanId, musicianId, roleCode, statusCode]
+      properties:
+        assignmentId: { type: string, format: uuid }
+        servicePlanId: { type: string, format: uuid }
+        musicianId: { type: string, format: uuid }
+        roleCode: { $ref: '#/components/schemas/TeamMusicianRoleCode' }
+        instrumentCode:
+          $ref: '#/components/schemas/TeamInstrumentCode'
+        vocalPartCode:
+          $ref: '#/components/schemas/TeamVocalPartCode'
+        statusCode: { $ref: '#/components/schemas/TeamAssignmentStatusCode' }
+        assignmentOrder: { type: integer, minimum: 0, nullable: true }
+        substituteForAssignmentId: { type: string, format: uuid, nullable: true }
+    TeamRehearsalAssignmentRequest:
+      type: object
+      additionalProperties: false
+      required: [servicePlanId, musicianId, roleCode, statusCode]
+      properties:
+        servicePlanId: { type: string, format: uuid }
+        serviceAssignmentId: { type: string, format: uuid, nullable: true }
+        musicianId: { type: string, format: uuid }
+        roleCode: { $ref: '#/components/schemas/TeamMusicianRoleCode' }
+        instrumentCode:
+          $ref: '#/components/schemas/TeamInstrumentCode'
+        vocalPartCode:
+          $ref: '#/components/schemas/TeamVocalPartCode'
+        statusCode: { $ref: '#/components/schemas/TeamAssignmentStatusCode' }
+        substituteForAssignmentId: { type: string, format: uuid, nullable: true }
+        overrideUnavailable: { type: boolean, default: false }
+        reasonCode: { type: string, nullable: true }
+        reference: { type: string, nullable: true }
+    TeamRehearsalAssignmentResponse:
+      type: object
+      required: [assignmentId, rehearsalEventId, servicePlanId, musicianId, roleCode, statusCode]
+      properties:
+        assignmentId: { type: string, format: uuid }
+        rehearsalEventId: { type: string, format: uuid }
+        servicePlanId: { type: string, format: uuid }
+        musicianId: { type: string, format: uuid }
+        roleCode: { $ref: '#/components/schemas/TeamMusicianRoleCode' }
+        instrumentCode:
+          $ref: '#/components/schemas/TeamInstrumentCode'
+        vocalPartCode:
+          $ref: '#/components/schemas/TeamVocalPartCode'
+        statusCode: { $ref: '#/components/schemas/TeamAssignmentStatusCode' }
+        serviceAssignmentId: { type: string, format: uuid, nullable: true }
+        substituteForAssignmentId: { type: string, format: uuid, nullable: true }
+    TeamSongAssignmentOverrideRequest:
+      type: object
+      additionalProperties: false
+      required: [servicePlanBlockId, baseServiceAssignmentId, musicianId, roleCode, statusCode]
+      properties:
+        servicePlanBlockId: { type: string, format: uuid }
+        baseServiceAssignmentId: { type: string, format: uuid }
+        musicianId: { type: string, format: uuid }
+        roleCode: { $ref: '#/components/schemas/TeamMusicianRoleCode' }
+        instrumentCode:
+          $ref: '#/components/schemas/TeamInstrumentCode'
+        vocalPartCode:
+          $ref: '#/components/schemas/TeamVocalPartCode'
+        statusCode: { $ref: '#/components/schemas/TeamAssignmentStatusCode' }
+        reasonCode: { type: string, nullable: true }
+        reference: { type: string, nullable: true }
+    TeamSongAssignmentOverrideResponse:
+      type: object
+      required: [overrideId, servicePlanId, servicePlanBlockId, baseServiceAssignmentId, musicianId, roleCode, statusCode]
+      properties:
+        overrideId: { type: string, format: uuid }
+        servicePlanId: { type: string, format: uuid }
+        servicePlanBlockId: { type: string, format: uuid }
+        baseServiceAssignmentId: { type: string, format: uuid }
+        musicianId: { type: string, format: uuid }
+        roleCode: { $ref: '#/components/schemas/TeamMusicianRoleCode' }
+        instrumentCode:
+          $ref: '#/components/schemas/TeamInstrumentCode'
+        vocalPartCode:
+          $ref: '#/components/schemas/TeamVocalPartCode'
+        statusCode: { $ref: '#/components/schemas/TeamAssignmentStatusCode' }
+    TeamSubstituteAssignmentRequest:
+      type: object
+      additionalProperties: false
+      required: [substituteMusicianId]
+      properties:
+        substituteMusicianId: { type: string, format: uuid }
+        statusCode: { $ref: '#/components/schemas/TeamAssignmentStatusCode' }
+        overrideUnavailable: { type: boolean, default: false }
+        reasonCode: { type: string, nullable: true }
+        reference: { type: string, nullable: true }
+    TeamReorderAssignmentsRequest:
+      type: object
+      additionalProperties: false
+      required: [orderedAssignmentIds]
+      properties:
+        orderedAssignmentIds:
+          type: array
+          minItems: 1
+          items: { type: string, format: uuid }
+        reasonCode: { type: string, nullable: true }
+        reference: { type: string, nullable: true }
+    TeamServiceRosterResponse:
+      type: object
+      required: [servicePlanId, assignments, staffingGaps, availabilityConflicts]
+      properties:
+        servicePlanId: { type: string, format: uuid }
+        assignments:
+          type: array
+          items: { $ref: '#/components/schemas/TeamServiceAssignmentResponse' }
+        staffingGaps:
+          type: array
+          items: { type: string }
+        availabilityConflicts:
+          type: array
+          items: { type: string }
+    TeamAssignmentHistoryResponse:
+      type: object
+      required: [historyId, assignmentType, assignmentId, servicePlanId, changeAction, changedBy, reasonCode, changedAt]
+      properties:
+        historyId: { type: string, format: uuid }
+        assignmentType: { $ref: '#/components/schemas/TeamAssignmentType' }
+        assignmentId: { type: string, format: uuid }
+        servicePlanId: { type: string, format: uuid }
+        rehearsalEventId: { type: string, format: uuid, nullable: true }
+        musicianId: { type: string, format: uuid, nullable: true }
+        roleCode: { $ref: '#/components/schemas/TeamMusicianRoleCode' }
+        instrumentCode:
+          $ref: '#/components/schemas/TeamInstrumentCode'
+        vocalPartCode:
+          $ref: '#/components/schemas/TeamVocalPartCode'
+        statusCode: { $ref: '#/components/schemas/TeamAssignmentStatusCode' }
+        assignmentOrder: { type: integer, nullable: true }
+        substituteForAssignmentId: { type: string, format: uuid, nullable: true }
+        serviceAssignmentId: { type: string, format: uuid, nullable: true }
+        changeAction: { type: string }
+        changedBy: { type: string }
+        reasonCode: { type: string }
+        reference: { type: string, nullable: true }
+        changedAt: { type: string, format: date-time }
     FeedbackOutcome:
       type: string
       enum:

@@ -4,7 +4,9 @@ import com.cadentia.api.security.PersonnelAuthorizationPolicy;
 import com.cadentia.team.PersonnelAuditModels.PersonnelAuditAction;
 import com.cadentia.team.PersonnelAuditModels.PersonnelAuditEvent;
 import com.cadentia.team.PersonnelAuditModels.PersonnelAuditTargetType;
+import com.cadentia.team.TeamPlanningModels.AssignmentChangeHistoryRecord;
 import com.cadentia.team.TeamPlanningModels.AssignmentStatusCode;
+import com.cadentia.team.TeamPlanningModels.AssignmentType;
 import com.cadentia.team.TeamPlanningModels.AvailabilityWindowRecord;
 import com.cadentia.team.TeamPlanningModels.CreateMusicianCommand;
 import com.cadentia.team.TeamPlanningModels.InstrumentCode;
@@ -12,10 +14,13 @@ import com.cadentia.team.TeamPlanningModels.MusicianRecord;
 import com.cadentia.team.TeamPlanningModels.MusicianRoleCode;
 import com.cadentia.team.TeamPlanningModels.RehearsalAssignmentRecord;
 import com.cadentia.team.TeamPlanningModels.ServiceAssignmentRecord;
+import com.cadentia.team.TeamPlanningModels.ServiceRoster;
 import com.cadentia.team.TeamPlanningModels.SkillLevelCode;
 import com.cadentia.team.TeamPlanningModels.SongAssignmentOverrideRecord;
 import com.cadentia.team.TeamPlanningModels.VocalPartCode;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -196,19 +201,120 @@ public class AuthorizedTeamPlanningService {
             AssignmentStatusCode statusCode,
             String reasonCode,
             String reference) {
+        return createServiceAssignment(
+                servicePlanId, musicianId, roleCode, instrumentCode, vocalPartCode, statusCode, 0, false, reasonCode,
+                reference);
+    }
+
+    @Transactional
+    public ServiceAssignmentRecord createServiceAssignment(
+            UUID servicePlanId,
+            UUID musicianId,
+            MusicianRoleCode roleCode,
+            InstrumentCode instrumentCode,
+            VocalPartCode vocalPartCode,
+            AssignmentStatusCode statusCode,
+            int assignmentOrder,
+            boolean overrideUnavailable,
+            String reasonCode,
+            String reference) {
         authorizationPolicy.requireAssignmentManagement();
+        validateServiceAssignment(servicePlanId, musicianId, roleCode, instrumentCode, vocalPartCode, statusCode, null,
+                overrideUnavailable);
         ServiceAssignmentRecord assignment = repository.createServiceAssignment(
-                servicePlanId, musicianId, roleCode, instrumentCode, vocalPartCode, statusCode);
-        record(
-                PersonnelAuditAction.PERSONNEL_ASSIGNMENT_CHANGED,
-                PersonnelAuditTargetType.SERVICE_ASSIGNMENT,
-                assignment.assignmentId(),
-                reasonCode,
-                reference,
-                null,
-                snapshotRef("service_team_assignments", assignment.assignmentId()),
-                "musicianId,roleCode,instrumentCode,vocalPartCode,statusCode");
+                servicePlanId, musicianId, roleCode, instrumentCode, vocalPartCode, statusCode, assignmentOrder, null);
+        recordServiceAssignmentChange(assignment, "CREATE", reasonCode, reference, null, "musicianId,roleCode,instrumentCode,vocalPartCode,statusCode,assignmentOrder");
         return assignment;
+    }
+
+    @Transactional
+    public ServiceAssignmentRecord updateServiceAssignment(
+            UUID assignmentId,
+            UUID musicianId,
+            MusicianRoleCode roleCode,
+            InstrumentCode instrumentCode,
+            VocalPartCode vocalPartCode,
+            AssignmentStatusCode statusCode,
+            int assignmentOrder,
+            boolean overrideUnavailable,
+            String reasonCode,
+            String reference) {
+        authorizationPolicy.requireAssignmentManagement();
+        ServiceAssignmentRecord existing = repository.findServiceAssignment(assignmentId)
+                .orElseThrow(() -> new IllegalArgumentException("Unknown service assignment."));
+        validateServiceAssignment(existing.servicePlanId(), musicianId, roleCode, instrumentCode, vocalPartCode,
+                statusCode, assignmentId, overrideUnavailable);
+        ServiceAssignmentRecord updated = repository.updateServiceAssignment(
+                        assignmentId, musicianId, roleCode, instrumentCode, vocalPartCode, statusCode, assignmentOrder)
+                .orElseThrow(() -> new IllegalArgumentException("Unknown service assignment."));
+        recordServiceAssignmentChange(updated, "UPDATE", reasonCode, reference,
+                snapshotRef("service_team_assignments", existing.assignmentId()),
+                "musicianId,roleCode,instrumentCode,vocalPartCode,statusCode,assignmentOrder");
+        return updated;
+    }
+
+    @Transactional
+    public void removeServiceAssignment(UUID assignmentId, String reasonCode, String reference) {
+        authorizationPolicy.requireAssignmentManagement();
+        ServiceAssignmentRecord existing = repository.findServiceAssignment(assignmentId)
+                .orElseThrow(() -> new IllegalArgumentException("Unknown service assignment."));
+        repository.removeServiceAssignment(assignmentId);
+        recordServiceAssignmentChange(existing, "REMOVE", reasonCode, reference,
+                snapshotRef("service_team_assignments", existing.assignmentId()), "statusCode");
+    }
+
+    @Transactional
+    public List<ServiceAssignmentRecord> reorderServiceAssignments(
+            UUID servicePlanId,
+            List<UUID> orderedAssignmentIds,
+            String reasonCode,
+            String reference) {
+        authorizationPolicy.requireAssignmentManagement();
+        repository.reorderServiceAssignments(servicePlanId, orderedAssignmentIds);
+        List<ServiceAssignmentRecord> roster = repository.listServiceRoster(servicePlanId);
+        for (ServiceAssignmentRecord assignment : roster) {
+            repository.recordAssignmentHistory(
+                    AssignmentType.SERVICE,
+                    assignment.assignmentId(),
+                    assignment.servicePlanId(),
+                    null,
+                    assignment.musicianId(),
+                    assignment.roleCode(),
+                    assignment.instrumentCode(),
+                    assignment.vocalPartCode(),
+                    assignment.statusCode(),
+                    assignment.assignmentOrder(),
+                    assignment.substituteForAssignmentId(),
+                    null,
+                    "REORDER",
+                    authorizationPolicy.currentActor(),
+                    safeReasonCode(reasonCode),
+                    reference);
+        }
+        return roster;
+    }
+
+    @Transactional
+    public ServiceAssignmentRecord substituteServiceAssignment(
+            UUID originalAssignmentId,
+            UUID substituteMusicianId,
+            AssignmentStatusCode substituteStatusCode,
+            boolean overrideUnavailable,
+            String reasonCode,
+            String reference) {
+        authorizationPolicy.requireAssignmentManagement();
+        ServiceAssignmentRecord original = repository.findServiceAssignment(originalAssignmentId)
+                .orElseThrow(() -> new IllegalArgumentException("Unknown service assignment."));
+        validateServiceAssignment(original.servicePlanId(), substituteMusicianId, original.roleCode(),
+                original.instrumentCode(), original.vocalPartCode(), substituteStatusCode, originalAssignmentId,
+                overrideUnavailable);
+        ServiceAssignmentRecord substitute = repository.createServiceAssignment(
+                original.servicePlanId(), substituteMusicianId, original.roleCode(), original.instrumentCode(),
+                original.vocalPartCode(), substituteStatusCode, original.assignmentOrder(), original.assignmentId());
+        recordServiceAssignmentChange(substitute, "SUBSTITUTE", reasonCode, reference,
+                snapshotRef("service_team_assignments", original.assignmentId()),
+                "musicianId,substituteForAssignmentId,statusCode");
+        return substitute;
     }
 
     @Transactional
@@ -222,9 +328,30 @@ public class AuthorizedTeamPlanningService {
             AssignmentStatusCode statusCode,
             String reasonCode,
             String reference) {
+        return createRehearsalAssignment(rehearsalEventId, servicePlanId, null, musicianId, roleCode, instrumentCode,
+                vocalPartCode, statusCode, null, false, reasonCode, reference);
+    }
+
+    @Transactional
+    public RehearsalAssignmentRecord createRehearsalAssignment(
+            UUID rehearsalEventId,
+            UUID servicePlanId,
+            UUID serviceAssignmentId,
+            UUID musicianId,
+            MusicianRoleCode roleCode,
+            InstrumentCode instrumentCode,
+            VocalPartCode vocalPartCode,
+            AssignmentStatusCode statusCode,
+            UUID substituteForAssignmentId,
+            boolean overrideUnavailable,
+            String reasonCode,
+            String reference) {
         authorizationPolicy.requireAssignmentManagement();
-        RehearsalAssignmentRecord assignment = repository.createRehearsalAssignment(
-                rehearsalEventId, servicePlanId, musicianId, roleCode, instrumentCode, vocalPartCode, statusCode);
+        validateAssignmentVocabularyAndMusician(servicePlanId, musicianId, roleCode, instrumentCode, vocalPartCode,
+                statusCode, overrideUnavailable);
+        RehearsalAssignmentRecord assignment = repository.createRehearsalAssignment(rehearsalEventId, servicePlanId,
+                serviceAssignmentId, musicianId, roleCode, instrumentCode, vocalPartCode, statusCode,
+                substituteForAssignmentId);
         record(
                 PersonnelAuditAction.PERSONNEL_ASSIGNMENT_CHANGED,
                 PersonnelAuditTargetType.REHEARSAL_ASSIGNMENT,
@@ -233,7 +360,12 @@ public class AuthorizedTeamPlanningService {
                 reference,
                 null,
                 snapshotRef("rehearsal_team_assignments", assignment.assignmentId()),
-                "musicianId,roleCode,instrumentCode,vocalPartCode,statusCode");
+                "serviceAssignmentId,musicianId,roleCode,instrumentCode,vocalPartCode,statusCode");
+        repository.recordAssignmentHistory(AssignmentType.REHEARSAL, assignment.assignmentId(), assignment.servicePlanId(),
+                assignment.rehearsalEventId(), assignment.musicianId(), assignment.roleCode(), assignment.instrumentCode(),
+                assignment.vocalPartCode(), assignment.statusCode(), null, assignment.substituteForAssignmentId(),
+                assignment.serviceAssignmentId(), "CREATE", authorizationPolicy.currentActor(), safeReasonCode(reasonCode),
+                reference);
         return assignment;
     }
 
@@ -250,6 +382,8 @@ public class AuthorizedTeamPlanningService {
             String reasonCode,
             String reference) {
         authorizationPolicy.requireAssignmentManagement();
+        validateAssignmentVocabularyAndMusician(servicePlanId, musicianId, roleCode, instrumentCode, vocalPartCode,
+                statusCode, false);
         SongAssignmentOverrideRecord override = repository.createSongAssignmentOverride(
                 servicePlanId,
                 servicePlanBlockId,
@@ -270,6 +404,10 @@ public class AuthorizedTeamPlanningService {
                 snapshotRef("service_team_assignments", baseServiceAssignmentId),
                 snapshotRef("service_song_assignment_overrides", override.overrideId()),
                 "musicianId,roleCode,instrumentCode,vocalPartCode,statusCode");
+        repository.recordAssignmentHistory(AssignmentType.SONG_OVERRIDE, override.overrideId(), override.servicePlanId(),
+                null, override.musicianId(), override.roleCode(), override.instrumentCode(), override.vocalPartCode(),
+                override.statusCode(), null, null, override.baseServiceAssignmentId(), "CREATE",
+                authorizationPolicy.currentActor(), safeReasonCode(reasonCode), reference);
         return override;
     }
 
@@ -290,15 +428,22 @@ public class AuthorizedTeamPlanningService {
                 .orElseThrow(() -> new AccessDeniedException(NO_EXISTENCE_LEAK_MESSAGE));
         authorizationPolicy.requireSelfServiceAssignmentResponse(musician);
         Optional<ServiceAssignmentRecord> updated = repository.updateServiceAssignmentStatus(assignmentId, statusCode);
-        updated.ifPresent(assignment -> record(
-                PersonnelAuditAction.PERSONNEL_ASSIGNMENT_CHANGED,
-                PersonnelAuditTargetType.SERVICE_ASSIGNMENT,
-                assignment.assignmentId(),
-                reasonCode,
-                reference,
-                snapshotRef("service_team_assignments", existing.assignmentId()),
-                snapshotRef("service_team_assignments", assignment.assignmentId()),
-                "statusCode"));
+        updated.ifPresent(assignment -> {
+            record(
+                    PersonnelAuditAction.PERSONNEL_ASSIGNMENT_CHANGED,
+                    PersonnelAuditTargetType.SERVICE_ASSIGNMENT,
+                    assignment.assignmentId(),
+                    reasonCode,
+                    reference,
+                    snapshotRef("service_team_assignments", existing.assignmentId()),
+                    snapshotRef("service_team_assignments", assignment.assignmentId()),
+                    "statusCode");
+            repository.recordAssignmentHistory(AssignmentType.SERVICE, assignment.assignmentId(), assignment.servicePlanId(),
+                    null, assignment.musicianId(), assignment.roleCode(), assignment.instrumentCode(),
+                    assignment.vocalPartCode(), assignment.statusCode(), assignment.assignmentOrder(),
+                    assignment.substituteForAssignmentId(), null, "STATUS", authorizationPolicy.currentActor(),
+                    safeReasonCode(reasonCode), reference);
+        });
         return updated;
     }
 
@@ -322,6 +467,126 @@ public class AuthorizedTeamPlanningService {
                 "readinessNoteRef");
     }
 
+    public ServiceRoster getServiceRoster(UUID servicePlanId) {
+        authorizationPolicy.requireRosterRead();
+        List<ServiceAssignmentRecord> assignments = repository.listServiceRoster(servicePlanId);
+        return new ServiceRoster(
+                servicePlanId,
+                activeAssignments(assignments),
+                staffingGaps(assignments),
+                availabilityConflicts(assignments));
+    }
+
+    public List<ServiceAssignmentRecord> listUpcomingAssignmentsForMusician(UUID musicianId, Instant fromInclusive) {
+        MusicianRecord musician = repository.findMusician(musicianId)
+                .orElseThrow(() -> new AccessDeniedException(NO_EXISTENCE_LEAK_MESSAGE));
+        authorizationPolicy.requireMusicianProfileRead(musician);
+        return repository.listUpcomingServiceAssignmentsForMusician(musicianId, fromInclusive);
+    }
+
+    public List<AssignmentChangeHistoryRecord> listAssignmentHistory(UUID servicePlanId) {
+        authorizationPolicy.requireRosterRead();
+        return repository.listAssignmentHistory(servicePlanId);
+    }
+
+    private void validateServiceAssignment(
+            UUID servicePlanId,
+            UUID musicianId,
+            MusicianRoleCode roleCode,
+            InstrumentCode instrumentCode,
+            VocalPartCode vocalPartCode,
+            AssignmentStatusCode statusCode,
+            UUID excludingAssignmentId,
+            boolean overrideUnavailable) {
+        validateAssignmentVocabularyAndMusician(servicePlanId, musicianId, roleCode, instrumentCode, vocalPartCode,
+                statusCode, overrideUnavailable);
+        if (repository.hasDuplicateServicePosition(servicePlanId, roleCode, instrumentCode, vocalPartCode,
+                excludingAssignmentId)) {
+            throw new IllegalArgumentException("Duplicate mutually exclusive service position.");
+        }
+    }
+
+    private void validateAssignmentVocabularyAndMusician(
+            UUID servicePlanId,
+            UUID musicianId,
+            MusicianRoleCode roleCode,
+            InstrumentCode instrumentCode,
+            VocalPartCode vocalPartCode,
+            AssignmentStatusCode statusCode,
+            boolean overrideUnavailable) {
+        if (!repository.isActiveMusician(musicianId)) {
+            throw new IllegalArgumentException("Cannot assign an inactive or unknown musician.");
+        }
+        if (!repository.isActiveVocabularyValue("musician_roles", roleCode == null ? null : roleCode.name())
+                || !repository.isActiveVocabularyValue("instruments", instrumentCode == null ? null : instrumentCode.name())
+                || !repository.isActiveVocabularyValue("vocal_parts", vocalPartCode == null ? null : vocalPartCode.name())
+                || !repository.isActiveVocabularyValue("assignment_statuses", statusCode == null ? null : statusCode.name())) {
+            throw new IllegalArgumentException("Cannot assign inactive controlled vocabulary values.");
+        }
+        if (!overrideUnavailable && repository.hasUnavailableWindow(musicianId, servicePlanId)) {
+            throw new IllegalArgumentException("Musician is unavailable for this service without override.");
+        }
+    }
+
+    private List<ServiceAssignmentRecord> activeAssignments(List<ServiceAssignmentRecord> assignments) {
+        return assignments.stream()
+                .filter(assignment -> assignment.statusCode() != AssignmentStatusCode.DECLINED
+                        && assignment.statusCode() != AssignmentStatusCode.UNAVAILABLE)
+                .filter(assignment -> assignments.stream()
+                        .noneMatch(candidate -> assignment.assignmentId().equals(candidate.substituteForAssignmentId())
+                                && candidate.statusCode() != AssignmentStatusCode.DECLINED
+                                && candidate.statusCode() != AssignmentStatusCode.UNAVAILABLE))
+                .sorted(Comparator.comparing(assignment -> assignment.assignmentOrder() == null ? 0 : assignment.assignmentOrder()))
+                .toList();
+    }
+
+    private List<String> staffingGaps(List<ServiceAssignmentRecord> assignments) {
+        List<ServiceAssignmentRecord> active = activeAssignments(assignments);
+        List<String> gaps = new ArrayList<>();
+        if (active.stream().noneMatch(assignment -> assignment.roleCode() == MusicianRoleCode.WORSHIP_LEADER)) {
+            gaps.add("WORSHIP_LEADER");
+        }
+        if (active.stream().noneMatch(assignment -> assignment.instrumentCode() == InstrumentCode.DRUMS)) {
+            gaps.add("DRUMS");
+        }
+        if (active.stream().noneMatch(assignment -> assignment.instrumentCode() == InstrumentCode.BASS)) {
+            gaps.add("BASS");
+        }
+        return gaps;
+    }
+
+    private List<String> availabilityConflicts(List<ServiceAssignmentRecord> assignments) {
+        return activeAssignments(assignments).stream()
+                .filter(assignment -> repository.hasUnavailableWindow(assignment.musicianId(), assignment.servicePlanId()))
+                .map(assignment -> assignment.assignmentId().toString())
+                .toList();
+    }
+
+    private void recordServiceAssignmentChange(
+            ServiceAssignmentRecord assignment,
+            String changeAction,
+            String reasonCode,
+            String reference,
+            String beforeStateRef,
+            String changedFields) {
+        record(
+                changeAction.equals("SUBSTITUTE")
+                        ? PersonnelAuditAction.PERSONNEL_SUBSTITUTION_CHANGED
+                        : PersonnelAuditAction.PERSONNEL_ASSIGNMENT_CHANGED,
+                PersonnelAuditTargetType.SERVICE_ASSIGNMENT,
+                assignment.assignmentId(),
+                reasonCode,
+                reference,
+                beforeStateRef,
+                snapshotRef("service_team_assignments", assignment.assignmentId()),
+                changedFields);
+        repository.recordAssignmentHistory(AssignmentType.SERVICE, assignment.assignmentId(), assignment.servicePlanId(),
+                null, assignment.musicianId(), assignment.roleCode(), assignment.instrumentCode(),
+                assignment.vocalPartCode(), assignment.statusCode(), assignment.assignmentOrder(),
+                assignment.substituteForAssignmentId(), null, changeAction, authorizationPolicy.currentActor(),
+                safeReasonCode(reasonCode), reference);
+    }
+
     private void record(
             PersonnelAuditAction action,
             PersonnelAuditTargetType targetType,
@@ -331,7 +596,7 @@ public class AuthorizedTeamPlanningService {
             String beforeStateRef,
             String afterStateRef,
             String changedFields) {
-        String safeReasonCode = reasonCode == null || reasonCode.isBlank() ? "unspecified" : reasonCode.trim();
+        String safeReasonCode = safeReasonCode(reasonCode);
         auditService.record(new PersonnelAuditEvent(
                 authorizationPolicy.currentActor(),
                 authorizationPolicy.currentActorRoles(),
@@ -345,6 +610,10 @@ public class AuthorizedTeamPlanningService {
                 hashRef(beforeStateRef),
                 hashRef(afterStateRef),
                 Map.of("fields", changedFields)));
+    }
+
+    private String safeReasonCode(String reasonCode) {
+        return reasonCode == null || reasonCode.isBlank() ? "unspecified" : reasonCode.trim();
     }
 
     private String snapshotRef(String tableName, UUID id) {
