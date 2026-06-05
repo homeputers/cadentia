@@ -19,6 +19,7 @@ import com.cadentia.team.TeamPlanningModels.VocalPartCode;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.sql.Types;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -216,14 +217,14 @@ public class JdbcArrangementSuitabilityRepository {
                  AND vocal_skill.vocal_part_code = service_team_assignments.vocal_part_code
                  AND vocal_skill.active
                 LEFT JOIN skill_levels assigned_vocal_skill ON assigned_vocal_skill.code = vocal_skill.skill_level_code
-                LEFT JOIN skill_levels required_skill ON required_skill.code = :minimumSkillLevelCode
+                LEFT JOIN skill_levels required_skill ON required_skill.code = CAST(:minimumSkillLevelCode AS varchar)
                 WHERE service_team_assignments.service_plan_id = :servicePlanId
                   AND service_team_assignments.status_code IN (:activeStatuses)
-                  AND (:roleCode IS NULL OR service_team_assignments.role_code = :roleCode)
-                  AND (:instrumentCode IS NULL OR service_team_assignments.instrument_code = :instrumentCode)
-                  AND (:vocalPartCode IS NULL OR service_team_assignments.vocal_part_code = :vocalPartCode)
+                  AND (CAST(:roleCode AS varchar) IS NULL OR service_team_assignments.role_code = :roleCode)
+                  AND (CAST(:instrumentCode AS varchar) IS NULL OR service_team_assignments.instrument_code = :instrumentCode)
+                  AND (CAST(:vocalPartCode AS varchar) IS NULL OR service_team_assignments.vocal_part_code = :vocalPartCode)
                   AND (
-                      :minimumSkillLevelCode IS NULL
+                      CAST(:minimumSkillLevelCode AS varchar) IS NULL
                       OR (
                           service_team_assignments.instrument_code IS NOT NULL
                           AND assigned_instrument_skill.level_rank >= required_skill.level_rank
@@ -237,10 +238,10 @@ public class JdbcArrangementSuitabilityRepository {
                 new MapSqlParameterSource()
                         .addValue("servicePlanId", servicePlanId)
                         .addValue("activeStatuses", ACTIVE_ASSIGNMENT_STATUSES)
-                        .addValue("roleCode", enumName(slot.roleCode()))
-                        .addValue("instrumentCode", enumName(slot.instrumentCode()))
-                        .addValue("vocalPartCode", enumName(slot.vocalPartCode()))
-                        .addValue("minimumSkillLevelCode", enumName(slot.minimumSkillLevelCode())),
+                        .addValue("roleCode", enumName(slot.roleCode()), Types.VARCHAR)
+                        .addValue("instrumentCode", enumName(slot.instrumentCode()), Types.VARCHAR)
+                        .addValue("vocalPartCode", enumName(slot.vocalPartCode()), Types.VARCHAR)
+                        .addValue("minimumSkillLevelCode", enumName(slot.minimumSkillLevelCode()), Types.VARCHAR),
                 Integer.class);
         return count == null ? 0 : count;
     }
