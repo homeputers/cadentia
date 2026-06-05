@@ -1,0 +1,313 @@
+package com.cadentia.rehearsal;
+
+import java.time.Instant;
+import java.util.UUID;
+
+public final class RehearsalWorkflowModels {
+
+    private RehearsalWorkflowModels() {
+    }
+
+    public enum ReadinessStateCode {
+        DRAFT("draft"),
+        PLANNED("planned"),
+        REHEARSING("rehearsing"),
+        ISSUES_OPEN("issues_open"),
+        READY("ready"),
+        COMPLETED("completed");
+
+        private final String code;
+
+        ReadinessStateCode(String code) {
+            this.code = code;
+        }
+
+        public String code() {
+            return code;
+        }
+
+        public static ReadinessStateCode fromCode(String code) {
+            for (ReadinessStateCode value : values()) {
+                if (value.code.equals(code)) {
+                    return value;
+                }
+            }
+            throw new IllegalArgumentException("Unknown readiness state code: " + code);
+        }
+    }
+
+    public enum TargetTypeCode {
+        SERVICE("service"),
+        REHEARSAL_SESSION("rehearsal_session"),
+        SETLIST_ITEM("setlist_item"),
+        TRANSITION("transition"),
+        ARRANGEMENT("arrangement"),
+        TEAM_ROLE("team_role"),
+        MUSICIAN_ASSIGNMENT("musician_assignment");
+
+        private final String code;
+
+        TargetTypeCode(String code) {
+            this.code = code;
+        }
+
+        public String code() {
+            return code;
+        }
+
+        public static TargetTypeCode fromCode(String code) {
+            for (TargetTypeCode value : values()) {
+                if (value.code.equals(code)) {
+                    return value;
+                }
+            }
+            throw new IllegalArgumentException("Unknown target type code: " + code);
+        }
+    }
+
+    public enum IssueCategoryCode {
+        UNRESOLVED_TRANSITION("unresolved_transition"),
+        DIFFICULT_SONG("difficult_song"),
+        BLOCKER("blocker"),
+        ARRANGEMENT_CONCERN("arrangement_concern"),
+        TEAM_ROLE_CONCERN("team_role_concern"),
+        GENERAL_FOLLOW_UP("general_follow_up");
+
+        private final String code;
+
+        IssueCategoryCode(String code) {
+            this.code = code;
+        }
+
+        public String code() {
+            return code;
+        }
+
+        public static IssueCategoryCode fromCode(String code) {
+            for (IssueCategoryCode value : values()) {
+                if (value.code.equals(code)) {
+                    return value;
+                }
+            }
+            throw new IllegalArgumentException("Unknown issue category code: " + code);
+        }
+    }
+
+    public enum IssueSeverityCode {
+        LOW("low"),
+        MEDIUM("medium"),
+        HIGH("high"),
+        BLOCKING("blocking");
+
+        private final String code;
+
+        IssueSeverityCode(String code) {
+            this.code = code;
+        }
+
+        public String code() {
+            return code;
+        }
+
+        public static IssueSeverityCode fromCode(String code) {
+            for (IssueSeverityCode value : values()) {
+                if (value.code.equals(code)) {
+                    return value;
+                }
+            }
+            throw new IllegalArgumentException("Unknown issue severity code: " + code);
+        }
+    }
+
+    public enum IssueStatusCode {
+        OPEN("open"),
+        IN_PROGRESS("in_progress"),
+        RESOLVED("resolved"),
+        DEFERRED("deferred"),
+        CANCELLED("cancelled");
+
+        private final String code;
+
+        IssueStatusCode(String code) {
+            this.code = code;
+        }
+
+        public String code() {
+            return code;
+        }
+
+        public static IssueStatusCode fromCode(String code) {
+            for (IssueStatusCode value : values()) {
+                if (value.code.equals(code)) {
+                    return value;
+                }
+            }
+            throw new IllegalArgumentException("Unknown issue status code: " + code);
+        }
+    }
+
+    public enum IssueActionStatusCode {
+        TODO("todo"),
+        IN_PROGRESS("in_progress"),
+        DONE("done"),
+        CANCELLED("cancelled");
+
+        private final String code;
+
+        IssueActionStatusCode(String code) {
+            this.code = code;
+        }
+
+        public String code() {
+            return code;
+        }
+
+        public static IssueActionStatusCode fromCode(String code) {
+            for (IssueActionStatusCode value : values()) {
+                if (value.code.equals(code)) {
+                    return value;
+                }
+            }
+            throw new IllegalArgumentException("Unknown issue action status code: " + code);
+        }
+    }
+
+    public enum IssueOwnerType {
+        ACTOR("actor"),
+        TEAM_ROLE("team_role"),
+        SERVICE_ASSIGNMENT("service_assignment"),
+        UNASSIGNED("unassigned");
+
+        private final String code;
+
+        IssueOwnerType(String code) {
+            this.code = code;
+        }
+
+        public String code() {
+            return code;
+        }
+    }
+
+    public record ControlledVocabularyEntry(
+            String code,
+            String displayName,
+            int sortOrder,
+            boolean active,
+            boolean systemDefault) {
+    }
+
+    public record RehearsalSessionRecord(
+            UUID rehearsalSessionId,
+            UUID servicePlanId,
+            String sessionCode,
+            Instant startsAt,
+            Instant endsAt,
+            String location,
+            ReadinessStateCode readinessStateCode,
+            Instant archivedAt) {
+    }
+
+    public record RehearsalTarget(
+            TargetTypeCode targetTypeCode,
+            UUID rehearsalSessionId,
+            UUID servicePlanBlockId,
+            UUID setlistVersionItemId,
+            UUID transitionFromBlockId,
+            UUID transitionToBlockId,
+            UUID arrangementId,
+            String teamRoleCode,
+            UUID serviceTeamAssignmentId,
+            UUID rehearsalTeamAssignmentId,
+            UUID songAssignmentOverrideId) {
+
+        public static RehearsalTarget service() {
+            return new RehearsalTarget(TargetTypeCode.SERVICE, null, null, null, null, null, null, null, null, null, null);
+        }
+
+        public static RehearsalTarget session(UUID rehearsalSessionId) {
+            return new RehearsalTarget(TargetTypeCode.REHEARSAL_SESSION, rehearsalSessionId, null, null, null, null,
+                    null, null, null, null, null);
+        }
+
+        public static RehearsalTarget setlistItem(UUID servicePlanBlockId, UUID setlistVersionItemId) {
+            return new RehearsalTarget(TargetTypeCode.SETLIST_ITEM, null, servicePlanBlockId, setlistVersionItemId,
+                    null, null, null, null, null, null, null);
+        }
+
+        public static RehearsalTarget transition(UUID transitionFromBlockId, UUID transitionToBlockId) {
+            return new RehearsalTarget(TargetTypeCode.TRANSITION, null, null, null, transitionFromBlockId,
+                    transitionToBlockId, null, null, null, null, null);
+        }
+
+        public static RehearsalTarget arrangement(UUID arrangementId) {
+            return new RehearsalTarget(TargetTypeCode.ARRANGEMENT, null, null, null, null, null, arrangementId,
+                    null, null, null, null);
+        }
+
+        public static RehearsalTarget teamRole(String teamRoleCode) {
+            return new RehearsalTarget(TargetTypeCode.TEAM_ROLE, null, null, null, null, null, null, teamRoleCode,
+                    null, null, null);
+        }
+
+        public static RehearsalTarget serviceAssignment(UUID serviceTeamAssignmentId) {
+            return new RehearsalTarget(TargetTypeCode.MUSICIAN_ASSIGNMENT, null, null, null, null, null, null, null,
+                    serviceTeamAssignmentId, null, null);
+        }
+    }
+
+    public record RehearsalNoteRecord(
+            UUID noteId,
+            UUID servicePlanId,
+            RehearsalTarget target,
+            String noteBody,
+            String visibilityCode,
+            String createdBy,
+            Instant createdAt) {
+    }
+
+    public record RehearsalIssueRecord(
+            UUID issueId,
+            UUID servicePlanId,
+            RehearsalTarget target,
+            IssueCategoryCode categoryCode,
+            IssueSeverityCode severityCode,
+            IssueStatusCode statusCode,
+            String title,
+            String detail,
+            String detectedBy) {
+    }
+
+    public record RehearsalIssueActionRecord(
+            UUID actionId,
+            UUID issueId,
+            UUID servicePlanId,
+            IssueActionStatusCode actionStatusCode,
+            String actionSummary,
+            IssueOwnerType ownerType,
+            String ownerActor,
+            String ownerTeamRoleCode,
+            UUID ownerServiceAssignmentId) {
+    }
+
+    public record ArrangementOverrideRecord(
+            UUID arrangementOverrideId,
+            UUID servicePlanId,
+            UUID servicePlanBlockId,
+            UUID setlistVersionItemId,
+            UUID sourceArrangementId,
+            String sourceArrangementVersionRef,
+            String effectiveKey,
+            String effectiveMode,
+            Integer effectiveTempoBpm,
+            String effectiveTimeSignature,
+            Integer effectiveDurationSeconds,
+            Integer effectiveEnergyLevel,
+            Integer effectiveDifficultyLevel,
+            String effectiveNotes,
+            String rationale,
+            String provenanceNote,
+            String createdBy,
+            String updatedBy) {
+    }
+}
