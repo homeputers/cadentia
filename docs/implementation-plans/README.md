@@ -82,6 +82,11 @@ includes:
 - [ADR-022 Isolated Instance Provisioning Runbook](../runbooks/adr-022-isolated-instance-provisioning.md) documents
   provisioning, upgrade, backup, restore, export, staging clone, operator audit,
   and guardrail workflows for isolated church deployments.
+
+- [ADR-023 Team Assignment Operations Runbook](../runbooks/adr-023-team-assignment-operations.md) documents
+  roster setup, controlled-vocabulary maintenance, availability collection,
+  service/rehearsal assignments, substitutions, team-aware recommendation
+  profiles, diagnostics, readiness boundaries, privacy rules, and troubleshooting.
 - [ADR-022 Package Governance, Promotion, and Contributor Runbook](../runbooks/adr-022-package-governance.md) documents
   package authoring, validation, promotion, seed catalog governance, accepted
   `instanceId` usage, and contributor rules that prohibit shared tenant-filtered
