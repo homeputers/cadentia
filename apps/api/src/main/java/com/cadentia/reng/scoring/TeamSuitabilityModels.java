@@ -126,7 +126,23 @@ public final class TeamSuitabilityModels {
             FactStatus status,
             String diagnosticCode,
             int requiredCount,
-            int actualCount) {
+            int actualCount,
+            Map<String, Object> values,
+            List<RecommendationExplanationEvidence> evidence) {
+
+        public TeamSuitabilityFact(
+                TeamConstraintCode code,
+                FactStatus status,
+                String diagnosticCode,
+                int requiredCount,
+                int actualCount) {
+            this(code, status, diagnosticCode, requiredCount, actualCount, Map.of(), List.of());
+        }
+
+        public TeamSuitabilityFact {
+            values = values == null ? Map.of() : Map.copyOf(values);
+            evidence = evidence == null ? List.of() : List.copyOf(evidence);
+        }
     }
 
     public record TeamSuitabilityEvaluation(

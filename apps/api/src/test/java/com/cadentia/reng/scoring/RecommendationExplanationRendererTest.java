@@ -40,6 +40,24 @@ class RecommendationExplanationRendererTest {
     }
 
     @Test
+    void shouldRenderTeamSuitabilityDiagnostics() {
+        RecommendationExplanationFact requiredInstrument = fact(
+                "TEAM_REQUIRED_INSTRUMENT_COVERAGE",
+                "team.required_instrument_coverage",
+                Map.of("targetCode", "DRUMS", "actualCount", 0, "requiredCount", 1, "minimumSkillRank", 0, "status", "fail"));
+        RecommendationExplanationFact leadRange = fact(
+                "TEAM_LEAD_VOCAL_RANGE_FIT",
+                "team.lead_vocal_range_fit",
+                Map.of("rangeRequirement", "configured", "fitCount", 0, "status", "fail"));
+
+        List<ExplanationRenderResult> results = renderer.renderAll(List.of(requiredInstrument, leadRange));
+
+        assertThat(results).allMatch(result -> !result.hasValidationErrors());
+        assertThat(results.get(0).text()).contains("DRUMS", "0/1");
+        assertThat(results.get(1).text()).contains("Lead-vocal range requirement", "fit count 0");
+    }
+
+    @Test
     void shouldReportValidationErrorWhenTemplateValuesAreMissing() {
         RecommendationExplanationFact fact = fact("TEMPO_POLICY_OK", "transition.tempo_policy", Map.of("fromBpm", 96, "toBpm", 108));
 
@@ -76,6 +94,7 @@ class RecommendationExplanationRendererTest {
         };
         String severity = switch (code) {
             case "INSUFFICIENT_CANDIDATES" -> "warning";
+            case "TEAM_REQUIRED_INSTRUMENT_COVERAGE", "TEAM_LEAD_VOCAL_RANGE_FIT" -> "blocked";
             default -> "info";
         };
         return new RecommendationExplanationFact(

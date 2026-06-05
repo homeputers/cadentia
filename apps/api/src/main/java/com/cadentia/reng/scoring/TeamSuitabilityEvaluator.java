@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 public class TeamSuitabilityEvaluator {
 
@@ -32,13 +33,14 @@ public class TeamSuitabilityEvaluator {
                 .sorted(Comparator.comparing(assignment -> assignment.musicianId().toString()))
                 .toList();
         List<TeamSuitabilityFact> facts = new ArrayList<>();
-        addUnavailableFact(assignments, facts);
-        addIncompleteTeamFact(constraints, facts);
-        addVocalConfigurationFact(requirement, assignments, facts);
-        addSlotFacts(requirement.requiredSlots(), assignments, true, facts);
-        addSlotFacts(requirement.optionalSlots(), assignments, false, facts);
-        addBackingVocalFact(requirement, assignments, facts);
-        addLeadVocalRangeFact(requirement, assignments, facts);
+        addUnavailableFact(candidate, constraints, assignments, facts);
+        addAssignmentStatusFact(candidate, constraints, assignments, facts);
+        addIncompleteTeamFact(candidate, constraints, facts);
+        addVocalConfigurationFact(candidate, constraints, requirement, assignments, facts);
+        addSlotFacts(candidate, constraints, requirement.requiredSlots(), assignments, true, facts);
+        addSlotFacts(candidate, constraints, requirement.optionalSlots(), assignments, false, facts);
+        addBackingVocalFact(candidate, constraints, requirement, assignments, facts);
+        addLeadVocalRangeFact(candidate, constraints, requirement, assignments, facts);
         return new TeamSuitabilityEvaluation(candidate.arrangementId(), facts);
     }
 
@@ -52,26 +54,63 @@ public class TeamSuitabilityEvaluator {
         return scoringFacts.stream().mapToDouble(TeamSuitabilityEvaluator::scoreFact).average().orElse(1.0d);
     }
 
-    private static void addUnavailableFact(List<TeamAssignment> assignments, List<TeamSuitabilityFact> facts) {
+    private static void addUnavailableFact(
+            RecommendableArrangement candidate,
+            ExplicitTeamConstraints constraints,
+            List<TeamAssignment> assignments,
+            List<TeamSuitabilityFact> facts) {
         long unavailable = assignments.stream().filter(assignment -> !assignment.activeForSuitability()).count();
+        int unavailableCount = Math.toIntExact(unavailable);
         facts.add(new TeamSuitabilityFact(
                 TeamConstraintCode.UNAVAILABLE_ASSIGNED_MUSICIAN,
                 unavailable == 0 ? FactStatus.PASS : FactStatus.FAIL,
                 "UNAVAILABLE_ASSIGNED_MUSICIAN",
                 0,
-                Math.toIntExact(unavailable)));
+                unavailableCount,
+                Map.of(
+                        "status", unavailable == 0 ? "pass" : "fail",
+                        "unavailableCount", unavailableCount,
+                        "activeAssignmentCount", activeAssignments(assignments).size()),
+                evidence(candidate, constraints, "assignment_availability_status")));
     }
 
-    private static void addIncompleteTeamFact(ExplicitTeamConstraints constraints, List<TeamSuitabilityFact> facts) {
+    private static void addAssignmentStatusFact(
+            RecommendableArrangement candidate,
+            ExplicitTeamConstraints constraints,
+            List<TeamAssignment> assignments,
+            List<TeamSuitabilityFact> facts) {
+        facts.add(new TeamSuitabilityFact(
+                TeamConstraintCode.ASSIGNMENT_STATUS,
+                assignments.isEmpty() ? FactStatus.WARNING : FactStatus.PASS,
+                "ASSIGNMENT_STATUS",
+                1,
+                assignments.size(),
+                Map.of(
+                        "status", assignments.isEmpty() ? "warning" : "pass",
+                        "assignedCount", assignments.size(),
+                        "activeAssignmentCount", activeAssignments(assignments).size()),
+                evidence(candidate, constraints, "assignment_status")));
+    }
+
+    private static void addIncompleteTeamFact(
+            RecommendableArrangement candidate,
+            ExplicitTeamConstraints constraints,
+            List<TeamSuitabilityFact> facts) {
         facts.add(new TeamSuitabilityFact(
                 TeamConstraintCode.INCOMPLETE_TEAM,
                 constraints.incompleteTeam() ? FactStatus.WARNING : FactStatus.PASS,
                 "INCOMPLETE_TEAM",
                 0,
-                constraints.incompleteTeam() ? 1 : 0));
+                constraints.incompleteTeam() ? 1 : 0,
+                Map.of(
+                        "status", constraints.incompleteTeam() ? "warning" : "pass",
+                        "warningCount", constraints.incompleteTeam() ? 1 : 0),
+                evidence(candidate, constraints, "readiness_status")));
     }
 
     private static void addVocalConfigurationFact(
+            RecommendableArrangement candidate,
+            ExplicitTeamConstraints constraints,
             ArrangementTeamRequirement requirement,
             List<TeamAssignment> assignments,
             List<TeamSuitabilityFact> facts) {
@@ -85,10 +124,18 @@ public class TeamSuitabilityEvaluator {
                 hasLead ? FactStatus.PASS : FactStatus.FAIL,
                 "MISSING_VOCAL_CONFIGURATION",
                 1,
-                hasLead ? 1 : 0));
+                hasLead ? 1 : 0,
+                Map.of(
+                        "status", hasLead ? "pass" : "fail",
+                        "vocalConfiguration", safeValue(requirement.vocalConfiguration()),
+                        "requiredCount", 1,
+                        "actualCount", hasLead ? 1 : 0),
+                evidence(candidate, constraints, "vocal_configuration")));
     }
 
     private static void addSlotFacts(
+            RecommendableArrangement candidate,
+            ExplicitTeamConstraints constraints,
             List<TeamRequirementSlot> slots,
             List<TeamAssignment> assignments,
             boolean required,
@@ -104,11 +151,20 @@ public class TeamSuitabilityEvaluator {
                     status,
                     diagnosticCode(code, slot),
                     slot.minimumCount(),
-                    actual));
+                    actual,
+                    Map.of(
+                            "status", factStatusValue(status),
+                            "targetCode", targetCode(slot),
+                            "requiredCount", slot.minimumCount(),
+                            "actualCount", actual,
+                            "minimumSkillRank", slot.minimumSkillRank()),
+                    evidence(candidate, constraints, evidenceField(code))));
         }
     }
 
     private static void addBackingVocalFact(
+            RecommendableArrangement candidate,
+            ExplicitTeamConstraints constraints,
             ArrangementTeamRequirement requirement,
             List<TeamAssignment> assignments,
             List<TeamSuitabilityFact> facts) {
@@ -118,15 +174,24 @@ public class TeamSuitabilityEvaluator {
         int actual = (int) activeAssignments(assignments).stream()
                 .filter(TeamSuitabilityEvaluator::hasBackingVocalPart)
                 .count();
+        FactStatus status = actual >= requirement.requiredBackingVocalCount() ? FactStatus.PASS : FactStatus.FAIL;
         facts.add(new TeamSuitabilityFact(
                 TeamConstraintCode.MISSING_VOCAL_CONFIGURATION,
-                actual >= requirement.requiredBackingVocalCount() ? FactStatus.PASS : FactStatus.FAIL,
+                status,
                 "BACKING_VOCAL_COVERAGE",
                 requirement.requiredBackingVocalCount(),
-                actual));
+                actual,
+                Map.of(
+                        "status", factStatusValue(status),
+                        "vocalConfiguration", safeValue(requirement.vocalConfiguration()),
+                        "requiredCount", requirement.requiredBackingVocalCount(),
+                        "actualCount", actual),
+                evidence(candidate, constraints, "vocal_configuration")));
     }
 
     private static void addLeadVocalRangeFact(
+            RecommendableArrangement candidate,
+            ExplicitTeamConstraints constraints,
             ArrangementTeamRequirement requirement,
             List<TeamAssignment> assignments,
             List<TeamSuitabilityFact> facts) {
@@ -145,7 +210,63 @@ public class TeamSuitabilityEvaluator {
                 anyFit ? FactStatus.PASS : FactStatus.FAIL,
                 "LEAD_VOCAL_RANGE_MISMATCH",
                 1,
-                anyFit ? 1 : 0));
+                anyFit ? 1 : 0,
+                Map.of(
+                        "status", anyFit ? "pass" : "fail",
+                        "rangeRequirement", "configured",
+                        "fitCount", anyFit ? 1 : 0),
+                evidence(candidate, constraints, "lead_vocal_range")));
+    }
+
+    private static List<RecommendationExplanationEvidence> evidence(
+            RecommendableArrangement candidate,
+            ExplicitTeamConstraints constraints,
+            String field) {
+        return List.of(
+                new RecommendationExplanationEvidence(
+                        "arrangement_suitability",
+                        "arrangement:" + candidate.arrangementId(),
+                        field,
+                        1.0d),
+                new RecommendationExplanationEvidence(
+                        "service_assignment",
+                        "service_plan:" + constraints.servicePlanId(),
+                        field,
+                        1.0d));
+    }
+
+    private static String targetCode(TeamRequirementSlot slot) {
+        if (slot.instrumentCode() != null) {
+            return normalize(slot.instrumentCode());
+        }
+        if (slot.vocalPartCode() != null) {
+            return normalize(slot.vocalPartCode());
+        }
+        if (slot.roleCode() != null) {
+            return normalize(slot.roleCode());
+        }
+        return "TEAM_SLOT";
+    }
+
+    private static String evidenceField(TeamConstraintCode code) {
+        return switch (code) {
+            case MISSING_REQUIRED_INSTRUMENT -> "required_instrument_coverage";
+            case OPTIONAL_INSTRUMENT_FIT -> "optional_instrument_fit";
+            case INSUFFICIENT_SKILL_COVERAGE -> "skill_level_floor";
+            case LEAD_VOCAL_RANGE_MISMATCH -> "lead_vocal_range";
+            case MISSING_VOCAL_CONFIGURATION -> "vocal_configuration";
+            case UNAVAILABLE_ASSIGNED_MUSICIAN -> "assignment_availability_status";
+            case INCOMPLETE_TEAM -> "readiness_status";
+            case ASSIGNMENT_STATUS -> "assignment_status";
+        };
+    }
+
+    private static String factStatusValue(FactStatus status) {
+        return status.name().toLowerCase(Locale.ROOT);
+    }
+
+    private static String safeValue(String value) {
+        return value == null || value.isBlank() ? "unspecified" : value;
     }
 
     private static int countMatches(TeamRequirementSlot slot, List<TeamAssignment> assignments) {

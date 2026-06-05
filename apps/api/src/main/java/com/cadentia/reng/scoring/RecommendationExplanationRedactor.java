@@ -71,6 +71,9 @@ public final class RecommendationExplanationRedactor {
         if ("approval".equals(normalize(evidence.type()))) {
             return new RecommendationExplanationEvidence(evidence.type(), "approval_gate_summary", evidence.field(), evidence.confidence());
         }
+        if ("service_assignment".equals(normalize(evidence.type()))) {
+            return new RecommendationExplanationEvidence(evidence.type(), "service_assignment_summary", evidence.field(), evidence.confidence());
+        }
         return evidence;
     }
 

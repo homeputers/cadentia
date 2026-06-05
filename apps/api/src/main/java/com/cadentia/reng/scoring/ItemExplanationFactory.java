@@ -14,6 +14,8 @@ import java.util.stream.Collectors;
 
 public class ItemExplanationFactory {
 
+    private final TeamSuitabilityEvaluator teamSuitabilityEvaluator = new TeamSuitabilityEvaluator();
+
     public List<RecommendationExplanationFact> build(
             RecommendableArrangement candidate,
             ScoringRequest request,
@@ -162,7 +164,73 @@ public class ItemExplanationFactory {
                         List.of(new RecommendationExplanationEvidence("score", "feedback.aggregate", "raw", score.rawScore())),
                         score.weightedContribution())));
 
+        componentScores.stream()
+                .filter(score -> CandidateFeatureScorer.TEAM_SUITABILITY.equals(score.componentCode()))
+                .findFirst()
+                .ifPresent(score -> facts.add(new RecommendationExplanationFact(
+                        "SCORE_COMPONENT_TEAM_SUITABILITY",
+                        "info",
+                        "item",
+                        subject,
+                        "item.score_component_team_suitability",
+                        Map.of("score", score.rawScore()),
+                        List.of(new RecommendationExplanationEvidence("score", "candidate.team_suitability", "raw", score.rawScore())),
+                        score.weightedContribution())));
+
+        teamSuitabilityEvaluator.evaluate(candidate, request).facts().stream()
+                .map(fact -> teamSuitabilityExplanation(subject, fact))
+                .forEach(facts::add);
+
         return List.copyOf(facts);
+    }
+
+    private static RecommendationExplanationFact teamSuitabilityExplanation(
+            RecommendationExplanationSubject subject,
+            TeamSuitabilityModels.TeamSuitabilityFact fact) {
+        return new RecommendationExplanationFact(
+                teamExplanationCode(fact),
+                teamSeverity(fact.status()),
+                "item",
+                subject,
+                teamTemplateKey(fact),
+                fact.values(),
+                fact.evidence(),
+                null);
+    }
+
+    private static String teamExplanationCode(TeamSuitabilityModels.TeamSuitabilityFact fact) {
+        return switch (fact.code()) {
+            case MISSING_REQUIRED_INSTRUMENT -> "TEAM_REQUIRED_INSTRUMENT_COVERAGE";
+            case OPTIONAL_INSTRUMENT_FIT -> "TEAM_OPTIONAL_INSTRUMENT_FIT";
+            case MISSING_VOCAL_CONFIGURATION -> "TEAM_VOCAL_CONFIGURATION";
+            case LEAD_VOCAL_RANGE_MISMATCH -> "TEAM_LEAD_VOCAL_RANGE_FIT";
+            case INSUFFICIENT_SKILL_COVERAGE -> "TEAM_SKILL_LEVEL_FLOOR";
+            case UNAVAILABLE_ASSIGNED_MUSICIAN -> "TEAM_AVAILABILITY_STATUS";
+            case INCOMPLETE_TEAM -> "TEAM_READINESS_WARNING";
+            case ASSIGNMENT_STATUS -> "TEAM_ASSIGNMENT_STATUS";
+        };
+    }
+
+    private static String teamTemplateKey(TeamSuitabilityModels.TeamSuitabilityFact fact) {
+        return switch (teamExplanationCode(fact)) {
+            case "TEAM_REQUIRED_INSTRUMENT_COVERAGE" -> "team.required_instrument_coverage";
+            case "TEAM_OPTIONAL_INSTRUMENT_FIT" -> "team.optional_instrument_fit";
+            case "TEAM_VOCAL_CONFIGURATION" -> "team.vocal_configuration";
+            case "TEAM_LEAD_VOCAL_RANGE_FIT" -> "team.lead_vocal_range_fit";
+            case "TEAM_SKILL_LEVEL_FLOOR" -> "team.skill_level_floor";
+            case "TEAM_AVAILABILITY_STATUS" -> "team.availability_status";
+            case "TEAM_ASSIGNMENT_STATUS" -> "team.assignment_status";
+            case "TEAM_READINESS_WARNING" -> "team.readiness_warning";
+            default -> throw new IllegalArgumentException("Unsupported team fact: " + fact.code());
+        };
+    }
+
+    private static String teamSeverity(TeamSuitabilityModels.FactStatus status) {
+        return switch (status) {
+            case PASS -> "info";
+            case WARNING -> "warning";
+            case FAIL -> "blocked";
+        };
     }
 
     private static List<RecommendationTag> matchedRequestedThemeTags(
@@ -318,6 +386,9 @@ public class ItemExplanationFactory {
         }
         if (fact.templateKey().contains("score_component") || fact.templateKey().contains("feedback")) {
             return "score_components";
+        }
+        if (fact.templateKey().startsWith("team.")) {
+            return "team_suitability";
         }
         if (fact.templateKey().contains("approval")) {
             return "eligibility";

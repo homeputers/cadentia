@@ -7,7 +7,15 @@ import java.util.Set;
 
 public final class ExplanationEvidenceValidator {
 
-    private static final Set<String> ALLOWED_EVIDENCE_TYPES = Set.of("score", "catalog", "approval", "provenance", "transition", "request");
+    private static final Set<String> ALLOWED_EVIDENCE_TYPES = Set.of(
+            "score",
+            "catalog",
+            "approval",
+            "provenance",
+            "transition",
+            "request",
+            "arrangement_suitability",
+            "service_assignment");
 
     private ExplanationEvidenceValidator() {}
 

@@ -9,6 +9,8 @@ import com.cadentia.reng.ApprovalGateSummary;
 import com.cadentia.reng.RecommendableArrangement;
 import com.cadentia.reng.RecommendationTag;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
@@ -105,6 +107,106 @@ class ItemExplanationFactoryTest {
                         .contains("missing_musical_key", "missing_bpm", "missing_time_signature"));
     }
 
+    @Test
+    void emitsStructuredTeamSuitabilityDiagnosticsForConflictsWarningsAndBonuses() {
+        // Arrange
+        UUID arrangementId = UUID.fromString("00000000-0000-0000-0000-000000000501");
+        RecommendableArrangement candidate = candidate(arrangementId, UUID.randomUUID(), "G", 118, "4/4", List.of());
+        ScoringRequest request = requestWithTeamConstraints(
+                candidate,
+                new TeamSuitabilityModels.ArrangementTeamRequirement(
+                        List.of(
+                                new TeamSuitabilityModels.TeamRequirementSlot(null, "DRUMS", null, 0, 1),
+                                new TeamSuitabilityModels.TeamRequirementSlot(null, "GUITAR", null, 4, 1)),
+                        List.of(new TeamSuitabilityModels.TeamRequirementSlot(null, "CELLO", null, 0, 1)),
+                        "LEAD_WITH_BACKING",
+                        true,
+                        60,
+                        72,
+                        1),
+                List.of(
+                        assignment(Set.of("GUITAR"), Set.of(), Map.of("GUITAR", 2), Map.of(), true, null, null),
+                        assignment(Set.of(), Set.of("LEAD"), Map.of(), Map.of("LEAD", 3), true, 64, 70),
+                        assignment(Set.of(), Set.of(), Map.of(), Map.of(), false, null, null)),
+                true);
+
+        // Act
+        List<RecommendationExplanationFact> facts = factory.build(candidate, request, List.of());
+
+        // Assert
+        assertThat(facts).extracting(RecommendationExplanationFact::code)
+                .contains(
+                        "TEAM_REQUIRED_INSTRUMENT_COVERAGE",
+                        "TEAM_SKILL_LEVEL_FLOOR",
+                        "TEAM_OPTIONAL_INSTRUMENT_FIT",
+                        "TEAM_VOCAL_CONFIGURATION",
+                        "TEAM_LEAD_VOCAL_RANGE_FIT",
+                        "TEAM_AVAILABILITY_STATUS",
+                        "TEAM_ASSIGNMENT_STATUS",
+                        "TEAM_READINESS_WARNING");
+        assertThat(facts)
+                .filteredOn(fact -> "TEAM_REQUIRED_INSTRUMENT_COVERAGE".equals(fact.code()))
+                .singleElement()
+                .satisfies(fact -> {
+                    assertThat(fact.severity()).isEqualTo("blocked");
+                    assertThat(fact.values()).containsEntry("targetCode", "DRUMS");
+                    assertThat(fact.evidence()).extracting(RecommendationExplanationEvidence::type)
+                            .contains("arrangement_suitability", "service_assignment");
+                });
+        assertThat(facts)
+                .filteredOn(fact -> "TEAM_LEAD_VOCAL_RANGE_FIT".equals(fact.code()))
+                .singleElement()
+                .satisfies(fact -> {
+                    assertThat(fact.values()).containsEntry("rangeRequirement", "configured");
+                    assertThat(fact.values()).doesNotContainKeys("comfortableLowMidiNote", "comfortableHighMidiNote");
+                });
+        assertThat(facts)
+                .filteredOn(fact -> "TEAM_SKILL_LEVEL_FLOOR".equals(fact.code()))
+                .singleElement()
+                .satisfies(fact -> assertThat(fact.values()).containsEntry("minimumSkillRank", 4));
+        assertThat(facts)
+                .filteredOn(fact -> "TEAM_OPTIONAL_INSTRUMENT_FIT".equals(fact.code()))
+                .singleElement()
+                .satisfies(fact -> assertThat(fact.severity()).isEqualTo("warning"));
+        assertThat(facts)
+                .filteredOn(fact -> "TEAM_AVAILABILITY_STATUS".equals(fact.code()))
+                .singleElement()
+                .satisfies(fact -> assertThat(fact.values()).containsEntry("unavailableCount", 1));
+        assertThat(facts)
+                .filteredOn(fact -> "TEAM_READINESS_WARNING".equals(fact.code()))
+                .singleElement()
+                .satisfies(fact -> assertThat(fact.values()).containsEntry("warningCount", 1));
+    }
+
+    @Test
+    void redactsTeamSuitabilityDiagnosticsFromPublicAudience() {
+        // Arrange
+        RecommendableArrangement candidate = candidate(UUID.randomUUID(), UUID.randomUUID(), "G", 118, "4/4", List.of());
+        ScoringRequest request = requestWithTeamConstraints(
+                candidate,
+                new TeamSuitabilityModels.ArrangementTeamRequirement(
+                        List.of(new TeamSuitabilityModels.TeamRequirementSlot(null, "DRUMS", null, 0, 1)),
+                        List.of(),
+                        null,
+                        false,
+                        null,
+                        null,
+                        0),
+                List.of(),
+                false);
+        RecommendationSongExplanation explanation = factory.buildSongExplanation(candidate, request, List.of(), 1);
+
+        // Act
+        RecommendationSongExplanation publicExplanation = explanation.forAudience(DiagnosticsAudience.PUBLIC);
+        RecommendationSongExplanation leaderExplanation = explanation.forAudience(DiagnosticsAudience.WORSHIP_LEADER);
+
+        // Assert
+        assertThat(publicExplanation.facts()).extracting(RecommendationExplanationFact::code)
+                .doesNotContain("TEAM_REQUIRED_INSTRUMENT_COVERAGE", "TEAM_ASSIGNMENT_STATUS");
+        assertThat(leaderExplanation.facts()).extracting(RecommendationExplanationFact::code)
+                .contains("TEAM_REQUIRED_INSTRUMENT_COVERAGE", "TEAM_ASSIGNMENT_STATUS");
+    }
+
     private static RecommendableArrangement candidate(
             UUID arrangementId,
             UUID songId,
@@ -142,6 +244,54 @@ class ItemExplanationFactoryTest {
                 List.of(),
                 false,
                 new ScoringRequest.DefaultsApplied(false, false, false, false));
+    }
+
+    private static ScoringRequest requestWithTeamConstraints(
+            RecommendableArrangement candidate,
+            TeamSuitabilityModels.ArrangementTeamRequirement requirement,
+            List<TeamSuitabilityModels.TeamAssignment> assignments,
+            boolean incompleteTeam) {
+        return new ScoringRequest(
+                "Psalm 24",
+                List.of("holiness"),
+                1,
+                0,
+                new ScoringRequest.KeyPolicy(true, true, 2),
+                new ScoringRequest.TempoPolicy(12),
+                null,
+                "en",
+                List.of(),
+                false,
+                new ScoringRequest.DefaultsApplied(false, false, false, false),
+                null,
+                new TeamSuitabilityModels.ExplicitTeamConstraints(
+                        UUID.fromString("00000000-0000-0000-0000-000000000601"),
+                        assignments,
+                        Map.of(candidate.arrangementId(), requirement),
+                        incompleteTeam));
+    }
+
+    private static TeamSuitabilityModels.TeamAssignment assignment(
+            Set<String> instruments,
+            Set<String> vocalParts,
+            Map<String, Integer> instrumentSkills,
+            Map<String, Integer> vocalSkills,
+            boolean available,
+            Integer low,
+            Integer high) {
+        return new TeamSuitabilityModels.TeamAssignment(
+                UUID.randomUUID(),
+                available
+                        ? TeamSuitabilityModels.AssignmentStatus.ACCEPTED
+                        : TeamSuitabilityModels.AssignmentStatus.UNAVAILABLE,
+                available,
+                Set.of(),
+                instruments,
+                vocalParts,
+                instrumentSkills,
+                vocalSkills,
+                low,
+                high);
     }
 
     private static ApprovalGateSummary approvedSummary() {
