@@ -3,6 +3,8 @@ package com.cadentia.team;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -52,6 +54,10 @@ class AuthorizedTeamPlanningServiceTest {
         PersonnelAuthorizationPolicy policy =
                 new PersonnelAuthorizationPolicy(new SecurityObservabilityRecorder(new SimpleMeterRegistry()));
         service = new AuthorizedTeamPlanningService(repository, policy, new PersonnelDataRedactor(policy), auditService);
+        lenient().when(repository.isActiveMusician(any())).thenReturn(true);
+        lenient().when(repository.isActiveVocabularyValue(anyString(), any())).thenReturn(true);
+        lenient().when(repository.hasUnavailableWindow(any(), any())).thenReturn(false);
+        lenient().when(repository.hasDuplicateServicePosition(any(), any(), any(), any(), any())).thenReturn(false);
     }
 
     @AfterEach
@@ -80,7 +86,9 @@ class AuthorizedTeamPlanningServiceTest {
                         MusicianRoleCode.INSTRUMENTALIST,
                         InstrumentCode.PIANO,
                         null,
-                        AssignmentStatusCode.REQUESTED))
+                        AssignmentStatusCode.REQUESTED,
+                        0,
+                        null))
                 .thenReturn(assignment);
 
         // Act
@@ -159,6 +167,104 @@ class AuthorizedTeamPlanningServiceTest {
                         "portal"))
                 .isInstanceOf(AccessDeniedException.class)
                 .hasMessage("Access denied.");
+    }
+
+
+    @Test
+    void schedulerCannotAssignUnavailableMusicianWithoutOverride() {
+        // Arrange
+        UUID servicePlanId = UUID.randomUUID();
+        UUID musicianId = UUID.randomUUID();
+        authenticate("scheduler", RbacAuthorities.ROLE_TEAM_SCHEDULER);
+        when(repository.hasUnavailableWindow(musicianId, servicePlanId)).thenReturn(true);
+
+        // Act / Assert
+        assertThatThrownBy(() -> service.createServiceAssignment(
+                        servicePlanId,
+                        musicianId,
+                        MusicianRoleCode.INSTRUMENTALIST,
+                        InstrumentCode.BASS,
+                        null,
+                        AssignmentStatusCode.REQUESTED,
+                        "weekly_schedule",
+                        "req-456"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Musician is unavailable for this service without override.");
+    }
+
+    @Test
+    void substituteAssignmentPreservesOriginalAndMarksActiveMusicianDeterministically() {
+        // Arrange
+        UUID servicePlanId = UUID.randomUUID();
+        UUID originalMusicianId = UUID.randomUUID();
+        UUID substituteMusicianId = UUID.randomUUID();
+        UUID originalAssignmentId = UUID.randomUUID();
+        UUID substituteAssignmentId = UUID.randomUUID();
+        authenticate("scheduler", RbacAuthorities.ROLE_TEAM_SCHEDULER);
+        ServiceAssignmentRecord original = new ServiceAssignmentRecord(
+                originalAssignmentId,
+                servicePlanId,
+                originalMusicianId,
+                MusicianRoleCode.INSTRUMENTALIST,
+                InstrumentCode.DRUMS,
+                null,
+                AssignmentStatusCode.ACCEPTED,
+                2,
+                null);
+        ServiceAssignmentRecord substitute = new ServiceAssignmentRecord(
+                substituteAssignmentId,
+                servicePlanId,
+                substituteMusicianId,
+                MusicianRoleCode.INSTRUMENTALIST,
+                InstrumentCode.DRUMS,
+                null,
+                AssignmentStatusCode.SUBSTITUTE,
+                2,
+                originalAssignmentId);
+        when(repository.findServiceAssignment(originalAssignmentId)).thenReturn(Optional.of(original));
+        when(repository.createServiceAssignment(
+                        servicePlanId,
+                        substituteMusicianId,
+                        MusicianRoleCode.INSTRUMENTALIST,
+                        InstrumentCode.DRUMS,
+                        null,
+                        AssignmentStatusCode.SUBSTITUTE,
+                        2,
+                        originalAssignmentId))
+                .thenReturn(substitute);
+        when(repository.listServiceRoster(servicePlanId)).thenReturn(List.of(original, substitute));
+
+        // Act
+        ServiceAssignmentRecord result = service.substituteServiceAssignment(
+                originalAssignmentId,
+                substituteMusicianId,
+                AssignmentStatusCode.SUBSTITUTE,
+                false,
+                "late_change",
+                "req-789");
+
+        // Assert
+        assertThat(result.substituteForAssignmentId()).isEqualTo(originalAssignmentId);
+        assertThat(service.getServiceRoster(servicePlanId).assignments())
+                .extracting(ServiceAssignmentRecord::musicianId)
+                .containsExactly(substituteMusicianId);
+        verify(repository).recordAssignmentHistory(
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                org.mockito.ArgumentMatchers.eq("SUBSTITUTE"),
+                any(),
+                any(),
+                any());
     }
 
     @Test

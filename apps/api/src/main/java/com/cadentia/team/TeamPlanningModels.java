@@ -1,6 +1,7 @@
 package com.cadentia.team;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 public final class TeamPlanningModels {
@@ -68,6 +69,12 @@ public final class TeamPlanningModels {
         SUBSTITUTE
     }
 
+    public enum AssignmentType {
+        SERVICE,
+        REHEARSAL,
+        SONG_OVERRIDE
+    }
+
     public record ControlledVocabularyEntry(
             String code,
             String displayName,
@@ -118,7 +125,20 @@ public final class TeamPlanningModels {
             MusicianRoleCode roleCode,
             InstrumentCode instrumentCode,
             VocalPartCode vocalPartCode,
-            AssignmentStatusCode statusCode) {
+            AssignmentStatusCode statusCode,
+            Integer assignmentOrder,
+            UUID substituteForAssignmentId) {
+
+        public ServiceAssignmentRecord(
+                UUID assignmentId,
+                UUID servicePlanId,
+                UUID musicianId,
+                MusicianRoleCode roleCode,
+                InstrumentCode instrumentCode,
+                VocalPartCode vocalPartCode,
+                AssignmentStatusCode statusCode) {
+            this(assignmentId, servicePlanId, musicianId, roleCode, instrumentCode, vocalPartCode, statusCode, 0, null);
+        }
     }
 
     public record RehearsalEventRecord(
@@ -137,7 +157,22 @@ public final class TeamPlanningModels {
             MusicianRoleCode roleCode,
             InstrumentCode instrumentCode,
             VocalPartCode vocalPartCode,
-            AssignmentStatusCode statusCode) {
+            AssignmentStatusCode statusCode,
+            UUID serviceAssignmentId,
+            UUID substituteForAssignmentId) {
+
+        public RehearsalAssignmentRecord(
+                UUID assignmentId,
+                UUID rehearsalEventId,
+                UUID servicePlanId,
+                UUID musicianId,
+                MusicianRoleCode roleCode,
+                InstrumentCode instrumentCode,
+                VocalPartCode vocalPartCode,
+                AssignmentStatusCode statusCode) {
+            this(assignmentId, rehearsalEventId, servicePlanId, musicianId, roleCode, instrumentCode, vocalPartCode,
+                    statusCode, null, null);
+        }
     }
 
     public record SongAssignmentOverrideRecord(
@@ -150,5 +185,33 @@ public final class TeamPlanningModels {
             InstrumentCode instrumentCode,
             VocalPartCode vocalPartCode,
             AssignmentStatusCode statusCode) {
+    }
+
+    public record ServiceRoster(
+            UUID servicePlanId,
+            List<ServiceAssignmentRecord> assignments,
+            List<String> staffingGaps,
+            List<String> availabilityConflicts) {
+    }
+
+    public record AssignmentChangeHistoryRecord(
+            UUID historyId,
+            AssignmentType assignmentType,
+            UUID assignmentId,
+            UUID servicePlanId,
+            UUID rehearsalEventId,
+            UUID musicianId,
+            MusicianRoleCode roleCode,
+            InstrumentCode instrumentCode,
+            VocalPartCode vocalPartCode,
+            AssignmentStatusCode statusCode,
+            Integer assignmentOrder,
+            UUID substituteForAssignmentId,
+            UUID serviceAssignmentId,
+            String changeAction,
+            String changedBy,
+            String reasonCode,
+            String reference,
+            Instant changedAt) {
     }
 }

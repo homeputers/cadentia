@@ -1,6 +1,8 @@
 package com.cadentia.team;
 
+import com.cadentia.team.TeamPlanningModels.AssignmentChangeHistoryRecord;
 import com.cadentia.team.TeamPlanningModels.AssignmentStatusCode;
+import com.cadentia.team.TeamPlanningModels.AssignmentType;
 import com.cadentia.team.TeamPlanningModels.AvailabilityWindowRecord;
 import com.cadentia.team.TeamPlanningModels.ControlledVocabularyEntry;
 import com.cadentia.team.TeamPlanningModels.CreateMusicianCommand;
@@ -43,19 +45,60 @@ public interface TeamPlanningRepository {
             AssignmentStatusCode statusCode,
             UUID servicePlanId);
 
+    boolean isActiveMusician(UUID musicianId);
+
+    boolean isActiveVocabularyValue(String tableName, String code);
+
+    boolean hasUnavailableWindow(UUID musicianId, UUID servicePlanId);
+
+    boolean hasDuplicateServicePosition(
+            UUID servicePlanId,
+            MusicianRoleCode roleCode,
+            InstrumentCode instrumentCode,
+            VocalPartCode vocalPartCode,
+            UUID excludingAssignmentId);
+
     ServiceAssignmentRecord createServiceAssignment(
             UUID servicePlanId,
             UUID musicianId,
             MusicianRoleCode roleCode,
             InstrumentCode instrumentCode,
             VocalPartCode vocalPartCode,
-            AssignmentStatusCode statusCode);
+            AssignmentStatusCode statusCode,
+            int assignmentOrder,
+            UUID substituteForAssignmentId);
+
+    default ServiceAssignmentRecord createServiceAssignment(
+            UUID servicePlanId,
+            UUID musicianId,
+            MusicianRoleCode roleCode,
+            InstrumentCode instrumentCode,
+            VocalPartCode vocalPartCode,
+            AssignmentStatusCode statusCode) {
+        return createServiceAssignment(
+                servicePlanId, musicianId, roleCode, instrumentCode, vocalPartCode, statusCode, 0, null);
+    }
 
     Optional<ServiceAssignmentRecord> findServiceAssignment(UUID assignmentId);
+
+    List<ServiceAssignmentRecord> listServiceRoster(UUID servicePlanId);
 
     List<ServiceAssignmentRecord> listUpcomingServiceAssignmentsForMusician(UUID musicianId, Instant fromInclusive);
 
     Optional<ServiceAssignmentRecord> updateServiceAssignmentStatus(UUID assignmentId, AssignmentStatusCode statusCode);
+
+    Optional<ServiceAssignmentRecord> updateServiceAssignment(
+            UUID assignmentId,
+            UUID musicianId,
+            MusicianRoleCode roleCode,
+            InstrumentCode instrumentCode,
+            VocalPartCode vocalPartCode,
+            AssignmentStatusCode statusCode,
+            int assignmentOrder);
+
+    boolean removeServiceAssignment(UUID assignmentId);
+
+    void reorderServiceAssignments(UUID servicePlanId, List<UUID> orderedAssignmentIds);
 
     RehearsalEventRecord createRehearsalEvent(
             UUID servicePlanId,
@@ -66,11 +109,26 @@ public interface TeamPlanningRepository {
     RehearsalAssignmentRecord createRehearsalAssignment(
             UUID rehearsalEventId,
             UUID servicePlanId,
+            UUID serviceAssignmentId,
             UUID musicianId,
             MusicianRoleCode roleCode,
             InstrumentCode instrumentCode,
             VocalPartCode vocalPartCode,
-            AssignmentStatusCode statusCode);
+            AssignmentStatusCode statusCode,
+            UUID substituteForAssignmentId);
+
+    default RehearsalAssignmentRecord createRehearsalAssignment(
+            UUID rehearsalEventId,
+            UUID servicePlanId,
+            UUID musicianId,
+            MusicianRoleCode roleCode,
+            InstrumentCode instrumentCode,
+            VocalPartCode vocalPartCode,
+            AssignmentStatusCode statusCode) {
+        return createRehearsalAssignment(
+                rehearsalEventId, servicePlanId, null, musicianId, roleCode, instrumentCode, vocalPartCode,
+                statusCode, null);
+    }
 
     SongAssignmentOverrideRecord createSongAssignmentOverride(
             UUID servicePlanId,
@@ -81,4 +139,24 @@ public interface TeamPlanningRepository {
             InstrumentCode instrumentCode,
             VocalPartCode vocalPartCode,
             AssignmentStatusCode statusCode);
+
+    void recordAssignmentHistory(
+            AssignmentType assignmentType,
+            UUID assignmentId,
+            UUID servicePlanId,
+            UUID rehearsalEventId,
+            UUID musicianId,
+            MusicianRoleCode roleCode,
+            InstrumentCode instrumentCode,
+            VocalPartCode vocalPartCode,
+            AssignmentStatusCode statusCode,
+            Integer assignmentOrder,
+            UUID substituteForAssignmentId,
+            UUID serviceAssignmentId,
+            String changeAction,
+            String changedBy,
+            String reasonCode,
+            String reference);
+
+    List<AssignmentChangeHistoryRecord> listAssignmentHistory(UUID servicePlanId);
 }

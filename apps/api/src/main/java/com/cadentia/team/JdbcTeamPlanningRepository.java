@@ -1,6 +1,8 @@
 package com.cadentia.team;
 
+import com.cadentia.team.TeamPlanningModels.AssignmentChangeHistoryRecord;
 import com.cadentia.team.TeamPlanningModels.AssignmentStatusCode;
+import com.cadentia.team.TeamPlanningModels.AssignmentType;
 import com.cadentia.team.TeamPlanningModels.AvailabilityWindowRecord;
 import com.cadentia.team.TeamPlanningModels.ControlledVocabularyEntry;
 import com.cadentia.team.TeamPlanningModels.CreateMusicianCommand;
@@ -160,37 +162,117 @@ public class JdbcTeamPlanningRepository implements TeamPlanningRepository {
     }
 
     @Override
+    public boolean isActiveMusician(UUID musicianId) {
+        Integer count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM musicians WHERE id = :musicianId AND active",
+                Map.of("musicianId", musicianId),
+                Integer.class);
+        return count != null && count > 0;
+    }
+
+    @Override
+    public boolean isActiveVocabularyValue(String tableName, String code) {
+        if (code == null) {
+            return true;
+        }
+        Integer count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM " + tableName + " WHERE code = :code AND active",
+                Map.of("code", code),
+                Integer.class);
+        return count != null && count > 0;
+    }
+
+    @Override
+    public boolean hasUnavailableWindow(UUID musicianId, UUID servicePlanId) {
+        Integer count = jdbcTemplate.queryForObject(
+                """
+                SELECT COUNT(*)
+                FROM musician_availability_windows windows
+                JOIN service_plans plans ON plans.id = :servicePlanId
+                WHERE windows.musician_id = :musicianId
+                  AND windows.status_code IN ('DECLINED', 'UNAVAILABLE')
+                  AND (windows.service_plan_id = :servicePlanId
+                       OR (windows.starts_at <= plans.service_date_time AND windows.ends_at > plans.service_date_time))
+                """,
+                new MapSqlParameterSource()
+                        .addValue("musicianId", musicianId)
+                        .addValue("servicePlanId", servicePlanId),
+                Integer.class);
+        return count != null && count > 0;
+    }
+
+    @Override
+    public boolean hasDuplicateServicePosition(
+            UUID servicePlanId,
+            MusicianRoleCode roleCode,
+            InstrumentCode instrumentCode,
+            VocalPartCode vocalPartCode,
+            UUID excludingAssignmentId) {
+        if (roleCode == null || (instrumentCode == null && vocalPartCode == null)) {
+            return false;
+        }
+        Integer count = jdbcTemplate.queryForObject(
+                """
+                SELECT COUNT(*)
+                FROM service_team_assignments
+                WHERE service_plan_id = :servicePlanId
+                  AND role_code = :roleCode
+                  AND COALESCE(instrument_code, '') = COALESCE(:instrumentCode, '')
+                  AND COALESCE(vocal_part_code, '') = COALESCE(:vocalPartCode, '')
+                  AND status_code IN ('REQUESTED', 'TENTATIVE', 'ACCEPTED', 'SUBSTITUTE')
+                  AND (:excludingAssignmentId IS NULL OR id <> :excludingAssignmentId)
+                """,
+                assignmentParameters(servicePlanId, null, roleCode, instrumentCode, vocalPartCode, null)
+                        .addValue("excludingAssignmentId", excludingAssignmentId),
+                Integer.class);
+        return count != null && count > 0;
+    }
+
+    @Override
     public ServiceAssignmentRecord createServiceAssignment(
             UUID servicePlanId,
             UUID musicianId,
             MusicianRoleCode roleCode,
             InstrumentCode instrumentCode,
             VocalPartCode vocalPartCode,
-            AssignmentStatusCode statusCode) {
+            AssignmentStatusCode statusCode,
+            int assignmentOrder,
+            UUID substituteForAssignmentId) {
         UUID id = jdbcTemplate.queryForObject(
                 """
                 INSERT INTO service_team_assignments (
-                    service_plan_id, musician_id, role_code, instrument_code, vocal_part_code, status_code
-                ) VALUES (:servicePlanId, :musicianId, :roleCode, :instrumentCode, :vocalPartCode, :statusCode)
+                    service_plan_id, musician_id, role_code, instrument_code, vocal_part_code, status_code,
+                    assignment_order, substitute_for_assignment_id
+                ) VALUES (
+                    :servicePlanId, :musicianId, :roleCode, :instrumentCode, :vocalPartCode, :statusCode,
+                    :assignmentOrder, :substituteForAssignmentId
+                )
                 RETURNING id
                 """,
-                assignmentParameters(servicePlanId, musicianId, roleCode, instrumentCode, vocalPartCode, statusCode),
+                assignmentParameters(servicePlanId, musicianId, roleCode, instrumentCode, vocalPartCode, statusCode)
+                        .addValue("assignmentOrder", assignmentOrder)
+                        .addValue("substituteForAssignmentId", substituteForAssignmentId),
                 UUID.class);
-        return new ServiceAssignmentRecord(
-                id, servicePlanId, musicianId, roleCode, instrumentCode, vocalPartCode, statusCode);
+        return new ServiceAssignmentRecord(id, servicePlanId, musicianId, roleCode, instrumentCode, vocalPartCode,
+                statusCode, assignmentOrder, substituteForAssignmentId);
     }
 
     @Override
     public Optional<ServiceAssignmentRecord> findServiceAssignment(UUID assignmentId) {
         List<ServiceAssignmentRecord> rows = jdbcTemplate.query(
-                """
-                SELECT id, service_plan_id, musician_id, role_code, instrument_code, vocal_part_code, status_code
-                FROM service_team_assignments
-                WHERE id = :assignmentId
-                """,
+                serviceAssignmentSelect() + " WHERE id = :assignmentId",
                 Map.of("assignmentId", assignmentId),
                 (rs, rowNum) -> mapServiceAssignment(rs));
         return rows.stream().findFirst();
+    }
+
+    @Override
+    public List<ServiceAssignmentRecord> listServiceRoster(UUID servicePlanId) {
+        return jdbcTemplate.query(
+                serviceAssignmentSelect()
+                        + " WHERE service_plan_id = :servicePlanId ORDER BY assignment_order ASC, created_at ASC",
+                Map.of("servicePlanId", servicePlanId),
+                (rs, rowNum) -> mapServiceAssignment(rs));
     }
 
     @Override
@@ -200,12 +282,13 @@ public class JdbcTeamPlanningRepository implements TeamPlanningRepository {
                 SELECT service_team_assignments.id, service_team_assignments.service_plan_id,
                        service_team_assignments.musician_id, service_team_assignments.role_code,
                        service_team_assignments.instrument_code, service_team_assignments.vocal_part_code,
-                       service_team_assignments.status_code
+                       service_team_assignments.status_code, service_team_assignments.assignment_order,
+                       service_team_assignments.substitute_for_assignment_id, service_team_assignments.created_at
                 FROM service_team_assignments
                 JOIN service_plans ON service_plans.id = service_team_assignments.service_plan_id
                 WHERE service_team_assignments.musician_id = :musicianId
                   AND service_plans.service_date_time >= :fromInclusive
-                ORDER BY service_plans.service_date_time ASC, service_team_assignments.created_at ASC
+                ORDER BY service_plans.service_date_time ASC, service_team_assignments.assignment_order ASC
                 """,
                 new MapSqlParameterSource()
                         .addValue("musicianId", musicianId)
@@ -214,20 +297,78 @@ public class JdbcTeamPlanningRepository implements TeamPlanningRepository {
     }
 
     @Override
-    public Optional<ServiceAssignmentRecord> updateServiceAssignmentStatus(
-            UUID assignmentId, AssignmentStatusCode statusCode) {
+    public Optional<ServiceAssignmentRecord> updateServiceAssignmentStatus(UUID assignmentId, AssignmentStatusCode statusCode) {
         List<ServiceAssignmentRecord> rows = jdbcTemplate.query(
                 """
                 UPDATE service_team_assignments
                 SET status_code = :statusCode, updated_at = now()
                 WHERE id = :assignmentId
-                RETURNING id, service_plan_id, musician_id, role_code, instrument_code, vocal_part_code, status_code
+                RETURNING id, service_plan_id, musician_id, role_code, instrument_code, vocal_part_code, status_code,
+                          assignment_order, substitute_for_assignment_id, created_at
                 """,
                 new MapSqlParameterSource()
                         .addValue("assignmentId", assignmentId)
                         .addValue("statusCode", enumName(statusCode)),
                 (rs, rowNum) -> mapServiceAssignment(rs));
         return rows.stream().findFirst();
+    }
+
+    @Override
+    public Optional<ServiceAssignmentRecord> updateServiceAssignment(
+            UUID assignmentId,
+            UUID musicianId,
+            MusicianRoleCode roleCode,
+            InstrumentCode instrumentCode,
+            VocalPartCode vocalPartCode,
+            AssignmentStatusCode statusCode,
+            int assignmentOrder) {
+        List<ServiceAssignmentRecord> rows = jdbcTemplate.query(
+                """
+                UPDATE service_team_assignments
+                SET musician_id = :musicianId,
+                    role_code = :roleCode,
+                    instrument_code = :instrumentCode,
+                    vocal_part_code = :vocalPartCode,
+                    status_code = :statusCode,
+                    assignment_order = :assignmentOrder,
+                    updated_at = now()
+                WHERE id = :assignmentId
+                RETURNING id, service_plan_id, musician_id, role_code, instrument_code, vocal_part_code, status_code,
+                          assignment_order, substitute_for_assignment_id, created_at
+                """,
+                assignmentParameters(null, musicianId, roleCode, instrumentCode, vocalPartCode, statusCode)
+                        .addValue("assignmentId", assignmentId)
+                        .addValue("assignmentOrder", assignmentOrder),
+                (rs, rowNum) -> mapServiceAssignment(rs));
+        return rows.stream().findFirst();
+    }
+
+    @Override
+    public boolean removeServiceAssignment(UUID assignmentId) {
+        return jdbcTemplate.update(
+                """
+                UPDATE service_team_assignments
+                SET status_code = 'DECLINED', updated_at = now()
+                WHERE id = :assignmentId
+                """,
+                Map.of("assignmentId", assignmentId)) > 0;
+    }
+
+    @Override
+    public void reorderServiceAssignments(UUID servicePlanId, List<UUID> orderedAssignmentIds) {
+        int order = 0;
+        for (UUID assignmentId : orderedAssignmentIds) {
+            jdbcTemplate.update(
+                    """
+                    UPDATE service_team_assignments
+                    SET assignment_order = :assignmentOrder, updated_at = now()
+                    WHERE service_plan_id = :servicePlanId AND id = :assignmentId
+                    """,
+                    new MapSqlParameterSource()
+                            .addValue("assignmentOrder", order++)
+                            .addValue("servicePlanId", servicePlanId)
+                            .addValue("assignmentId", assignmentId));
+        }
     }
 
     @Override
@@ -255,27 +396,31 @@ public class JdbcTeamPlanningRepository implements TeamPlanningRepository {
     public RehearsalAssignmentRecord createRehearsalAssignment(
             UUID rehearsalEventId,
             UUID servicePlanId,
+            UUID serviceAssignmentId,
             UUID musicianId,
             MusicianRoleCode roleCode,
             InstrumentCode instrumentCode,
             VocalPartCode vocalPartCode,
-            AssignmentStatusCode statusCode) {
+            AssignmentStatusCode statusCode,
+            UUID substituteForAssignmentId) {
         UUID id = jdbcTemplate.queryForObject(
                 """
                 INSERT INTO rehearsal_team_assignments (
-                    rehearsal_event_id, service_plan_id, musician_id, role_code,
-                    instrument_code, vocal_part_code, status_code
+                    rehearsal_event_id, service_plan_id, service_assignment_id, musician_id, role_code,
+                    instrument_code, vocal_part_code, status_code, substitute_for_assignment_id
                 ) VALUES (
-                    :rehearsalEventId, :servicePlanId, :musicianId, :roleCode,
-                    :instrumentCode, :vocalPartCode, :statusCode
+                    :rehearsalEventId, :servicePlanId, :serviceAssignmentId, :musicianId, :roleCode,
+                    :instrumentCode, :vocalPartCode, :statusCode, :substituteForAssignmentId
                 )
                 RETURNING id
                 """,
                 assignmentParameters(servicePlanId, musicianId, roleCode, instrumentCode, vocalPartCode, statusCode)
-                        .addValue("rehearsalEventId", rehearsalEventId),
+                        .addValue("rehearsalEventId", rehearsalEventId)
+                        .addValue("serviceAssignmentId", serviceAssignmentId)
+                        .addValue("substituteForAssignmentId", substituteForAssignmentId),
                 UUID.class);
-        return new RehearsalAssignmentRecord(
-                id, rehearsalEventId, servicePlanId, musicianId, roleCode, instrumentCode, vocalPartCode, statusCode);
+        return new RehearsalAssignmentRecord(id, rehearsalEventId, servicePlanId, musicianId, roleCode, instrumentCode,
+                vocalPartCode, statusCode, serviceAssignmentId, substituteForAssignmentId);
     }
 
     @Override
@@ -303,16 +448,64 @@ public class JdbcTeamPlanningRepository implements TeamPlanningRepository {
                         .addValue("servicePlanBlockId", servicePlanBlockId)
                         .addValue("baseServiceAssignmentId", baseServiceAssignmentId),
                 UUID.class);
-        return new SongAssignmentOverrideRecord(
-                id,
-                servicePlanId,
-                servicePlanBlockId,
-                baseServiceAssignmentId,
-                musicianId,
-                roleCode,
-                instrumentCode,
-                vocalPartCode,
-                statusCode);
+        return new SongAssignmentOverrideRecord(id, servicePlanId, servicePlanBlockId, baseServiceAssignmentId,
+                musicianId, roleCode, instrumentCode, vocalPartCode, statusCode);
+    }
+
+    @Override
+    public void recordAssignmentHistory(
+            AssignmentType assignmentType,
+            UUID assignmentId,
+            UUID servicePlanId,
+            UUID rehearsalEventId,
+            UUID musicianId,
+            MusicianRoleCode roleCode,
+            InstrumentCode instrumentCode,
+            VocalPartCode vocalPartCode,
+            AssignmentStatusCode statusCode,
+            Integer assignmentOrder,
+            UUID substituteForAssignmentId,
+            UUID serviceAssignmentId,
+            String changeAction,
+            String changedBy,
+            String reasonCode,
+            String reference) {
+        jdbcTemplate.update(
+                """
+                INSERT INTO team_assignment_history (
+                    assignment_type, assignment_id, service_plan_id, rehearsal_event_id, musician_id,
+                    role_code, instrument_code, vocal_part_code, status_code, assignment_order,
+                    substitute_for_assignment_id, service_assignment_id, change_action, changed_by, reason_code, reference
+                ) VALUES (
+                    :assignmentType, :assignmentId, :servicePlanId, :rehearsalEventId, :musicianId,
+                    :roleCode, :instrumentCode, :vocalPartCode, :statusCode, :assignmentOrder,
+                    :substituteForAssignmentId, :serviceAssignmentId, :changeAction, :changedBy, :reasonCode, :reference
+                )
+                """,
+                assignmentHistoryParameters(assignmentType, assignmentId, servicePlanId, rehearsalEventId, musicianId,
+                        roleCode, instrumentCode, vocalPartCode, statusCode, assignmentOrder, substituteForAssignmentId,
+                        serviceAssignmentId, changeAction, changedBy, reasonCode, reference));
+    }
+
+    @Override
+    public List<AssignmentChangeHistoryRecord> listAssignmentHistory(UUID servicePlanId) {
+        return jdbcTemplate.query(
+                """
+                SELECT *
+                FROM team_assignment_history
+                WHERE service_plan_id = :servicePlanId
+                ORDER BY changed_at DESC, id DESC
+                """,
+                Map.of("servicePlanId", servicePlanId),
+                (rs, rowNum) -> mapAssignmentHistory(rs));
+    }
+
+    private String serviceAssignmentSelect() {
+        return """
+                SELECT id, service_plan_id, musician_id, role_code, instrument_code, vocal_part_code, status_code,
+                       assignment_order, substitute_for_assignment_id, created_at
+                FROM service_team_assignments
+                """;
     }
 
     private ServiceAssignmentRecord mapServiceAssignment(ResultSet rs) throws SQLException {
@@ -323,7 +516,31 @@ public class JdbcTeamPlanningRepository implements TeamPlanningRepository {
                 enumValue(MusicianRoleCode.class, rs.getString("role_code")),
                 enumValue(InstrumentCode.class, rs.getString("instrument_code")),
                 enumValue(VocalPartCode.class, rs.getString("vocal_part_code")),
-                enumValue(AssignmentStatusCode.class, rs.getString("status_code")));
+                enumValue(AssignmentStatusCode.class, rs.getString("status_code")),
+                rs.getInt("assignment_order"),
+                rs.getObject("substitute_for_assignment_id", UUID.class));
+    }
+
+    private AssignmentChangeHistoryRecord mapAssignmentHistory(ResultSet rs) throws SQLException {
+        return new AssignmentChangeHistoryRecord(
+                rs.getObject("id", UUID.class),
+                enumValue(AssignmentType.class, rs.getString("assignment_type")),
+                rs.getObject("assignment_id", UUID.class),
+                rs.getObject("service_plan_id", UUID.class),
+                rs.getObject("rehearsal_event_id", UUID.class),
+                rs.getObject("musician_id", UUID.class),
+                enumValue(MusicianRoleCode.class, rs.getString("role_code")),
+                enumValue(InstrumentCode.class, rs.getString("instrument_code")),
+                enumValue(VocalPartCode.class, rs.getString("vocal_part_code")),
+                enumValue(AssignmentStatusCode.class, rs.getString("status_code")),
+                nullableInteger(rs, "assignment_order"),
+                rs.getObject("substitute_for_assignment_id", UUID.class),
+                rs.getObject("service_assignment_id", UUID.class),
+                rs.getString("change_action"),
+                rs.getString("changed_by"),
+                rs.getString("reason_code"),
+                rs.getString("reference"),
+                rs.getTimestamp("changed_at").toInstant());
     }
 
     private List<ControlledVocabularyEntry> listVocabulary(String tableName) {
@@ -353,6 +570,36 @@ public class JdbcTeamPlanningRepository implements TeamPlanningRepository {
                 .addValue("instrumentCode", enumName(instrumentCode))
                 .addValue("vocalPartCode", enumName(vocalPartCode))
                 .addValue("statusCode", enumName(statusCode));
+    }
+
+    private MapSqlParameterSource assignmentHistoryParameters(
+            AssignmentType assignmentType,
+            UUID assignmentId,
+            UUID servicePlanId,
+            UUID rehearsalEventId,
+            UUID musicianId,
+            MusicianRoleCode roleCode,
+            InstrumentCode instrumentCode,
+            VocalPartCode vocalPartCode,
+            AssignmentStatusCode statusCode,
+            Integer assignmentOrder,
+            UUID substituteForAssignmentId,
+            UUID serviceAssignmentId,
+            String changeAction,
+            String changedBy,
+            String reasonCode,
+            String reference) {
+        return assignmentParameters(servicePlanId, musicianId, roleCode, instrumentCode, vocalPartCode, statusCode)
+                .addValue("assignmentType", enumName(assignmentType))
+                .addValue("assignmentId", assignmentId)
+                .addValue("rehearsalEventId", rehearsalEventId)
+                .addValue("assignmentOrder", assignmentOrder)
+                .addValue("substituteForAssignmentId", substituteForAssignmentId)
+                .addValue("serviceAssignmentId", serviceAssignmentId)
+                .addValue("changeAction", changeAction)
+                .addValue("changedBy", changedBy)
+                .addValue("reasonCode", reasonCode)
+                .addValue("reference", reference);
     }
 
     private MusicianRecord mapMusician(ResultSet rs) throws SQLException {
