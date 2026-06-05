@@ -187,6 +187,15 @@ public final class RehearsalWorkflowModels {
         public String code() {
             return code;
         }
+
+        public static IssueOwnerType fromCode(String code) {
+            for (IssueOwnerType value : values()) {
+                if (value.code.equals(code)) {
+                    return value;
+                }
+            }
+            throw new IllegalArgumentException("Unknown issue owner type: " + code);
+        }
     }
 
     public record ControlledVocabularyEntry(
@@ -206,6 +215,18 @@ public final class RehearsalWorkflowModels {
             String location,
             ReadinessStateCode readinessStateCode,
             Instant archivedAt) {
+    }
+
+    public record WorkflowStatus(
+            UUID servicePlanId,
+            ReadinessStateCode explicitStateCode,
+            ReadinessStateCode derivedStateCode,
+            int openBlockingIssueCount,
+            int openRequiredActionCount) {
+
+        public boolean readyForService() {
+            return derivedStateCode == ReadinessStateCode.READY || derivedStateCode == ReadinessStateCode.COMPLETED;
+        }
     }
 
     public record RehearsalTarget(
@@ -275,7 +296,17 @@ public final class RehearsalWorkflowModels {
             IssueStatusCode statusCode,
             String title,
             String detail,
-            String detectedBy) {
+            String detectedBy,
+            Instant resolvedAt,
+            Instant archivedAt) {
+
+        public boolean open() {
+            return statusCode == IssueStatusCode.OPEN || statusCode == IssueStatusCode.IN_PROGRESS;
+        }
+
+        public boolean blocking() {
+            return open() && (severityCode == IssueSeverityCode.BLOCKING || categoryCode == IssueCategoryCode.BLOCKER);
+        }
     }
 
     public record RehearsalIssueActionRecord(
@@ -287,7 +318,29 @@ public final class RehearsalWorkflowModels {
             IssueOwnerType ownerType,
             String ownerActor,
             String ownerTeamRoleCode,
-            UUID ownerServiceAssignmentId) {
+            UUID ownerServiceAssignmentId,
+            Instant completedAt) {
+
+        public boolean open() {
+            return actionStatusCode == IssueActionStatusCode.TODO
+                    || actionStatusCode == IssueActionStatusCode.IN_PROGRESS;
+        }
+    }
+
+    public record RehearsalAuditRecord(
+            UUID auditId,
+            String actor,
+            java.util.Set<String> actorRoles,
+            String actionCode,
+            String targetType,
+            UUID targetId,
+            UUID servicePlanId,
+            UUID rehearsalSessionId,
+            Instant occurredAt,
+            String reason,
+            String reference,
+            String beforeStateSnapshot,
+            String afterStateSnapshot) {
     }
 
     public record ArrangementOverrideRecord(

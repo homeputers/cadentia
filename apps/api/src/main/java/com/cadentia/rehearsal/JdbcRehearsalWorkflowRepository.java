@@ -8,6 +8,7 @@ import com.cadentia.rehearsal.RehearsalWorkflowModels.IssueOwnerType;
 import com.cadentia.rehearsal.RehearsalWorkflowModels.IssueSeverityCode;
 import com.cadentia.rehearsal.RehearsalWorkflowModels.IssueStatusCode;
 import com.cadentia.rehearsal.RehearsalWorkflowModels.ReadinessStateCode;
+import com.cadentia.rehearsal.RehearsalWorkflowModels.RehearsalAuditRecord;
 import com.cadentia.rehearsal.RehearsalWorkflowModels.RehearsalIssueActionRecord;
 import com.cadentia.rehearsal.RehearsalWorkflowModels.RehearsalIssueRecord;
 import com.cadentia.rehearsal.RehearsalWorkflowModels.RehearsalNoteRecord;
@@ -19,6 +20,8 @@ import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -49,6 +52,17 @@ public class JdbcRehearsalWorkflowRepository implements RehearsalWorkflowReposit
         return listVocabulary("rehearsal_issue_statuses");
     }
 
+
+    @Override
+    public Optional<ReadinessStateCode> findServiceReadiness(UUID servicePlanId) {
+        return jdbcTemplate.query(
+                        "SELECT readiness_state_code FROM service_rehearsal_workflow_states WHERE service_plan_id = :id",
+                        Map.of("id", servicePlanId),
+                        (rs, rowNum) -> ReadinessStateCode.fromCode(rs.getString("readiness_state_code")))
+                .stream()
+                .findFirst();
+    }
+
     @Override
     @Transactional
     public RehearsalSessionRecord createSession(
@@ -74,6 +88,38 @@ public class JdbcRehearsalWorkflowRepository implements RehearsalWorkflowReposit
                         .addValue("endsAt", Timestamp.from(endsAt))
                         .addValue("location", location)
                         .addValue("createdBy", createdBy),
+                UUID.class);
+        return getSession(id);
+    }
+
+
+    @Override
+    public RehearsalSessionRecord updateSession(
+            UUID servicePlanId,
+            UUID rehearsalSessionId,
+            String sessionCode,
+            Instant startsAt,
+            Instant endsAt,
+            String location,
+            String updatedBy) {
+        UUID id = jdbcTemplate.queryForObject(
+                """
+                UPDATE rehearsal_sessions
+                SET session_code = :sessionCode, starts_at = :startsAt, ends_at = :endsAt, location = :location,
+                    updated_by = :updatedBy, updated_at = NOW()
+                WHERE service_plan_id = :servicePlanId
+                  AND id = :rehearsalSessionId
+                  AND archived_at IS NULL
+                RETURNING id
+                """,
+                new MapSqlParameterSource()
+                        .addValue("servicePlanId", servicePlanId)
+                        .addValue("rehearsalSessionId", rehearsalSessionId)
+                        .addValue("sessionCode", sessionCode)
+                        .addValue("startsAt", Timestamp.from(startsAt))
+                        .addValue("endsAt", Timestamp.from(endsAt))
+                        .addValue("location", location)
+                        .addValue("updatedBy", updatedBy),
                 UUID.class);
         return getSession(id);
     }
@@ -179,6 +225,35 @@ public class JdbcRehearsalWorkflowRepository implements RehearsalWorkflowReposit
                 (rs, rowNum) -> mapNote(rs));
     }
 
+
+    @Override
+    public Optional<RehearsalIssueRecord> findIssue(UUID servicePlanId, UUID issueId) {
+        return jdbcTemplate.query(
+                        "SELECT * FROM rehearsal_issues WHERE service_plan_id = :servicePlanId AND id = :issueId",
+                        new MapSqlParameterSource()
+                                .addValue("servicePlanId", servicePlanId)
+                                .addValue("issueId", issueId),
+                        (rs, rowNum) -> mapIssue(rs))
+                .stream()
+                .findFirst();
+    }
+
+    @Override
+    public List<RehearsalIssueRecord> listIssues(UUID servicePlanId) {
+        return jdbcTemplate.query(
+                "SELECT * FROM rehearsal_issues WHERE service_plan_id = :servicePlanId AND archived_at IS NULL ORDER BY created_at, id",
+                Map.of("servicePlanId", servicePlanId),
+                (rs, rowNum) -> mapIssue(rs));
+    }
+
+    @Override
+    public List<RehearsalIssueActionRecord> listIssueActions(UUID servicePlanId) {
+        return jdbcTemplate.query(
+                "SELECT * FROM rehearsal_issue_actions WHERE service_plan_id = :servicePlanId ORDER BY created_at, id",
+                Map.of("servicePlanId", servicePlanId),
+                (rs, rowNum) -> mapAction(rs));
+    }
+
     @Override
     public RehearsalIssueRecord createIssue(
             UUID servicePlanId,
@@ -218,6 +293,52 @@ public class JdbcRehearsalWorkflowRepository implements RehearsalWorkflowReposit
                 (rs, rowNum) -> mapIssue(rs));
     }
 
+
+    @Override
+    public RehearsalIssueRecord updateIssueSeverity(
+            UUID servicePlanId,
+            UUID issueId,
+            IssueSeverityCode severityCode,
+            String updatedBy) {
+        UUID id = jdbcTemplate.queryForObject(
+                """
+                UPDATE rehearsal_issues
+                SET severity_code = :severityCode, updated_at = NOW()
+                WHERE service_plan_id = :servicePlanId AND id = :issueId AND archived_at IS NULL
+                RETURNING id
+                """,
+                new MapSqlParameterSource()
+                        .addValue("servicePlanId", servicePlanId)
+                        .addValue("issueId", issueId)
+                        .addValue("severityCode", severityCode.code()),
+                UUID.class);
+        return findIssue(servicePlanId, id).orElseThrow();
+    }
+
+    @Override
+    public RehearsalIssueRecord updateIssueStatus(
+            UUID servicePlanId,
+            UUID issueId,
+            IssueStatusCode statusCode,
+            String updatedBy) {
+        UUID id = jdbcTemplate.queryForObject(
+                """
+                UPDATE rehearsal_issues
+                SET status_code = :statusCode,
+                    resolved_at = CASE WHEN :statusCode IN ('resolved', 'deferred', 'cancelled') THEN NOW() ELSE NULL END,
+                    archived_at = CASE WHEN :statusCode = 'cancelled' THEN NOW() ELSE archived_at END,
+                    updated_at = NOW()
+                WHERE service_plan_id = :servicePlanId AND id = :issueId
+                RETURNING id
+                """,
+                new MapSqlParameterSource()
+                        .addValue("servicePlanId", servicePlanId)
+                        .addValue("issueId", issueId)
+                        .addValue("statusCode", statusCode.code()),
+                UUID.class);
+        return findIssue(servicePlanId, id).orElseThrow();
+    }
+
     @Override
     public RehearsalIssueActionRecord addIssueAction(
             UUID servicePlanId,
@@ -255,6 +376,60 @@ public class JdbcRehearsalWorkflowRepository implements RehearsalWorkflowReposit
                 "SELECT * FROM rehearsal_issue_actions WHERE id = :id",
                 Map.of("id", id),
                 (rs, rowNum) -> mapAction(rs));
+    }
+
+
+    @Override
+    public RehearsalIssueActionRecord updateIssueActionOwner(
+            UUID servicePlanId,
+            UUID actionId,
+            IssueOwnerType ownerType,
+            String ownerActor,
+            String ownerTeamRoleCode,
+            UUID ownerServiceAssignmentId,
+            String updatedBy) {
+        UUID id = jdbcTemplate.queryForObject(
+                """
+                UPDATE rehearsal_issue_actions
+                SET owner_type = :ownerType, owner_actor = :ownerActor, owner_team_role_code = :ownerTeamRoleCode,
+                    owner_service_assignment_id = :ownerServiceAssignmentId, updated_by = :updatedBy, updated_at = NOW()
+                WHERE service_plan_id = :servicePlanId AND id = :actionId
+                RETURNING id
+                """,
+                new MapSqlParameterSource()
+                        .addValue("servicePlanId", servicePlanId)
+                        .addValue("actionId", actionId)
+                        .addValue("ownerType", ownerType.code())
+                        .addValue("ownerActor", ownerActor)
+                        .addValue("ownerTeamRoleCode", ownerTeamRoleCode)
+                        .addValue("ownerServiceAssignmentId", ownerServiceAssignmentId)
+                        .addValue("updatedBy", updatedBy),
+                UUID.class);
+        return getAction(id);
+    }
+
+    @Override
+    public RehearsalIssueActionRecord updateIssueActionStatus(
+            UUID servicePlanId,
+            UUID actionId,
+            IssueActionStatusCode statusCode,
+            String updatedBy) {
+        UUID id = jdbcTemplate.queryForObject(
+                """
+                UPDATE rehearsal_issue_actions
+                SET action_status_code = :statusCode,
+                    completed_at = CASE WHEN :statusCode IN ('done', 'cancelled') THEN NOW() ELSE NULL END,
+                    updated_by = :updatedBy, updated_at = NOW()
+                WHERE service_plan_id = :servicePlanId AND id = :actionId
+                RETURNING id
+                """,
+                new MapSqlParameterSource()
+                        .addValue("servicePlanId", servicePlanId)
+                        .addValue("actionId", actionId)
+                        .addValue("statusCode", statusCode.code())
+                        .addValue("updatedBy", updatedBy),
+                UUID.class);
+        return getAction(id);
     }
 
     @Override
@@ -299,6 +474,46 @@ public class JdbcRehearsalWorkflowRepository implements RehearsalWorkflowReposit
                 (rs, rowNum) -> mapArrangementOverride(rs));
     }
 
+
+    @Override
+    public RehearsalAuditRecord recordAudit(RehearsalAuditRecord auditRecord) {
+        UUID id = jdbcTemplate.queryForObject(
+                """
+                INSERT INTO privileged_action_audit_events (
+                    actor, actor_roles, action, target_type, target_id, before_state_ref, after_state_ref, metadata, occurred_at
+                ) VALUES (
+                    :actor, CAST(:actorRoles AS jsonb), :action, :targetType, :targetId,
+                    :beforeStateSnapshot, :afterStateSnapshot, CAST(:metadata AS jsonb), :occurredAt
+                )
+                RETURNING id
+                """,
+                new MapSqlParameterSource()
+                        .addValue("actor", auditRecord.actor())
+                        .addValue("actorRoles", jsonArray(auditRecord.actorRoles()))
+                        .addValue("action", auditRecord.actionCode())
+                        .addValue("targetType", auditRecord.targetType())
+                        .addValue("targetId", auditRecord.targetId())
+                        .addValue("beforeStateSnapshot", auditRecord.beforeStateSnapshot())
+                        .addValue("afterStateSnapshot", auditRecord.afterStateSnapshot())
+                        .addValue("metadata", auditMetadata(auditRecord))
+                        .addValue("occurredAt", Timestamp.from(auditRecord.occurredAt())),
+                UUID.class);
+        return new RehearsalAuditRecord(
+                id,
+                auditRecord.actor(),
+                auditRecord.actorRoles(),
+                auditRecord.actionCode(),
+                auditRecord.targetType(),
+                auditRecord.targetId(),
+                auditRecord.servicePlanId(),
+                auditRecord.rehearsalSessionId(),
+                auditRecord.occurredAt(),
+                auditRecord.reason(),
+                auditRecord.reference(),
+                auditRecord.beforeStateSnapshot(),
+                auditRecord.afterStateSnapshot());
+    }
+
     private List<ControlledVocabularyEntry> listVocabulary(String tableName) {
         return jdbcTemplate.query(
                 "SELECT code, display_name, sort_order, active, system_default FROM " + tableName + " ORDER BY sort_order",
@@ -308,6 +523,13 @@ public class JdbcRehearsalWorkflowRepository implements RehearsalWorkflowReposit
                         rs.getInt("sort_order"),
                         rs.getBoolean("active"),
                         rs.getBoolean("system_default")));
+    }
+
+    private RehearsalIssueActionRecord getAction(UUID id) {
+        return jdbcTemplate.queryForObject(
+                "SELECT * FROM rehearsal_issue_actions WHERE id = :id",
+                Map.of("id", id),
+                (rs, rowNum) -> mapAction(rs));
     }
 
     private RehearsalSessionRecord getSession(UUID id) {
@@ -362,7 +584,9 @@ public class JdbcRehearsalWorkflowRepository implements RehearsalWorkflowReposit
                 IssueStatusCode.fromCode(rs.getString("status_code")),
                 rs.getString("title"),
                 rs.getString("detail"),
-                rs.getString("detected_by"));
+                rs.getString("detected_by"),
+                instantOrNull(rs, "resolved_at"),
+                instantOrNull(rs, "archived_at"));
     }
 
     private RehearsalIssueActionRecord mapAction(ResultSet rs) throws SQLException {
@@ -372,10 +596,11 @@ public class JdbcRehearsalWorkflowRepository implements RehearsalWorkflowReposit
                 rs.getObject("service_plan_id", UUID.class),
                 IssueActionStatusCode.fromCode(rs.getString("action_status_code")),
                 rs.getString("action_summary"),
-                IssueOwnerType.valueOf(rs.getString("owner_type").toUpperCase()),
+                IssueOwnerType.fromCode(rs.getString("owner_type")),
                 rs.getString("owner_actor"),
                 rs.getString("owner_team_role_code"),
-                rs.getObject("owner_service_assignment_id", UUID.class));
+                rs.getObject("owner_service_assignment_id", UUID.class),
+                instantOrNull(rs, "completed_at"));
     }
 
     private RehearsalTarget mapTarget(ResultSet rs) throws SQLException {
@@ -413,6 +638,32 @@ public class JdbcRehearsalWorkflowRepository implements RehearsalWorkflowReposit
                 rs.getString("provenance_note"),
                 rs.getString("created_by"),
                 rs.getString("updated_by"));
+    }
+
+
+    private String jsonArray(Set<String> values) {
+        if (values == null || values.isEmpty()) {
+            return "[]";
+        }
+        return values.stream()
+                .map(this::jsonString)
+                .collect(java.util.stream.Collectors.joining(",", "[", "]"));
+    }
+
+    private String auditMetadata(RehearsalAuditRecord auditRecord) {
+        return "{"
+                + "\"servicePlanId\":" + jsonString(auditRecord.servicePlanId()) + ","
+                + "\"rehearsalSessionId\":" + jsonString(auditRecord.rehearsalSessionId()) + ","
+                + "\"reason\":" + jsonString(auditRecord.reason()) + ","
+                + "\"reference\":" + jsonString(auditRecord.reference())
+                + "}";
+    }
+
+    private String jsonString(Object value) {
+        if (value == null) {
+            return "null";
+        }
+        return "\"" + value.toString().replace("\\", "\\\\").replace("\"", "\\\"") + "\"";
     }
 
     private Instant instantOrNull(ResultSet rs, String column) throws SQLException {
