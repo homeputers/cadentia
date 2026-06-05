@@ -1,7 +1,8 @@
 # ADR-023: Team and Musician Assignment Model
 
-Status: Accepted  
+Status: Implemented
 Date: 2026-05-28
+Implemented: 2026-06-05
 
 ## Context
 

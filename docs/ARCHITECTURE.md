@@ -581,3 +581,35 @@ npm run check:adr-022-runtime-guardrails
 npm run check:adr-022-operator-admin-guardrails
 ```
 
+
+------------------------------------------------------------------------
+
+## ADR-023 Team and Musician Assignment Architecture
+
+ADR-023 adds instance-local operational planning data to the existing approval
+first recommendation architecture. The new model is intentionally downstream of
+catalog governance:
+
+- `musicians`, `teams`, `team_memberships`, musician role/instrument/vocal-part
+  assignments, availability windows, service team assignments, rehearsal team
+  assignments, and song assignment overrides represent local personnel planning
+  facts.
+- `arrangement_suitability_profiles` and `arrangement_suitability_slots` store
+  versioned, governance-linked planning compatibility requirements for approved
+  arrangements.
+- Approved team-suitability views join through `v_recommendable_arrangements`,
+  so doctrinal, musical, licensing, editorial, active-arrangement, and current
+  lyrics gates run before team suitability is evaluated.
+- Recommendation profiles choose whether team facts are disabled, scoring inputs,
+  or hard filters after approved-only candidate retrieval.
+- Explanation facts may cite `arrangement_suitability` and `service_assignment`
+  evidence. Public views redact team diagnostics; worship-leader and admin views
+  receive aggregate staffing gaps without private contact details, raw skill
+  values, exact vocal ranges, availability-note text, or readiness-note text.
+
+The LLM boundary remains unchanged: LLM components parse intent only. They must
+not select songs, infer musician suitability, generate private personnel facts,
+or summarize private readiness notes into recommendation explanations.
+
+Operational setup and troubleshooting are documented in
+[`docs/runbooks/adr-023-team-assignment-operations.md`](./runbooks/adr-023-team-assignment-operations.md).

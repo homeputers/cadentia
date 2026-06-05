@@ -12,6 +12,19 @@ bypass catalog approval gates.
 
 - [ADR-023: Team and Musician Assignment Model](../adr/ADR-023-team-and-musician-assignment-model.md)
 
+## Status
+
+Overall status: Completed / Implemented (2026-06-05).
+
+- Subtask 1: Completed / Implemented - team and musician domain schema, controlled vocabularies, constraints, and repository coverage are implemented.
+- Subtask 2: Completed / Implemented - authorization, privacy, and audit controls protect personnel data and operational notes.
+- Subtask 3: Completed / Implemented - service and rehearsal assignment workflows support lifecycle transitions, substitutions, and history.
+- Subtask 4: Completed / Implemented - arrangement suitability profiles and structured slots model team capability requirements behind approval gates.
+- Subtask 5: Completed / Implemented - deterministic team constraints and scoring inputs are integrated without allowing team data to bypass catalog approval.
+- Subtask 6: Completed / Implemented - team-aware recommendation diagnostics provide structured evidence with audience-appropriate redaction.
+- Subtask 7: Completed / Implemented - rehearsal readiness is surfaced as operational status without changing recommendation eligibility.
+- Subtask 8: Completed / Implemented - operational runbook, fixture data, and regression coverage are published.
+
 ## Guiding Principles
 
 - Personnel and assignment data is local to the deployed church instance.

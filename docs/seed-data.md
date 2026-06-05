@@ -112,3 +112,34 @@ docker compose exec -T postgres psql -U cadentia -d cadentia \
 Do not add production seed data to this test fixture directory. If Cadentia later
 needs production-approved catalog bootstrap data, introduce it through a separate,
 reviewed convention with explicit licensing, provenance, and approval semantics.
+
+------------------------------------------------------------------------
+
+## ADR-023 Team Assignment Fixture Data
+
+The ADR-023 team assignment fixture lives at
+`apps/api/src/test/resources/db/fixtures/team_assignment_fixture.sql`,
+with a matching reset script at
+`apps/api/src/test/resources/db/fixtures/reset_team_assignment_fixture.sql`.
+It is test-scoped and intentionally uses synthetic display names only; there are
+no real contact details, private availability notes, or sensitive pastoral notes.
+
+The fixture covers four representative planning contexts:
+
+- **Sparse acoustic service** — approved arrangement requiring only acoustic
+  guitar plus lead vocal coverage.
+- **Full-band service** — approved arrangement requiring drums, bass, piano, and
+  electric guitar with optional backing vocal coverage.
+- **Vocal-led service** — approved arrangement emphasizing lead and backing vocal
+  slots with minimal instrumentation.
+- **Incomplete-team service** — an operationally blocked roster and an
+  intentionally unapproved arrangement that remains absent from approved
+  suitability views even when team/readiness data exists.
+
+Expected diagnostics are documented in SQL comments next to the fixture service
+plans. They reference structured evidence (`arrangement_suitability` and
+`service_assignment`) rather than LLM prose or private notes. The fixture must
+not be promoted to production seed data; production churches should configure
+rosters, controlled vocabularies, availability, and assignment workflows through
+Cadentia's admin UI or approved import path.
+
