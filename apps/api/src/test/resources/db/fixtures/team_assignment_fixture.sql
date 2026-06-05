@@ -21,9 +21,9 @@ VALUES (
 INSERT INTO songs (id, canonical_title, normalized_title, primary_language, original_artist_display,
                    composer_credits, song_status, doctrinal_notes)
 VALUES
-    ('23800000-0000-0000-0000-000000000001', '[TEST FIXTURE] Sparse Mercy', 'test-fixture-sparse-mercy', 'en', 'Cadentia Test Fixtures', 'Synthetic fixture only.', 'ACTIVE', 'Fixture only.'),
-    ('23800000-0000-0000-0000-000000000002', '[TEST FIXTURE] Full Band Praise', 'test-fixture-full-band-praise', 'en', 'Cadentia Test Fixtures', 'Synthetic fixture only.', 'ACTIVE', 'Fixture only.'),
-    ('23800000-0000-0000-0000-000000000003', '[TEST FIXTURE] Vocal Benediction', 'test-fixture-vocal-benediction', 'en', 'Cadentia Test Fixtures', 'Synthetic fixture only.', 'ACTIVE', 'Fixture only.'),
+    ('23800000-0000-0000-0000-000000000001', '[TEST FIXTURE] Sparse Mercy', 'test-fixture-sparse-mercy', 'en', 'Cadentia Test Fixtures', 'Synthetic fixture only.', 'APPROVED', 'Fixture only.'),
+    ('23800000-0000-0000-0000-000000000002', '[TEST FIXTURE] Full Band Praise', 'test-fixture-full-band-praise', 'en', 'Cadentia Test Fixtures', 'Synthetic fixture only.', 'APPROVED', 'Fixture only.'),
+    ('23800000-0000-0000-0000-000000000003', '[TEST FIXTURE] Vocal Benediction', 'test-fixture-vocal-benediction', 'en', 'Cadentia Test Fixtures', 'Synthetic fixture only.', 'APPROVED', 'Fixture only.'),
     ('23800000-0000-0000-0000-000000000004', '[TEST FIXTURE] Unapproved Team Favorite', 'test-fixture-unapproved-team-favorite', 'en', 'Cadentia Test Fixtures', 'Synthetic fixture only.', 'DRAFT', 'Fixture intentionally unapproved; team readiness must not make it recommendable.');
 
 INSERT INTO arrangements (id, song_id, name, normalized_name, source_type, language, musical_key,
@@ -38,10 +38,10 @@ VALUES
 INSERT INTO lyrics_documents (id, arrangement_id, format, content, content_hash, version_number,
                               is_current, contains_chords, contains_sections, source_reference, created_by)
 VALUES
-    ('23600000-0000-0000-0000-000000000001', '23700000-0000-0000-0000-000000000001', 'plain_text', E'Synthetic mercy fixture line\n', 'sha256:team-assignment-sparse', 1, true, false, false, 'fixture://adr-023/sparse', 'test-fixture-loader'),
-    ('23600000-0000-0000-0000-000000000002', '23700000-0000-0000-0000-000000000002', 'plain_text', E'Synthetic praise fixture line\n', 'sha256:team-assignment-full-band', 1, true, false, false, 'fixture://adr-023/full-band', 'test-fixture-loader'),
-    ('23600000-0000-0000-0000-000000000003', '23700000-0000-0000-0000-000000000003', 'plain_text', E'Synthetic benediction fixture line\n', 'sha256:team-assignment-vocal', 1, true, false, false, 'fixture://adr-023/vocal-led', 'test-fixture-loader'),
-    ('23600000-0000-0000-0000-000000000004', '23700000-0000-0000-0000-000000000004', 'plain_text', E'Synthetic unapproved fixture line\n', 'sha256:team-assignment-unapproved', 1, true, false, false, 'fixture://adr-023/unapproved', 'test-fixture-loader');
+    ('23600000-0000-0000-0000-000000000001', '23700000-0000-0000-0000-000000000001', 'PLAIN_TEXT', E'Synthetic mercy fixture line\n', 'sha256:team-assignment-sparse', 1, true, false, false, 'fixture://adr-023/sparse', 'test-fixture-loader'),
+    ('23600000-0000-0000-0000-000000000002', '23700000-0000-0000-0000-000000000002', 'PLAIN_TEXT', E'Synthetic praise fixture line\n', 'sha256:team-assignment-full-band', 1, true, false, false, 'fixture://adr-023/full-band', 'test-fixture-loader'),
+    ('23600000-0000-0000-0000-000000000003', '23700000-0000-0000-0000-000000000003', 'PLAIN_TEXT', E'Synthetic benediction fixture line\n', 'sha256:team-assignment-vocal', 1, true, false, false, 'fixture://adr-023/vocal-led', 'test-fixture-loader'),
+    ('23600000-0000-0000-0000-000000000004', '23700000-0000-0000-0000-000000000004', 'PLAIN_TEXT', E'Synthetic unapproved fixture line\n', 'sha256:team-assignment-unapproved', 1, true, false, false, 'fixture://adr-023/unapproved', 'test-fixture-loader');
 
 INSERT INTO provenance_records (id, song_id, arrangement_id, lyrics_document_id, import_batch_id,
                                 source_system, source_uri, source_label, license_type, license_notes,
@@ -194,6 +194,6 @@ INSERT INTO readiness_notes (id, service_plan_id, scope_type, scope_id, readines
                              objective_blockers, missing_people, unresolved_arrangement_conflicts,
                              human_note, privacy_classification, updated_by)
 VALUES
-    ('23d00000-0000-0000-0000-000000000001', '23000000-0000-0000-0000-000000000001', 'SERVICE_TEAM', '23000000-0000-0000-0000-000000000001', 'READY', '[]'::jsonb, '[]'::jsonb, '[]'::jsonb, NULL, 'TEAM_INTERNAL', 'test-fixture-loader'),
-    ('23d00000-0000-0000-0000-000000000002', '23000000-0000-0000-0000-000000000003', 'SERVICE_TEAM', '23000000-0000-0000-0000-000000000003', 'AT_RISK', '["BACKING_VOCAL_COUNT_SHORT"]'::jsonb, '["BACKGROUND_VOCAL_2"]'::jsonb, '[]'::jsonb, NULL, 'TEAM_INTERNAL', 'test-fixture-loader'),
-    ('23d00000-0000-0000-0000-000000000003', '23000000-0000-0000-0000-000000000004', 'SERVICE_TEAM', '23000000-0000-0000-0000-000000000004', 'BLOCKED', '["UNAVAILABLE_DRUMMER", "UNAPPROVED_ARRANGEMENT_NOT_RECOMMENDABLE"]'::jsonb, '["DRUMS"]'::jsonb, '[{"arrangementId":"23700000-0000-0000-0000-000000000004", "reason":"approval_gate"}]'::jsonb, NULL, 'TEAM_INTERNAL', 'test-fixture-loader');
+    ('23d00000-0000-0000-0000-000000000001', '23000000-0000-0000-0000-000000000001', 'SERVICE_TEAM', '23000000-0000-0000-0000-000000000001', 'READY', '[]'::jsonb, '[]'::jsonb, '[]'::jsonb, NULL, 'TEAM_PRIVATE', 'test-fixture-loader'),
+    ('23d00000-0000-0000-0000-000000000002', '23000000-0000-0000-0000-000000000003', 'SERVICE_TEAM', '23000000-0000-0000-0000-000000000003', 'AT_RISK', '["BACKING_VOCAL_COUNT_SHORT"]'::jsonb, '["BACKGROUND_VOCAL_2"]'::jsonb, '[]'::jsonb, NULL, 'TEAM_PRIVATE', 'test-fixture-loader'),
+    ('23d00000-0000-0000-0000-000000000003', '23000000-0000-0000-0000-000000000004', 'SERVICE_TEAM', '23000000-0000-0000-0000-000000000004', 'BLOCKED', '["UNAVAILABLE_DRUMMER", "UNAPPROVED_ARRANGEMENT_NOT_RECOMMENDABLE"]'::jsonb, '["DRUMS"]'::jsonb, '[{"arrangementId":"23700000-0000-0000-0000-000000000004", "reason":"approval_gate"}]'::jsonb, NULL, 'TEAM_PRIVATE', 'test-fixture-loader');
