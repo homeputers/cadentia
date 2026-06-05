@@ -52,11 +52,14 @@ public class JdbcRehearsalWorkflowRepository implements RehearsalWorkflowReposit
         return listVocabulary("rehearsal_issue_statuses");
     }
 
-
     @Override
     public Optional<ReadinessStateCode> findServiceReadiness(UUID servicePlanId) {
         return jdbcTemplate.query(
-                        "SELECT readiness_state_code FROM service_rehearsal_workflow_states WHERE service_plan_id = :id",
+                        """
+                        SELECT readiness_state_code
+                        FROM service_rehearsal_workflow_states
+                        WHERE service_plan_id = :id
+                        """,
                         Map.of("id", servicePlanId),
                         (rs, rowNum) -> ReadinessStateCode.fromCode(rs.getString("readiness_state_code")))
                 .stream()
@@ -91,7 +94,6 @@ public class JdbcRehearsalWorkflowRepository implements RehearsalWorkflowReposit
                 UUID.class);
         return getSession(id);
     }
-
 
     @Override
     public RehearsalSessionRecord updateSession(
@@ -151,7 +153,11 @@ public class JdbcRehearsalWorkflowRepository implements RehearsalWorkflowReposit
             String rationale,
             String changedBy) {
         String previousStateCode = jdbcTemplate.query(
-                        "SELECT readiness_state_code FROM service_rehearsal_workflow_states WHERE service_plan_id = :id",
+                        """
+                        SELECT readiness_state_code
+                        FROM service_rehearsal_workflow_states
+                        WHERE service_plan_id = :id
+                        """,
                         Map.of("id", servicePlanId),
                         (rs, rowNum) -> rs.getString("readiness_state_code"))
                 .stream()
@@ -225,7 +231,6 @@ public class JdbcRehearsalWorkflowRepository implements RehearsalWorkflowReposit
                 (rs, rowNum) -> mapNote(rs));
     }
 
-
     @Override
     public Optional<RehearsalIssueRecord> findIssue(UUID servicePlanId, UUID issueId) {
         return jdbcTemplate.query(
@@ -241,7 +246,13 @@ public class JdbcRehearsalWorkflowRepository implements RehearsalWorkflowReposit
     @Override
     public List<RehearsalIssueRecord> listIssues(UUID servicePlanId) {
         return jdbcTemplate.query(
-                "SELECT * FROM rehearsal_issues WHERE service_plan_id = :servicePlanId AND archived_at IS NULL ORDER BY created_at, id",
+                """
+                SELECT *
+                FROM rehearsal_issues
+                WHERE service_plan_id = :servicePlanId
+                  AND archived_at IS NULL
+                ORDER BY created_at, id
+                """,
                 Map.of("servicePlanId", servicePlanId),
                 (rs, rowNum) -> mapIssue(rs));
     }
@@ -249,7 +260,12 @@ public class JdbcRehearsalWorkflowRepository implements RehearsalWorkflowReposit
     @Override
     public List<RehearsalIssueActionRecord> listIssueActions(UUID servicePlanId) {
         return jdbcTemplate.query(
-                "SELECT * FROM rehearsal_issue_actions WHERE service_plan_id = :servicePlanId ORDER BY created_at, id",
+                """
+                SELECT *
+                FROM rehearsal_issue_actions
+                WHERE service_plan_id = :servicePlanId
+                ORDER BY created_at, id
+                """,
                 Map.of("servicePlanId", servicePlanId),
                 (rs, rowNum) -> mapAction(rs));
     }
@@ -293,7 +309,6 @@ public class JdbcRehearsalWorkflowRepository implements RehearsalWorkflowReposit
                 (rs, rowNum) -> mapIssue(rs));
     }
 
-
     @Override
     public RehearsalIssueRecord updateIssueSeverity(
             UUID servicePlanId,
@@ -325,7 +340,10 @@ public class JdbcRehearsalWorkflowRepository implements RehearsalWorkflowReposit
                 """
                 UPDATE rehearsal_issues
                 SET status_code = :statusCode,
-                    resolved_at = CASE WHEN :statusCode IN ('resolved', 'deferred', 'cancelled') THEN NOW() ELSE NULL END,
+                    resolved_at = CASE
+                        WHEN :statusCode IN ('resolved', 'deferred', 'cancelled') THEN NOW()
+                        ELSE NULL
+                    END,
                     archived_at = CASE WHEN :statusCode = 'cancelled' THEN NOW() ELSE archived_at END,
                     updated_at = NOW()
                 WHERE service_plan_id = :servicePlanId AND id = :issueId
@@ -378,7 +396,6 @@ public class JdbcRehearsalWorkflowRepository implements RehearsalWorkflowReposit
                 (rs, rowNum) -> mapAction(rs));
     }
 
-
     @Override
     public RehearsalIssueActionRecord updateIssueActionOwner(
             UUID servicePlanId,
@@ -391,8 +408,12 @@ public class JdbcRehearsalWorkflowRepository implements RehearsalWorkflowReposit
         UUID id = jdbcTemplate.queryForObject(
                 """
                 UPDATE rehearsal_issue_actions
-                SET owner_type = :ownerType, owner_actor = :ownerActor, owner_team_role_code = :ownerTeamRoleCode,
-                    owner_service_assignment_id = :ownerServiceAssignmentId, updated_by = :updatedBy, updated_at = NOW()
+                SET owner_type = :ownerType,
+                    owner_actor = :ownerActor,
+                    owner_team_role_code = :ownerTeamRoleCode,
+                    owner_service_assignment_id = :ownerServiceAssignmentId,
+                    updated_by = :updatedBy,
+                    updated_at = NOW()
                 WHERE service_plan_id = :servicePlanId AND id = :actionId
                 RETURNING id
                 """,
@@ -474,13 +495,13 @@ public class JdbcRehearsalWorkflowRepository implements RehearsalWorkflowReposit
                 (rs, rowNum) -> mapArrangementOverride(rs));
     }
 
-
     @Override
     public RehearsalAuditRecord recordAudit(RehearsalAuditRecord auditRecord) {
         UUID id = jdbcTemplate.queryForObject(
                 """
                 INSERT INTO privileged_action_audit_events (
-                    actor, actor_roles, action, target_type, target_id, before_state_ref, after_state_ref, metadata, occurred_at
+                    actor, actor_roles, action, target_type, target_id, before_state_ref, after_state_ref, metadata,
+                    occurred_at
                 ) VALUES (
                     :actor, CAST(:actorRoles AS jsonb), :action, :targetType, :targetId,
                     :beforeStateSnapshot, :afterStateSnapshot, CAST(:metadata AS jsonb), :occurredAt
@@ -516,7 +537,11 @@ public class JdbcRehearsalWorkflowRepository implements RehearsalWorkflowReposit
 
     private List<ControlledVocabularyEntry> listVocabulary(String tableName) {
         return jdbcTemplate.query(
-                "SELECT code, display_name, sort_order, active, system_default FROM " + tableName + " ORDER BY sort_order",
+                """
+                SELECT code, display_name, sort_order, active, system_default
+                FROM %s
+                ORDER BY sort_order
+                """.formatted(tableName),
                 (rs, rowNum) -> new ControlledVocabularyEntry(
                         rs.getString("code"),
                         rs.getString("display_name"),
@@ -639,7 +664,6 @@ public class JdbcRehearsalWorkflowRepository implements RehearsalWorkflowReposit
                 rs.getString("created_by"),
                 rs.getString("updated_by"));
     }
-
 
     private String jsonArray(Set<String> values) {
         if (values == null || values.isEmpty()) {
