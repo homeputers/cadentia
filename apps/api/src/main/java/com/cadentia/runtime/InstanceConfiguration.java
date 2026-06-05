@@ -2,8 +2,13 @@ package com.cadentia.runtime;
 
 import com.cadentia.reng.scoring.ScoringProfile;
 import com.cadentia.reng.scoring.ScoringProfileLifecycle;
+import com.cadentia.reng.scoring.TeamConstraintCode;
+import com.cadentia.reng.scoring.TeamConstraintMode;
 import com.fasterxml.jackson.databind.JsonNode;
+import java.util.EnumMap;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.StreamSupport;
@@ -123,12 +128,22 @@ public record InstanceConfiguration(
 
     private static ScoringProfile scoringProfile(JsonNode profile) {
         // JsonNode value spliterator does not expose field names, so iterate fields explicitly.
-        java.util.LinkedHashMap<String, Double> orderedWeights = new java.util.LinkedHashMap<>();
+        LinkedHashMap<String, Double> orderedWeights = new LinkedHashMap<>();
         profile.path("weights").fields().forEachRemaining(entry -> orderedWeights.put(entry.getKey(), entry.getValue().asDouble()));
         List<String> tieBreakers = StreamSupport.stream(profile.path("deterministicTieBreakers").spliterator(), false)
                 .map(JsonNode::asText)
                 .toList();
-        return new ScoringProfile(profile.path("id").asText(), orderedWeights, tieBreakers, ScoringProfileLifecycle.active());
+        EnumMap<TeamConstraintCode, TeamConstraintMode> teamConstraintModes = new EnumMap<>(TeamConstraintCode.class);
+        profile.path("teamConstraints").fields().forEachRemaining(entry ->
+                teamConstraintModes.put(
+                        TeamConstraintCode.valueOf(entry.getKey()),
+                        TeamConstraintMode.valueOf(entry.getValue().asText().trim().toUpperCase(Locale.ROOT))));
+        return new ScoringProfile(
+                profile.path("id").asText(),
+                orderedWeights,
+                tieBreakers,
+                ScoringProfileLifecycle.active(),
+                teamConstraintModes);
     }
 
     private static List<IntegrationProvider> integrations(JsonNode providers) {

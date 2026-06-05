@@ -23,6 +23,9 @@ public class CandidateFeatureScorer {
     public static final String ENERGY_FIT = "energy_fit";
     public static final String METADATA_CONFIDENCE = "metadata_confidence";
     public static final String FEEDBACK_TUNING = "feedback_tuning";
+    public static final String TEAM_SUITABILITY = "team_suitability";
+
+    private final TeamSuitabilityEvaluator teamSuitabilityEvaluator = new TeamSuitabilityEvaluator();
 
     public List<CandidateFeatureScore> scoreCandidates(
             List<RecommendableArrangement> candidates,
@@ -73,9 +76,20 @@ public class CandidateFeatureScorer {
                 FEEDBACK_TUNING,
                 feedbackContributions.getOrDefault(candidate.arrangementId(), 0.0d),
                 profile.componentWeights()));
+        if (hasTeamScoringInput(profile)) {
+            componentScores.add(componentScore(
+                    TEAM_SUITABILITY,
+                    teamSuitabilityEvaluator.scoringRawScore(candidate, request, profile),
+                    profile.componentWeights()));
+        }
 
         double total = componentScores.stream().mapToDouble(ScoringComponentScore::weightedContribution).sum();
         return new CandidateFeatureScore(candidate, List.copyOf(componentScores), total);
+    }
+
+    private static boolean hasTeamScoringInput(ScoringProfile profile) {
+        return profile.teamConstraintModes().values().stream()
+                .anyMatch(mode -> mode == TeamConstraintMode.SCORING_INPUT);
     }
 
     private void emitFeedbackImpactDistribution(Map<UUID, Double> feedbackContributions) {

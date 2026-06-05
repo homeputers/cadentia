@@ -1810,6 +1810,10 @@ components:
           default: []
           example:
             - Example Song To Avoid
+        serviceTeamContext:
+          $ref: '#/components/schemas/RecommendationServiceTeamContext'
+        teamConstraints:
+          $ref: '#/components/schemas/ExplicitRecommendationTeamConstraints'
         serviceMoment:
           type: string
           nullable: true
@@ -1839,6 +1843,141 @@ components:
             Requests admin-only diagnostics such as candidate exclusions, near misses,
             hard-filter reasons, score ranges, tie-break details, and constraint-relaxation rationale.
             Ignored unless explanationAudience is admin and the caller is authorized.
+    RecommendationServiceTeamContext:
+      type: object
+      nullable: true
+      additionalProperties: false
+      description: >-
+        Backend-resolved service/team context reference. The LLM intent agent must not
+        invent or alter this value, and profile configuration decides how it affects recommendations.
+      properties:
+        servicePlanId:
+          type: string
+          format: uuid
+        servicePlanBlockId:
+          type: string
+          format: uuid
+          nullable: true
+    ExplicitRecommendationTeamConstraints:
+      type: object
+      nullable: true
+      additionalProperties: false
+      description: >-
+        Explicit, validated team-capability snapshot supplied by trusted backend/UI code.
+        Private comments, contact fields, and readiness notes are intentionally absent.
+      properties:
+        servicePlanId:
+          type: string
+          format: uuid
+          nullable: true
+        incompleteTeam:
+          type: boolean
+          default: false
+        assignments:
+          type: array
+          default: []
+          items:
+            $ref: '#/components/schemas/RecommendationTeamAssignment'
+        arrangementRequirements:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/RecommendationArrangementTeamRequirement'
+    RecommendationTeamAssignment:
+      type: object
+      additionalProperties: false
+      required: [musicianId, status, availableForService]
+      properties:
+        musicianId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [REQUESTED, TENTATIVE, ACCEPTED, DECLINED, UNAVAILABLE, SUBSTITUTE]
+        availableForService:
+          type: boolean
+        roleCodes:
+          type: array
+          default: []
+          items: { type: string }
+        instrumentCodes:
+          type: array
+          default: []
+          items: { type: string }
+        vocalPartCodes:
+          type: array
+          default: []
+          items: { type: string }
+        instrumentSkillRanks:
+          type: object
+          additionalProperties: { type: integer }
+        vocalSkillRanks:
+          type: object
+          additionalProperties: { type: integer }
+        comfortableLowMidiNote:
+          type: integer
+          nullable: true
+          minimum: 0
+          maximum: 127
+        comfortableHighMidiNote:
+          type: integer
+          nullable: true
+          minimum: 0
+          maximum: 127
+    RecommendationArrangementTeamRequirement:
+      type: object
+      additionalProperties: false
+      properties:
+        requiredSlots:
+          type: array
+          default: []
+          items:
+            $ref: '#/components/schemas/RecommendationTeamRequirementSlot'
+        optionalSlots:
+          type: array
+          default: []
+          items:
+            $ref: '#/components/schemas/RecommendationTeamRequirementSlot'
+        vocalConfiguration:
+          type: string
+          nullable: true
+        vocalConfigurationRequired:
+          type: boolean
+          default: false
+        leadVocalLowMidiNote:
+          type: integer
+          nullable: true
+          minimum: 0
+          maximum: 127
+        leadVocalHighMidiNote:
+          type: integer
+          nullable: true
+          minimum: 0
+          maximum: 127
+        requiredBackingVocalCount:
+          type: integer
+          minimum: 0
+          default: 0
+    RecommendationTeamRequirementSlot:
+      type: object
+      additionalProperties: false
+      properties:
+        roleCode:
+          type: string
+          nullable: true
+        instrumentCode:
+          type: string
+          nullable: true
+        vocalPartCode:
+          type: string
+          nullable: true
+        minimumSkillRank:
+          type: integer
+          minimum: 0
+          default: 0
+        minimumCount:
+          type: integer
+          minimum: 1
+          default: 1
     SetlistCounts:
       type: object
       additionalProperties: false

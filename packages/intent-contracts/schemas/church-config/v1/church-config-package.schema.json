@@ -107,7 +107,62 @@
         "securityPolicy": { "type": "object", "additionalProperties": false, "required": ["requireMfaForAdmins", "sessionTimeoutMinutes"] }
       }
     },
-    "scoringProfiles": { "type": "object", "additionalProperties": false, "required": ["activeProfile", "profiles"] },
+    "scoringProfiles": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["activeProfile", "profiles"],
+      "properties": {
+        "activeProfile": { "$ref": "#/definitions/id" },
+        "profiles": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "label", "weights", "deterministicTieBreakers"],
+            "properties": {
+              "id": { "$ref": "#/definitions/id" },
+              "label": { "type": "string", "minLength": 1, "maxLength": 120 },
+              "weights": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["themeFit", "scriptureFit", "musicalFit", "energyFit", "familiarity"],
+                "properties": {
+                  "themeFit": { "type": "number", "minimum": 0 },
+                  "scriptureFit": { "type": "number", "minimum": 0 },
+                  "musicalFit": { "type": "number", "minimum": 0 },
+                  "energyFit": { "type": "number", "minimum": 0 },
+                  "familiarity": { "type": "number", "minimum": 0 }
+                }
+              },
+              "deterministicTieBreakers": {
+                "type": "array",
+                "minItems": 1,
+                "items": { "enum": ["approval_date", "title", "arrangement_id"] }
+              },
+              "teamConstraints": {
+                "type": "object",
+                "additionalProperties": false,
+                "propertyNames": {
+                  "enum": [
+                    "MISSING_REQUIRED_INSTRUMENT",
+                    "INSUFFICIENT_SKILL_COVERAGE",
+                    "LEAD_VOCAL_RANGE_MISMATCH",
+                    "MISSING_VOCAL_CONFIGURATION",
+                    "UNAVAILABLE_ASSIGNED_MUSICIAN",
+                    "OPTIONAL_INSTRUMENT_FIT",
+                    "INCOMPLETE_TEAM"
+                  ]
+                },
+                "patternProperties": {
+                  ".*": { "enum": ["HARD_FILTER", "SCORING_INPUT", "WARNING_ONLY", "DISABLED"] }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "vocabularies": { "type": "object", "additionalProperties": false, "required": ["themeTags", "serviceMoments", "languages", "energyArcs"] },
     "approvalGates": { "type": "object", "additionalProperties": false, "required": ["requireLyricsProvenance", "requireDoctrinalReview", "requireLicensingReview", "minimumReviewers", "allowedReviewerRoles", "blockRecommendationStatuses"] },
     "workflowDefaults": { "type": "object", "additionalProperties": false, "required": ["servicePlanLeadDays", "rehearsalReminderHours", "defaultSetLengthMinutes", "defaultServiceMoments"] },
