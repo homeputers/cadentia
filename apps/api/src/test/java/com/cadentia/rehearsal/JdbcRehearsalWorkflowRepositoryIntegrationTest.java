@@ -219,8 +219,11 @@ class JdbcRehearsalWorkflowRepositoryIntegrationTest {
     private UUID insertArrangement() {
         UUID songId = jdbcTemplate.queryForObject(
                 """
-                INSERT INTO songs (title, normalized_title, artist, source_reference, ccli_number, created_by)
-                VALUES (:title, :normalizedTitle, 'Cadentia Test', 'fixture', :ccliNumber, 'test')
+                INSERT INTO songs (
+                    canonical_title, normalized_title, primary_language, original_artist_display, ccli_number
+                ) VALUES (
+                    :title, :normalizedTitle, 'en', 'Cadentia Test', :ccliNumber
+                )
                 RETURNING id
                 """,
                 new MapSqlParameterSource()
