@@ -17,6 +17,8 @@ tags:
     description: Service-plan composition, attachment, and publish operations
   - name: TeamAssignments
     description: Worship team service, rehearsal, and musician assignment workflows
+  - name: RehearsalWorkflow
+    description: Versioned rehearsal workflow, readiness, issue, note, and service-scoped override operations
 paths:
   /feedback/events:
     post:
@@ -1119,7 +1121,10 @@ paths:
         Creates a structured assignment using controlled role, instrument, vocal part,
         and assignment-status values. Unavailable musicians require an explicit override.
       parameters:
-        - $ref: '#/components/parameters/ServicePlanId'
+        - in: path
+          name: servicePlanId
+          required: true
+          schema: { type: string, format: uuid }
       requestBody:
         required: true
         content:
@@ -1142,7 +1147,10 @@ paths:
       x-required-roles: [WORSHIP_LEADER, TEAM_SCHEDULER, ADMIN]
       summary: Update a service team assignment
       parameters:
-        - $ref: '#/components/parameters/ServicePlanId'
+        - in: path
+          name: servicePlanId
+          required: true
+          schema: { type: string, format: uuid }
         - $ref: '#/components/parameters/AssignmentId'
       requestBody:
         required: true
@@ -1165,7 +1173,10 @@ paths:
       x-required-roles: [WORSHIP_LEADER, TEAM_SCHEDULER, ADMIN]
       summary: Remove a service team assignment without deleting history
       parameters:
-        - $ref: '#/components/parameters/ServicePlanId'
+        - in: path
+          name: servicePlanId
+          required: true
+          schema: { type: string, format: uuid }
         - $ref: '#/components/parameters/AssignmentId'
         - in: query
           name: reasonCode
@@ -1186,7 +1197,10 @@ paths:
       summary: Add a substitute for a service assignment
       description: Creates a substitute row linked to the original assignment rather than overwriting history.
       parameters:
-        - $ref: '#/components/parameters/ServicePlanId'
+        - in: path
+          name: servicePlanId
+          required: true
+          schema: { type: string, format: uuid }
         - $ref: '#/components/parameters/AssignmentId'
       requestBody:
         required: true
@@ -1210,7 +1224,10 @@ paths:
       x-required-roles: [WORSHIP_LEADER, TEAM_SCHEDULER, ADMIN]
       summary: Reorder service team assignments
       parameters:
-        - $ref: '#/components/parameters/ServicePlanId'
+        - in: path
+          name: servicePlanId
+          required: true
+          schema: { type: string, format: uuid }
       requestBody:
         required: true
         content:
@@ -1265,7 +1282,10 @@ paths:
       summary: Create a song-specific assignment override
       description: Assigns a controlled responsibility for a specific song block without changing catalog approval gates.
       parameters:
-        - $ref: '#/components/parameters/ServicePlanId'
+        - in: path
+          name: servicePlanId
+          required: true
+          schema: { type: string, format: uuid }
       requestBody:
         required: true
         content:
@@ -1288,7 +1308,10 @@ paths:
       x-required-roles: [WORSHIP_LEADER, TEAM_SCHEDULER, REPORTING_VIEWER, ADMIN]
       summary: Get a privacy-aware service roster summary
       parameters:
-        - $ref: '#/components/parameters/ServicePlanId'
+        - in: path
+          name: servicePlanId
+          required: true
+          schema: { type: string, format: uuid }
       responses:
         '200':
           description: Service roster summary.
@@ -1331,7 +1354,10 @@ paths:
       x-required-roles: [WORSHIP_LEADER, TEAM_SCHEDULER, REPORTING_VIEWER, ADMIN]
       summary: List assignment change history for a service
       parameters:
-        - $ref: '#/components/parameters/ServicePlanId'
+        - in: path
+          name: servicePlanId
+          required: true
+          schema: { type: string, format: uuid }
       responses:
         '200':
           description: Assignment change history.
@@ -1341,6 +1367,428 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/TeamAssignmentHistoryResponse'
+
+
+  /v1/service-plans/{servicePlanId}/rehearsal-sessions:
+    get:
+      tags: [RehearsalWorkflow]
+      operationId: listRehearsalSessions
+      security: [{ bearerAuth: [] }]
+      x-required-roles: [ADMIN, WORSHIP_LEADER, TEAM_SCHEDULER, ASSIGNED_MUSICIAN, DOCTRINAL_REVIEWER, MUSICAL_REVIEWER, REPORTING_VIEWER]
+      summary: List service-scoped rehearsal sessions
+      parameters:
+        - in: path
+          name: servicePlanId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Rehearsal sessions visible to the caller.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/RehearsalSessionResponse' }
+    post:
+      tags: [RehearsalWorkflow]
+      operationId: createRehearsalSession
+      security: [{ bearerAuth: [] }]
+      x-required-roles: [ADMIN, WORSHIP_LEADER, TEAM_SCHEDULER]
+      summary: Create a rehearsal session for a service plan
+      parameters:
+        - in: path
+          name: servicePlanId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateRehearsalSessionRequest' }
+      responses:
+        '201':
+          description: Rehearsal session created.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RehearsalSessionResponse' }
+        '400': { $ref: '#/components/responses/InvalidWorkflowPayload' }
+  /v1/service-plans/{servicePlanId}/rehearsal-sessions/{rehearsalSessionId}:
+    patch:
+      tags: [RehearsalWorkflow]
+      operationId: updateRehearsalSession
+      security: [{ bearerAuth: [] }]
+      x-required-roles: [ADMIN, WORSHIP_LEADER, TEAM_SCHEDULER]
+      summary: Update mutable rehearsal session metadata
+      parameters:
+        - in: path
+          name: servicePlanId
+          required: true
+          schema: { type: string, format: uuid }
+        - in: path
+          name: rehearsalSessionId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateRehearsalSessionRequest' }
+      responses:
+        '200':
+          description: Rehearsal session updated.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RehearsalSessionResponse' }
+        '409': { $ref: '#/components/responses/WorkflowVersionConflict' }
+    delete:
+      tags: [RehearsalWorkflow]
+      operationId: archiveRehearsalSession
+      security: [{ bearerAuth: [] }]
+      x-required-roles: [ADMIN, WORSHIP_LEADER, TEAM_SCHEDULER]
+      summary: Archive a rehearsal session without deleting audit history
+      parameters:
+        - in: path
+          name: servicePlanId
+          required: true
+          schema: { type: string, format: uuid }
+        - in: path
+          name: rehearsalSessionId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Rehearsal session archived.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RehearsalSessionResponse' }
+  /v1/service-plans/{servicePlanId}/workflow-status:
+    get:
+      tags: [RehearsalWorkflow]
+      operationId: getServiceWorkflowStatus
+      security: [{ bearerAuth: [] }]
+      x-required-roles: [ADMIN, WORSHIP_LEADER, TEAM_SCHEDULER, DOCTRINAL_REVIEWER, MUSICAL_REVIEWER, REPORTING_VIEWER]
+      summary: Retrieve service rehearsal workflow readiness status
+      parameters:
+        - in: path
+          name: servicePlanId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Service workflow status.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WorkflowStatusResponse' }
+  /v1/service-plans/{servicePlanId}/readiness-transitions:
+    post:
+      tags: [RehearsalWorkflow]
+      operationId: transitionReadinessState
+      security: [{ bearerAuth: [] }]
+      x-required-roles: [ADMIN, WORSHIP_LEADER, TEAM_SCHEDULER, DOCTRINAL_REVIEWER, MUSICAL_REVIEWER]
+      summary: Transition service readiness through the controlled state machine
+      parameters:
+        - in: path
+          name: servicePlanId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReadinessTransitionRequest' }
+      responses:
+        '200':
+          description: Updated workflow status.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WorkflowStatusResponse' }
+        '400': { $ref: '#/components/responses/InvalidWorkflowPayload' }
+        '409': { $ref: '#/components/responses/BlockedWorkflowTransition' }
+  /v1/service-plans/{servicePlanId}/notes:
+    get:
+      tags: [RehearsalWorkflow]
+      operationId: listRehearsalNotes
+      security: [{ bearerAuth: [] }]
+      x-required-roles: [ADMIN, WORSHIP_LEADER, TEAM_SCHEDULER, ASSIGNED_MUSICIAN, DOCTRINAL_REVIEWER, MUSICAL_REVIEWER, REPORTING_VIEWER]
+      summary: List rehearsal notes redacted according to caller role
+      parameters:
+        - in: path
+          name: servicePlanId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Visible notes; private content is omitted for unauthorized roles.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/RehearsalNoteResponse' }
+    post:
+      tags: [RehearsalWorkflow]
+      operationId: createRehearsalNote
+      security: [{ bearerAuth: [] }]
+      x-required-roles: [ADMIN, WORSHIP_LEADER, TEAM_SCHEDULER, DOCTRINAL_REVIEWER, MUSICAL_REVIEWER]
+      summary: Add a targeted rehearsal note
+      parameters:
+        - in: path
+          name: servicePlanId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateRehearsalNoteRequest' }
+      responses:
+        '201':
+          description: Note created.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RehearsalNoteResponse' }
+  /v1/service-plans/{servicePlanId}/issues:
+    get:
+      tags: [RehearsalWorkflow]
+      operationId: listRehearsalIssues
+      security: [{ bearerAuth: [] }]
+      x-required-roles: [ADMIN, WORSHIP_LEADER, TEAM_SCHEDULER, ASSIGNED_MUSICIAN, DOCTRINAL_REVIEWER, MUSICAL_REVIEWER, REPORTING_VIEWER]
+      summary: List rehearsal issues and their visible actions
+      parameters:
+        - in: path
+          name: servicePlanId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Issues visible to the caller.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/RehearsalIssueResponse' }
+    post:
+      tags: [RehearsalWorkflow]
+      operationId: createRehearsalIssue
+      security: [{ bearerAuth: [] }]
+      x-required-roles: [ADMIN, WORSHIP_LEADER, TEAM_SCHEDULER, DOCTRINAL_REVIEWER, MUSICAL_REVIEWER]
+      summary: Open a structured rehearsal issue
+      parameters:
+        - in: path
+          name: servicePlanId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateRehearsalIssueRequest' }
+      responses:
+        '201':
+          description: Issue opened.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RehearsalIssueResponse' }
+  /v1/service-plans/{servicePlanId}/issues/{issueId}/status:
+    patch:
+      tags: [RehearsalWorkflow]
+      operationId: updateRehearsalIssueStatus
+      security: [{ bearerAuth: [] }]
+      x-required-roles: [ADMIN, WORSHIP_LEADER, TEAM_SCHEDULER, DOCTRINAL_REVIEWER, MUSICAL_REVIEWER]
+      summary: Transition a rehearsal issue status using stable status codes
+      parameters:
+        - in: path
+          name: servicePlanId
+          required: true
+          schema: { type: string, format: uuid }
+        - in: path
+          name: issueId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateIssueStatusRequest' }
+      responses:
+        '200':
+          description: Updated issue.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RehearsalIssueResponse' }
+        '400': { $ref: '#/components/responses/InvalidWorkflowPayload' }
+        '409': { $ref: '#/components/responses/WorkflowVersionConflict' }
+  /v1/service-plans/{servicePlanId}/issues/{issueId}/actions:
+    post:
+      tags: [RehearsalWorkflow]
+      operationId: createRehearsalIssueAction
+      security: [{ bearerAuth: [] }]
+      x-required-roles: [ADMIN, WORSHIP_LEADER, TEAM_SCHEDULER, DOCTRINAL_REVIEWER, MUSICAL_REVIEWER]
+      summary: Create an owned follow-up action for an issue
+      parameters:
+        - in: path
+          name: servicePlanId
+          required: true
+          schema: { type: string, format: uuid }
+        - in: path
+          name: issueId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateIssueActionRequest' }
+      responses:
+        '201':
+          description: Action created.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RehearsalIssueActionResponse' }
+  /v1/service-plans/{servicePlanId}/issue-actions/{actionId}/owner:
+    patch:
+      tags: [RehearsalWorkflow]
+      operationId: updateRehearsalIssueActionOwner
+      security: [{ bearerAuth: [] }]
+      x-required-roles: [ADMIN, WORSHIP_LEADER, TEAM_SCHEDULER]
+      summary: Update issue action ownership
+      parameters:
+        - in: path
+          name: servicePlanId
+          required: true
+          schema: { type: string, format: uuid }
+        - in: path
+          name: actionId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateIssueActionOwnerRequest' }
+      responses:
+        '200':
+          description: Updated action.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RehearsalIssueActionResponse' }
+  /v1/service-plans/{servicePlanId}/issue-actions/{actionId}/status:
+    patch:
+      tags: [RehearsalWorkflow]
+      operationId: updateRehearsalIssueActionStatus
+      security: [{ bearerAuth: [] }]
+      x-required-roles: [ADMIN, WORSHIP_LEADER, TEAM_SCHEDULER, ASSIGNED_MUSICIAN]
+      summary: Update issue action response/status fields
+      description: Assigned musicians may update action status for actions relevant to their assignment without receiving workflow governance permissions.
+      parameters:
+        - in: path
+          name: servicePlanId
+          required: true
+          schema: { type: string, format: uuid }
+        - in: path
+          name: actionId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateIssueActionStatusRequest' }
+      responses:
+        '200':
+          description: Updated action.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RehearsalIssueActionResponse' }
+  /v1/service-plans/{servicePlanId}/arrangement-overrides:
+    get:
+      tags: [RehearsalWorkflow]
+      operationId: listArrangementOverrides
+      security: [{ bearerAuth: [] }]
+      x-required-roles: [ADMIN, WORSHIP_LEADER, TEAM_SCHEDULER, ASSIGNED_MUSICIAN, DOCTRINAL_REVIEWER, MUSICAL_REVIEWER, REPORTING_VIEWER]
+      summary: List service-scoped arrangement overrides
+      description: Rehearsal overrides are service-scoped effective values only and never update approved catalog arrangements.
+      parameters:
+        - in: path
+          name: servicePlanId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Service-scoped arrangement overrides.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/ArrangementOverrideResponse' }
+    post:
+      tags: [RehearsalWorkflow]
+      operationId: createArrangementOverride
+      security: [{ bearerAuth: [] }]
+      x-required-roles: [ADMIN, WORSHIP_LEADER, TEAM_SCHEDULER]
+      summary: Create a service-scoped arrangement override
+      description: Creates effective arrangement values for this service only; approved catalog arrangements are not mutated by this workflow path.
+      parameters:
+        - in: path
+          name: servicePlanId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateArrangementOverrideRequest' }
+      responses:
+        '201':
+          description: Override created.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ArrangementOverrideResponse' }
+  /v1/service-plans/{servicePlanId}/arrangement-overrides/{arrangementOverrideId}:
+    patch:
+      tags: [RehearsalWorkflow]
+      operationId: updateArrangementOverride
+      security: [{ bearerAuth: [] }]
+      x-required-roles: [ADMIN, WORSHIP_LEADER, TEAM_SCHEDULER]
+      summary: Update a service-scoped arrangement override
+      description: Updates service-scoped effective values only; approved catalog arrangements are not mutated.
+      parameters:
+        - in: path
+          name: servicePlanId
+          required: true
+          schema: { type: string, format: uuid }
+        - in: path
+          name: arrangementOverrideId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateArrangementOverrideRequest' }
+      responses:
+        '200':
+          description: Override updated.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ArrangementOverrideResponse' }
+        '409': { $ref: '#/components/responses/WorkflowVersionConflict' }
+    delete:
+      tags: [RehearsalWorkflow]
+      operationId: archiveArrangementOverride
+      security: [{ bearerAuth: [] }]
+      x-required-roles: [ADMIN, WORSHIP_LEADER, TEAM_SCHEDULER]
+      summary: Archive a service-scoped arrangement override
+      parameters:
+        - in: path
+          name: servicePlanId
+          required: true
+          schema: { type: string, format: uuid }
+        - in: path
+          name: arrangementOverrideId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '204': { description: Override archived. }
 
 components:
   parameters:
@@ -3096,6 +3544,290 @@ components:
           type: object
           nullable: true
           additionalProperties: true
+
+
+
+    RehearsalReadinessStateCode:
+      type: string
+      enum: [draft, planned, rehearsing, issues_open, ready, completed]
+      description: Stable machine-readable rehearsal readiness state code.
+    RehearsalTargetTypeCode:
+      type: string
+      enum: [service, rehearsal_session, setlist_item, transition, arrangement, team_role, musician_assignment]
+    RehearsalIssueCategoryCode:
+      type: string
+      enum: [unresolved_transition, difficult_song, blocker, arrangement_concern, team_role_concern, general_follow_up]
+    RehearsalIssueSeverityCode:
+      type: string
+      enum: [low, medium, high, blocking]
+    RehearsalIssueStatusCode:
+      type: string
+      enum: [open, in_progress, resolved, deferred, cancelled]
+    RehearsalIssueActionStatusCode:
+      type: string
+      enum: [todo, in_progress, done, cancelled]
+    RehearsalIssueOwnerType:
+      type: string
+      enum: [actor, team_role, service_assignment, unassigned]
+    RehearsalNoteVisibilityCode:
+      type: string
+      enum: [public, team_private, pastoral_private]
+    WorkflowProblemCode:
+      type: string
+      enum: [INVALID_STATUS_CODE, TRANSITION_BLOCKED, VERSION_CONFLICT, FORBIDDEN, NOT_FOUND]
+    WorkflowProblemResponse:
+      type: object
+      required: [code, message]
+      properties:
+        code: { $ref: '#/components/schemas/WorkflowProblemCode' }
+        message: { type: string }
+        currentStatus: { type: string, nullable: true }
+        requestedStatus: { type: string, nullable: true }
+    RehearsalTarget:
+      type: object
+      additionalProperties: false
+      required: [targetTypeCode]
+      properties:
+        targetTypeCode: { $ref: '#/components/schemas/RehearsalTargetTypeCode' }
+        rehearsalSessionId: { type: string, format: uuid, nullable: true }
+        servicePlanBlockId: { type: string, format: uuid, nullable: true }
+        setlistVersionItemId: { type: string, format: uuid, nullable: true }
+        transitionFromBlockId: { type: string, format: uuid, nullable: true }
+        transitionToBlockId: { type: string, format: uuid, nullable: true }
+        arrangementId: { type: string, format: uuid, nullable: true }
+        teamRoleCode: { type: string, nullable: true }
+        serviceTeamAssignmentId: { type: string, format: uuid, nullable: true }
+        rehearsalTeamAssignmentId: { type: string, format: uuid, nullable: true }
+        songAssignmentOverrideId: { type: string, format: uuid, nullable: true }
+    RehearsalSessionResponse:
+      type: object
+      required: [rehearsalSessionId, servicePlanId, sessionCode, startsAt, endsAt, readinessStateCode, version]
+      properties:
+        rehearsalSessionId: { type: string, format: uuid }
+        servicePlanId: { type: string, format: uuid }
+        sessionCode: { type: string }
+        startsAt: { type: string, format: date-time }
+        endsAt: { type: string, format: date-time }
+        location: { type: string, nullable: true }
+        readinessStateCode: { $ref: '#/components/schemas/RehearsalReadinessStateCode' }
+        archivedAt: { type: string, format: date-time, nullable: true }
+        version: { type: integer, format: int64, minimum: 0 }
+    CreateRehearsalSessionRequest:
+      type: object
+      additionalProperties: false
+      required: [sessionCode, startsAt, endsAt]
+      properties:
+        sessionCode: { type: string, minLength: 1, maxLength: 64 }
+        startsAt: { type: string, format: date-time }
+        endsAt: { type: string, format: date-time }
+        location: { type: string, nullable: true, maxLength: 255 }
+        reason: { type: string, nullable: true }
+        reference: { type: string, nullable: true }
+    UpdateRehearsalSessionRequest:
+      allOf:
+        - $ref: '#/components/schemas/CreateRehearsalSessionRequest'
+        - type: object
+          properties:
+            expectedVersion: { type: integer, format: int64, minimum: 0, nullable: true }
+    WorkflowStatusResponse:
+      type: object
+      required: [servicePlanId, explicitStateCode, derivedStateCode, openBlockingIssueCount, openRequiredActionCount, readyForService]
+      properties:
+        servicePlanId: { type: string, format: uuid }
+        explicitStateCode: { $ref: '#/components/schemas/RehearsalReadinessStateCode' }
+        derivedStateCode: { $ref: '#/components/schemas/RehearsalReadinessStateCode' }
+        openBlockingIssueCount: { type: integer, minimum: 0 }
+        openRequiredActionCount: { type: integer, minimum: 0 }
+        readyForService: { type: boolean }
+    ReadinessTransitionRequest:
+      type: object
+      additionalProperties: false
+      required: [newStateCode]
+      properties:
+        rehearsalSessionId: { type: string, format: uuid, nullable: true }
+        newStateCode: { $ref: '#/components/schemas/RehearsalReadinessStateCode' }
+        reason: { type: string, nullable: true }
+        reference: { type: string, nullable: true }
+        expectedVersion: { type: integer, format: int64, minimum: 0, nullable: true }
+    ReadinessHistoryResponse:
+      type: object
+      required: [previousStateCode, newStateCode, changedBy, changedAt]
+      properties:
+        previousStateCode: { $ref: '#/components/schemas/RehearsalReadinessStateCode', nullable: true }
+        newStateCode: { $ref: '#/components/schemas/RehearsalReadinessStateCode' }
+        changedBy: { type: string }
+        changedAt: { type: string, format: date-time }
+        reason: { type: string, nullable: true }
+    RehearsalNoteResponse:
+      type: object
+      required: [noteId, servicePlanId, target, visibilityCode, redacted, createdAt]
+      properties:
+        noteId: { type: string, format: uuid }
+        servicePlanId: { type: string, format: uuid }
+        target: { $ref: '#/components/schemas/RehearsalTarget' }
+        noteBody: { type: string, nullable: true }
+        visibilityCode: { $ref: '#/components/schemas/RehearsalNoteVisibilityCode' }
+        redacted: { type: boolean }
+        createdBy: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+    CreateRehearsalNoteRequest:
+      type: object
+      additionalProperties: false
+      required: [target, noteBody, visibilityCode]
+      properties:
+        target: { $ref: '#/components/schemas/RehearsalTarget' }
+        noteBody: { type: string, minLength: 1, maxLength: 4000 }
+        visibilityCode: { $ref: '#/components/schemas/RehearsalNoteVisibilityCode' }
+        reason: { type: string, nullable: true }
+        reference: { type: string, nullable: true }
+    RehearsalIssueActionOwner:
+      type: object
+      required: [ownerType]
+      properties:
+        ownerType: { $ref: '#/components/schemas/RehearsalIssueOwnerType' }
+        ownerActor: { type: string, nullable: true }
+        ownerTeamRoleCode: { type: string, nullable: true }
+        ownerServiceAssignmentId: { type: string, format: uuid, nullable: true }
+    RehearsalIssueActionResponse:
+      type: object
+      required: [actionId, issueId, servicePlanId, actionStatusCode, actionSummary, owner, version]
+      properties:
+        actionId: { type: string, format: uuid }
+        issueId: { type: string, format: uuid }
+        servicePlanId: { type: string, format: uuid }
+        actionStatusCode: { $ref: '#/components/schemas/RehearsalIssueActionStatusCode' }
+        actionSummary: { type: string }
+        owner: { $ref: '#/components/schemas/RehearsalIssueActionOwner' }
+        completedAt: { type: string, format: date-time, nullable: true }
+        version: { type: integer, format: int64, minimum: 0 }
+    RehearsalIssueResponse:
+      type: object
+      required: [issueId, servicePlanId, target, categoryCode, severityCode, statusCode, title, actions, version]
+      properties:
+        issueId: { type: string, format: uuid }
+        servicePlanId: { type: string, format: uuid }
+        target: { $ref: '#/components/schemas/RehearsalTarget' }
+        categoryCode: { $ref: '#/components/schemas/RehearsalIssueCategoryCode' }
+        severityCode: { $ref: '#/components/schemas/RehearsalIssueSeverityCode' }
+        statusCode: { $ref: '#/components/schemas/RehearsalIssueStatusCode' }
+        title: { type: string }
+        detail: { type: string, nullable: true }
+        detectedBy: { type: string, nullable: true }
+        resolvedAt: { type: string, format: date-time, nullable: true }
+        archivedAt: { type: string, format: date-time, nullable: true }
+        actions:
+          type: array
+          items: { $ref: '#/components/schemas/RehearsalIssueActionResponse' }
+        history:
+          type: array
+          items: { $ref: '#/components/schemas/IssueHistoryResponse' }
+        version: { type: integer, format: int64, minimum: 0 }
+    IssueHistoryResponse:
+      type: object
+      required: [statusCode, changedAt]
+      properties:
+        statusCode: { $ref: '#/components/schemas/RehearsalIssueStatusCode' }
+        actor: { type: string, nullable: true }
+        changedAt: { type: string, format: date-time }
+    CreateRehearsalIssueRequest:
+      type: object
+      additionalProperties: false
+      required: [target, categoryCode, severityCode, title]
+      properties:
+        target: { $ref: '#/components/schemas/RehearsalTarget' }
+        categoryCode: { $ref: '#/components/schemas/RehearsalIssueCategoryCode' }
+        severityCode: { $ref: '#/components/schemas/RehearsalIssueSeverityCode' }
+        title: { type: string, minLength: 1, maxLength: 200 }
+        detail: { type: string, nullable: true, maxLength: 4000 }
+        reason: { type: string, nullable: true }
+        reference: { type: string, nullable: true }
+    UpdateIssueStatusRequest:
+      type: object
+      additionalProperties: false
+      required: [statusCode]
+      properties:
+        statusCode: { $ref: '#/components/schemas/RehearsalIssueStatusCode' }
+        reason: { type: string, nullable: true }
+        reference: { type: string, nullable: true }
+        expectedVersion: { type: integer, format: int64, minimum: 0, nullable: true }
+    CreateIssueActionRequest:
+      type: object
+      additionalProperties: false
+      required: [actionSummary, owner]
+      properties:
+        actionSummary: { type: string, minLength: 1, maxLength: 500 }
+        owner: { $ref: '#/components/schemas/RehearsalIssueActionOwner' }
+        reason: { type: string, nullable: true }
+        reference: { type: string, nullable: true }
+    UpdateIssueActionOwnerRequest:
+      type: object
+      additionalProperties: false
+      required: [owner]
+      properties:
+        owner: { $ref: '#/components/schemas/RehearsalIssueActionOwner' }
+        reason: { type: string, nullable: true }
+        reference: { type: string, nullable: true }
+        expectedVersion: { type: integer, format: int64, minimum: 0, nullable: true }
+    UpdateIssueActionStatusRequest:
+      type: object
+      additionalProperties: false
+      required: [actionStatusCode]
+      properties:
+        actionStatusCode: { $ref: '#/components/schemas/RehearsalIssueActionStatusCode' }
+        responseNote: { type: string, nullable: true, maxLength: 1000 }
+        reason: { type: string, nullable: true }
+        reference: { type: string, nullable: true }
+        expectedVersion: { type: integer, format: int64, minimum: 0, nullable: true }
+    ArrangementOverrideResponse:
+      type: object
+      required: [arrangementOverrideId, servicePlanId, sourceArrangementId, rationale, provenanceNote, version]
+      properties:
+        arrangementOverrideId: { type: string, format: uuid }
+        servicePlanId: { type: string, format: uuid }
+        servicePlanBlockId: { type: string, format: uuid, nullable: true }
+        setlistVersionItemId: { type: string, format: uuid, nullable: true }
+        sourceArrangementId: { type: string, format: uuid }
+        sourceArrangementVersionRef: { type: string, nullable: true }
+        effectiveKey: { type: string, nullable: true }
+        effectiveMode: { type: string, nullable: true }
+        effectiveTempoBpm: { type: integer, nullable: true }
+        effectiveTimeSignature: { type: string, nullable: true }
+        effectiveDurationSeconds: { type: integer, nullable: true }
+        effectiveEnergyLevel: { type: integer, nullable: true, minimum: 1, maximum: 5 }
+        effectiveDifficultyLevel: { type: integer, nullable: true, minimum: 1, maximum: 5 }
+        effectiveNotes: { type: string, nullable: true }
+        rationale: { type: string }
+        provenanceNote: { type: string }
+        createdBy: { type: string, nullable: true }
+        updatedBy: { type: string, nullable: true }
+        version: { type: integer, format: int64, minimum: 0 }
+    CreateArrangementOverrideRequest:
+      type: object
+      additionalProperties: false
+      required: [sourceArrangementId, rationale, provenanceNote]
+      properties:
+        servicePlanBlockId: { type: string, format: uuid, nullable: true }
+        setlistVersionItemId: { type: string, format: uuid, nullable: true }
+        sourceArrangementId: { type: string, format: uuid }
+        sourceArrangementVersionRef: { type: string, nullable: true }
+        effectiveKey: { type: string, nullable: true }
+        effectiveMode: { type: string, nullable: true }
+        effectiveTempoBpm: { type: integer, nullable: true, minimum: 1 }
+        effectiveTimeSignature: { type: string, nullable: true }
+        effectiveDurationSeconds: { type: integer, nullable: true, minimum: 1 }
+        effectiveEnergyLevel: { type: integer, nullable: true, minimum: 1, maximum: 5 }
+        effectiveDifficultyLevel: { type: integer, nullable: true, minimum: 1, maximum: 5 }
+        effectiveNotes: { type: string, nullable: true }
+        rationale: { type: string, minLength: 1 }
+        provenanceNote: { type: string, minLength: 1 }
+        reason: { type: string, nullable: true }
+        reference: { type: string, nullable: true }
+    UpdateArrangementOverrideRequest:
+      allOf:
+        - $ref: '#/components/schemas/CreateArrangementOverrideRequest'
+        - type: object
+          properties:
+            expectedVersion: { type: integer, format: int64, minimum: 0, nullable: true }
 
     ServicePlanStatus:
       type: string

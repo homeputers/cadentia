@@ -29,6 +29,12 @@ public interface RehearsalWorkflowRepository {
 
     Optional<ReadinessStateCode> findServiceReadiness(UUID servicePlanId);
 
+    List<RehearsalSessionRecord> listSessions(UUID servicePlanId);
+
+    List<RehearsalNoteRecord> listNotes(UUID servicePlanId);
+
+    List<ArrangementOverrideRecord> listArrangementOverrides(UUID servicePlanId);
+
     RehearsalSessionRecord createSession(
             UUID servicePlanId,
             String sessionCode,
@@ -117,6 +123,10 @@ public interface RehearsalWorkflowRepository {
             String updatedBy);
 
     ArrangementOverrideRecord createArrangementOverride(ArrangementOverrideRecord overrideRecord);
+
+    ArrangementOverrideRecord updateArrangementOverride(ArrangementOverrideRecord overrideRecord);
+
+    void archiveArrangementOverride(UUID servicePlanId, UUID arrangementOverrideId, String archivedBy);
 
     RehearsalAuditRecord recordAudit(RehearsalAuditRecord auditRecord);
 }

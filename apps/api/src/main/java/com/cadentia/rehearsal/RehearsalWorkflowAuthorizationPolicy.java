@@ -25,6 +25,33 @@ public class RehearsalWorkflowAuthorizationPolicy {
         this(new SecurityObservabilityRecorder(Metrics.globalRegistry));
     }
 
+    public void requireWorkflowRead() {
+        Authentication authentication = authentication();
+        require(
+                "rehearsal.workflow.read",
+                hasAnyAuthority(
+                        authentication,
+                        RbacAuthorities.ROLE_ADMIN,
+                        RbacAuthorities.ROLE_WORSHIP_LEADER,
+                        RbacAuthorities.ROLE_TEAM_SCHEDULER,
+                        RbacAuthorities.ROLE_ASSIGNED_MUSICIAN,
+                        RbacAuthorities.ROLE_DOCTRINAL_REVIEWER,
+                        RbacAuthorities.ROLE_MUSICAL_REVIEWER,
+                        RbacAuthorities.ROLE_REPORTING_VIEWER));
+    }
+
+    public void requireActionResponseMutation() {
+        Authentication authentication = authentication();
+        require(
+                "rehearsal.workflow.action_response",
+                hasAnyAuthority(
+                        authentication,
+                        RbacAuthorities.ROLE_ADMIN,
+                        RbacAuthorities.ROLE_WORSHIP_LEADER,
+                        RbacAuthorities.ROLE_TEAM_SCHEDULER,
+                        RbacAuthorities.ROLE_ASSIGNED_MUSICIAN));
+    }
+
     public void requireWorkflowMutation() {
         Authentication authentication = authentication();
         require(
@@ -33,7 +60,9 @@ public class RehearsalWorkflowAuthorizationPolicy {
                         authentication,
                         RbacAuthorities.ROLE_ADMIN,
                         RbacAuthorities.ROLE_WORSHIP_LEADER,
-                        RbacAuthorities.ROLE_TEAM_SCHEDULER));
+                        RbacAuthorities.ROLE_TEAM_SCHEDULER,
+                        RbacAuthorities.ROLE_DOCTRINAL_REVIEWER,
+                        RbacAuthorities.ROLE_MUSICAL_REVIEWER));
     }
 
     public void requireEmergencyCorrection() {

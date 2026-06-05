@@ -17,6 +17,7 @@ import com.cadentia.rehearsal.RehearsalWorkflowModels.WorkflowStatus;
 import java.time.Instant;
 import java.util.EnumMap;
 import java.util.EnumSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -50,6 +51,31 @@ public class RehearsalWorkflowService {
             RehearsalWorkflowAuthorizationPolicy authorizationPolicy) {
         this.repository = repository;
         this.authorizationPolicy = authorizationPolicy;
+    }
+
+    public List<RehearsalSessionRecord> listSessions(UUID servicePlanId) {
+        authorizationPolicy.requireWorkflowRead();
+        return repository.listSessions(servicePlanId);
+    }
+
+    public List<RehearsalNoteRecord> listNotes(UUID servicePlanId) {
+        authorizationPolicy.requireWorkflowRead();
+        return repository.listNotes(servicePlanId);
+    }
+
+    public List<RehearsalIssueRecord> listIssues(UUID servicePlanId) {
+        authorizationPolicy.requireWorkflowRead();
+        return repository.listIssues(servicePlanId);
+    }
+
+    public List<RehearsalIssueActionRecord> listIssueActions(UUID servicePlanId) {
+        authorizationPolicy.requireWorkflowRead();
+        return repository.listIssueActions(servicePlanId);
+    }
+
+    public List<ArrangementOverrideRecord> listArrangementOverrides(UUID servicePlanId) {
+        authorizationPolicy.requireWorkflowRead();
+        return repository.listArrangementOverrides(servicePlanId);
     }
 
     @Transactional
@@ -87,6 +113,20 @@ public class RehearsalWorkflowService {
         audit("REHEARSAL_SESSION_UPDATED", "rehearsal_session", rehearsalSessionId, servicePlanId, rehearsalSessionId,
                 null, sessionSnapshot(updated), reason, reference);
         return updated;
+    }
+
+    @Transactional
+    public RehearsalSessionRecord archiveSession(
+            UUID servicePlanId,
+            UUID rehearsalSessionId,
+            String reason,
+            String reference) {
+        authorizationPolicy.requireWorkflowMutation();
+        RehearsalSessionRecord archived = repository.archiveSession(
+                servicePlanId, rehearsalSessionId, authorizationPolicy.currentActor());
+        audit("REHEARSAL_SESSION_ARCHIVED", "rehearsal_session", rehearsalSessionId, servicePlanId, rehearsalSessionId,
+                null, sessionSnapshot(archived), reason, reference);
+        return archived;
     }
 
     @Transactional
@@ -181,7 +221,7 @@ public class RehearsalWorkflowService {
             IssueActionStatusCode statusCode,
             String reason,
             String reference) {
-        authorizationPolicy.requireWorkflowMutation();
+        authorizationPolicy.requireActionResponseMutation();
         String before = actionSnapshot(findAction(servicePlanId, actionId));
         RehearsalIssueActionRecord updated = repository.updateIssueActionStatus(
                 servicePlanId, actionId, statusCode, authorizationPolicy.currentActor());
@@ -262,6 +302,26 @@ public class RehearsalWorkflowService {
         audit("REHEARSAL_OVERRIDE_CREATED", "service_arrangement_override", created.arrangementOverrideId(),
                 created.servicePlanId(), null, null, overrideSnapshot(created), reason, reference);
         return created;
+    }
+
+    @Transactional
+    public ArrangementOverrideRecord updateArrangementOverride(
+            ArrangementOverrideRecord overrideRecord,
+            String reason,
+            String reference) {
+        authorizationPolicy.requireWorkflowMutation();
+        ArrangementOverrideRecord updated = repository.updateArrangementOverride(overrideRecord);
+        audit("REHEARSAL_OVERRIDE_UPDATED", "service_arrangement_override", updated.arrangementOverrideId(),
+                updated.servicePlanId(), null, null, overrideSnapshot(updated), reason, reference);
+        return updated;
+    }
+
+    @Transactional
+    public void archiveArrangementOverride(UUID servicePlanId, UUID arrangementOverrideId, String reason, String reference) {
+        authorizationPolicy.requireWorkflowMutation();
+        repository.archiveArrangementOverride(servicePlanId, arrangementOverrideId, authorizationPolicy.currentActor());
+        audit("REHEARSAL_OVERRIDE_ARCHIVED", "service_arrangement_override", arrangementOverrideId,
+                servicePlanId, null, null, "{\"archived\":true}", reason, reference);
     }
 
     public WorkflowStatus workflowStatus(UUID servicePlanId) {

@@ -214,6 +214,7 @@ class RehearsalWorkflowServiceTest {
         private final Map<UUID, ReadinessStateCode> readiness = new LinkedHashMap<>();
         private final Map<UUID, RehearsalIssueRecord> issues = new LinkedHashMap<>();
         private final Map<UUID, RehearsalIssueActionRecord> actions = new LinkedHashMap<>();
+        private final Map<UUID, ArrangementOverrideRecord> overrides = new LinkedHashMap<>();
         private final List<RehearsalAuditRecord> audits = new ArrayList<>();
 
         @Override
@@ -234,6 +235,21 @@ class RehearsalWorkflowServiceTest {
         @Override
         public Optional<ReadinessStateCode> findServiceReadiness(UUID servicePlanId) {
             return Optional.ofNullable(readiness.get(servicePlanId));
+        }
+
+        @Override
+        public List<RehearsalSessionRecord> listSessions(UUID servicePlanId) {
+            return List.of();
+        }
+
+        @Override
+        public List<RehearsalNoteRecord> listNotes(UUID servicePlanId) {
+            return List.of();
+        }
+
+        @Override
+        public List<ArrangementOverrideRecord> listArrangementOverrides(UUID servicePlanId) {
+            return overrides.values().stream().filter(overrideRecord -> overrideRecord.servicePlanId().equals(servicePlanId)).toList();
         }
 
         @Override
@@ -386,7 +402,27 @@ class RehearsalWorkflowServiceTest {
 
         @Override
         public ArrangementOverrideRecord createArrangementOverride(ArrangementOverrideRecord overrideRecord) {
+            ArrangementOverrideRecord created = new ArrangementOverrideRecord(
+                    overrideRecord.arrangementOverrideId() == null ? UUID.randomUUID() : overrideRecord.arrangementOverrideId(),
+                    overrideRecord.servicePlanId(), overrideRecord.servicePlanBlockId(), overrideRecord.setlistVersionItemId(),
+                    overrideRecord.sourceArrangementId(), overrideRecord.sourceArrangementVersionRef(), overrideRecord.effectiveKey(),
+                    overrideRecord.effectiveMode(), overrideRecord.effectiveTempoBpm(), overrideRecord.effectiveTimeSignature(),
+                    overrideRecord.effectiveDurationSeconds(), overrideRecord.effectiveEnergyLevel(),
+                    overrideRecord.effectiveDifficultyLevel(), overrideRecord.effectiveNotes(), overrideRecord.rationale(),
+                    overrideRecord.provenanceNote(), overrideRecord.createdBy(), overrideRecord.updatedBy());
+            overrides.put(created.arrangementOverrideId(), created);
+            return created;
+        }
+
+        @Override
+        public ArrangementOverrideRecord updateArrangementOverride(ArrangementOverrideRecord overrideRecord) {
+            overrides.put(overrideRecord.arrangementOverrideId(), overrideRecord);
             return overrideRecord;
+        }
+
+        @Override
+        public void archiveArrangementOverride(UUID servicePlanId, UUID arrangementOverrideId, String archivedBy) {
+            overrides.remove(arrangementOverrideId);
         }
 
         @Override
