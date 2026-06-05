@@ -1,6 +1,9 @@
 package com.cadentia.serviceplan;
 
+import com.cadentia.generated.model.ReadinessSummary;
 import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
 
@@ -22,7 +25,7 @@ public final class ServicePlanModels {
         BLOCKED
     }
 
-    public record ReadinessSummary(
+    public record OperationalReadinessSummary(
             ReadinessStatus status,
             List<String> objectiveBlockers,
             List<String> missingPeople,
@@ -30,8 +33,21 @@ public final class ServicePlanModels {
             int privateNoteCount,
             Instant lastUpdatedAt) {
 
-        public static ReadinessSummary unknown() {
-            return new ReadinessSummary(ReadinessStatus.UNKNOWN, List.of(), List.of(), List.of(), 0, null);
+        public static OperationalReadinessSummary unknown() {
+            return new OperationalReadinessSummary(ReadinessStatus.UNKNOWN, List.of(), List.of(), List.of(), 0, null);
+        }
+
+        public ReadinessSummary toReadinessSummary() {
+            ReadinessSummary response = new ReadinessSummary(
+                    com.cadentia.generated.model.ReadinessStatus.fromValue(status().name()),
+                    objectiveBlockers(),
+                    missingPeople(),
+                    unresolvedArrangementConflicts(),
+                    privateNoteCount());
+            if (lastUpdatedAt() != null) {
+                response.setLastUpdatedAt(OffsetDateTime.ofInstant(lastUpdatedAt(), ZoneOffset.UTC));
+            }
+            return response;
         }
     }
 
@@ -66,7 +82,7 @@ public final class ServicePlanModels {
             String publishedBy,
             List<ServicePlanBlock> blocks,
             List<SetlistAttachment> attachments,
-            ReadinessSummary readinessSummary) {
+            OperationalReadinessSummary readinessSummary) {
 
         public ServicePlanRecord(
                 UUID servicePlanId,
@@ -81,7 +97,7 @@ public final class ServicePlanModels {
                 List<ServicePlanBlock> blocks,
                 List<SetlistAttachment> attachments) {
             this(servicePlanId, serviceDateTime, title, theme, scripture, notes, status, publishedAt, publishedBy,
-                    blocks, attachments, ReadinessSummary.unknown());
+                    blocks, attachments, OperationalReadinessSummary.unknown());
         }
     }
 }

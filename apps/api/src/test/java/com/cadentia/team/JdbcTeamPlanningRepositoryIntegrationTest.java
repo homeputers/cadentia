@@ -16,6 +16,7 @@ import com.cadentia.team.TeamPlanningModels.SkillLevelCode;
 import com.cadentia.team.TeamPlanningModels.SongAssignmentOverrideRecord;
 import com.cadentia.team.TeamPlanningModels.VocalPartCode;
 import com.cadentia.team.TeamPlanningModels.VocalRangeCode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.Map;
@@ -50,7 +51,7 @@ class JdbcTeamPlanningRepositoryIntegrationTest {
         jdbcTemplate.getJdbcTemplate().execute("CREATE EXTENSION IF NOT EXISTS pgcrypto");
         Flyway.configure().dataSource(dataSource).load().migrate();
 
-        repository = new JdbcTeamPlanningRepository(jdbcTemplate);
+        repository = new JdbcTeamPlanningRepository(jdbcTemplate, new ObjectMapper());
     }
 
     @Test

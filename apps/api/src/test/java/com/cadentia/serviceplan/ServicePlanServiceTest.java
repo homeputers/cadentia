@@ -47,9 +47,9 @@ class ServicePlanServiceTest {
         verify(repository).create(serviceDateTime, "Sunday Service", "Faith", "Hebrews 11", "notes");
     }
 
-
     @Test
     void publishRejectsUnapprovedCatalogContentDespiteReadiness() {
+        // Arrange
         UUID planId = UUID.randomUUID();
         ServicePlanRecord current = new ServicePlanRecord(
                 planId,
@@ -68,6 +68,7 @@ class ServicePlanServiceTest {
 
         ServicePlanService service = new ServicePlanService(repository);
 
+        // Act / Assert
         assertThatThrownBy(() -> service.publish(planId, "system", "readiness says ready"))
                 .isInstanceOf(ServicePlanPublishConflictException.class)
                 .hasMessageContaining("catalog approval gates");

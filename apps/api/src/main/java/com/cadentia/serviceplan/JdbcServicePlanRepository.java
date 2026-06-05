@@ -1,7 +1,7 @@
 package com.cadentia.serviceplan;
 
+import com.cadentia.serviceplan.ServicePlanModels.OperationalReadinessSummary;
 import com.cadentia.serviceplan.ServicePlanModels.ReadinessStatus;
-import com.cadentia.serviceplan.ServicePlanModels.ReadinessSummary;
 import com.cadentia.serviceplan.ServicePlanModels.ServicePlanBlock;
 import com.cadentia.serviceplan.ServicePlanModels.ServicePlanRecord;
 import com.cadentia.serviceplan.ServicePlanModels.ServicePlanStatus;
@@ -25,17 +25,18 @@ import org.springframework.transaction.annotation.Transactional;
 @Repository
 public class JdbcServicePlanRepository implements ServicePlanRepository {
 
-    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
-
     private final NamedParameterJdbcTemplate jdbcTemplate;
+    private final ObjectMapper objectMapper;
 
-    public JdbcServicePlanRepository(NamedParameterJdbcTemplate jdbcTemplate) {
+    public JdbcServicePlanRepository(NamedParameterJdbcTemplate jdbcTemplate, ObjectMapper objectMapper) {
         this.jdbcTemplate = jdbcTemplate;
+        this.objectMapper = objectMapper;
     }
 
     @Override
     @Transactional
-    public ServicePlanRecord create(Instant serviceDateTime, String title, String theme, String scripture, String notes) {
+    public ServicePlanRecord create(
+            Instant serviceDateTime, String title, String theme, String scripture, String notes) {
         UUID id = jdbcTemplate.queryForObject(
                 """
                 INSERT INTO service_plans (service_date_time, title, theme, scripture, notes)
@@ -43,7 +44,7 @@ public class JdbcServicePlanRepository implements ServicePlanRepository {
                 RETURNING id
                 """,
                 new MapSqlParameterSource()
-                         .addValue("serviceDateTime", Timestamp.from(serviceDateTime))
+                        .addValue("serviceDateTime", Timestamp.from(serviceDateTime))
                         .addValue("title", title)
                         .addValue("theme", theme)
                         .addValue("scripture", scripture)
@@ -73,7 +74,8 @@ public class JdbcServicePlanRepository implements ServicePlanRepository {
 
     @Override
     @Transactional
-    public ServicePlanRecord updateMetadata(UUID id, Instant serviceDateTime, String title, String theme, String scripture, String notes) {
+    public ServicePlanRecord updateMetadata(
+            UUID id, Instant serviceDateTime, String title, String theme, String scripture, String notes) {
         jdbcTemplate.update(
                 """
                 UPDATE service_plans
@@ -87,7 +89,7 @@ public class JdbcServicePlanRepository implements ServicePlanRepository {
                 """,
                 new MapSqlParameterSource()
                         .addValue("id", id)
-                         .addValue("serviceDateTime", Timestamp.from(serviceDateTime))
+                        .addValue("serviceDateTime", Timestamp.from(serviceDateTime))
                         .addValue("title", title)
                         .addValue("theme", theme)
                         .addValue("scripture", scripture)
@@ -206,7 +208,6 @@ public class JdbcServicePlanRepository implements ServicePlanRepository {
         return newerCount != null && newerCount > 0;
     }
 
-
     @Override
     public boolean hasUnapprovedPlannedCatalogContent(UUID servicePlanId) {
         Integer unapprovedCount = jdbcTemplate.queryForObject(
@@ -254,12 +255,11 @@ public class JdbcServicePlanRepository implements ServicePlanRepository {
                 readinessSummary(id));
     }
 
-
-    private ReadinessSummary readinessSummary(UUID servicePlanId) {
+    private OperationalReadinessSummary readinessSummary(UUID servicePlanId) {
         return jdbcTemplate.query(
                 "SELECT * FROM v_service_plan_readiness_summary WHERE service_plan_id = :servicePlanId",
                 Map.of("servicePlanId", servicePlanId),
-                (rs, rowNum) -> new ReadinessSummary(
+                (rs, rowNum) -> new OperationalReadinessSummary(
                         ReadinessStatus.valueOf(rs.getString("readiness_status_code")),
                         readJsonStrings(rs.getString("objective_blockers")),
                         readJsonStrings(rs.getString("missing_people")),
@@ -270,7 +270,7 @@ public class JdbcServicePlanRepository implements ServicePlanRepository {
                                 : rs.getTimestamp("last_updated_at").toInstant()))
                 .stream()
                 .findFirst()
-                .orElse(ReadinessSummary.unknown());
+                .orElse(OperationalReadinessSummary.unknown());
     }
 
     private List<String> readJsonStrings(String json) {
@@ -279,7 +279,7 @@ public class JdbcServicePlanRepository implements ServicePlanRepository {
         }
         try {
             List<String> values = new ArrayList<>();
-            collectJsonStrings(OBJECT_MAPPER.readTree(json), values);
+            collectJsonStrings(objectMapper.readTree(json), values);
             return values;
         } catch (Exception exception) {
             throw new IllegalArgumentException("Unable to read readiness summary JSON.", exception);

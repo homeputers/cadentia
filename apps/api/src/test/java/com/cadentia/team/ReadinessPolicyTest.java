@@ -19,6 +19,7 @@ class ReadinessPolicyTest {
 
     @Test
     void redactsPrivateHumanNotesButKeepsStructuredBlockersForMusicians() {
+        // Arrange
         ReadinessNoteRecord note = new ReadinessNoteRecord(
                 UUID.randomUUID(),
                 ReadinessScopeType.SERVICE_TEAM,
@@ -35,8 +36,10 @@ class ReadinessPolicyTest {
                 "leader",
                 Instant.parse("2026-06-01T10:00:00Z"));
 
+        // Act
         ReadinessNoteRecord redacted = policy.redact(note, ReadinessAudience.ASSIGNED_MUSICIAN);
 
+        // Assert
         assertThat(redacted.humanNote()).isNull();
         assertThat(redacted.objectiveBlockers()).containsExactly("drummer has not confirmed chart");
         assertThat(redacted.missingPeople()).containsExactly("bass");
@@ -45,6 +48,7 @@ class ReadinessPolicyTest {
 
     @Test
     void allowsTeamLeadersToReadTeamPrivateReadinessNotes() {
+        // Arrange
         ReadinessNoteRecord note = new ReadinessNoteRecord(
                 UUID.randomUUID(),
                 ReadinessScopeType.REHEARSAL,
@@ -61,8 +65,10 @@ class ReadinessPolicyTest {
                 "leader",
                 Instant.parse("2026-06-01T10:00:00Z"));
 
+        // Act
         ReadinessNoteRecord visible = policy.redact(note, ReadinessAudience.TEAM_LEADER);
 
+        // Assert
         assertThat(visible.humanNote()).isEqualTo("Ready after rehearsal");
     }
 }

@@ -42,13 +42,14 @@ import org.springframework.transaction.annotation.Transactional;
 @Repository
 public class JdbcTeamPlanningRepository implements TeamPlanningRepository {
 
-    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private static final TypeReference<List<String>> STRING_LIST = new TypeReference<>() {};
 
     private final NamedParameterJdbcTemplate jdbcTemplate;
+    private final ObjectMapper objectMapper;
 
-    public JdbcTeamPlanningRepository(NamedParameterJdbcTemplate jdbcTemplate) {
+    public JdbcTeamPlanningRepository(NamedParameterJdbcTemplate jdbcTemplate, ObjectMapper objectMapper) {
         this.jdbcTemplate = jdbcTemplate;
+        this.objectMapper = objectMapper;
     }
 
     @Override
@@ -666,7 +667,6 @@ public class JdbcTeamPlanningRepository implements TeamPlanningRepository {
                 .addValue("reference", reference);
     }
 
-
     private MapSqlParameterSource readinessParameters(RecordReadinessCommand command) {
         return new MapSqlParameterSource()
                 .addValue("scopeType", enumName(command.scopeType()))
@@ -708,7 +708,7 @@ public class JdbcTeamPlanningRepository implements TeamPlanningRepository {
 
     private String toJson(List<String> values) {
         try {
-            return OBJECT_MAPPER.writeValueAsString(values == null ? List.of() : values);
+            return objectMapper.writeValueAsString(values == null ? List.of() : values);
         } catch (JsonProcessingException exception) {
             throw new IllegalArgumentException("Unable to serialize readiness values.", exception);
         }
@@ -719,7 +719,7 @@ public class JdbcTeamPlanningRepository implements TeamPlanningRepository {
             return List.of();
         }
         try {
-            return OBJECT_MAPPER.readValue(json, STRING_LIST);
+            return objectMapper.readValue(json, STRING_LIST);
         } catch (JsonProcessingException exception) {
             throw new IllegalArgumentException("Unable to read readiness values.", exception);
         }

@@ -34,6 +34,7 @@ import com.cadentia.team.TeamPlanningModels.ServingPreferenceCode;
 import com.cadentia.team.TeamPlanningModels.SkillLevelCode;
 import com.cadentia.team.TeamPlanningModels.VocalPartCode;
 import com.cadentia.team.TeamPlanningModels.VocalRangeCode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.List;
@@ -67,7 +68,7 @@ class JdbcArrangementSuitabilityRepositoryIntegrationTest {
         Flyway.configure().dataSource(dataSource).load().migrate();
         jdbcTemplate = new NamedParameterJdbcTemplate(dataSource);
         suitabilityRepository = new JdbcArrangementSuitabilityRepository(jdbcTemplate);
-        teamRepository = new JdbcTeamPlanningRepository(jdbcTemplate);
+        teamRepository = new JdbcTeamPlanningRepository(jdbcTemplate, new ObjectMapper());
         songRepository = new JdbcSongRepository(jdbcTemplate);
     }
 
