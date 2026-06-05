@@ -1369,7 +1369,7 @@ paths:
                   $ref: '#/components/schemas/TeamAssignmentHistoryResponse'
 
 
-  /v1/service-plans/{servicePlanId}/rehearsal-sessions:
+  /service-plans/{servicePlanId}/rehearsal-sessions:
     get:
       tags: [RehearsalWorkflow]
       operationId: listRehearsalSessions
@@ -1412,7 +1412,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/RehearsalSessionResponse' }
         '400': { $ref: '#/components/responses/InvalidWorkflowPayload' }
-  /v1/service-plans/{servicePlanId}/rehearsal-sessions/{rehearsalSessionId}:
+  /service-plans/{servicePlanId}/rehearsal-sessions/{rehearsalSessionId}:
     patch:
       tags: [RehearsalWorkflow]
       operationId: updateRehearsalSession
@@ -1461,7 +1461,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/RehearsalSessionResponse' }
-  /v1/service-plans/{servicePlanId}/workflow-status:
+  /service-plans/{servicePlanId}/workflow-status:
     get:
       tags: [RehearsalWorkflow]
       operationId: getServiceWorkflowStatus
@@ -1479,7 +1479,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/WorkflowStatusResponse' }
-  /v1/service-plans/{servicePlanId}/readiness-transitions:
+  /service-plans/{servicePlanId}/readiness-transitions:
     post:
       tags: [RehearsalWorkflow]
       operationId: transitionReadinessState
@@ -1504,7 +1504,7 @@ paths:
               schema: { $ref: '#/components/schemas/WorkflowStatusResponse' }
         '400': { $ref: '#/components/responses/InvalidWorkflowPayload' }
         '409': { $ref: '#/components/responses/BlockedWorkflowTransition' }
-  /v1/service-plans/{servicePlanId}/notes:
+  /service-plans/{servicePlanId}/notes:
     get:
       tags: [RehearsalWorkflow]
       operationId: listRehearsalNotes
@@ -1546,7 +1546,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/RehearsalNoteResponse' }
-  /v1/service-plans/{servicePlanId}/issues:
+  /service-plans/{servicePlanId}/issues:
     get:
       tags: [RehearsalWorkflow]
       operationId: listRehearsalIssues
@@ -1588,7 +1588,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/RehearsalIssueResponse' }
-  /v1/service-plans/{servicePlanId}/issues/{issueId}/status:
+  /service-plans/{servicePlanId}/issues/{issueId}/status:
     patch:
       tags: [RehearsalWorkflow]
       operationId: updateRehearsalIssueStatus
@@ -1617,7 +1617,7 @@ paths:
               schema: { $ref: '#/components/schemas/RehearsalIssueResponse' }
         '400': { $ref: '#/components/responses/InvalidWorkflowPayload' }
         '409': { $ref: '#/components/responses/WorkflowVersionConflict' }
-  /v1/service-plans/{servicePlanId}/issues/{issueId}/actions:
+  /service-plans/{servicePlanId}/issues/{issueId}/actions:
     post:
       tags: [RehearsalWorkflow]
       operationId: createRehearsalIssueAction
@@ -1644,7 +1644,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/RehearsalIssueActionResponse' }
-  /v1/service-plans/{servicePlanId}/issue-actions/{actionId}/owner:
+  /service-plans/{servicePlanId}/issue-actions/{actionId}/owner:
     patch:
       tags: [RehearsalWorkflow]
       operationId: updateRehearsalIssueActionOwner
@@ -1671,7 +1671,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/RehearsalIssueActionResponse' }
-  /v1/service-plans/{servicePlanId}/issue-actions/{actionId}/status:
+  /service-plans/{servicePlanId}/issue-actions/{actionId}/status:
     patch:
       tags: [RehearsalWorkflow]
       operationId: updateRehearsalIssueActionStatus
@@ -1699,7 +1699,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/RehearsalIssueActionResponse' }
-  /v1/service-plans/{servicePlanId}/arrangement-overrides:
+  /service-plans/{servicePlanId}/arrangement-overrides:
     get:
       tags: [RehearsalWorkflow]
       operationId: listArrangementOverrides
@@ -1743,7 +1743,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ArrangementOverrideResponse' }
-  /v1/service-plans/{servicePlanId}/arrangement-overrides/{arrangementOverrideId}:
+  /service-plans/{servicePlanId}/arrangement-overrides/{arrangementOverrideId}:
     patch:
       tags: [RehearsalWorkflow]
       operationId: updateArrangementOverride
@@ -3551,7 +3551,7 @@ components:
       type: string
       enum: [draft, planned, rehearsing, issues_open, ready, completed]
       description: Stable machine-readable rehearsal readiness state code.
-    RehearsalTargetTypeCode:
+    RehearsalWorkflowTargetTypeCode:
       type: string
       enum: [service, rehearsal_session, setlist_item, transition, arrangement, team_role, musician_assignment]
     RehearsalIssueCategoryCode:
@@ -3583,12 +3583,12 @@ components:
         message: { type: string }
         currentStatus: { type: string, nullable: true }
         requestedStatus: { type: string, nullable: true }
-    RehearsalTarget:
+    RehearsalWorkflowTarget:
       type: object
       additionalProperties: false
       required: [targetTypeCode]
       properties:
-        targetTypeCode: { $ref: '#/components/schemas/RehearsalTargetTypeCode' }
+        targetTypeCode: { $ref: '#/components/schemas/RehearsalWorkflowTargetTypeCode' }
         rehearsalSessionId: { type: string, format: uuid, nullable: true }
         servicePlanBlockId: { type: string, format: uuid, nullable: true }
         setlistVersionItemId: { type: string, format: uuid, nullable: true }
@@ -3664,7 +3664,7 @@ components:
       properties:
         noteId: { type: string, format: uuid }
         servicePlanId: { type: string, format: uuid }
-        target: { $ref: '#/components/schemas/RehearsalTarget' }
+        target: { $ref: '#/components/schemas/RehearsalWorkflowTarget' }
         noteBody: { type: string, nullable: true }
         visibilityCode: { $ref: '#/components/schemas/RehearsalNoteVisibilityCode' }
         redacted: { type: boolean }
@@ -3675,7 +3675,7 @@ components:
       additionalProperties: false
       required: [target, noteBody, visibilityCode]
       properties:
-        target: { $ref: '#/components/schemas/RehearsalTarget' }
+        target: { $ref: '#/components/schemas/RehearsalWorkflowTarget' }
         noteBody: { type: string, minLength: 1, maxLength: 4000 }
         visibilityCode: { $ref: '#/components/schemas/RehearsalNoteVisibilityCode' }
         reason: { type: string, nullable: true }
@@ -3706,7 +3706,7 @@ components:
       properties:
         issueId: { type: string, format: uuid }
         servicePlanId: { type: string, format: uuid }
-        target: { $ref: '#/components/schemas/RehearsalTarget' }
+        target: { $ref: '#/components/schemas/RehearsalWorkflowTarget' }
         categoryCode: { $ref: '#/components/schemas/RehearsalIssueCategoryCode' }
         severityCode: { $ref: '#/components/schemas/RehearsalIssueSeverityCode' }
         statusCode: { $ref: '#/components/schemas/RehearsalIssueStatusCode' }
@@ -3734,7 +3734,7 @@ components:
       additionalProperties: false
       required: [target, categoryCode, severityCode, title]
       properties:
-        target: { $ref: '#/components/schemas/RehearsalTarget' }
+        target: { $ref: '#/components/schemas/RehearsalWorkflowTarget' }
         categoryCode: { $ref: '#/components/schemas/RehearsalIssueCategoryCode' }
         severityCode: { $ref: '#/components/schemas/RehearsalIssueSeverityCode' }
         title: { type: string, minLength: 1, maxLength: 200 }

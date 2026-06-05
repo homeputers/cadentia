@@ -66,7 +66,6 @@ public class JdbcRehearsalWorkflowRepository implements RehearsalWorkflowReposit
                 .findFirst();
     }
 
-
     @Override
     public List<RehearsalSessionRecord> listSessions(UUID servicePlanId) {
         return jdbcTemplate.query(

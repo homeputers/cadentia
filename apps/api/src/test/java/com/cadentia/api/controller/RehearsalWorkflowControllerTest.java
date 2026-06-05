@@ -10,7 +10,7 @@ import com.cadentia.generated.model.RehearsalIssueOwnerType;
 import com.cadentia.generated.model.RehearsalIssueStatusCode;
 import com.cadentia.generated.model.RehearsalNoteVisibilityCode;
 import com.cadentia.generated.model.RehearsalReadinessStateCode;
-import com.cadentia.generated.model.RehearsalTargetTypeCode;
+import com.cadentia.generated.model.RehearsalWorkflowTargetTypeCode;
 import com.cadentia.generated.model.UpdateIssueActionStatusRequest;
 import com.cadentia.generated.model.UpdateIssueStatusRequest;
 import com.cadentia.rehearsal.RehearsalWorkflowAuthorizationPolicy;
@@ -85,8 +85,16 @@ class RehearsalWorkflowControllerTest {
     @Test
     void assignedMusicianCanUpdateActionStatusWithoutOwnerOrWorkflowMutationPayload() {
         // Arrange
-        UUID issueId = repository.createIssue(servicePlanId, RehearsalTarget.service(), IssueCategoryCode.GENERAL_FOLLOW_UP,
-                IssueSeverityCode.MEDIUM, IssueStatusCode.OPEN, "Cue", "Confirm capo", "leader").issueId();
+        UUID issueId = repository.createIssue(
+                servicePlanId,
+                RehearsalTarget.service(),
+                IssueCategoryCode.GENERAL_FOLLOW_UP,
+                IssueSeverityCode.MEDIUM,
+                IssueStatusCode.OPEN,
+                "Cue",
+                "Confirm capo",
+                "leader")
+                .issueId();
         UUID actionId = repository.addIssueAction(servicePlanId, issueId, IssueActionStatusCode.TODO, "Confirm capo",
                 IssueOwnerType.SERVICE_ASSIGNMENT, null, null, UUID.randomUUID(), "leader").actionId();
         authenticate(RbacAuthorities.ROLE_ASSIGNED_MUSICIAN);
@@ -123,8 +131,16 @@ class RehearsalWorkflowControllerTest {
     @Test
     void rejectsStaleExpectedVersionBeforeMutatingIssueStatus() {
         // Arrange
-        UUID issueId = repository.createIssue(servicePlanId, RehearsalTarget.service(), IssueCategoryCode.GENERAL_FOLLOW_UP,
-                IssueSeverityCode.LOW, IssueStatusCode.OPEN, "Follow up", "Detail", "leader").issueId();
+        UUID issueId = repository.createIssue(
+                servicePlanId,
+                RehearsalTarget.service(),
+                IssueCategoryCode.GENERAL_FOLLOW_UP,
+                IssueSeverityCode.LOW,
+                IssueStatusCode.OPEN,
+                "Follow up",
+                "Detail",
+                "leader")
+                .issueId();
 
         // Act / Assert
         assertThatThrownBy(() -> controller.updateRehearsalIssueStatus(servicePlanId, issueId,
@@ -147,7 +163,8 @@ class RehearsalWorkflowControllerTest {
 
         // Assert
         assertThat(response).hasSize(1);
-        assertThat(response.getFirst().getTarget().getTargetTypeCode()).isEqualTo(RehearsalTargetTypeCode.REHEARSAL_SESSION);
+        assertThat(response.getFirst().getTarget().getTargetTypeCode())
+                .isEqualTo(RehearsalWorkflowTargetTypeCode.REHEARSAL_SESSION);
         assertThat(response.getFirst().getActions()).hasSize(1);
         assertThat(response.getFirst().getActions().getFirst().getActionId()).isEqualTo(actionId);
     }
@@ -192,56 +209,261 @@ class RehearsalWorkflowControllerTest {
         private final Map<UUID, RehearsalIssueRecord> issues = new LinkedHashMap<>();
         private final Map<UUID, RehearsalIssueActionRecord> actions = new LinkedHashMap<>();
 
-        public List<ControlledVocabularyEntry> listReadinessStates() { return List.of(); }
-        public List<ControlledVocabularyEntry> listIssueCategories() { return List.of(); }
-        public List<ControlledVocabularyEntry> listIssueStatuses() { return List.of(); }
-        public Optional<ReadinessStateCode> findServiceReadiness(UUID servicePlanId) { return Optional.ofNullable(readiness.get(servicePlanId)); }
-        public List<RehearsalSessionRecord> listSessions(UUID servicePlanId) { return sessions.values().stream().filter(s -> s.servicePlanId().equals(servicePlanId)).toList(); }
-        public List<RehearsalNoteRecord> listNotes(UUID servicePlanId) { return notes.values().stream().filter(n -> n.servicePlanId().equals(servicePlanId)).toList(); }
-        public List<ArrangementOverrideRecord> listArrangementOverrides(UUID servicePlanId) { return List.of(); }
-        public RehearsalSessionRecord createSession(UUID servicePlanId, String sessionCode, Instant startsAt, Instant endsAt, String location, String createdBy) {
-            RehearsalSessionRecord session = new RehearsalSessionRecord(UUID.randomUUID(), servicePlanId, sessionCode, startsAt, endsAt, location, ReadinessStateCode.DRAFT, null);
+        @Override
+        public List<ControlledVocabularyEntry> listReadinessStates() {
+            return List.of();
+        }
+
+        @Override
+        public List<ControlledVocabularyEntry> listIssueCategories() {
+            return List.of();
+        }
+
+        @Override
+        public List<ControlledVocabularyEntry> listIssueStatuses() {
+            return List.of();
+        }
+
+        @Override
+        public Optional<ReadinessStateCode> findServiceReadiness(UUID servicePlanId) {
+            return Optional.ofNullable(readiness.get(servicePlanId));
+        }
+
+        @Override
+        public List<RehearsalSessionRecord> listSessions(UUID servicePlanId) {
+            return sessions.values().stream()
+                    .filter(session -> session.servicePlanId().equals(servicePlanId))
+                    .toList();
+        }
+
+        @Override
+        public List<RehearsalNoteRecord> listNotes(UUID servicePlanId) {
+            return notes.values().stream()
+                    .filter(note -> note.servicePlanId().equals(servicePlanId))
+                    .toList();
+        }
+
+        @Override
+        public List<ArrangementOverrideRecord> listArrangementOverrides(UUID servicePlanId) {
+            return List.of();
+        }
+
+        @Override
+        public RehearsalSessionRecord createSession(
+                UUID servicePlanId,
+                String sessionCode,
+                Instant startsAt,
+                Instant endsAt,
+                String location,
+                String createdBy) {
+            RehearsalSessionRecord session = new RehearsalSessionRecord(
+                    UUID.randomUUID(),
+                    servicePlanId,
+                    sessionCode,
+                    startsAt,
+                    endsAt,
+                    location,
+                    ReadinessStateCode.DRAFT,
+                    null);
             sessions.put(session.rehearsalSessionId(), session);
             return session;
         }
-        public RehearsalSessionRecord updateSession(UUID servicePlanId, UUID rehearsalSessionId, String sessionCode, Instant startsAt, Instant endsAt, String location, String updatedBy) { return createSession(servicePlanId, sessionCode, startsAt, endsAt, location, updatedBy); }
-        public RehearsalSessionRecord archiveSession(UUID servicePlanId, UUID rehearsalSessionId, String archivedBy) { return sessions.get(rehearsalSessionId); }
-        public void recordServiceReadiness(UUID servicePlanId, UUID rehearsalSessionId, ReadinessStateCode newStateCode, String rationale, String changedBy) { readiness.put(servicePlanId, newStateCode); }
-        public RehearsalNoteRecord addNote(UUID servicePlanId, RehearsalTarget target, String noteBody, String visibilityCode, String createdBy) {
-            RehearsalNoteRecord note = new RehearsalNoteRecord(UUID.randomUUID(), servicePlanId, target, noteBody, visibilityCode, createdBy, Instant.now());
+
+        @Override
+        public RehearsalSessionRecord updateSession(
+                UUID servicePlanId,
+                UUID rehearsalSessionId,
+                String sessionCode,
+                Instant startsAt,
+                Instant endsAt,
+                String location,
+                String updatedBy) {
+            return createSession(servicePlanId, sessionCode, startsAt, endsAt, location, updatedBy);
+        }
+
+        @Override
+        public RehearsalSessionRecord archiveSession(UUID servicePlanId, UUID rehearsalSessionId, String archivedBy) {
+            return sessions.get(rehearsalSessionId);
+        }
+
+        @Override
+        public void recordServiceReadiness(
+                UUID servicePlanId,
+                UUID rehearsalSessionId,
+                ReadinessStateCode newStateCode,
+                String rationale,
+                String changedBy) {
+            readiness.put(servicePlanId, newStateCode);
+        }
+
+        @Override
+        public RehearsalNoteRecord addNote(
+                UUID servicePlanId,
+                RehearsalTarget target,
+                String noteBody,
+                String visibilityCode,
+                String createdBy) {
+            RehearsalNoteRecord note = new RehearsalNoteRecord(
+                    UUID.randomUUID(), servicePlanId, target, noteBody, visibilityCode, createdBy, Instant.now());
             notes.put(note.noteId(), note);
             return note;
         }
-        public Optional<RehearsalIssueRecord> findIssue(UUID servicePlanId, UUID issueId) { return Optional.ofNullable(issues.get(issueId)); }
-        public List<RehearsalIssueRecord> listIssues(UUID servicePlanId) { return issues.values().stream().filter(i -> i.servicePlanId().equals(servicePlanId)).toList(); }
-        public List<RehearsalIssueActionRecord> listIssueActions(UUID servicePlanId) { return actions.values().stream().filter(a -> a.servicePlanId().equals(servicePlanId)).toList(); }
-        public RehearsalIssueRecord createIssue(UUID servicePlanId, RehearsalTarget target, IssueCategoryCode categoryCode, IssueSeverityCode severityCode, IssueStatusCode statusCode, String title, String detail, String detectedBy) {
-            RehearsalIssueRecord issue = new RehearsalIssueRecord(UUID.randomUUID(), servicePlanId, target, categoryCode, severityCode, statusCode, title, detail, detectedBy, null, null);
+
+        @Override
+        public Optional<RehearsalIssueRecord> findIssue(UUID servicePlanId, UUID issueId) {
+            return Optional.ofNullable(issues.get(issueId));
+        }
+
+        @Override
+        public List<RehearsalIssueRecord> listIssues(UUID servicePlanId) {
+            return issues.values().stream()
+                    .filter(issue -> issue.servicePlanId().equals(servicePlanId))
+                    .toList();
+        }
+
+        @Override
+        public List<RehearsalIssueActionRecord> listIssueActions(UUID servicePlanId) {
+            return actions.values().stream()
+                    .filter(action -> action.servicePlanId().equals(servicePlanId))
+                    .toList();
+        }
+
+        @Override
+        public RehearsalIssueRecord createIssue(
+                UUID servicePlanId,
+                RehearsalTarget target,
+                IssueCategoryCode categoryCode,
+                IssueSeverityCode severityCode,
+                IssueStatusCode statusCode,
+                String title,
+                String detail,
+                String detectedBy) {
+            RehearsalIssueRecord issue = new RehearsalIssueRecord(
+                    UUID.randomUUID(),
+                    servicePlanId,
+                    target,
+                    categoryCode,
+                    severityCode,
+                    statusCode,
+                    title,
+                    detail,
+                    detectedBy,
+                    null,
+                    null);
             issues.put(issue.issueId(), issue);
             return issue;
         }
-        public RehearsalIssueRecord updateIssueSeverity(UUID servicePlanId, UUID issueId, IssueSeverityCode severityCode, String updatedBy) { return issues.get(issueId); }
-        public RehearsalIssueRecord updateIssueStatus(UUID servicePlanId, UUID issueId, IssueStatusCode statusCode, String updatedBy) {
+
+        @Override
+        public RehearsalIssueRecord updateIssueSeverity(
+                UUID servicePlanId,
+                UUID issueId,
+                IssueSeverityCode severityCode,
+                String updatedBy) {
+            return issues.get(issueId);
+        }
+
+        @Override
+        public RehearsalIssueRecord updateIssueStatus(
+                UUID servicePlanId,
+                UUID issueId,
+                IssueStatusCode statusCode,
+                String updatedBy) {
             RehearsalIssueRecord issue = issues.get(issueId);
-            RehearsalIssueRecord updated = new RehearsalIssueRecord(issue.issueId(), issue.servicePlanId(), issue.target(), issue.categoryCode(), issue.severityCode(), statusCode, issue.title(), issue.detail(), issue.detectedBy(), null, issue.archivedAt());
+            RehearsalIssueRecord updated = new RehearsalIssueRecord(
+                    issue.issueId(),
+                    issue.servicePlanId(),
+                    issue.target(),
+                    issue.categoryCode(),
+                    issue.severityCode(),
+                    statusCode,
+                    issue.title(),
+                    issue.detail(),
+                    issue.detectedBy(),
+                    null,
+                    issue.archivedAt());
             issues.put(issueId, updated);
             return updated;
         }
-        public RehearsalIssueActionRecord addIssueAction(UUID servicePlanId, UUID issueId, IssueActionStatusCode statusCode, String actionSummary, IssueOwnerType ownerType, String ownerActor, String ownerTeamRoleCode, UUID ownerServiceAssignmentId, String createdBy) {
-            RehearsalIssueActionRecord action = new RehearsalIssueActionRecord(UUID.randomUUID(), issueId, servicePlanId, statusCode, actionSummary, ownerType, ownerActor, ownerTeamRoleCode, ownerServiceAssignmentId, null);
+
+        @Override
+        public RehearsalIssueActionRecord addIssueAction(
+                UUID servicePlanId,
+                UUID issueId,
+                IssueActionStatusCode statusCode,
+                String actionSummary,
+                IssueOwnerType ownerType,
+                String ownerActor,
+                String ownerTeamRoleCode,
+                UUID ownerServiceAssignmentId,
+                String createdBy) {
+            RehearsalIssueActionRecord action = new RehearsalIssueActionRecord(
+                    UUID.randomUUID(),
+                    issueId,
+                    servicePlanId,
+                    statusCode,
+                    actionSummary,
+                    ownerType,
+                    ownerActor,
+                    ownerTeamRoleCode,
+                    ownerServiceAssignmentId,
+                    null);
             actions.put(action.actionId(), action);
             return action;
         }
-        public RehearsalIssueActionRecord updateIssueActionOwner(UUID servicePlanId, UUID actionId, IssueOwnerType ownerType, String ownerActor, String ownerTeamRoleCode, UUID ownerServiceAssignmentId, String updatedBy) { return actions.get(actionId); }
-        public RehearsalIssueActionRecord updateIssueActionStatus(UUID servicePlanId, UUID actionId, IssueActionStatusCode statusCode, String updatedBy) {
+
+        @Override
+        public RehearsalIssueActionRecord updateIssueActionOwner(
+                UUID servicePlanId,
+                UUID actionId,
+                IssueOwnerType ownerType,
+                String ownerActor,
+                String ownerTeamRoleCode,
+                UUID ownerServiceAssignmentId,
+                String updatedBy) {
+            return actions.get(actionId);
+        }
+
+        @Override
+        public RehearsalIssueActionRecord updateIssueActionStatus(
+                UUID servicePlanId,
+                UUID actionId,
+                IssueActionStatusCode statusCode,
+                String updatedBy) {
             RehearsalIssueActionRecord action = actions.get(actionId);
-            RehearsalIssueActionRecord updated = new RehearsalIssueActionRecord(action.actionId(), action.issueId(), action.servicePlanId(), statusCode, action.actionSummary(), action.ownerType(), action.ownerActor(), action.ownerTeamRoleCode(), action.ownerServiceAssignmentId(), Instant.now());
+            RehearsalIssueActionRecord updated = new RehearsalIssueActionRecord(
+                    action.actionId(),
+                    action.issueId(),
+                    action.servicePlanId(),
+                    statusCode,
+                    action.actionSummary(),
+                    action.ownerType(),
+                    action.ownerActor(),
+                    action.ownerTeamRoleCode(),
+                    action.ownerServiceAssignmentId(),
+                    Instant.now());
             actions.put(actionId, updated);
             return updated;
         }
-        public ArrangementOverrideRecord createArrangementOverride(ArrangementOverrideRecord overrideRecord) { return overrideRecord; }
-        public ArrangementOverrideRecord updateArrangementOverride(ArrangementOverrideRecord overrideRecord) { return overrideRecord; }
-        public void archiveArrangementOverride(UUID servicePlanId, UUID arrangementOverrideId, String archivedBy) {}
-        public RehearsalAuditRecord recordAudit(RehearsalAuditRecord auditRecord) { return auditRecord; }
+
+        @Override
+        public ArrangementOverrideRecord createArrangementOverride(ArrangementOverrideRecord overrideRecord) {
+            return overrideRecord;
+        }
+
+        @Override
+        public ArrangementOverrideRecord updateArrangementOverride(ArrangementOverrideRecord overrideRecord) {
+            return overrideRecord;
+        }
+
+        @Override
+        public void archiveArrangementOverride(UUID servicePlanId, UUID arrangementOverrideId, String archivedBy) {
+        }
+
+        @Override
+        public RehearsalAuditRecord recordAudit(RehearsalAuditRecord auditRecord) {
+            return auditRecord;
+        }
+
     }
 }

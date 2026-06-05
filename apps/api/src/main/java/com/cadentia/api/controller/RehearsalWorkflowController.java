@@ -21,8 +21,8 @@ import com.cadentia.generated.model.RehearsalNoteResponse;
 import com.cadentia.generated.model.RehearsalNoteVisibilityCode;
 import com.cadentia.generated.model.RehearsalReadinessStateCode;
 import com.cadentia.generated.model.RehearsalSessionResponse;
-import com.cadentia.generated.model.RehearsalTarget;
-import com.cadentia.generated.model.RehearsalTargetTypeCode;
+import com.cadentia.generated.model.RehearsalWorkflowTarget;
+import com.cadentia.generated.model.RehearsalWorkflowTargetTypeCode;
 import com.cadentia.generated.model.UpdateArrangementOverrideRequest;
 import com.cadentia.generated.model.UpdateIssueActionOwnerRequest;
 import com.cadentia.generated.model.UpdateIssueActionStatusRequest;
@@ -480,7 +480,7 @@ public class RehearsalWorkflowController implements RehearsalWorkflowApi {
         return IssueOwnerType.fromCode(value.getValue());
     }
 
-    private com.cadentia.rehearsal.RehearsalWorkflowModels.RehearsalTarget toTarget(RehearsalTarget target) {
+    private com.cadentia.rehearsal.RehearsalWorkflowModels.RehearsalTarget toTarget(RehearsalWorkflowTarget target) {
         return new com.cadentia.rehearsal.RehearsalWorkflowModels.RehearsalTarget(
                 com.cadentia.rehearsal.RehearsalWorkflowModels.TargetTypeCode.fromCode(target.getTargetTypeCode().getValue()),
                 target.getRehearsalSessionId(),
@@ -495,8 +495,8 @@ public class RehearsalWorkflowController implements RehearsalWorkflowApi {
                 target.getSongAssignmentOverrideId());
     }
 
-    private RehearsalTarget toGenerated(com.cadentia.rehearsal.RehearsalWorkflowModels.RehearsalTarget target) {
-        return new RehearsalTarget(RehearsalTargetTypeCode.fromValue(target.targetTypeCode().code()))
+    private RehearsalWorkflowTarget toGenerated(com.cadentia.rehearsal.RehearsalWorkflowModels.RehearsalTarget target) {
+        return new RehearsalWorkflowTarget(RehearsalWorkflowTargetTypeCode.fromValue(target.targetTypeCode().code()))
                 .rehearsalSessionId(target.rehearsalSessionId())
                 .servicePlanBlockId(target.servicePlanBlockId())
                 .setlistVersionItemId(target.setlistVersionItemId())
