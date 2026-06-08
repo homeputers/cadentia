@@ -243,6 +243,12 @@ schemas:
     "$ref": "./components/schemas/rehearsal-workflow.yaml#/UpdateIssueActionStatusRequest"
   ArrangementOverrideResponse:
     "$ref": "./components/schemas/rehearsal-workflow.yaml#/ArrangementOverrideResponse"
+  EffectiveArrangementValueResponse:
+    "$ref": "./components/schemas/rehearsal-workflow.yaml#/EffectiveArrangementValueResponse"
+  EffectiveArrangementProvenanceResponse:
+    "$ref": "./components/schemas/rehearsal-workflow.yaml#/EffectiveArrangementProvenanceResponse"
+  EffectiveArrangementResponse:
+    "$ref": "./components/schemas/rehearsal-workflow.yaml#/EffectiveArrangementResponse"
   CreateArrangementOverrideRequest:
     "$ref": "./components/schemas/rehearsal-workflow.yaml#/CreateArrangementOverrideRequest"
   UpdateArrangementOverrideRequest:

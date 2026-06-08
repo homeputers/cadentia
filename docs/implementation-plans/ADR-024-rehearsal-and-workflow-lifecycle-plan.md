@@ -378,3 +378,26 @@ for readiness incidents, accidental override creation, and audit reconciliation.
   to unauthorized reporting roles.
 - Do not create reports that require parsing free-form comments to determine
   blocker status.
+
+### Subtask 4 implementation note: service-effective arrangement rendering
+
+Service-specific arrangement overrides are resolved only through the rehearsal
+workflow rendering layer. The resolver first loads the approved canonical
+arrangement and then applies the most specific active override for the requested
+`servicePlanId`, `servicePlanBlockId`, `setlistVersionItemId`, and
+`sourceArrangementId`. It returns source, override, and effective values for key,
+mode, capo/transposition guidance, chart annotations, section-order notes,
+transition cues, instrumentation notes, and asset-selection notes so service
+planning, rehearsal, and chart views can clearly label catalog truth versus
+service-only adaptation.
+
+Override records must never be consumed by recommendation candidate eligibility,
+doctrinal approval, catalog approval status, or recommendation scoring. Creating,
+updating, archiving, or rendering an override does not write to canonical
+`arrangements`, lyrics, approval, or recommendation read-model tables. To promote
+a repeated service adaptation into catalog metadata, the team must open a separate
+catalog governance change: create or update an arrangement candidate, attach
+proper provenance/licensing evidence, run musical and doctrinal review, and allow
+the normal approval workflow to publish the new canonical arrangement version.
+Until that governance workflow completes, the values remain service-scoped
+rehearsal metadata only.

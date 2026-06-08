@@ -5,6 +5,9 @@ import com.cadentia.generated.api.RehearsalWorkflowApi;
 import com.cadentia.generated.model.ArrangementOverrideResponse;
 import com.cadentia.generated.model.CreateArrangementOverrideRequest;
 import com.cadentia.generated.model.CreateIssueActionRequest;
+import com.cadentia.generated.model.EffectiveArrangementProvenanceResponse;
+import com.cadentia.generated.model.EffectiveArrangementResponse;
+import com.cadentia.generated.model.EffectiveArrangementValueResponse;
 import com.cadentia.generated.model.CreateRehearsalIssueRequest;
 import com.cadentia.generated.model.CreateRehearsalNoteRequest;
 import com.cadentia.generated.model.CreateRehearsalSessionRequest;
@@ -29,7 +32,11 @@ import com.cadentia.generated.model.UpdateIssueActionStatusRequest;
 import com.cadentia.generated.model.UpdateIssueStatusRequest;
 import com.cadentia.generated.model.UpdateRehearsalSessionRequest;
 import com.cadentia.generated.model.WorkflowStatusResponse;
+import com.cadentia.rehearsal.EffectiveArrangementRenderingService;
 import com.cadentia.rehearsal.RehearsalWorkflowModels.ArrangementOverrideRecord;
+import com.cadentia.rehearsal.RehearsalWorkflowModels.EffectiveArrangementProvenance;
+import com.cadentia.rehearsal.RehearsalWorkflowModels.EffectiveArrangementRendering;
+import com.cadentia.rehearsal.RehearsalWorkflowModels.EffectiveArrangementValue;
 import com.cadentia.rehearsal.RehearsalWorkflowModels.IssueActionStatusCode;
 import com.cadentia.rehearsal.RehearsalWorkflowModels.IssueCategoryCode;
 import com.cadentia.rehearsal.RehearsalWorkflowModels.IssueOwnerType;
@@ -48,6 +55,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -62,9 +70,18 @@ public class RehearsalWorkflowController implements RehearsalWorkflowApi {
     private static final long CURRENT_VERSION = 0L;
 
     private final RehearsalWorkflowService service;
+    private final EffectiveArrangementRenderingService renderingService;
 
     public RehearsalWorkflowController(RehearsalWorkflowService service) {
+        this(service, null);
+    }
+
+    @Autowired
+    public RehearsalWorkflowController(
+            RehearsalWorkflowService service,
+            EffectiveArrangementRenderingService renderingService) {
         this.service = service;
+        this.renderingService = renderingService;
     }
 
     @Override
@@ -245,6 +262,17 @@ public class RehearsalWorkflowController implements RehearsalWorkflowApi {
 
     @Override
     @PreAuthorize("hasAnyAuthority(T(com.cadentia.api.security.RbacAuthorities).ROLE_ADMIN, T(com.cadentia.api.security.RbacAuthorities).ROLE_WORSHIP_LEADER, T(com.cadentia.api.security.RbacAuthorities).ROLE_TEAM_SCHEDULER, T(com.cadentia.api.security.RbacAuthorities).ROLE_ASSIGNED_MUSICIAN, T(com.cadentia.api.security.RbacAuthorities).ROLE_DOCTRINAL_REVIEWER, T(com.cadentia.api.security.RbacAuthorities).ROLE_MUSICAL_REVIEWER, T(com.cadentia.api.security.RbacAuthorities).ROLE_REPORTING_VIEWER)")
+    public ResponseEntity<EffectiveArrangementResponse> renderEffectiveArrangement(
+            UUID servicePlanId,
+            UUID arrangementId,
+            UUID servicePlanBlockId,
+            UUID setlistVersionItemId) {
+        return ResponseEntity.ok(toEffectiveArrangement(renderingService.renderEffectiveArrangement(
+                servicePlanId, servicePlanBlockId, setlistVersionItemId, arrangementId)));
+    }
+
+    @Override
+    @PreAuthorize("hasAnyAuthority(T(com.cadentia.api.security.RbacAuthorities).ROLE_ADMIN, T(com.cadentia.api.security.RbacAuthorities).ROLE_WORSHIP_LEADER, T(com.cadentia.api.security.RbacAuthorities).ROLE_TEAM_SCHEDULER, T(com.cadentia.api.security.RbacAuthorities).ROLE_ASSIGNED_MUSICIAN, T(com.cadentia.api.security.RbacAuthorities).ROLE_DOCTRINAL_REVIEWER, T(com.cadentia.api.security.RbacAuthorities).ROLE_MUSICAL_REVIEWER, T(com.cadentia.api.security.RbacAuthorities).ROLE_REPORTING_VIEWER)")
     public ResponseEntity<List<ArrangementOverrideResponse>> listArrangementOverrides(UUID servicePlanId) {
         return ResponseEntity.ok(service.listArrangementOverrides(servicePlanId).stream().map(this::toOverride).toList());
     }
@@ -352,6 +380,53 @@ public class RehearsalWorkflowController implements RehearsalWorkflowApi {
                 .completedAt(offset(action.completedAt()));
     }
 
+    private EffectiveArrangementResponse toEffectiveArrangement(EffectiveArrangementRendering rendering) {
+        return new EffectiveArrangementResponse(
+                rendering.servicePlanId(),
+                rendering.sourceArrangementId(),
+                rendering.arrangementName(),
+                rendering.hasServiceOverride(),
+                toEffectiveValue(rendering.musicalKey()),
+                toEffectiveValue(rendering.keyMode()),
+                toEffectiveValue(rendering.tempoBpm()),
+                toEffectiveValue(rendering.timeSignature()),
+                toEffectiveValue(rendering.durationSeconds()),
+                toEffectiveValue(rendering.energyLevel()),
+                toEffectiveValue(rendering.difficultyLevel()),
+                rendering.renderedTranspositionInterval(),
+                rendering.transpositionSource(),
+                toEffectiveProvenance(rendering.provenance()))
+                .servicePlanBlockId(rendering.servicePlanBlockId())
+                .setlistVersionItemId(rendering.setlistVersionItemId())
+                .rehearsalNotes(toEffectiveValue(rendering.rehearsalNotes()))
+                .capoFret(toEffectiveValue(rendering.capoFret()))
+                .transpositionSemitones(toEffectiveValue(rendering.transpositionSemitones()))
+                .chartAnnotations(toEffectiveValue(rendering.chartAnnotations()))
+                .sectionOrderNotes(toEffectiveValue(rendering.sectionOrderNotes()))
+                .transitionCues(toEffectiveValue(rendering.transitionCues()))
+                .instrumentationNotes(toEffectiveValue(rendering.instrumentationNotes()))
+                .assetSelectionNotes(toEffectiveValue(rendering.assetSelectionNotes()))
+                .renderedLyricsContent(rendering.renderedLyricsContent())
+                .renderedChordMapJson(rendering.renderedChordMapJson());
+    }
+
+    private EffectiveArrangementValueResponse toEffectiveValue(EffectiveArrangementValue<?> value) {
+        return new EffectiveArrangementValueResponse(EffectiveArrangementValueResponse.ValueSourceEnum.fromValue(value.valueSource().name()))
+                .sourceValue(value.sourceValue())
+                .overrideValue(value.overrideValue())
+                .effectiveValue(value.effectiveValue());
+    }
+
+    private EffectiveArrangementProvenanceResponse toEffectiveProvenance(EffectiveArrangementProvenance provenance) {
+        return new EffectiveArrangementProvenanceResponse(provenance.sourceArrangementId(), provenance.auditReference())
+                .sourceArrangementVersionRef(provenance.sourceArrangementVersionRef())
+                .arrangementOverrideId(provenance.arrangementOverrideId())
+                .provenanceNote(provenance.provenanceNote())
+                .rationale(provenance.rationale())
+                .createdBy(provenance.createdBy())
+                .updatedBy(provenance.updatedBy());
+    }
+
     private ArrangementOverrideResponse toOverride(ArrangementOverrideRecord record) {
         return new ArrangementOverrideResponse(
                 record.arrangementOverrideId(),
@@ -371,6 +446,13 @@ public class RehearsalWorkflowController implements RehearsalWorkflowApi {
                 .effectiveEnergyLevel(record.effectiveEnergyLevel())
                 .effectiveDifficultyLevel(record.effectiveDifficultyLevel())
                 .effectiveNotes(record.effectiveNotes())
+                .capoFret(record.capoFret())
+                .transpositionSemitones(record.transpositionSemitones())
+                .chartAnnotations(record.chartAnnotations())
+                .sectionOrderNotes(record.sectionOrderNotes())
+                .transitionCues(record.transitionCues())
+                .instrumentationNotes(record.instrumentationNotes())
+                .assetSelectionNotes(record.assetSelectionNotes())
                 .createdBy(record.createdBy())
                 .updatedBy(record.updatedBy());
     }
@@ -391,6 +473,13 @@ public class RehearsalWorkflowController implements RehearsalWorkflowApi {
                 request.getEffectiveEnergyLevel(),
                 request.getEffectiveDifficultyLevel(),
                 request.getEffectiveNotes(),
+                request.getCapoFret(),
+                request.getTranspositionSemitones(),
+                request.getChartAnnotations(),
+                request.getSectionOrderNotes(),
+                request.getTransitionCues(),
+                request.getInstrumentationNotes(),
+                request.getAssetSelectionNotes(),
                 request.getRationale(),
                 request.getProvenanceNote(),
                 currentActor(),
@@ -414,6 +503,13 @@ public class RehearsalWorkflowController implements RehearsalWorkflowApi {
                 request.getEffectiveEnergyLevel(),
                 request.getEffectiveDifficultyLevel(),
                 request.getEffectiveNotes(),
+                request.getCapoFret(),
+                request.getTranspositionSemitones(),
+                request.getChartAnnotations(),
+                request.getSectionOrderNotes(),
+                request.getTransitionCues(),
+                request.getInstrumentationNotes(),
+                request.getAssetSelectionNotes(),
                 request.getRationale(),
                 request.getProvenanceNote(),
                 currentActor(),
