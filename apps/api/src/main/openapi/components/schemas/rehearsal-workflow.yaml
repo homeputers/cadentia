@@ -587,6 +587,31 @@ ArrangementOverrideResponse:
     effectiveNotes:
       type: string
       nullable: true
+    capoFret:
+      type: integer
+      nullable: true
+      minimum: 0
+      maximum: 12
+    transpositionSemitones:
+      type: integer
+      nullable: true
+      minimum: -11
+      maximum: 11
+    chartAnnotations:
+      type: string
+      nullable: true
+    sectionOrderNotes:
+      type: string
+      nullable: true
+    transitionCues:
+      type: string
+      nullable: true
+    instrumentationNotes:
+      type: string
+      nullable: true
+    assetSelectionNotes:
+      type: string
+      nullable: true
     rationale:
       type: string
     provenanceNote:
@@ -653,6 +678,31 @@ CreateArrangementOverrideRequest:
     effectiveNotes:
       type: string
       nullable: true
+    capoFret:
+      type: integer
+      nullable: true
+      minimum: 0
+      maximum: 12
+    transpositionSemitones:
+      type: integer
+      nullable: true
+      minimum: -11
+      maximum: 11
+    chartAnnotations:
+      type: string
+      nullable: true
+    sectionOrderNotes:
+      type: string
+      nullable: true
+    transitionCues:
+      type: string
+      nullable: true
+    instrumentationNotes:
+      type: string
+      nullable: true
+    assetSelectionNotes:
+      type: string
+      nullable: true
     rationale:
       type: string
       minLength: 1
@@ -685,3 +735,127 @@ UpdateRehearsalSessionRequest:
         format: int64
         minimum: 0
         nullable: true
+EffectiveArrangementValueResponse:
+  type: object
+  required:
+  - valueSource
+  properties:
+    sourceValue:
+      nullable: true
+    overrideValue:
+      nullable: true
+    effectiveValue:
+      nullable: true
+    valueSource:
+      type: string
+      enum:
+      - CATALOG
+      - SERVICE_OVERRIDE
+EffectiveArrangementProvenanceResponse:
+  type: object
+  required:
+  - sourceArrangementId
+  - auditReference
+  properties:
+    sourceArrangementId:
+      type: string
+      format: uuid
+    sourceArrangementVersionRef:
+      type: string
+      nullable: true
+    arrangementOverrideId:
+      type: string
+      format: uuid
+      nullable: true
+    provenanceNote:
+      type: string
+      nullable: true
+    rationale:
+      type: string
+      nullable: true
+    createdBy:
+      type: string
+      nullable: true
+    updatedBy:
+      type: string
+      nullable: true
+    auditReference:
+      type: string
+EffectiveArrangementResponse:
+  type: object
+  required:
+  - servicePlanId
+  - sourceArrangementId
+  - arrangementName
+  - hasServiceOverride
+  - musicalKey
+  - keyMode
+  - tempoBpm
+  - timeSignature
+  - durationSeconds
+  - energyLevel
+  - difficultyLevel
+  - renderedTranspositionInterval
+  - transpositionSource
+  - provenance
+  properties:
+    servicePlanId:
+      type: string
+      format: uuid
+    servicePlanBlockId:
+      type: string
+      format: uuid
+      nullable: true
+    setlistVersionItemId:
+      type: string
+      format: uuid
+      nullable: true
+    sourceArrangementId:
+      type: string
+      format: uuid
+    arrangementName:
+      type: string
+    hasServiceOverride:
+      type: boolean
+    musicalKey:
+      "$ref": "#/EffectiveArrangementValueResponse"
+    keyMode:
+      "$ref": "#/EffectiveArrangementValueResponse"
+    tempoBpm:
+      "$ref": "#/EffectiveArrangementValueResponse"
+    timeSignature:
+      "$ref": "#/EffectiveArrangementValueResponse"
+    durationSeconds:
+      "$ref": "#/EffectiveArrangementValueResponse"
+    energyLevel:
+      "$ref": "#/EffectiveArrangementValueResponse"
+    difficultyLevel:
+      "$ref": "#/EffectiveArrangementValueResponse"
+    rehearsalNotes:
+      "$ref": "#/EffectiveArrangementValueResponse"
+    capoFret:
+      "$ref": "#/EffectiveArrangementValueResponse"
+    transpositionSemitones:
+      "$ref": "#/EffectiveArrangementValueResponse"
+    chartAnnotations:
+      "$ref": "#/EffectiveArrangementValueResponse"
+    sectionOrderNotes:
+      "$ref": "#/EffectiveArrangementValueResponse"
+    transitionCues:
+      "$ref": "#/EffectiveArrangementValueResponse"
+    instrumentationNotes:
+      "$ref": "#/EffectiveArrangementValueResponse"
+    assetSelectionNotes:
+      "$ref": "#/EffectiveArrangementValueResponse"
+    renderedTranspositionInterval:
+      type: integer
+    transpositionSource:
+      type: string
+    renderedLyricsContent:
+      type: string
+      nullable: true
+    renderedChordMapJson:
+      type: string
+      nullable: true
+    provenance:
+      "$ref": "#/EffectiveArrangementProvenanceResponse"

@@ -394,6 +394,50 @@
           application/json:
             schema:
               "$ref": "../components/schemas/rehearsal-workflow.yaml#/RehearsalIssueActionResponse"
+"/service-plans/{servicePlanId}/effective-arrangements/{arrangementId}":
+  get:
+    tags:
+    - RehearsalWorkflow
+    operationId: renderEffectiveArrangement
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - ADMIN
+    - WORSHIP_LEADER
+    - TEAM_SCHEDULER
+    - ASSIGNED_MUSICIAN
+    - DOCTRINAL_REVIEWER
+    - MUSICAL_REVIEWER
+    - REPORTING_VIEWER
+    summary: Render a service-effective arrangement
+    description: Resolves an approved canonical arrangement with service-scoped rehearsal overrides for service planning, charts, and rehearsal rendering only. Catalog metadata and recommendation read models are not updated.
+    parameters:
+    - "$ref": "../components/shared/parameters.yaml#/ServicePlanId"
+    - in: path
+      name: arrangementId
+      required: true
+      schema:
+        type: string
+        format: uuid
+    - in: query
+      name: servicePlanBlockId
+      required: false
+      schema:
+        type: string
+        format: uuid
+    - in: query
+      name: setlistVersionItemId
+      required: false
+      schema:
+        type: string
+        format: uuid
+    responses:
+      '200':
+        description: Effective arrangement values with source and override provenance.
+        content:
+          application/json:
+            schema:
+              "$ref": "../components/schemas/rehearsal-workflow.yaml#/EffectiveArrangementResponse"
 "/service-plans/{servicePlanId}/arrangement-overrides":
   get:
     tags:

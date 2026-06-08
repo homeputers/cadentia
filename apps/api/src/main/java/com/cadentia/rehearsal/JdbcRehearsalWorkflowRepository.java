@@ -502,12 +502,16 @@ public class JdbcRehearsalWorkflowRepository implements RehearsalWorkflowReposit
                     service_plan_id, service_plan_block_id, setlist_version_item_id, source_arrangement_id,
                     source_arrangement_version_ref, effective_key, effective_mode, effective_tempo_bpm,
                     effective_time_signature, effective_duration_seconds, effective_energy_level,
-                    effective_difficulty_level, effective_notes, rationale, provenance_note, created_by, updated_by
+                    effective_difficulty_level, effective_notes, capo_fret, transposition_semitones, chart_annotations,
+                    section_order_notes, transition_cues, instrumentation_notes, asset_selection_notes, rationale,
+                    provenance_note, created_by, updated_by
                 ) VALUES (
                     :servicePlanId, :servicePlanBlockId, :setlistVersionItemId, :sourceArrangementId,
                     :sourceArrangementVersionRef, :effectiveKey, :effectiveMode, :effectiveTempoBpm,
                     :effectiveTimeSignature, :effectiveDurationSeconds, :effectiveEnergyLevel,
-                    :effectiveDifficultyLevel, :effectiveNotes, :rationale, :provenanceNote, :createdBy, :updatedBy
+                    :effectiveDifficultyLevel, :effectiveNotes, :capoFret, :transpositionSemitones, :chartAnnotations,
+                    :sectionOrderNotes, :transitionCues, :instrumentationNotes, :assetSelectionNotes, :rationale,
+                    :provenanceNote, :createdBy, :updatedBy
                 )
                 RETURNING id
                 """,
@@ -525,6 +529,13 @@ public class JdbcRehearsalWorkflowRepository implements RehearsalWorkflowReposit
                         .addValue("effectiveEnergyLevel", overrideRecord.effectiveEnergyLevel())
                         .addValue("effectiveDifficultyLevel", overrideRecord.effectiveDifficultyLevel())
                         .addValue("effectiveNotes", overrideRecord.effectiveNotes())
+                        .addValue("capoFret", overrideRecord.capoFret())
+                        .addValue("transpositionSemitones", overrideRecord.transpositionSemitones())
+                        .addValue("chartAnnotations", overrideRecord.chartAnnotations())
+                        .addValue("sectionOrderNotes", overrideRecord.sectionOrderNotes())
+                        .addValue("transitionCues", overrideRecord.transitionCues())
+                        .addValue("instrumentationNotes", overrideRecord.instrumentationNotes())
+                        .addValue("assetSelectionNotes", overrideRecord.assetSelectionNotes())
                         .addValue("rationale", overrideRecord.rationale())
                         .addValue("provenanceNote", overrideRecord.provenanceNote())
                         .addValue("createdBy", overrideRecord.createdBy())
@@ -553,6 +564,13 @@ public class JdbcRehearsalWorkflowRepository implements RehearsalWorkflowReposit
                     effective_energy_level = :effectiveEnergyLevel,
                     effective_difficulty_level = :effectiveDifficultyLevel,
                     effective_notes = :effectiveNotes,
+                    capo_fret = :capoFret,
+                    transposition_semitones = :transpositionSemitones,
+                    chart_annotations = :chartAnnotations,
+                    section_order_notes = :sectionOrderNotes,
+                    transition_cues = :transitionCues,
+                    instrumentation_notes = :instrumentationNotes,
+                    asset_selection_notes = :assetSelectionNotes,
                     rationale = :rationale,
                     provenance_note = :provenanceNote,
                     updated_by = :updatedBy,
@@ -699,6 +717,13 @@ public class JdbcRehearsalWorkflowRepository implements RehearsalWorkflowReposit
                 .addValue("effectiveEnergyLevel", overrideRecord.effectiveEnergyLevel())
                 .addValue("effectiveDifficultyLevel", overrideRecord.effectiveDifficultyLevel())
                 .addValue("effectiveNotes", overrideRecord.effectiveNotes())
+                .addValue("capoFret", overrideRecord.capoFret())
+                .addValue("transpositionSemitones", overrideRecord.transpositionSemitones())
+                .addValue("chartAnnotations", overrideRecord.chartAnnotations())
+                .addValue("sectionOrderNotes", overrideRecord.sectionOrderNotes())
+                .addValue("transitionCues", overrideRecord.transitionCues())
+                .addValue("instrumentationNotes", overrideRecord.instrumentationNotes())
+                .addValue("assetSelectionNotes", overrideRecord.assetSelectionNotes())
                 .addValue("rationale", overrideRecord.rationale())
                 .addValue("provenanceNote", overrideRecord.provenanceNote())
                 .addValue("createdBy", overrideRecord.createdBy())
@@ -776,6 +801,13 @@ public class JdbcRehearsalWorkflowRepository implements RehearsalWorkflowReposit
                 nullableInteger(rs, "effective_energy_level"),
                 nullableInteger(rs, "effective_difficulty_level"),
                 rs.getString("effective_notes"),
+                nullableInteger(rs, "capo_fret"),
+                nullableInteger(rs, "transposition_semitones"),
+                rs.getString("chart_annotations"),
+                rs.getString("section_order_notes"),
+                rs.getString("transition_cues"),
+                rs.getString("instrumentation_notes"),
+                rs.getString("asset_selection_notes"),
                 rs.getString("rationale"),
                 rs.getString("provenance_note"),
                 rs.getString("created_by"),

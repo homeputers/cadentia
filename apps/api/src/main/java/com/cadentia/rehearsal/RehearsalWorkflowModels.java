@@ -358,9 +358,103 @@ public final class RehearsalWorkflowModels {
             Integer effectiveEnergyLevel,
             Integer effectiveDifficultyLevel,
             String effectiveNotes,
+            Integer capoFret,
+            Integer transpositionSemitones,
+            String chartAnnotations,
+            String sectionOrderNotes,
+            String transitionCues,
+            String instrumentationNotes,
+            String assetSelectionNotes,
             String rationale,
             String provenanceNote,
             String createdBy,
             String updatedBy) {
+
+        public ArrangementOverrideRecord(
+                UUID arrangementOverrideId,
+                UUID servicePlanId,
+                UUID servicePlanBlockId,
+                UUID setlistVersionItemId,
+                UUID sourceArrangementId,
+                String sourceArrangementVersionRef,
+                String effectiveKey,
+                String effectiveMode,
+                Integer effectiveTempoBpm,
+                String effectiveTimeSignature,
+                Integer effectiveDurationSeconds,
+                Integer effectiveEnergyLevel,
+                Integer effectiveDifficultyLevel,
+                String effectiveNotes,
+                String rationale,
+                String provenanceNote,
+                String createdBy,
+                String updatedBy) {
+            this(arrangementOverrideId, servicePlanId, servicePlanBlockId, setlistVersionItemId, sourceArrangementId,
+                    sourceArrangementVersionRef, effectiveKey, effectiveMode, effectiveTempoBpm, effectiveTimeSignature,
+                    effectiveDurationSeconds, effectiveEnergyLevel, effectiveDifficultyLevel, effectiveNotes, null, null,
+                    null, null, null, null, null, rationale, provenanceNote, createdBy, updatedBy);
+        }
+    }
+
+    public enum EffectiveArrangementValueSource {
+        CATALOG,
+        SERVICE_OVERRIDE
+    }
+
+    public record EffectiveArrangementValue<T>(
+            T sourceValue,
+            T overrideValue,
+            T effectiveValue,
+            EffectiveArrangementValueSource valueSource) {
+
+        public static <T> EffectiveArrangementValue<T> from(T sourceValue, T overrideValue) {
+            return new EffectiveArrangementValue<>(sourceValue, overrideValue,
+                    overrideValue == null ? sourceValue : overrideValue,
+                    overrideValue == null ? EffectiveArrangementValueSource.CATALOG
+                            : EffectiveArrangementValueSource.SERVICE_OVERRIDE);
+        }
+    }
+
+    public record EffectiveArrangementProvenance(
+            UUID sourceArrangementId,
+            String sourceArrangementVersionRef,
+            UUID arrangementOverrideId,
+            String provenanceNote,
+            String rationale,
+            String createdBy,
+            String updatedBy,
+            String auditReference) {
+    }
+
+    public record EffectiveArrangementRendering(
+            UUID servicePlanId,
+            UUID servicePlanBlockId,
+            UUID setlistVersionItemId,
+            UUID sourceArrangementId,
+            String arrangementName,
+            EffectiveArrangementValue<String> musicalKey,
+            EffectiveArrangementValue<String> keyMode,
+            EffectiveArrangementValue<Integer> tempoBpm,
+            EffectiveArrangementValue<String> timeSignature,
+            EffectiveArrangementValue<Integer> durationSeconds,
+            EffectiveArrangementValue<Integer> energyLevel,
+            EffectiveArrangementValue<Integer> difficultyLevel,
+            EffectiveArrangementValue<String> rehearsalNotes,
+            EffectiveArrangementValue<Integer> capoFret,
+            EffectiveArrangementValue<Integer> transpositionSemitones,
+            EffectiveArrangementValue<String> chartAnnotations,
+            EffectiveArrangementValue<String> sectionOrderNotes,
+            EffectiveArrangementValue<String> transitionCues,
+            EffectiveArrangementValue<String> instrumentationNotes,
+            EffectiveArrangementValue<String> assetSelectionNotes,
+            int renderedTranspositionInterval,
+            String transpositionSource,
+            String renderedLyricsContent,
+            String renderedChordMapJson,
+            EffectiveArrangementProvenance provenance) {
+
+        public boolean hasServiceOverride() {
+            return provenance.arrangementOverrideId() != null;
+        }
     }
 }

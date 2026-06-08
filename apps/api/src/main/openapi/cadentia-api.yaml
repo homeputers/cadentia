@@ -121,6 +121,8 @@ paths:
     "$ref": "./paths/rehearsal-workflow.yaml#/~1service-plans~1{servicePlanId}~1issue-actions~1{actionId}~1owner"
   "/service-plans/{servicePlanId}/issue-actions/{actionId}/status":
     "$ref": "./paths/rehearsal-workflow.yaml#/~1service-plans~1{servicePlanId}~1issue-actions~1{actionId}~1status"
+  "/service-plans/{servicePlanId}/effective-arrangements/{arrangementId}":
+    "$ref": "./paths/rehearsal-workflow.yaml#/~1service-plans~1{servicePlanId}~1effective-arrangements~1{arrangementId}"
   "/service-plans/{servicePlanId}/arrangement-overrides":
     "$ref": "./paths/rehearsal-workflow.yaml#/~1service-plans~1{servicePlanId}~1arrangement-overrides"
   "/service-plans/{servicePlanId}/arrangement-overrides/{arrangementOverrideId}":
@@ -371,6 +373,12 @@ components:
       "$ref": "./components/schemas/rehearsal-workflow.yaml#/UpdateIssueActionStatusRequest"
     ArrangementOverrideResponse:
       "$ref": "./components/schemas/rehearsal-workflow.yaml#/ArrangementOverrideResponse"
+    EffectiveArrangementValueResponse:
+      "$ref": "./components/schemas/rehearsal-workflow.yaml#/EffectiveArrangementValueResponse"
+    EffectiveArrangementProvenanceResponse:
+      "$ref": "./components/schemas/rehearsal-workflow.yaml#/EffectiveArrangementProvenanceResponse"
+    EffectiveArrangementResponse:
+      "$ref": "./components/schemas/rehearsal-workflow.yaml#/EffectiveArrangementResponse"
     CreateArrangementOverrideRequest:
       "$ref": "./components/schemas/rehearsal-workflow.yaml#/CreateArrangementOverrideRequest"
     UpdateArrangementOverrideRequest:
