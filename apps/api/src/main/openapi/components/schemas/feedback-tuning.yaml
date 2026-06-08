@@ -1,0 +1,210 @@
+FeedbackOutcome:
+  type: string
+  enum:
+  - accepted
+  - rejected
+  - skipped
+  - favorited
+FeedbackScopeLayer:
+  type: string
+  description: Deterministic preference precedence is personal then team then policy/global.
+  enum:
+  - personal
+  - team
+  - policy_global
+FeedbackReplacementReason:
+  type: string
+  description: Controlled taxonomy for replace/reject/skipped rationales used for
+    tuning.
+  enum:
+  - theological_mismatch
+  - congregational_familiarity_low
+  - vocal_range_mismatch
+  - key_center_flow
+  - tempo_flow
+  - instrumentation_fit
+  - seasonal_mismatch
+  - service_moment_mismatch
+  - duplicate_recent_usage
+  - pastoral_direction
+CreateFeedbackEventRequest:
+  type: object
+  additionalProperties: false
+  required:
+  - setlistId
+  - arrangementId
+  - outcome
+  - scopeLayer
+  - scopeId
+  properties:
+    setlistId:
+      type: string
+      format: uuid
+    setlistVersionId:
+      type: string
+      format: uuid
+      nullable: true
+    arrangementId:
+      type: string
+      format: uuid
+    outcome:
+      "$ref": "../../cadentia-api.components.yaml#/schemas/FeedbackOutcome"
+    replacementReason:
+      "$ref": "../../cadentia-api.components.yaml#/schemas/FeedbackReplacementReason"
+    replacedWithArrangementId:
+      type: string
+      format: uuid
+      nullable: true
+    familiarityScore:
+      type: integer
+      format: int32
+      minimum: 1
+      maximum: 5
+      nullable: true
+    serviceType:
+      type: string
+      nullable: true
+      description: Optional service context (for example youth or prayer-night).
+    scopeLayer:
+      "$ref": "../../cadentia-api.components.yaml#/schemas/FeedbackScopeLayer"
+    scopeId:
+      type: string
+      format: uuid
+    actorId:
+      type: string
+      minLength: 1
+  description: 'Explicit feedback payload used by deterministic scoring profiles.
+    Free-form scoring reason codes are not accepted.
+
+    '
+FeedbackEventResponse:
+  type: object
+  additionalProperties: false
+  required:
+  - feedbackEventId
+  - setlistId
+  - arrangementId
+  - outcome
+  - scopeLayer
+  - scopeId
+  - createdAt
+  properties:
+    feedbackEventId:
+      type: string
+      format: uuid
+    setlistId:
+      type: string
+      format: uuid
+    setlistVersionId:
+      type: string
+      format: uuid
+      nullable: true
+    arrangementId:
+      type: string
+      format: uuid
+    outcome:
+      "$ref": "../../cadentia-api.components.yaml#/schemas/FeedbackOutcome"
+    replacementReason:
+      "$ref": "../../cadentia-api.components.yaml#/schemas/FeedbackReplacementReason"
+    replacedWithArrangementId:
+      type: string
+      format: uuid
+      nullable: true
+    familiarityScore:
+      type: integer
+      format: int32
+      minimum: 1
+      maximum: 5
+      nullable: true
+    scopeLayer:
+      "$ref": "../../cadentia-api.components.yaml#/schemas/FeedbackScopeLayer"
+    scopeId:
+      type: string
+      format: uuid
+    actorId:
+      type: string
+    createdAt:
+      type: string
+      format: date-time
+FeedbackScopeStateResponse:
+  type: object
+  additionalProperties: false
+  required:
+  - scopeLayer
+  - scopeId
+  - counters
+  properties:
+    scopeLayer:
+      "$ref": "../../cadentia-api.components.yaml#/schemas/FeedbackScopeLayer"
+    scopeId:
+      type: string
+      format: uuid
+    counters:
+      type: object
+      additionalProperties: false
+      required:
+      - accepted
+      - rejected
+      - skipped
+      - favorited
+      properties:
+        accepted:
+          type: integer
+          format: int64
+          minimum: 0
+        rejected:
+          type: integer
+          format: int64
+          minimum: 0
+        skipped:
+          type: integer
+          format: int64
+          minimum: 0
+        favorited:
+          type: integer
+          format: int64
+          minimum: 0
+    replacementReasonCounts:
+      type: object
+      additionalProperties:
+        type: integer
+        format: int64
+        minimum: 0
+    lastFeedbackAt:
+      type: string
+      format: date-time
+      nullable: true
+FeedbackResetRequest:
+  type: object
+  additionalProperties: false
+  required:
+  - reason
+  properties:
+    reason:
+      type: string
+      minLength: 3
+      maxLength: 500
+    actorId:
+      type: string
+      minLength: 1
+FeedbackResetResponse:
+  type: object
+  additionalProperties: false
+  required:
+  - scopeLayer
+  - scopeId
+  - resetAt
+  properties:
+    scopeLayer:
+      "$ref": "../../cadentia-api.components.yaml#/schemas/FeedbackScopeLayer"
+    scopeId:
+      type: string
+      format: uuid
+    resetAt:
+      type: string
+      format: date-time
+    actorId:
+      type: string
+    auditReference:
+      type: string
+      description: Identifier of append-only reset audit event.

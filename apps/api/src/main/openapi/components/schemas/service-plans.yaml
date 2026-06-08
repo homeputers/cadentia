@@ -1,0 +1,308 @@
+ReadinessHistoryResponse:
+  type: object
+  required:
+  - previousStateCode
+  - newStateCode
+  - changedBy
+  - changedAt
+  properties:
+    previousStateCode:
+      "$ref": "../../cadentia-api.components.yaml#/schemas/RehearsalReadinessStateCode"
+      nullable: true
+    newStateCode:
+      "$ref": "../../cadentia-api.components.yaml#/schemas/RehearsalReadinessStateCode"
+    changedBy:
+      type: string
+    changedAt:
+      type: string
+      format: date-time
+    reason:
+      type: string
+      nullable: true
+ServicePlanStatus:
+  type: string
+  enum:
+  - draft
+  - published
+  - finalized
+ServicePlanBlockType:
+  type: string
+  enum:
+  - praise
+  - worship
+  - offering
+  - altar_call
+  - communion
+  - special
+ServicePlanBlockSourceType:
+  type: string
+  enum:
+  - setlist_version
+  - manual
+ServicePlanSummary:
+  type: object
+  required:
+  - servicePlanId
+  - title
+  - serviceDateTime
+  - status
+  properties:
+    servicePlanId:
+      type: string
+      format: uuid
+    title:
+      type: string
+    serviceDateTime:
+      type: string
+      format: date-time
+    status:
+      "$ref": "../../cadentia-api.components.yaml#/schemas/ServicePlanStatus"
+CreateServicePlanRequest:
+  type: object
+  additionalProperties: false
+  required:
+  - serviceDateTime
+  - title
+  properties:
+    serviceDateTime:
+      type: string
+      format: date-time
+    title:
+      type: string
+      minLength: 1
+      maxLength: 160
+    theme:
+      type: string
+      nullable: true
+    scripture:
+      type: string
+      nullable: true
+    notes:
+      type: string
+      nullable: true
+UpdateServicePlanRequest:
+  allOf:
+  - "$ref": "../../cadentia-api.components.yaml#/schemas/CreateServicePlanRequest"
+AttachSetlistVersionRequest:
+  type: object
+  additionalProperties: false
+  required:
+  - setlistId
+  - setlistVersionId
+  properties:
+    setlistId:
+      type: string
+      format: uuid
+    setlistVersionId:
+      type: string
+      format: uuid
+    placementIndex:
+      type: integer
+      minimum: 0
+      nullable: true
+    notes:
+      type: string
+      nullable: true
+ServicePlanSetlistAttachmentResponse:
+  type: object
+  required:
+  - attachmentId
+  - servicePlanId
+  - setlistId
+  - setlistVersionId
+  properties:
+    attachmentId:
+      type: string
+      format: uuid
+    servicePlanId:
+      type: string
+      format: uuid
+    setlistId:
+      type: string
+      format: uuid
+    setlistVersionId:
+      type: string
+      format: uuid
+    attachedAt:
+      type: string
+      format: date-time
+ServicePlanBlockProvenance:
+  type: object
+  properties:
+    sourceType:
+      "$ref": "../../cadentia-api.components.yaml#/schemas/ServicePlanBlockSourceType"
+    setlistId:
+      type: string
+      format: uuid
+      nullable: true
+    setlistVersionId:
+      type: string
+      format: uuid
+      nullable: true
+    setlistEntryId:
+      type: string
+      format: uuid
+      nullable: true
+ServicePlanBlock:
+  type: object
+  required:
+  - blockId
+  - orderIndex
+  - type
+  - title
+  - provenance
+  properties:
+    blockId:
+      type: string
+      format: uuid
+    orderIndex:
+      type: integer
+      minimum: 0
+    type:
+      "$ref": "../../cadentia-api.components.yaml#/schemas/ServicePlanBlockType"
+    title:
+      type: string
+    notes:
+      type: string
+      nullable: true
+    serviceTransposeSemitones:
+      type: integer
+      nullable: true
+    serviceKeyOverride:
+      type: string
+      nullable: true
+    provenance:
+      "$ref": "../../cadentia-api.components.yaml#/schemas/ServicePlanBlockProvenance"
+ReorderServicePlanBlocksRequest:
+  type: object
+  additionalProperties: false
+  required:
+  - orderedBlockIds
+  properties:
+    orderedBlockIds:
+      type: array
+      minItems: 1
+      items:
+        type: string
+        format: uuid
+ServicePlanEffectiveSequenceSnapshot:
+  type: object
+  required:
+  - snapshotId
+  - capturedAt
+  - blocks
+  properties:
+    snapshotId:
+      type: string
+      format: uuid
+    capturedAt:
+      type: string
+      format: date-time
+    blocks:
+      type: array
+      items:
+        "$ref": "../../cadentia-api.components.yaml#/schemas/ServicePlanBlock"
+ServicePlanResponse:
+  type: object
+  required:
+  - servicePlanId
+  - serviceDateTime
+  - title
+  - status
+  - blocks
+  - setlistAttachments
+  properties:
+    servicePlanId:
+      type: string
+      format: uuid
+    serviceDateTime:
+      type: string
+      format: date-time
+    title:
+      type: string
+    theme:
+      type: string
+      nullable: true
+    scripture:
+      type: string
+      nullable: true
+    notes:
+      type: string
+      nullable: true
+    status:
+      "$ref": "../../cadentia-api.components.yaml#/schemas/ServicePlanStatus"
+    blocks:
+      type: array
+      items:
+        "$ref": "../../cadentia-api.components.yaml#/schemas/ServicePlanBlock"
+    setlistAttachments:
+      type: array
+      items:
+        "$ref": "../../cadentia-api.components.yaml#/schemas/ServicePlanSetlistAttachmentResponse"
+    effectiveSequenceSnapshot:
+      "$ref": "../../cadentia-api.components.yaml#/schemas/ServicePlanEffectiveSequenceSnapshot"
+      nullable: true
+    readinessSummary:
+      "$ref": "../../cadentia-api.components.yaml#/schemas/ReadinessSummary"
+      nullable: true
+ReadinessStatus:
+  type: string
+  enum:
+  - UNKNOWN
+  - READY
+  - AT_RISK
+  - BLOCKED
+ReadinessSummary:
+  type: object
+  required:
+  - status
+  - objectiveBlockers
+  - missingPeople
+  - unresolvedArrangementConflicts
+  - privateNoteCount
+  properties:
+    status:
+      "$ref": "../../cadentia-api.components.yaml#/schemas/ReadinessStatus"
+    objectiveBlockers:
+      type: array
+      items:
+        type: string
+    missingPeople:
+      type: array
+      items:
+        type: string
+    unresolvedArrangementConflicts:
+      type: array
+      items:
+        type: string
+    privateNoteCount:
+      type: integer
+      minimum: 0
+    lastUpdatedAt:
+      type: string
+      format: date-time
+      nullable: true
+PublishServicePlanRequest:
+  type: object
+  additionalProperties: false
+  properties:
+    expectedRevision:
+      type: integer
+      minimum: 0
+      nullable: true
+    publishNote:
+      type: string
+      nullable: true
+ServicePlanPublishResponse:
+  allOf:
+  - "$ref": "../../cadentia-api.components.yaml#/schemas/ServicePlanResponse"
+  - type: object
+    required:
+    - publishedAt
+    - publishedBy
+    properties:
+      publishedAt:
+        type: string
+        format: date-time
+      publishedBy:
+        type: string

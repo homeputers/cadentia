@@ -1,0 +1,21 @@
+InvalidWorkflowPayload:
+  description: Rehearsal workflow payload failed validation or used an unsupported
+    status code.
+  content:
+    application/json:
+      schema:
+        "$ref": "../../cadentia-api.components.yaml#/schemas/WorkflowProblemResponse"
+BlockedWorkflowTransition:
+  description: Requested readiness or workflow transition is not allowed by the state
+    machine.
+  content:
+    application/json:
+      schema:
+        "$ref": "../../cadentia-api.components.yaml#/schemas/WorkflowProblemResponse"
+WorkflowVersionConflict:
+  description: Request expected version did not match the current workflow resource
+    version.
+  content:
+    application/json:
+      schema:
+        "$ref": "../../cadentia-api.components.yaml#/schemas/WorkflowProblemResponse"

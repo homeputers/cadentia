@@ -1,0 +1,222 @@
+ConversationState:
+  type: string
+  enum:
+  - START
+  - COLLECTING
+  - CLARIFICATION_REQUIRED
+  - READY_TO_CONFIRM
+  - CONFIRMED
+  - EXPIRED
+  - CANCELLED
+SlotValueSource:
+  type: string
+  enum:
+  - menu
+  - free_text
+  - default
+  - user_edit
+ChannelType:
+  type: string
+  enum:
+  - menu
+  - free_text
+  - mixed
+ConversationSlotSource:
+  type: object
+  additionalProperties: false
+  required:
+  - slot
+  - source
+  properties:
+    slot:
+      type: string
+      enum:
+      - verseText
+      - scriptureReferences
+      - themeHints
+      - counts
+      - keyPolicy
+      - tempoPolicy
+      - language
+      - energyArc
+      - excludedSongs
+      - serviceMoment
+    source:
+      "$ref": "../../cadentia-api.components.yaml#/schemas/SlotValueSource"
+    updatedAt:
+      type: string
+      format: date-time
+ConversationRevisionEvent:
+  type: object
+  additionalProperties: false
+  required:
+  - eventId
+  - eventType
+  - source
+  - occurredAt
+  properties:
+    eventId:
+      type: string
+      format: uuid
+    eventType:
+      type: string
+      enum:
+      - slot_update
+      - clarification_answer
+      - confirm
+      - cancel
+      - expire
+      - recover
+    source:
+      "$ref": "../../cadentia-api.components.yaml#/schemas/SlotValueSource"
+    occurredAt:
+      type: string
+      format: date-time
+    summary:
+      type: string
+ConversationSessionStateResponse:
+  type: object
+  additionalProperties: false
+  required:
+  - sessionId
+  - state
+  - channel
+  - slots
+  - slotSources
+  - revisionHistory
+  - expiresAt
+  - auditMessages
+  properties:
+    sessionId:
+      type: string
+      format: uuid
+    state:
+      "$ref": "../../cadentia-api.components.yaml#/schemas/ConversationState"
+    channel:
+      "$ref": "../../cadentia-api.components.yaml#/schemas/ChannelType"
+    slots:
+      "$ref": "../../cadentia-api.components.yaml#/schemas/GenerateSetlistRequest"
+    slotSources:
+      type: array
+      items:
+        "$ref": "../../cadentia-api.components.yaml#/schemas/ConversationSlotSource"
+    clarificationQuestion:
+      type: string
+      nullable: true
+    missingSlots:
+      type: array
+      items:
+        type: string
+    revisionHistory:
+      type: array
+      items:
+        "$ref": "../../cadentia-api.components.yaml#/schemas/ConversationRevisionEvent"
+    expiresAt:
+      type: string
+      format: date-time
+    confirmedAt:
+      type: string
+      format: date-time
+      nullable: true
+    auditMessages:
+      type: array
+      items:
+        type: string
+ConversationSlotUpdateRequest:
+  type: object
+  additionalProperties: false
+  required:
+  - source
+  properties:
+    source:
+      "$ref": "../../cadentia-api.components.yaml#/schemas/SlotValueSource"
+    slotPatch:
+      type: object
+      additionalProperties: false
+      properties:
+        verseText:
+          type: string
+        scriptureReferences:
+          type: array
+          items:
+            type: string
+        themeHints:
+          type: array
+          items:
+            type: string
+        counts:
+          "$ref": "../../cadentia-api.components.yaml#/schemas/SetlistCounts"
+        keyPolicy:
+          "$ref": "../../cadentia-api.components.yaml#/schemas/KeyPolicy"
+        tempoPolicy:
+          "$ref": "../../cadentia-api.components.yaml#/schemas/TempoPolicy"
+        language:
+          type: string
+          nullable: true
+        energyArc:
+          type: string
+          nullable: true
+          enum:
+          - steady
+          - rising
+          - falling
+          - low_to_high
+          - high_to_low
+        excludedSongs:
+          type: array
+          items:
+            type: string
+        serviceMoment:
+          type: string
+          nullable: true
+          enum:
+          - opening
+          - communion
+          - response
+          - altar_call
+          - sending
+          - other
+ConversationClarificationRequest:
+  type: object
+  additionalProperties: false
+  required:
+  - source
+  - clarificationAnswer
+  properties:
+    source:
+      "$ref": "../../cadentia-api.components.yaml#/schemas/SlotValueSource"
+    clarificationAnswer:
+      type: string
+      minLength: 1
+      maxLength: 5000
+ConversationConfirmRequest:
+  type: object
+  additionalProperties: false
+  required:
+  - accepted
+  properties:
+    accepted:
+      type: boolean
+      enum:
+      - true
+ConversationRecoveryResponse:
+  type: object
+  additionalProperties: false
+  required:
+  - sessionId
+  - priorState
+  - recoveredState
+  - recoveryMessage
+  - restartSuggested
+  properties:
+    sessionId:
+      type: string
+      format: uuid
+    priorState:
+      "$ref": "../../cadentia-api.components.yaml#/schemas/ConversationState"
+    recoveredState:
+      "$ref": "../../cadentia-api.components.yaml#/schemas/ConversationSessionStateResponse"
+    recoveryMessage:
+      type: string
+    restartSuggested:
+      type: boolean

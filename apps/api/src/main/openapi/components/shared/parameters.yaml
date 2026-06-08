@@ -1,0 +1,42 @@
+ServicePlanId:
+  in: path
+  name: servicePlanId
+  required: true
+  schema:
+    type: string
+    format: uuid
+AssignmentId:
+  in: path
+  name: assignmentId
+  required: true
+  schema:
+    type: string
+    format: uuid
+RehearsalSessionId:
+  in: path
+  name: rehearsalSessionId
+  required: true
+  schema:
+    type: string
+    format: uuid
+IssueId:
+  in: path
+  name: issueId
+  required: true
+  schema:
+    type: string
+    format: uuid
+ActionId:
+  in: path
+  name: actionId
+  required: true
+  schema:
+    type: string
+    format: uuid
+ArrangementOverrideId:
+  in: path
+  name: arrangementOverrideId
+  required: true
+  schema:
+    type: string
+    format: uuid

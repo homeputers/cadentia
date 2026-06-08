@@ -1,0 +1,502 @@
+"/service-plans/{servicePlanId}/rehearsal-sessions":
+  get:
+    tags:
+    - RehearsalWorkflow
+    operationId: listRehearsalSessions
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - ADMIN
+    - WORSHIP_LEADER
+    - TEAM_SCHEDULER
+    - ASSIGNED_MUSICIAN
+    - DOCTRINAL_REVIEWER
+    - MUSICAL_REVIEWER
+    - REPORTING_VIEWER
+    summary: List service-scoped rehearsal sessions
+    parameters:
+    - "$ref": "../cadentia-api.components.yaml#/parameters/ServicePlanId"
+    responses:
+      '200':
+        description: Rehearsal sessions visible to the caller.
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                "$ref": "../cadentia-api.components.yaml#/schemas/RehearsalSessionResponse"
+  post:
+    tags:
+    - RehearsalWorkflow
+    operationId: createRehearsalSession
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - ADMIN
+    - WORSHIP_LEADER
+    - TEAM_SCHEDULER
+    summary: Create a rehearsal session for a service plan
+    parameters:
+    - "$ref": "../cadentia-api.components.yaml#/parameters/ServicePlanId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            "$ref": "../cadentia-api.components.yaml#/schemas/CreateRehearsalSessionRequest"
+    responses:
+      '201':
+        description: Rehearsal session created.
+        content:
+          application/json:
+            schema:
+              "$ref": "../cadentia-api.components.yaml#/schemas/RehearsalSessionResponse"
+      '400':
+        "$ref": "../cadentia-api.components.yaml#/responses/InvalidWorkflowPayload"
+"/service-plans/{servicePlanId}/rehearsal-sessions/{rehearsalSessionId}":
+  patch:
+    tags:
+    - RehearsalWorkflow
+    operationId: updateRehearsalSession
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - ADMIN
+    - WORSHIP_LEADER
+    - TEAM_SCHEDULER
+    summary: Update mutable rehearsal session metadata
+    parameters:
+    - "$ref": "../cadentia-api.components.yaml#/parameters/ServicePlanId"
+    - "$ref": "../cadentia-api.components.yaml#/parameters/RehearsalSessionId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            "$ref": "../cadentia-api.components.yaml#/schemas/UpdateRehearsalSessionRequest"
+    responses:
+      '200':
+        description: Rehearsal session updated.
+        content:
+          application/json:
+            schema:
+              "$ref": "../cadentia-api.components.yaml#/schemas/RehearsalSessionResponse"
+      '409':
+        "$ref": "../cadentia-api.components.yaml#/responses/WorkflowVersionConflict"
+  delete:
+    tags:
+    - RehearsalWorkflow
+    operationId: archiveRehearsalSession
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - ADMIN
+    - WORSHIP_LEADER
+    - TEAM_SCHEDULER
+    summary: Archive a rehearsal session without deleting audit history
+    parameters:
+    - "$ref": "../cadentia-api.components.yaml#/parameters/ServicePlanId"
+    - "$ref": "../cadentia-api.components.yaml#/parameters/RehearsalSessionId"
+    responses:
+      '200':
+        description: Rehearsal session archived.
+        content:
+          application/json:
+            schema:
+              "$ref": "../cadentia-api.components.yaml#/schemas/RehearsalSessionResponse"
+"/service-plans/{servicePlanId}/workflow-status":
+  get:
+    tags:
+    - RehearsalWorkflow
+    operationId: getServiceWorkflowStatus
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - ADMIN
+    - WORSHIP_LEADER
+    - TEAM_SCHEDULER
+    - DOCTRINAL_REVIEWER
+    - MUSICAL_REVIEWER
+    - REPORTING_VIEWER
+    summary: Retrieve service rehearsal workflow readiness status
+    parameters:
+    - "$ref": "../cadentia-api.components.yaml#/parameters/ServicePlanId"
+    responses:
+      '200':
+        description: Service workflow status.
+        content:
+          application/json:
+            schema:
+              "$ref": "../cadentia-api.components.yaml#/schemas/WorkflowStatusResponse"
+"/service-plans/{servicePlanId}/readiness-transitions":
+  post:
+    tags:
+    - RehearsalWorkflow
+    operationId: transitionReadinessState
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - ADMIN
+    - WORSHIP_LEADER
+    - TEAM_SCHEDULER
+    - DOCTRINAL_REVIEWER
+    - MUSICAL_REVIEWER
+    summary: Transition service readiness through the controlled state machine
+    parameters:
+    - "$ref": "../cadentia-api.components.yaml#/parameters/ServicePlanId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            "$ref": "../cadentia-api.components.yaml#/schemas/ReadinessTransitionRequest"
+    responses:
+      '200':
+        description: Updated workflow status.
+        content:
+          application/json:
+            schema:
+              "$ref": "../cadentia-api.components.yaml#/schemas/WorkflowStatusResponse"
+      '400':
+        "$ref": "../cadentia-api.components.yaml#/responses/InvalidWorkflowPayload"
+      '409':
+        "$ref": "../cadentia-api.components.yaml#/responses/BlockedWorkflowTransition"
+"/service-plans/{servicePlanId}/notes":
+  get:
+    tags:
+    - RehearsalWorkflow
+    operationId: listRehearsalNotes
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - ADMIN
+    - WORSHIP_LEADER
+    - TEAM_SCHEDULER
+    - ASSIGNED_MUSICIAN
+    - DOCTRINAL_REVIEWER
+    - MUSICAL_REVIEWER
+    - REPORTING_VIEWER
+    summary: List rehearsal notes redacted according to caller role
+    parameters:
+    - "$ref": "../cadentia-api.components.yaml#/parameters/ServicePlanId"
+    responses:
+      '200':
+        description: Visible notes; private content is omitted for unauthorized roles.
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                "$ref": "../cadentia-api.components.yaml#/schemas/RehearsalNoteResponse"
+  post:
+    tags:
+    - RehearsalWorkflow
+    operationId: createRehearsalNote
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - ADMIN
+    - WORSHIP_LEADER
+    - TEAM_SCHEDULER
+    - DOCTRINAL_REVIEWER
+    - MUSICAL_REVIEWER
+    summary: Add a targeted rehearsal note
+    parameters:
+    - "$ref": "../cadentia-api.components.yaml#/parameters/ServicePlanId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            "$ref": "../cadentia-api.components.yaml#/schemas/CreateRehearsalNoteRequest"
+    responses:
+      '201':
+        description: Note created.
+        content:
+          application/json:
+            schema:
+              "$ref": "../cadentia-api.components.yaml#/schemas/RehearsalNoteResponse"
+"/service-plans/{servicePlanId}/issues":
+  get:
+    tags:
+    - RehearsalWorkflow
+    operationId: listRehearsalIssues
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - ADMIN
+    - WORSHIP_LEADER
+    - TEAM_SCHEDULER
+    - ASSIGNED_MUSICIAN
+    - DOCTRINAL_REVIEWER
+    - MUSICAL_REVIEWER
+    - REPORTING_VIEWER
+    summary: List rehearsal issues and their visible actions
+    parameters:
+    - "$ref": "../cadentia-api.components.yaml#/parameters/ServicePlanId"
+    responses:
+      '200':
+        description: Issues visible to the caller.
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                "$ref": "../cadentia-api.components.yaml#/schemas/RehearsalIssueResponse"
+  post:
+    tags:
+    - RehearsalWorkflow
+    operationId: createRehearsalIssue
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - ADMIN
+    - WORSHIP_LEADER
+    - TEAM_SCHEDULER
+    - DOCTRINAL_REVIEWER
+    - MUSICAL_REVIEWER
+    summary: Open a structured rehearsal issue
+    parameters:
+    - "$ref": "../cadentia-api.components.yaml#/parameters/ServicePlanId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            "$ref": "../cadentia-api.components.yaml#/schemas/CreateRehearsalIssueRequest"
+    responses:
+      '201':
+        description: Issue opened.
+        content:
+          application/json:
+            schema:
+              "$ref": "../cadentia-api.components.yaml#/schemas/RehearsalIssueResponse"
+"/service-plans/{servicePlanId}/issues/{issueId}/status":
+  patch:
+    tags:
+    - RehearsalWorkflow
+    operationId: updateRehearsalIssueStatus
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - ADMIN
+    - WORSHIP_LEADER
+    - TEAM_SCHEDULER
+    - DOCTRINAL_REVIEWER
+    - MUSICAL_REVIEWER
+    summary: Transition a rehearsal issue status using stable status codes
+    parameters:
+    - "$ref": "../cadentia-api.components.yaml#/parameters/ServicePlanId"
+    - "$ref": "../cadentia-api.components.yaml#/parameters/IssueId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            "$ref": "../cadentia-api.components.yaml#/schemas/UpdateIssueStatusRequest"
+    responses:
+      '200':
+        description: Updated issue.
+        content:
+          application/json:
+            schema:
+              "$ref": "../cadentia-api.components.yaml#/schemas/RehearsalIssueResponse"
+      '400':
+        "$ref": "../cadentia-api.components.yaml#/responses/InvalidWorkflowPayload"
+      '409':
+        "$ref": "../cadentia-api.components.yaml#/responses/WorkflowVersionConflict"
+"/service-plans/{servicePlanId}/issues/{issueId}/actions":
+  post:
+    tags:
+    - RehearsalWorkflow
+    operationId: createRehearsalIssueAction
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - ADMIN
+    - WORSHIP_LEADER
+    - TEAM_SCHEDULER
+    - DOCTRINAL_REVIEWER
+    - MUSICAL_REVIEWER
+    summary: Create an owned follow-up action for an issue
+    parameters:
+    - "$ref": "../cadentia-api.components.yaml#/parameters/ServicePlanId"
+    - "$ref": "../cadentia-api.components.yaml#/parameters/IssueId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            "$ref": "../cadentia-api.components.yaml#/schemas/CreateIssueActionRequest"
+    responses:
+      '201':
+        description: Action created.
+        content:
+          application/json:
+            schema:
+              "$ref": "../cadentia-api.components.yaml#/schemas/RehearsalIssueActionResponse"
+"/service-plans/{servicePlanId}/issue-actions/{actionId}/owner":
+  patch:
+    tags:
+    - RehearsalWorkflow
+    operationId: updateRehearsalIssueActionOwner
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - ADMIN
+    - WORSHIP_LEADER
+    - TEAM_SCHEDULER
+    summary: Update issue action ownership
+    parameters:
+    - "$ref": "../cadentia-api.components.yaml#/parameters/ServicePlanId"
+    - "$ref": "../cadentia-api.components.yaml#/parameters/ActionId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            "$ref": "../cadentia-api.components.yaml#/schemas/UpdateIssueActionOwnerRequest"
+    responses:
+      '200':
+        description: Updated action.
+        content:
+          application/json:
+            schema:
+              "$ref": "../cadentia-api.components.yaml#/schemas/RehearsalIssueActionResponse"
+"/service-plans/{servicePlanId}/issue-actions/{actionId}/status":
+  patch:
+    tags:
+    - RehearsalWorkflow
+    operationId: updateRehearsalIssueActionStatus
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - ADMIN
+    - WORSHIP_LEADER
+    - TEAM_SCHEDULER
+    - ASSIGNED_MUSICIAN
+    summary: Update issue action response/status fields
+    description: Assigned musicians may update action status for actions relevant
+      to their assignment without receiving workflow governance permissions.
+    parameters:
+    - "$ref": "../cadentia-api.components.yaml#/parameters/ServicePlanId"
+    - "$ref": "../cadentia-api.components.yaml#/parameters/ActionId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            "$ref": "../cadentia-api.components.yaml#/schemas/UpdateIssueActionStatusRequest"
+    responses:
+      '200':
+        description: Updated action.
+        content:
+          application/json:
+            schema:
+              "$ref": "../cadentia-api.components.yaml#/schemas/RehearsalIssueActionResponse"
+"/service-plans/{servicePlanId}/arrangement-overrides":
+  get:
+    tags:
+    - RehearsalWorkflow
+    operationId: listArrangementOverrides
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - ADMIN
+    - WORSHIP_LEADER
+    - TEAM_SCHEDULER
+    - ASSIGNED_MUSICIAN
+    - DOCTRINAL_REVIEWER
+    - MUSICAL_REVIEWER
+    - REPORTING_VIEWER
+    summary: List service-scoped arrangement overrides
+    description: Rehearsal overrides are service-scoped effective values only and
+      never update approved catalog arrangements.
+    parameters:
+    - "$ref": "../cadentia-api.components.yaml#/parameters/ServicePlanId"
+    responses:
+      '200':
+        description: Service-scoped arrangement overrides.
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                "$ref": "../cadentia-api.components.yaml#/schemas/ArrangementOverrideResponse"
+  post:
+    tags:
+    - RehearsalWorkflow
+    operationId: createArrangementOverride
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - ADMIN
+    - WORSHIP_LEADER
+    - TEAM_SCHEDULER
+    summary: Create a service-scoped arrangement override
+    description: Creates effective arrangement values for this service only; approved
+      catalog arrangements are not mutated by this workflow path.
+    parameters:
+    - "$ref": "../cadentia-api.components.yaml#/parameters/ServicePlanId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            "$ref": "../cadentia-api.components.yaml#/schemas/CreateArrangementOverrideRequest"
+    responses:
+      '201':
+        description: Override created.
+        content:
+          application/json:
+            schema:
+              "$ref": "../cadentia-api.components.yaml#/schemas/ArrangementOverrideResponse"
+"/service-plans/{servicePlanId}/arrangement-overrides/{arrangementOverrideId}":
+  patch:
+    tags:
+    - RehearsalWorkflow
+    operationId: updateArrangementOverride
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - ADMIN
+    - WORSHIP_LEADER
+    - TEAM_SCHEDULER
+    summary: Update a service-scoped arrangement override
+    description: Updates service-scoped effective values only; approved catalog arrangements
+      are not mutated.
+    parameters:
+    - "$ref": "../cadentia-api.components.yaml#/parameters/ServicePlanId"
+    - "$ref": "../cadentia-api.components.yaml#/parameters/ArrangementOverrideId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            "$ref": "../cadentia-api.components.yaml#/schemas/UpdateArrangementOverrideRequest"
+    responses:
+      '200':
+        description: Override updated.
+        content:
+          application/json:
+            schema:
+              "$ref": "../cadentia-api.components.yaml#/schemas/ArrangementOverrideResponse"
+      '409':
+        "$ref": "../cadentia-api.components.yaml#/responses/WorkflowVersionConflict"
+  delete:
+    tags:
+    - RehearsalWorkflow
+    operationId: archiveArrangementOverride
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - ADMIN
+    - WORSHIP_LEADER
+    - TEAM_SCHEDULER
+    summary: Archive a service-scoped arrangement override
+    parameters:
+    - "$ref": "../cadentia-api.components.yaml#/parameters/ServicePlanId"
+    - "$ref": "../cadentia-api.components.yaml#/parameters/ArrangementOverrideId"
+    responses:
+      '204':
+        description: Override archived.

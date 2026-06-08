@@ -1,0 +1,146 @@
+"/feedback/events":
+  post:
+    tags:
+    - FeedbackTuning
+    operationId: recordFeedbackEvent
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - WORSHIP_LEADER
+    - CATALOG_EDITOR
+    - DOCTRINAL_REVIEWER
+    - MUSICAL_REVIEWER
+    - ADMIN
+    summary: Record explicit recommendation feedback for deterministic tuning
+    description: 'Persists explicit user feedback signals that influence ranking weights
+      only. Feedback never changes eligibility gates such as approval, provenance,
+      activity, or licensing.
+
+      '
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            "$ref": "../cadentia-api.components.yaml#/schemas/CreateFeedbackEventRequest"
+    responses:
+      '201':
+        description: Feedback event recorded.
+        content:
+          application/json:
+            schema:
+              "$ref": "../cadentia-api.components.yaml#/schemas/FeedbackEventResponse"
+  get:
+    tags:
+    - FeedbackTuning
+    operationId: listFeedbackEvents
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - CATALOG_EDITOR
+    - ADMIN
+    summary: List feedback events for inspection and governance
+    description: 'Returns append-only feedback events by scope for audit and tuning
+      analysis. Listing requires authenticated operational roles (for example TEAM_LEAD
+      or ADMIN).
+
+      '
+    parameters:
+    - in: query
+      name: scopeLayer
+      schema:
+        "$ref": "../cadentia-api.components.yaml#/schemas/FeedbackScopeLayer"
+    - in: query
+      name: scopeId
+      schema:
+        type: string
+        format: uuid
+    - in: query
+      name: arrangementId
+      schema:
+        type: string
+        format: uuid
+    responses:
+      '200':
+        description: Feedback events matching filters.
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                "$ref": "../cadentia-api.components.yaml#/schemas/FeedbackEventResponse"
+"/feedback/scopes/{scopeLayer}/{scopeId}/state":
+  get:
+    tags:
+    - FeedbackTuning
+    operationId: getFeedbackScopeState
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - WORSHIP_LEADER
+    - CATALOG_EDITOR
+    - ADMIN
+    summary: Inspect deterministic feedback aggregate state for a scope
+    description: 'Returns aggregate counters and last-updated markers used by recommendation
+      tuning. Scope resolution order is personal -> team -> policy/global fallback.
+
+      '
+    parameters:
+    - in: path
+      name: scopeLayer
+      required: true
+      schema:
+        "$ref": "../cadentia-api.components.yaml#/schemas/FeedbackScopeLayer"
+    - in: path
+      name: scopeId
+      required: true
+      schema:
+        type: string
+        format: uuid
+    responses:
+      '200':
+        description: Aggregated feedback state for the requested scope.
+        content:
+          application/json:
+            schema:
+              "$ref": "../cadentia-api.components.yaml#/schemas/FeedbackScopeStateResponse"
+"/feedback/scopes/{scopeLayer}/{scopeId}/reset":
+  post:
+    tags:
+    - FeedbackTuning
+    operationId: resetFeedbackScopeState
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - ADMIN
+    summary: Reset feedback state for a scope
+    description: 'Destructive governance operation that resets feedback influence
+      state for a scope. This endpoint must be restricted to elevated roles (for example
+      TEAM_LEAD or ADMIN).
+
+      '
+    parameters:
+    - in: path
+      name: scopeLayer
+      required: true
+      schema:
+        "$ref": "../cadentia-api.components.yaml#/schemas/FeedbackScopeLayer"
+    - in: path
+      name: scopeId
+      required: true
+      schema:
+        type: string
+        format: uuid
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            "$ref": "../cadentia-api.components.yaml#/schemas/FeedbackResetRequest"
+    responses:
+      '200':
+        description: Feedback scope reset was accepted and audited.
+        content:
+          application/json:
+            schema:
+              "$ref": "../cadentia-api.components.yaml#/schemas/FeedbackResetResponse"

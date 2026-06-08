@@ -1,0 +1,687 @@
+RehearsalReadinessStateCode:
+  type: string
+  enum:
+  - draft
+  - planned
+  - rehearsing
+  - issues_open
+  - ready
+  - completed
+  description: Stable machine-readable rehearsal readiness state code.
+RehearsalWorkflowTargetTypeCode:
+  type: string
+  enum:
+  - service
+  - rehearsal_session
+  - setlist_item
+  - transition
+  - arrangement
+  - team_role
+  - musician_assignment
+RehearsalIssueCategoryCode:
+  type: string
+  enum:
+  - unresolved_transition
+  - difficult_song
+  - blocker
+  - arrangement_concern
+  - team_role_concern
+  - general_follow_up
+RehearsalIssueSeverityCode:
+  type: string
+  enum:
+  - low
+  - medium
+  - high
+  - blocking
+RehearsalIssueStatusCode:
+  type: string
+  enum:
+  - open
+  - in_progress
+  - resolved
+  - deferred
+  - cancelled
+RehearsalIssueActionStatusCode:
+  type: string
+  enum:
+  - todo
+  - in_progress
+  - done
+  - cancelled
+RehearsalIssueOwnerType:
+  type: string
+  enum:
+  - actor
+  - team_role
+  - service_assignment
+  - unassigned
+RehearsalNoteVisibilityCode:
+  type: string
+  enum:
+  - public
+  - team_private
+  - pastoral_private
+WorkflowProblemCode:
+  type: string
+  enum:
+  - INVALID_STATUS_CODE
+  - TRANSITION_BLOCKED
+  - VERSION_CONFLICT
+  - FORBIDDEN
+  - NOT_FOUND
+WorkflowProblemResponse:
+  type: object
+  required:
+  - code
+  - message
+  properties:
+    code:
+      "$ref": "../../cadentia-api.components.yaml#/schemas/WorkflowProblemCode"
+    message:
+      type: string
+    currentStatus:
+      type: string
+      nullable: true
+    requestedStatus:
+      type: string
+      nullable: true
+RehearsalWorkflowTarget:
+  type: object
+  additionalProperties: false
+  required:
+  - targetTypeCode
+  properties:
+    targetTypeCode:
+      "$ref": "../../cadentia-api.components.yaml#/schemas/RehearsalWorkflowTargetTypeCode"
+    rehearsalSessionId:
+      type: string
+      format: uuid
+      nullable: true
+    servicePlanBlockId:
+      type: string
+      format: uuid
+      nullable: true
+    setlistVersionItemId:
+      type: string
+      format: uuid
+      nullable: true
+    transitionFromBlockId:
+      type: string
+      format: uuid
+      nullable: true
+    transitionToBlockId:
+      type: string
+      format: uuid
+      nullable: true
+    arrangementId:
+      type: string
+      format: uuid
+      nullable: true
+    teamRoleCode:
+      type: string
+      nullable: true
+    serviceTeamAssignmentId:
+      type: string
+      format: uuid
+      nullable: true
+    rehearsalTeamAssignmentId:
+      type: string
+      format: uuid
+      nullable: true
+    songAssignmentOverrideId:
+      type: string
+      format: uuid
+      nullable: true
+RehearsalSessionResponse:
+  type: object
+  required:
+  - rehearsalSessionId
+  - servicePlanId
+  - sessionCode
+  - startsAt
+  - endsAt
+  - readinessStateCode
+  - version
+  properties:
+    rehearsalSessionId:
+      type: string
+      format: uuid
+    servicePlanId:
+      type: string
+      format: uuid
+    sessionCode:
+      type: string
+    startsAt:
+      type: string
+      format: date-time
+    endsAt:
+      type: string
+      format: date-time
+    location:
+      type: string
+      nullable: true
+    readinessStateCode:
+      "$ref": "../../cadentia-api.components.yaml#/schemas/RehearsalReadinessStateCode"
+    archivedAt:
+      type: string
+      format: date-time
+      nullable: true
+    version:
+      type: integer
+      format: int64
+      minimum: 0
+CreateRehearsalSessionRequest:
+  type: object
+  additionalProperties: false
+  required:
+  - sessionCode
+  - startsAt
+  - endsAt
+  properties:
+    sessionCode:
+      type: string
+      minLength: 1
+      maxLength: 64
+    startsAt:
+      type: string
+      format: date-time
+    endsAt:
+      type: string
+      format: date-time
+    location:
+      type: string
+      nullable: true
+      maxLength: 255
+    reason:
+      type: string
+      nullable: true
+    reference:
+      type: string
+      nullable: true
+WorkflowStatusResponse:
+  type: object
+  required:
+  - servicePlanId
+  - explicitStateCode
+  - derivedStateCode
+  - openBlockingIssueCount
+  - openRequiredActionCount
+  - readyForService
+  properties:
+    servicePlanId:
+      type: string
+      format: uuid
+    explicitStateCode:
+      "$ref": "../../cadentia-api.components.yaml#/schemas/RehearsalReadinessStateCode"
+    derivedStateCode:
+      "$ref": "../../cadentia-api.components.yaml#/schemas/RehearsalReadinessStateCode"
+    openBlockingIssueCount:
+      type: integer
+      minimum: 0
+    openRequiredActionCount:
+      type: integer
+      minimum: 0
+    readyForService:
+      type: boolean
+ReadinessTransitionRequest:
+  type: object
+  additionalProperties: false
+  required:
+  - newStateCode
+  properties:
+    rehearsalSessionId:
+      type: string
+      format: uuid
+      nullable: true
+    newStateCode:
+      "$ref": "../../cadentia-api.components.yaml#/schemas/RehearsalReadinessStateCode"
+    reason:
+      type: string
+      nullable: true
+    reference:
+      type: string
+      nullable: true
+    expectedVersion:
+      type: integer
+      format: int64
+      minimum: 0
+      nullable: true
+RehearsalNoteResponse:
+  type: object
+  required:
+  - noteId
+  - servicePlanId
+  - target
+  - visibilityCode
+  - redacted
+  - createdAt
+  properties:
+    noteId:
+      type: string
+      format: uuid
+    servicePlanId:
+      type: string
+      format: uuid
+    target:
+      "$ref": "../../cadentia-api.components.yaml#/schemas/RehearsalWorkflowTarget"
+    noteBody:
+      type: string
+      nullable: true
+    visibilityCode:
+      "$ref": "../../cadentia-api.components.yaml#/schemas/RehearsalNoteVisibilityCode"
+    redacted:
+      type: boolean
+    createdBy:
+      type: string
+      nullable: true
+    createdAt:
+      type: string
+      format: date-time
+CreateRehearsalNoteRequest:
+  type: object
+  additionalProperties: false
+  required:
+  - target
+  - noteBody
+  - visibilityCode
+  properties:
+    target:
+      "$ref": "../../cadentia-api.components.yaml#/schemas/RehearsalWorkflowTarget"
+    noteBody:
+      type: string
+      minLength: 1
+      maxLength: 4000
+    visibilityCode:
+      "$ref": "../../cadentia-api.components.yaml#/schemas/RehearsalNoteVisibilityCode"
+    reason:
+      type: string
+      nullable: true
+    reference:
+      type: string
+      nullable: true
+RehearsalIssueActionOwner:
+  type: object
+  required:
+  - ownerType
+  properties:
+    ownerType:
+      "$ref": "../../cadentia-api.components.yaml#/schemas/RehearsalIssueOwnerType"
+    ownerActor:
+      type: string
+      nullable: true
+    ownerTeamRoleCode:
+      type: string
+      nullable: true
+    ownerServiceAssignmentId:
+      type: string
+      format: uuid
+      nullable: true
+RehearsalIssueActionResponse:
+  type: object
+  required:
+  - actionId
+  - issueId
+  - servicePlanId
+  - actionStatusCode
+  - actionSummary
+  - owner
+  - version
+  properties:
+    actionId:
+      type: string
+      format: uuid
+    issueId:
+      type: string
+      format: uuid
+    servicePlanId:
+      type: string
+      format: uuid
+    actionStatusCode:
+      "$ref": "../../cadentia-api.components.yaml#/schemas/RehearsalIssueActionStatusCode"
+    actionSummary:
+      type: string
+    owner:
+      "$ref": "../../cadentia-api.components.yaml#/schemas/RehearsalIssueActionOwner"
+    completedAt:
+      type: string
+      format: date-time
+      nullable: true
+    version:
+      type: integer
+      format: int64
+      minimum: 0
+RehearsalIssueResponse:
+  type: object
+  required:
+  - issueId
+  - servicePlanId
+  - target
+  - categoryCode
+  - severityCode
+  - statusCode
+  - title
+  - actions
+  - version
+  properties:
+    issueId:
+      type: string
+      format: uuid
+    servicePlanId:
+      type: string
+      format: uuid
+    target:
+      "$ref": "../../cadentia-api.components.yaml#/schemas/RehearsalWorkflowTarget"
+    categoryCode:
+      "$ref": "../../cadentia-api.components.yaml#/schemas/RehearsalIssueCategoryCode"
+    severityCode:
+      "$ref": "../../cadentia-api.components.yaml#/schemas/RehearsalIssueSeverityCode"
+    statusCode:
+      "$ref": "../../cadentia-api.components.yaml#/schemas/RehearsalIssueStatusCode"
+    title:
+      type: string
+    detail:
+      type: string
+      nullable: true
+    detectedBy:
+      type: string
+      nullable: true
+    resolvedAt:
+      type: string
+      format: date-time
+      nullable: true
+    archivedAt:
+      type: string
+      format: date-time
+      nullable: true
+    actions:
+      type: array
+      items:
+        "$ref": "../../cadentia-api.components.yaml#/schemas/RehearsalIssueActionResponse"
+    history:
+      type: array
+      items:
+        "$ref": "../../cadentia-api.components.yaml#/schemas/IssueHistoryResponse"
+    version:
+      type: integer
+      format: int64
+      minimum: 0
+IssueHistoryResponse:
+  type: object
+  required:
+  - statusCode
+  - changedAt
+  properties:
+    statusCode:
+      "$ref": "../../cadentia-api.components.yaml#/schemas/RehearsalIssueStatusCode"
+    actor:
+      type: string
+      nullable: true
+    changedAt:
+      type: string
+      format: date-time
+CreateRehearsalIssueRequest:
+  type: object
+  additionalProperties: false
+  required:
+  - target
+  - categoryCode
+  - severityCode
+  - title
+  properties:
+    target:
+      "$ref": "../../cadentia-api.components.yaml#/schemas/RehearsalWorkflowTarget"
+    categoryCode:
+      "$ref": "../../cadentia-api.components.yaml#/schemas/RehearsalIssueCategoryCode"
+    severityCode:
+      "$ref": "../../cadentia-api.components.yaml#/schemas/RehearsalIssueSeverityCode"
+    title:
+      type: string
+      minLength: 1
+      maxLength: 200
+    detail:
+      type: string
+      nullable: true
+      maxLength: 4000
+    reason:
+      type: string
+      nullable: true
+    reference:
+      type: string
+      nullable: true
+UpdateIssueStatusRequest:
+  type: object
+  additionalProperties: false
+  required:
+  - statusCode
+  properties:
+    statusCode:
+      "$ref": "../../cadentia-api.components.yaml#/schemas/RehearsalIssueStatusCode"
+    reason:
+      type: string
+      nullable: true
+    reference:
+      type: string
+      nullable: true
+    expectedVersion:
+      type: integer
+      format: int64
+      minimum: 0
+      nullable: true
+CreateIssueActionRequest:
+  type: object
+  additionalProperties: false
+  required:
+  - actionSummary
+  - owner
+  properties:
+    actionSummary:
+      type: string
+      minLength: 1
+      maxLength: 500
+    owner:
+      "$ref": "../../cadentia-api.components.yaml#/schemas/RehearsalIssueActionOwner"
+    reason:
+      type: string
+      nullable: true
+    reference:
+      type: string
+      nullable: true
+UpdateIssueActionOwnerRequest:
+  type: object
+  additionalProperties: false
+  required:
+  - owner
+  properties:
+    owner:
+      "$ref": "../../cadentia-api.components.yaml#/schemas/RehearsalIssueActionOwner"
+    reason:
+      type: string
+      nullable: true
+    reference:
+      type: string
+      nullable: true
+    expectedVersion:
+      type: integer
+      format: int64
+      minimum: 0
+      nullable: true
+UpdateIssueActionStatusRequest:
+  type: object
+  additionalProperties: false
+  required:
+  - actionStatusCode
+  properties:
+    actionStatusCode:
+      "$ref": "../../cadentia-api.components.yaml#/schemas/RehearsalIssueActionStatusCode"
+    responseNote:
+      type: string
+      nullable: true
+      maxLength: 1000
+    reason:
+      type: string
+      nullable: true
+    reference:
+      type: string
+      nullable: true
+    expectedVersion:
+      type: integer
+      format: int64
+      minimum: 0
+      nullable: true
+ArrangementOverrideResponse:
+  type: object
+  required:
+  - arrangementOverrideId
+  - servicePlanId
+  - sourceArrangementId
+  - rationale
+  - provenanceNote
+  - version
+  properties:
+    arrangementOverrideId:
+      type: string
+      format: uuid
+    servicePlanId:
+      type: string
+      format: uuid
+    servicePlanBlockId:
+      type: string
+      format: uuid
+      nullable: true
+    setlistVersionItemId:
+      type: string
+      format: uuid
+      nullable: true
+    sourceArrangementId:
+      type: string
+      format: uuid
+    sourceArrangementVersionRef:
+      type: string
+      nullable: true
+    effectiveKey:
+      type: string
+      nullable: true
+    effectiveMode:
+      type: string
+      nullable: true
+    effectiveTempoBpm:
+      type: integer
+      nullable: true
+    effectiveTimeSignature:
+      type: string
+      nullable: true
+    effectiveDurationSeconds:
+      type: integer
+      nullable: true
+    effectiveEnergyLevel:
+      type: integer
+      nullable: true
+      minimum: 1
+      maximum: 5
+    effectiveDifficultyLevel:
+      type: integer
+      nullable: true
+      minimum: 1
+      maximum: 5
+    effectiveNotes:
+      type: string
+      nullable: true
+    rationale:
+      type: string
+    provenanceNote:
+      type: string
+    createdBy:
+      type: string
+      nullable: true
+    updatedBy:
+      type: string
+      nullable: true
+    version:
+      type: integer
+      format: int64
+      minimum: 0
+CreateArrangementOverrideRequest:
+  type: object
+  additionalProperties: false
+  required:
+  - sourceArrangementId
+  - rationale
+  - provenanceNote
+  properties:
+    servicePlanBlockId:
+      type: string
+      format: uuid
+      nullable: true
+    setlistVersionItemId:
+      type: string
+      format: uuid
+      nullable: true
+    sourceArrangementId:
+      type: string
+      format: uuid
+    sourceArrangementVersionRef:
+      type: string
+      nullable: true
+    effectiveKey:
+      type: string
+      nullable: true
+    effectiveMode:
+      type: string
+      nullable: true
+    effectiveTempoBpm:
+      type: integer
+      nullable: true
+      minimum: 1
+    effectiveTimeSignature:
+      type: string
+      nullable: true
+    effectiveDurationSeconds:
+      type: integer
+      nullable: true
+      minimum: 1
+    effectiveEnergyLevel:
+      type: integer
+      nullable: true
+      minimum: 1
+      maximum: 5
+    effectiveDifficultyLevel:
+      type: integer
+      nullable: true
+      minimum: 1
+      maximum: 5
+    effectiveNotes:
+      type: string
+      nullable: true
+    rationale:
+      type: string
+      minLength: 1
+    provenanceNote:
+      type: string
+      minLength: 1
+    reason:
+      type: string
+      nullable: true
+    reference:
+      type: string
+      nullable: true
+UpdateArrangementOverrideRequest:
+  allOf:
+  - "$ref": "../../cadentia-api.components.yaml#/schemas/CreateArrangementOverrideRequest"
+  - type: object
+    properties:
+      expectedVersion:
+        type: integer
+        format: int64
+        minimum: 0
+        nullable: true
+UpdateRehearsalSessionRequest:
+  allOf:
+  - "$ref": "../../cadentia-api.components.yaml#/schemas/CreateRehearsalSessionRequest"
+  - type: object
+    properties:
+      expectedVersion:
+        type: integer
+        format: int64
+        minimum: 0
+        nullable: true
