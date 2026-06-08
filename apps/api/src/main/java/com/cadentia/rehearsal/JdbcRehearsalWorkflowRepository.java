@@ -67,6 +67,47 @@ public class JdbcRehearsalWorkflowRepository implements RehearsalWorkflowReposit
     }
 
     @Override
+    public List<RehearsalSessionRecord> listSessions(UUID servicePlanId) {
+        return jdbcTemplate.query(
+                """
+                SELECT *
+                FROM rehearsal_sessions
+                WHERE service_plan_id = :servicePlanId
+                ORDER BY starts_at, id
+                """,
+                Map.of("servicePlanId", servicePlanId),
+                (rs, rowNum) -> mapSession(rs));
+    }
+
+    @Override
+    public List<RehearsalNoteRecord> listNotes(UUID servicePlanId) {
+        return jdbcTemplate.query(
+                """
+                SELECT *
+                FROM rehearsal_notes
+                WHERE service_plan_id = :servicePlanId
+                  AND archived_at IS NULL
+                ORDER BY created_at, id
+                """,
+                Map.of("servicePlanId", servicePlanId),
+                (rs, rowNum) -> mapNote(rs));
+    }
+
+    @Override
+    public List<ArrangementOverrideRecord> listArrangementOverrides(UUID servicePlanId) {
+        return jdbcTemplate.query(
+                """
+                SELECT *
+                FROM service_arrangement_overrides
+                WHERE service_plan_id = :servicePlanId
+                  AND archived_at IS NULL
+                ORDER BY created_at, id
+                """,
+                Map.of("servicePlanId", servicePlanId),
+                (rs, rowNum) -> mapArrangementOverride(rs));
+    }
+
+    @Override
     @Transactional
     public RehearsalSessionRecord createSession(
             UUID servicePlanId,
@@ -496,6 +537,56 @@ public class JdbcRehearsalWorkflowRepository implements RehearsalWorkflowReposit
     }
 
     @Override
+    public ArrangementOverrideRecord updateArrangementOverride(ArrangementOverrideRecord overrideRecord) {
+        UUID id = jdbcTemplate.queryForObject(
+                """
+                UPDATE service_arrangement_overrides
+                SET service_plan_block_id = :servicePlanBlockId,
+                    setlist_version_item_id = :setlistVersionItemId,
+                    source_arrangement_id = :sourceArrangementId,
+                    source_arrangement_version_ref = :sourceArrangementVersionRef,
+                    effective_key = :effectiveKey,
+                    effective_mode = :effectiveMode,
+                    effective_tempo_bpm = :effectiveTempoBpm,
+                    effective_time_signature = :effectiveTimeSignature,
+                    effective_duration_seconds = :effectiveDurationSeconds,
+                    effective_energy_level = :effectiveEnergyLevel,
+                    effective_difficulty_level = :effectiveDifficultyLevel,
+                    effective_notes = :effectiveNotes,
+                    rationale = :rationale,
+                    provenance_note = :provenanceNote,
+                    updated_by = :updatedBy,
+                    updated_at = NOW()
+                WHERE service_plan_id = :servicePlanId
+                  AND id = :arrangementOverrideId
+                  AND archived_at IS NULL
+                RETURNING id
+                """,
+                arrangementOverrideParameters(overrideRecord),
+                UUID.class);
+        return jdbcTemplate.queryForObject(
+                "SELECT * FROM service_arrangement_overrides WHERE id = :id",
+                Map.of("id", id),
+                (rs, rowNum) -> mapArrangementOverride(rs));
+    }
+
+    @Override
+    public void archiveArrangementOverride(UUID servicePlanId, UUID arrangementOverrideId, String archivedBy) {
+        jdbcTemplate.update(
+                """
+                UPDATE service_arrangement_overrides
+                SET archived_at = NOW(), updated_by = :archivedBy, updated_at = NOW()
+                WHERE service_plan_id = :servicePlanId
+                  AND id = :arrangementOverrideId
+                  AND archived_at IS NULL
+                """,
+                new MapSqlParameterSource()
+                        .addValue("servicePlanId", servicePlanId)
+                        .addValue("arrangementOverrideId", arrangementOverrideId)
+                        .addValue("archivedBy", archivedBy));
+    }
+
+    @Override
     public RehearsalAuditRecord recordAudit(RehearsalAuditRecord auditRecord) {
         UUID id = jdbcTemplate.queryForObject(
                 """
@@ -561,15 +652,19 @@ public class JdbcRehearsalWorkflowRepository implements RehearsalWorkflowReposit
         return jdbcTemplate.queryForObject(
                 "SELECT * FROM rehearsal_sessions WHERE id = :id",
                 Map.of("id", id),
-                (rs, rowNum) -> new RehearsalSessionRecord(
-                        rs.getObject("id", UUID.class),
-                        rs.getObject("service_plan_id", UUID.class),
-                        rs.getString("session_code"),
-                        rs.getTimestamp("starts_at").toInstant(),
-                        rs.getTimestamp("ends_at").toInstant(),
-                        rs.getString("location"),
-                        ReadinessStateCode.fromCode(rs.getString("readiness_state_code")),
-                        instantOrNull(rs, "archived_at")));
+                (rs, rowNum) -> mapSession(rs));
+    }
+
+    private RehearsalSessionRecord mapSession(ResultSet rs) throws SQLException {
+        return new RehearsalSessionRecord(
+                rs.getObject("id", UUID.class),
+                rs.getObject("service_plan_id", UUID.class),
+                rs.getString("session_code"),
+                rs.getTimestamp("starts_at").toInstant(),
+                rs.getTimestamp("ends_at").toInstant(),
+                rs.getString("location"),
+                ReadinessStateCode.fromCode(rs.getString("readiness_state_code")),
+                instantOrNull(rs, "archived_at"));
     }
 
     private MapSqlParameterSource targetParameters(UUID servicePlanId, RehearsalTarget target) {
@@ -586,6 +681,28 @@ public class JdbcRehearsalWorkflowRepository implements RehearsalWorkflowReposit
                 .addValue("serviceTeamAssignmentId", target.serviceTeamAssignmentId())
                 .addValue("rehearsalTeamAssignmentId", target.rehearsalTeamAssignmentId())
                 .addValue("songAssignmentOverrideId", target.songAssignmentOverrideId());
+    }
+
+    private MapSqlParameterSource arrangementOverrideParameters(ArrangementOverrideRecord overrideRecord) {
+        return new MapSqlParameterSource()
+                .addValue("arrangementOverrideId", overrideRecord.arrangementOverrideId())
+                .addValue("servicePlanId", overrideRecord.servicePlanId())
+                .addValue("servicePlanBlockId", overrideRecord.servicePlanBlockId())
+                .addValue("setlistVersionItemId", overrideRecord.setlistVersionItemId())
+                .addValue("sourceArrangementId", overrideRecord.sourceArrangementId())
+                .addValue("sourceArrangementVersionRef", overrideRecord.sourceArrangementVersionRef())
+                .addValue("effectiveKey", overrideRecord.effectiveKey())
+                .addValue("effectiveMode", overrideRecord.effectiveMode())
+                .addValue("effectiveTempoBpm", overrideRecord.effectiveTempoBpm())
+                .addValue("effectiveTimeSignature", overrideRecord.effectiveTimeSignature())
+                .addValue("effectiveDurationSeconds", overrideRecord.effectiveDurationSeconds())
+                .addValue("effectiveEnergyLevel", overrideRecord.effectiveEnergyLevel())
+                .addValue("effectiveDifficultyLevel", overrideRecord.effectiveDifficultyLevel())
+                .addValue("effectiveNotes", overrideRecord.effectiveNotes())
+                .addValue("rationale", overrideRecord.rationale())
+                .addValue("provenanceNote", overrideRecord.provenanceNote())
+                .addValue("createdBy", overrideRecord.createdBy())
+                .addValue("updatedBy", overrideRecord.updatedBy());
     }
 
     private RehearsalNoteRecord mapNote(ResultSet rs) throws SQLException {

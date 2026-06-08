@@ -66,7 +66,8 @@ class JdbcRehearsalWorkflowRepositoryIntegrationTest {
                 .toList();
 
         // Assert
-        assertThat(readinessCodes).containsExactly("draft", "planned", "rehearsing", "issues_open", "ready", "completed");
+        assertThat(readinessCodes)
+                .containsExactly("draft", "planned", "rehearsing", "issues_open", "ready", "completed");
         assertThat(issueCategoryCodes).containsExactly(
                 "unresolved_transition",
                 "difficult_song",
@@ -205,6 +206,120 @@ class JdbcRehearsalWorkflowRepositoryIntegrationTest {
         assertThat(arrangementKey(arrangementId)).isEqualTo(canonicalKeyBefore);
     }
 
+    @Test
+    void listQueriesReturnOnlyServiceScopedWorkflowRowsAndReflectOverrideMutations() {
+        // Arrange
+        UUID servicePlanId = insertServicePlan();
+        UUID otherServicePlanId = insertServicePlan();
+        UUID arrangementId = insertArrangement();
+        UUID blockId = insertServicePlanBlock(servicePlanId, arrangementId, 0);
+        UUID otherBlockId = insertServicePlanBlock(otherServicePlanId, arrangementId, 0);
+
+        RehearsalSessionRecord session = repository.createSession(
+                servicePlanId,
+                "midweek",
+                Instant.parse("2026-06-04T23:00:00Z"),
+                Instant.parse("2026-06-05T01:00:00Z"),
+                "Sanctuary",
+                "planner");
+        repository.createSession(
+                otherServicePlanId,
+                "other-service",
+                Instant.parse("2026-06-11T23:00:00Z"),
+                Instant.parse("2026-06-12T01:00:00Z"),
+                "Chapel",
+                "planner");
+        repository.addNote(
+                servicePlanId,
+                RehearsalTarget.session(session.rehearsalSessionId()),
+                "Warmups at 6:45.",
+                "team_private",
+                "planner");
+        repository.addNote(
+                otherServicePlanId,
+                RehearsalTarget.service(),
+                "Other service note.",
+                "team_private",
+                "planner");
+        ArrangementOverrideRecord override = repository.createArrangementOverride(new ArrangementOverrideRecord(
+                null,
+                servicePlanId,
+                blockId,
+                null,
+                arrangementId,
+                "arrangement:baseline",
+                "G",
+                "MAJOR",
+                74,
+                "4/4",
+                260,
+                3,
+                2,
+                "Acoustic intro only for this service.",
+                "Vocal range is better in G for the assigned leader.",
+                "Copied from canonical arrangement and adjusted for this service.",
+                "planner",
+                "planner"));
+        repository.createArrangementOverride(new ArrangementOverrideRecord(
+                null,
+                otherServicePlanId,
+                otherBlockId,
+                null,
+                arrangementId,
+                "arrangement:baseline",
+                "A",
+                "MAJOR",
+                78,
+                "4/4",
+                240,
+                3,
+                2,
+                "Other service override.",
+                "Other service rationale.",
+                "Other service provenance.",
+                "planner",
+                "planner"));
+
+        // Act
+        ArrangementOverrideRecord updated = repository.updateArrangementOverride(new ArrangementOverrideRecord(
+                override.arrangementOverrideId(),
+                servicePlanId,
+                blockId,
+                null,
+                arrangementId,
+                "arrangement:baseline",
+                "F",
+                "MAJOR",
+                70,
+                "4/4",
+                255,
+                2,
+                2,
+                "Lower key for this service only.",
+                "Leader requested lower key after rehearsal.",
+                "Derived from service-scoped rehearsal notes.",
+                "planner",
+                "music-director"));
+
+        // Assert
+        assertThat(repository.listSessions(servicePlanId))
+                .extracting(RehearsalSessionRecord::rehearsalSessionId)
+                .containsExactly(session.rehearsalSessionId());
+        assertThat(repository.listNotes(servicePlanId))
+                .extracting(RehearsalNoteRecord::noteBody)
+                .containsExactly("Warmups at 6:45.");
+        assertThat(repository.listArrangementOverrides(servicePlanId))
+                .extracting(ArrangementOverrideRecord::effectiveKey)
+                .containsExactly("F");
+        assertThat(updated.updatedBy()).isEqualTo("music-director");
+
+        repository.archiveArrangementOverride(servicePlanId, override.arrangementOverrideId(), "planner");
+        assertThat(repository.listArrangementOverrides(servicePlanId)).isEmpty();
+        assertThat(repository.listArrangementOverrides(otherServicePlanId))
+                .extracting(ArrangementOverrideRecord::effectiveKey)
+                .containsExactly("A");
+    }
+
     private UUID insertServicePlan() {
         return jdbcTemplate.queryForObject(
                 """
@@ -270,7 +385,11 @@ class JdbcRehearsalWorkflowRepositoryIntegrationTest {
 
     private String currentReadiness(UUID servicePlanId) {
         return jdbcTemplate.queryForObject(
-                "SELECT readiness_state_code FROM service_rehearsal_workflow_states WHERE service_plan_id = :servicePlanId",
+                """
+                SELECT readiness_state_code
+                FROM service_rehearsal_workflow_states
+                WHERE service_plan_id = :servicePlanId
+                """,
                 Map.of("servicePlanId", servicePlanId),
                 String.class);
     }

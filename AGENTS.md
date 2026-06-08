@@ -72,6 +72,16 @@ The LLM must output:
 
 - All commits should follow conventional commits format
 
+### OpenAPI
+
+- The API contract under `apps/api/src/main/openapi/` is intentionally split into three YAML files:
+    - `cadentia-api.yaml` is the aggregate entrypoint used by the OpenAPI generator. Keep API metadata, tags, and top-level `$ref` indexes here.
+    - `cadentia-api.paths.yaml` owns path-item definitions. Add or update endpoint operations here, and point shared parameters, schemas, and responses to `cadentia-api.components.yaml` with relative `$ref` values.
+    - `cadentia-api.components.yaml` owns reusable parameters, security schemes, schemas, and shared responses.
+- Do not collapse the OpenAPI contract back into a single large file unless the generator/tooling requirement changes.
+- Prefer expanded YAML style over inline JSON-style objects or arrays in these files for readability in diffs.
+- After OpenAPI changes, run `mvn -pl apps/api -DskipTests generate-sources` to verify the aggregate spec still resolves and generated interfaces/models stay in sync.
+
 ### Java
 
 - In general, follow [Google Java Style](https://google.github.io/styleguide/javaguide.html), but use four spaces instead of two
