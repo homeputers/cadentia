@@ -1,0 +1,282 @@
+"/api/admin/import-candidates":
+  get:
+    tags:
+    - AdminReview
+    operationId: listAdminImportCandidates
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - CATALOG_EDITOR
+    - ADMIN
+    summary: List import candidates for admin triage queue
+    parameters:
+    - in: query
+      name: batchId
+      required: true
+      schema:
+        type: string
+        format: uuid
+    - in: query
+      name: status
+      schema:
+        "$ref": "../components/schemas/admin-review.yaml#/ImportCandidateStatus"
+    responses:
+      '200':
+        description: Candidate queue page.
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                "$ref": "../components/schemas/admin-review.yaml#/AdminImportCandidateQueueItem"
+"/api/admin/import-candidates/{candidateId}":
+  get:
+    tags:
+    - AdminReview
+    operationId: getAdminImportCandidateDetail
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - CATALOG_EDITOR
+    - ADMIN
+    summary: Fetch admin candidate detail with parser evidence
+    parameters:
+    - in: path
+      name: candidateId
+      required: true
+      schema:
+        type: string
+        format: uuid
+    responses:
+      '200':
+        description: Candidate detail.
+        content:
+          application/json:
+            schema:
+              "$ref": "../components/schemas/admin-review.yaml#/AdminImportCandidateDetailResponse"
+      '404':
+        description: Candidate not found.
+"/api/admin/import-candidates/{candidateId}/duplicates":
+  get:
+    tags:
+    - AdminReview
+    operationId: getAdminImportCandidateDuplicates
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - CATALOG_EDITOR
+    - ADMIN
+    summary: Fetch ranked duplicate matches for a candidate
+    parameters:
+    - in: path
+      name: candidateId
+      required: true
+      schema:
+        type: string
+        format: uuid
+    responses:
+      '200':
+        description: Duplicate matches.
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                "$ref": "../components/schemas/admin-review.yaml#/AdminDuplicateMatch"
+"/api/admin/import-candidates/{candidateId}/audit-history":
+  get:
+    tags:
+    - AdminReview
+    operationId: getAdminImportCandidateAuditHistory
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - CATALOG_EDITOR
+    - ADMIN
+    summary: Fetch append-only audit history for an import candidate
+    parameters:
+    - in: path
+      name: candidateId
+      required: true
+      schema:
+        type: string
+        format: uuid
+    responses:
+      '200':
+        description: Audit history entries.
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                "$ref": "../components/schemas/admin-review.yaml#/AdminAuditHistoryItem"
+"/api/admin/import-candidates/{candidateId}/moderation-flags":
+  post:
+    tags:
+    - AdminReview
+    operationId: openAdminModerationFlag
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - CATALOG_EDITOR
+    - ADMIN
+    summary: Open a moderation flag for an import candidate
+    parameters:
+    - in: path
+      name: candidateId
+      required: true
+      schema:
+        type: string
+        format: uuid
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            "$ref": "../components/schemas/admin-review.yaml#/OpenModerationFlagRequest"
+    responses:
+      '200':
+        description: Created moderation flag.
+        content:
+          application/json:
+            schema:
+              "$ref": "../components/schemas/admin-review.yaml#/ModerationFlagResponse"
+"/api/admin/moderation-flags/{flagId}/assign":
+  post:
+    tags:
+    - AdminReview
+    operationId: assignAdminModerationFlag
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - CATALOG_EDITOR
+    - ADMIN
+    summary: Assign a moderation flag to a reviewer
+    parameters:
+    - in: path
+      name: flagId
+      required: true
+      schema:
+        type: string
+        format: uuid
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            "$ref": "../components/schemas/admin-review.yaml#/AssignModerationFlagRequest"
+    responses:
+      '200':
+        description: Updated moderation flag.
+        content:
+          application/json:
+            schema:
+              "$ref": "../components/schemas/admin-review.yaml#/ModerationFlagResponse"
+"/api/admin/moderation-flags/{flagId}/resolve":
+  post:
+    tags:
+    - AdminReview
+    operationId: resolveAdminModerationFlag
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - CATALOG_EDITOR
+    - ADMIN
+    summary: Resolve a moderation flag
+    parameters:
+    - in: path
+      name: flagId
+      required: true
+      schema:
+        type: string
+        format: uuid
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            "$ref": "../components/schemas/admin-review.yaml#/ResolveModerationFlagRequest"
+    responses:
+      '200':
+        description: Updated moderation flag.
+        content:
+          application/json:
+            schema:
+              "$ref": "../components/schemas/admin-review.yaml#/ModerationFlagResponse"
+"/api/admin/moderation-flags/{flagId}/escalate":
+  post:
+    tags:
+    - AdminReview
+    operationId: escalateAdminModerationFlag
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - CATALOG_EDITOR
+    - ADMIN
+    summary: Escalate a moderation flag
+    parameters:
+    - in: path
+      name: flagId
+      required: true
+      schema:
+        type: string
+        format: uuid
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            "$ref": "../components/schemas/admin-review.yaml#/EscalateModerationFlagRequest"
+    responses:
+      '200':
+        description: Updated moderation flag.
+        content:
+          application/json:
+            schema:
+              "$ref": "../components/schemas/admin-review.yaml#/ModerationFlagResponse"
+"/api/admin/rollback-previews":
+  post:
+    tags:
+    - AdminReview
+    operationId: createAdminRollbackPreview
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - ADMIN
+    summary: Create rollback preview for a target entity
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            "$ref": "../components/schemas/admin-review.yaml#/CreateRollbackPreviewRequest"
+    responses:
+      '200':
+        description: Rollback preview.
+        content:
+          application/json:
+            schema:
+              "$ref": "../components/schemas/admin-review.yaml#/RollbackPreviewResponse"
+"/api/admin/rollbacks":
+  post:
+    tags:
+    - AdminReview
+    operationId: executeAdminRollback
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - ADMIN
+    summary: Execute a previously previewed rollback
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            "$ref": "../components/schemas/admin-review.yaml#/ExecuteRollbackRequest"
+    responses:
+      '200':
+        description: Rollback execution result.
+        content:
+          application/json:
+            schema:
+              "$ref": "../components/schemas/admin-review.yaml#/RollbackExecutionResponse"

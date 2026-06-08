@@ -1,0 +1,952 @@
+NaturalLanguageSetlistRequest:
+  type: object
+  additionalProperties: false
+  required:
+  - text
+  properties:
+    text:
+      type: string
+      minLength: 1
+      maxLength: 5000
+      description: Raw natural-language user request to extract into the intent contract.
+      example: Build a thanksgiving set around Psalm 100 with 4 praise songs and 2
+        worship songs.
+GenerateSetlistRequest:
+  type: object
+  additionalProperties: false
+  required:
+  - verseText
+  - counts
+  - keyPolicy
+  - tempoPolicy
+  properties:
+    verseText:
+      type: string
+      minLength: 1
+      description: Scripture text or reference that frames the setlist.
+      example: Psalm 100
+    scriptureReferences:
+      type: array
+      description: Optional normalized scripture references explicitly provided or
+        confidently extracted.
+      items:
+        type: string
+      default: []
+      example:
+      - Psalm 100
+    themeHints:
+      type: array
+      description: Optional controlled or free-form theme hints extracted from the
+        user prompt.
+      items:
+        type: string
+      default: []
+      example:
+      - thanksgiving
+    counts:
+      "$ref": "#/SetlistCounts"
+    keyPolicy:
+      "$ref": "#/KeyPolicy"
+    tempoPolicy:
+      "$ref": "#/TempoPolicy"
+    language:
+      type: string
+      nullable: true
+      description: Requested language when supplied by the user.
+      example: Spanish
+    energyArc:
+      type: string
+      nullable: true
+      enum:
+      - steady
+      - rising
+      - falling
+      - low_to_high
+      - high_to_low
+      description: Requested energy shape when supplied by the user.
+    excludedSongs:
+      type: array
+      description: User-provided exclusions by title or catalog reference; never selected
+        by the LLM.
+      items:
+        type: string
+      default: []
+      example:
+      - Example Song To Avoid
+    serviceTeamContext:
+      "$ref": "#/RecommendationServiceTeamContext"
+    teamConstraints:
+      "$ref": "#/ExplicitRecommendationTeamConstraints"
+    serviceMoment:
+      type: string
+      nullable: true
+      enum:
+      - opening
+      - communion
+      - response
+      - altar_call
+      - sending
+      - other
+      description: Controlled service moment when supplied by the user.
+    explanationAudience:
+      type: string
+      nullable: true
+      enum:
+      - public
+      - worship_leader
+      - admin
+      default: public
+      description: Requested explanation visibility mode. Admin mode requires an authorized
+        admin authority and never changes recommendation selection, ordering, or scores.
+    includeAdminDiagnostics:
+      type: boolean
+      default: false
+      description: Requests admin-only diagnostics such as candidate exclusions, near
+        misses, hard-filter reasons, score ranges, tie-break details, and constraint-relaxation
+        rationale. Ignored unless explanationAudience is admin and the caller is authorized.
+RecommendationServiceTeamContext:
+  type: object
+  nullable: true
+  additionalProperties: false
+  description: Backend-resolved service/team context reference. The LLM intent agent
+    must not invent or alter this value, and profile configuration decides how it
+    affects recommendations.
+  properties:
+    servicePlanId:
+      type: string
+      format: uuid
+    servicePlanBlockId:
+      type: string
+      format: uuid
+      nullable: true
+RecommendationTeamAssignment:
+  type: object
+  additionalProperties: false
+  required:
+  - musicianId
+  - status
+  - availableForService
+  properties:
+    musicianId:
+      type: string
+      format: uuid
+    status:
+      type: string
+      enum:
+      - REQUESTED
+      - TENTATIVE
+      - ACCEPTED
+      - DECLINED
+      - UNAVAILABLE
+      - SUBSTITUTE
+    availableForService:
+      type: boolean
+    roleCodes:
+      type: array
+      default: []
+      items:
+        type: string
+    instrumentCodes:
+      type: array
+      default: []
+      items:
+        type: string
+    vocalPartCodes:
+      type: array
+      default: []
+      items:
+        type: string
+    instrumentSkillRanks:
+      type: object
+      additionalProperties:
+        type: integer
+    vocalSkillRanks:
+      type: object
+      additionalProperties:
+        type: integer
+    comfortableLowMidiNote:
+      type: integer
+      nullable: true
+      minimum: 0
+      maximum: 127
+    comfortableHighMidiNote:
+      type: integer
+      nullable: true
+      minimum: 0
+      maximum: 127
+RecommendationArrangementTeamRequirement:
+  type: object
+  additionalProperties: false
+  properties:
+    requiredSlots:
+      type: array
+      default: []
+      items:
+        "$ref": "#/RecommendationTeamRequirementSlot"
+    optionalSlots:
+      type: array
+      default: []
+      items:
+        "$ref": "#/RecommendationTeamRequirementSlot"
+    vocalConfiguration:
+      type: string
+      nullable: true
+    vocalConfigurationRequired:
+      type: boolean
+      default: false
+    leadVocalLowMidiNote:
+      type: integer
+      nullable: true
+      minimum: 0
+      maximum: 127
+    leadVocalHighMidiNote:
+      type: integer
+      nullable: true
+      minimum: 0
+      maximum: 127
+    requiredBackingVocalCount:
+      type: integer
+      minimum: 0
+      default: 0
+RecommendationTeamRequirementSlot:
+  type: object
+  additionalProperties: false
+  properties:
+    roleCode:
+      type: string
+      nullable: true
+    instrumentCode:
+      type: string
+      nullable: true
+    vocalPartCode:
+      type: string
+      nullable: true
+    minimumSkillRank:
+      type: integer
+      minimum: 0
+      default: 0
+    minimumCount:
+      type: integer
+      minimum: 1
+      default: 1
+SetlistCounts:
+  type: object
+  additionalProperties: false
+  required:
+  - praise
+  - worship
+  properties:
+    praise:
+      type: integer
+      format: int32
+      minimum: 0
+      maximum: 25
+      default: 10
+    worship:
+      type: integer
+      format: int32
+      minimum: 0
+      maximum: 25
+      default: 5
+KeyPolicy:
+  type: object
+  additionalProperties: false
+  required:
+  - preferSameKey
+  - allowRelativeMajorMinor
+  - maxKeyCenters
+  properties:
+    preferSameKey:
+      type: boolean
+      default: true
+    allowRelativeMajorMinor:
+      type: boolean
+      default: true
+    maxKeyCenters:
+      type: integer
+      format: int32
+      minimum: 1
+      maximum: 12
+      default: 2
+TempoPolicy:
+  type: object
+  additionalProperties: false
+  required:
+  - maxJumpBpm
+  properties:
+    maxJumpBpm:
+      type: integer
+      format: int32
+      minimum: 1
+      maximum: 60
+      default: 12
+RecommendationExplanation:
+  type: object
+  additionalProperties: false
+  description: 'Versioned, deterministic explanation payload for a recommendation
+    response. Schema version `recommendation_explanation.v1` is additive-compatible
+    only: optional fields and enum values may be added within v1, but existing public
+    field names, meanings, and required fields are not removed or renamed. Breaking
+    changes require a new schemaVersion and a migration window. Facts are produced
+    by the Recommendation Engine from scoring, policy, transition, and approved catalog
+    evidence; they are never generated by an LLM or supplied by the client as rationale.'
+  required:
+  - schemaName
+  - schemaVersion
+  - generatedBy
+  - requestId
+  - recommendationResultId
+  - scoringProfileVersion
+  - catalogSnapshotVersion
+  - generatedAt
+  - requestPolicySummary
+  - deterministicTieBreaks
+  - selectedSongs
+  - adjacentTransitions
+  - setLevel
+  - warnings
+  - diagnostics
+  properties:
+    schemaName:
+      type: string
+      enum:
+      - recommendation_explanation
+    schemaVersion:
+      type: string
+      enum:
+      - recommendation_explanation.v1
+    generatedBy:
+      type: string
+      enum:
+      - RecommendationEngine
+      description: Explicit boundary marker; explanation facts are generated by REng,
+        not an LLM.
+    requestId:
+      type: string
+      minLength: 1
+      maxLength: 120
+    correlationId:
+      type: string
+      minLength: 1
+      maxLength: 120
+    recommendationResultId:
+      type: string
+      minLength: 1
+      maxLength: 120
+    setlistId:
+      type: string
+      minLength: 1
+      maxLength: 120
+    scoringProfileVersion:
+      type: string
+      minLength: 1
+      maxLength: 120
+      description: Version of the deterministic scoring profile used for selection
+        and ordering.
+    catalogSnapshotVersion:
+      type: string
+      minLength: 1
+      maxLength: 120
+      description: Catalog snapshot/version used for candidate retrieval, scoring,
+        and evidence references.
+    generatedAt:
+      type: string
+      format: date-time
+    requestPolicySummary:
+      "$ref": "#/RecommendationRequestPolicySummary"
+    deterministicTieBreaks:
+      type: array
+      description: Populated only for deterministic tie-break rules that affected
+        ordering or selection.
+      items:
+        "$ref": "#/RecommendationTieBreakFact"
+    selectedSongs:
+      type: array
+      description: Explanation entries for selected song/arrangement result items.
+      items:
+        "$ref": "#/RecommendationExplanationEntry"
+    adjacentTransitions:
+      type: array
+      description: Directional explanation entries for adjacent result-item transitions.
+      items:
+        "$ref": "#/RecommendationExplanationEntry"
+    setLevel:
+      type: array
+      description: Whole-set explanations such as counts, key centers, tempo policy,
+        theme coverage, and energy arc.
+      items:
+        "$ref": "#/RecommendationExplanationEntry"
+    warnings:
+      type: array
+      description: User-safe warnings for insufficient catalog coverage, relaxed constraints,
+        or low-confidence metadata.
+      items:
+        "$ref": "#/RecommendationExplanationEntry"
+    diagnostics:
+      type: array
+      description: Audience-partitioned diagnostics; admin-only entries must be redacted
+        from public responses.
+      items:
+        "$ref": "#/RecommendationExplanationEntry"
+RecommendationRequestPolicySummary:
+  type: object
+  additionalProperties: false
+  required:
+  - counts
+  - keyPolicy
+  - tempoPolicy
+  - themeHints
+  - scriptureReferences
+  - appliedDefaults
+  properties:
+    counts:
+      "$ref": "#/SetlistCounts"
+    keyPolicy:
+      "$ref": "#/KeyPolicy"
+    tempoPolicy:
+      "$ref": "#/TempoPolicy"
+    themeHints:
+      type: array
+      items:
+        type: string
+    scriptureReferences:
+      type: array
+      items:
+        type: string
+    language:
+      type: string
+      nullable: true
+    energyArc:
+      type: string
+      nullable: true
+    serviceMoment:
+      type: string
+      nullable: true
+    appliedDefaults:
+      type: array
+      description: Request-policy fields defaulted by backend contract before recommendation.
+      items:
+        type: string
+RecommendationTieBreakFact:
+  type: object
+  additionalProperties: false
+  required:
+  - rule
+  - direction
+  - affectedResultIds
+  - values
+  - reasonCode
+  properties:
+    rule:
+      type: string
+      minLength: 1
+      maxLength: 120
+      example: arrangement_id
+    direction:
+      type: string
+      enum:
+      - asc
+      - desc
+    affectedResultIds:
+      type: array
+      minItems: 1
+      items:
+        type: string
+    values:
+      type: object
+      additionalProperties: true
+      description: Scalar tie-break values keyed by result/item identifier.
+    reasonCode:
+      "$ref": "#/RecommendationExplanationCode"
+RecommendationExplanationEntry:
+  type: object
+  additionalProperties: false
+  required:
+  - code
+  - severity
+  - scope
+  - audience
+  - subject
+  - templateKey
+  - values
+  - evidence
+  properties:
+    code:
+      "$ref": "#/RecommendationExplanationCode"
+    severity:
+      type: string
+      enum:
+      - info
+      - warning
+      - blocked
+    scope:
+      "$ref": "#/RecommendationExplanationScope"
+    audience:
+      type: string
+      enum:
+      - public
+      - worship_leader
+      - admin
+    subject:
+      "$ref": "#/RecommendationExplanationSubject"
+    templateKey:
+      type: string
+      minLength: 1
+      maxLength: 120
+      description: Stable localization key; rendered prose is not source-of-truth.
+    defaultText:
+      type: string
+      maxLength: 280
+      description: Optional fallback copy only; clients must use structured fields
+        for logic and tests.
+    values:
+      type: object
+      additionalProperties: true
+      description: Scalar template values keyed by stable machine-readable names.
+    evidence:
+      type: array
+      minItems: 1
+      maxItems: 20
+      items:
+        "$ref": "#/RecommendationExplanationEvidence"
+    scoreImpact:
+      type: number
+      format: double
+RecommendationExplanationScope:
+  type: string
+  enum:
+  - selected_song
+  - adjacent_transition
+  - set_level
+  - warning
+  - diagnostic
+RecommendationExplanationSubject:
+  type: object
+  additionalProperties: false
+  required:
+  - type
+  - id
+  properties:
+    type:
+      type: string
+      enum:
+      - song
+      - arrangement
+      - transition
+      - set
+      - candidate
+      - policy
+      - catalog
+    id:
+      type: string
+      minLength: 1
+      maxLength: 120
+    itemId:
+      type: string
+      maxLength: 120
+    songId:
+      type: string
+      maxLength: 120
+    arrangementId:
+      type: string
+      maxLength: 120
+    sourceItemId:
+      type: string
+      maxLength: 120
+    targetItemId:
+      type: string
+      maxLength: 120
+    sourceArrangementId:
+      type: string
+      maxLength: 120
+    targetArrangementId:
+      type: string
+      maxLength: 120
+RecommendationExplanationEvidence:
+  type: object
+  additionalProperties: false
+  required:
+  - type
+  - ref
+  properties:
+    type:
+      type: string
+      enum:
+      - catalog
+      - request
+      - score
+      - transition
+      - approval
+      - provenance
+      - policy
+      - diagnostic
+    ref:
+      type: string
+      minLength: 1
+      maxLength: 240
+    field:
+      type: string
+      maxLength: 120
+    confidence:
+      type: number
+      format: double
+      minimum: 0
+      maximum: 1
+RecommendationExplanationCode:
+  type: string
+  description: Governed recommendation explanation reason code. Codes are backend-owned,
+    stable for recommendation_explanation.v1 clients, and rendered through registry
+    localization keys rather than client-invented prose.
+  enum:
+  - ROLE_FIT
+  - APPROVAL_ELIGIBLE
+  - THEME_MATCH
+  - SCRIPTURE_MATCH
+  - SCORE_COMPONENT_MUSICAL_FIT
+  - SCORE_COMPONENT_ENERGY_FIT
+  - METADATA_LOW_CONFIDENCE
+  - FEEDBACK_TUNING
+  - SAME_KEY_TRANSITION
+  - RELATIVE_KEY_TRANSITION
+  - CLOSE_KEY_TRANSITION
+  - MODULATION_PENALTY
+  - TEMPO_POLICY_OK
+  - METER_COMPATIBLE
+  - ENERGY_ARC_MATCH
+  - SET_ENERGY_ARC_MATCH
+  - COUNT_TARGET_MET
+  - KEY_CENTER_POLICY_MET
+  - THEME_COVERAGE
+  - REQUEST_DEFAULTS_APPLIED
+  - DETERMINISTIC_TIE_BREAK_APPLIED
+  - INSUFFICIENT_CANDIDATES
+  - LOW_CONFIDENCE_METADATA_PRESENT
+  - EXCLUDED_APPROVAL_GATE
+  - EXCLUDED_MISSING_PROVENANCE
+  - EXCLUDED_LICENSING_CONCERN
+  - EXCLUDED_INACTIVE_ARRANGEMENT
+  - EXCLUDED_DUPLICATE_ARRANGEMENT
+  - EXCLUDED_KEY_CENTER_LIMIT
+  - EXCLUDED_TEMPO_POLICY
+  - EXCLUDED_WEAKER_SCORE
+  - EXCLUDED_QUOTA_FILLED
+SetlistProposalResponse:
+  type: object
+  additionalProperties: false
+  required:
+  - status
+  - auditMessages
+  properties:
+    status:
+      type: string
+      description: Machine-readable proposal status.
+      example: PENDING_CATALOG_IMPLEMENTATION
+    requestId:
+      type: string
+      description: Server-assigned request identifier for audits and support correlation.
+      example: req-2026-06-03-001
+    correlationId:
+      type: string
+      description: Optional trace or caller correlation identifier propagated through
+        recommendation processing.
+      example: corr-2026-06-03-001
+    recommendationResultId:
+      type: string
+      description: Stable identifier for this recommendation result when song selection
+        has been evaluated.
+      example: rec-result-001
+    auditMessages:
+      type: array
+      description: Transparent safety and processing messages for the proposal.
+      items:
+        type: string
+      example:
+      - Recommendation Engine scaffold accepted the structured request.
+      - No songs were selected because catalog retrieval is not implemented yet.
+    explanation:
+      "$ref": "#/RecommendationExplanation"
+SetlistProvenanceType:
+  type: string
+  enum:
+  - GENERATED_BASELINE
+  - MANUAL_EDIT
+SetlistItemChangeType:
+  type: string
+  enum:
+  - UNCHANGED
+  - ADDED
+  - REMOVED
+  - REORDERED
+  - REPLACED
+  - TRANSPOSED
+SetlistVersionStatus:
+  type: string
+  enum:
+  - DRAFT
+  - PUBLISHED
+  - LOCKED
+SetlistEditOperation:
+  type: object
+  additionalProperties: false
+  required:
+  - action
+  properties:
+    action:
+      type: string
+      enum:
+      - REORDER
+      - REPLACE
+      - REMOVE
+      - TRANSPOSE
+    itemId:
+      type: string
+      format: uuid
+      description: Target item in base version for remove, replace, and transpose.
+    fromPosition:
+      type: integer
+      format: int32
+      minimum: 1
+    toPosition:
+      type: integer
+      format: int32
+      minimum: 1
+    replacementArrangementId:
+      type: string
+      format: uuid
+      description: Catalog arrangement reference for replace action.
+    semitoneDelta:
+      type: integer
+      format: int32
+      minimum: -12
+      maximum: 12
+      description: Relative transpose adjustment for transpose action.
+SetlistVersionListResponse:
+  type: object
+  additionalProperties: false
+  required:
+  - setlistId
+  - versions
+  properties:
+    setlistId:
+      type: string
+      format: uuid
+    versions:
+      type: array
+      items:
+        "$ref": "#/SetlistVersionSummary"
+SetlistVersionSummary:
+  type: object
+  additionalProperties: false
+  required:
+  - versionId
+  - versionNumber
+  - provenance
+  - status
+  properties:
+    versionId:
+      type: string
+      format: uuid
+    parentVersionId:
+      type: string
+      format: uuid
+      nullable: true
+    versionNumber:
+      type: integer
+      format: int32
+      minimum: 1
+    provenance:
+      "$ref": "#/SetlistProvenanceType"
+    status:
+      "$ref": "#/SetlistVersionStatus"
+    createdAt:
+      type: string
+      format: date-time
+SetlistVersionEnvelope:
+  type: object
+  additionalProperties: false
+  required:
+  - setlistId
+  - version
+  properties:
+    setlistId:
+      type: string
+      format: uuid
+    version:
+      "$ref": "#/SetlistVersion"
+SetlistVersion:
+  allOf:
+  - "$ref": "#/SetlistVersionSummary"
+  - type: object
+    additionalProperties: false
+    required:
+    - engineProfileVersion
+    - items
+    properties:
+      request:
+        "$ref": "#/GenerateSetlistRequest"
+      parsedIntent:
+        type: object
+        additionalProperties: true
+      engineProfileVersion:
+        type: string
+      explanationFacts:
+        type: array
+        items:
+          type: string
+      items:
+        type: array
+        items:
+          "$ref": "#/SetlistVersionItem"
+      readinessSummary:
+        "$ref": "./service-plans.yaml#/ReadinessSummary"
+SetlistVersionItem:
+  type: object
+  additionalProperties: false
+  required:
+  - itemId
+  - position
+  - catalogArrangementId
+  - provenance
+  properties:
+    itemId:
+      type: string
+      format: uuid
+    position:
+      type: integer
+      format: int32
+      minimum: 1
+    catalogArrangementId:
+      type: string
+      format: uuid
+    transposeSemitones:
+      type: integer
+      format: int32
+      minimum: -12
+      maximum: 12
+      default: 0
+    provenance:
+      "$ref": "#/SetlistProvenanceType"
+SetlistVersionDiffResponse:
+  type: object
+  additionalProperties: false
+  required:
+  - setlistId
+  - fromVersionId
+  - toVersionId
+  - operations
+  properties:
+    setlistId:
+      type: string
+      format: uuid
+    fromVersionId:
+      type: string
+      format: uuid
+    toVersionId:
+      type: string
+      format: uuid
+    operations:
+      type: array
+      items:
+        "$ref": "#/SetlistDiffOperation"
+SetlistDiffOperation:
+  type: object
+  additionalProperties: false
+  required:
+  - action
+  properties:
+    action:
+      "$ref": "#/SetlistItemChangeType"
+    itemId:
+      type: string
+      format: uuid
+    previousPosition:
+      type: integer
+      format: int32
+      minimum: 1
+    newPosition:
+      type: integer
+      format: int32
+      minimum: 1
+    previousCatalogArrangementId:
+      type: string
+      format: uuid
+    newCatalogArrangementId:
+      type: string
+      format: uuid
+    previousTransposeSemitones:
+      type: integer
+      format: int32
+    newTransposeSemitones:
+      type: integer
+      format: int32
+ExplicitRecommendationTeamConstraints:
+  type: object
+  nullable: true
+  additionalProperties: false
+  description: Explicit, validated team-capability snapshot supplied by trusted backend/UI
+    code. Private comments, contact fields, and readiness notes are intentionally
+    absent.
+  properties:
+    servicePlanId:
+      type: string
+      format: uuid
+      nullable: true
+    incompleteTeam:
+      type: boolean
+      default: false
+    assignments:
+      type: array
+      default: []
+      items:
+        "$ref": "#/RecommendationTeamAssignment"
+    arrangementRequirements:
+      type: object
+      additionalProperties:
+        "$ref": "#/RecommendationArrangementTeamRequirement"
+CreateSetlistBaselineRequest:
+  type: object
+  additionalProperties: false
+  required:
+  - request
+  - parsedIntent
+  - engineProfileVersion
+  - items
+  properties:
+    request:
+      "$ref": "#/GenerateSetlistRequest"
+    parsedIntent:
+      description: Validated intent payload used by recommendation.
+      type: object
+      additionalProperties: true
+    engineProfileVersion:
+      type: string
+      minLength: 1
+      description: Recommendation/scoring engine profile version identifier.
+      example: scoring-profile-2026.05.1
+    explanationFacts:
+      type: array
+      items:
+        type: string
+    items:
+      type: array
+      minItems: 1
+      items:
+        "$ref": "#/SetlistVersionItem"
+CommitSetlistEditsRequest:
+  type: object
+  additionalProperties: false
+  required:
+  - baseVersionId
+  - operations
+  properties:
+    baseVersionId:
+      type: string
+      format: uuid
+    actorId:
+      type: string
+      description: Authenticated actor committing the edit transaction.
+    operations:
+      type: array
+      minItems: 1
+      items:
+        "$ref": "#/SetlistEditOperation"

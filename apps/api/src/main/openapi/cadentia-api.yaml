@@ -4,412 +4,415 @@ info:
   version: 0.1.0
   description: API-first contract for Cadentia setlist recommendation workflows.
 servers:
-  - url: http://localhost:8080
-    description: Local development server
+- url: http://localhost:8080
+  description: Local development server
 tags:
-  - name: Setlists
-    description: Deterministic setlist proposal operations
-  - name: AdminReview
-    description: Admin import-governance review operations
-  - name: FeedbackTuning
-    description: Recommendation feedback ingestion, inspection, and reset operations
-  - name: ServicePlans
-    description: Service-plan composition, attachment, and publish operations
-  - name: TeamAssignments
-    description: Worship team service, rehearsal, and musician assignment workflows
-  - name: RehearsalWorkflow
-    description: Versioned rehearsal workflow, readiness, issue, note, and service-scoped override operations
+- name: Setlists
+  description: Deterministic setlist proposal operations
+- name: AdminReview
+  description: Admin import-governance review operations
+- name: FeedbackTuning
+  description: Recommendation feedback ingestion, inspection, and reset operations
+- name: ServicePlans
+  description: Service-plan composition, attachment, and publish operations
+- name: TeamAssignments
+  description: Worship team service, rehearsal, and musician assignment workflows
+- name: RehearsalWorkflow
+  description: Versioned rehearsal workflow, readiness, issue, note, and service-scoped
+    override operations
 paths:
-  /feedback/events:
-    $ref: './cadentia-api.paths.yaml#/~1feedback~1events'
-  /feedback/scopes/{scopeLayer}/{scopeId}/state:
-    $ref: './cadentia-api.paths.yaml#/~1feedback~1scopes~1{scopeLayer}~1{scopeId}~1state'
-  /feedback/scopes/{scopeLayer}/{scopeId}/reset:
-    $ref: './cadentia-api.paths.yaml#/~1feedback~1scopes~1{scopeLayer}~1{scopeId}~1reset'
-  /api/admin/import-candidates:
-    $ref: './cadentia-api.paths.yaml#/~1api~1admin~1import-candidates'
-  /api/admin/import-candidates/{candidateId}:
-    $ref: './cadentia-api.paths.yaml#/~1api~1admin~1import-candidates~1{candidateId}'
-  /api/admin/import-candidates/{candidateId}/duplicates:
-    $ref: './cadentia-api.paths.yaml#/~1api~1admin~1import-candidates~1{candidateId}~1duplicates'
-  /api/admin/import-candidates/{candidateId}/audit-history:
-    $ref: './cadentia-api.paths.yaml#/~1api~1admin~1import-candidates~1{candidateId}~1audit-history'
-  /api/admin/import-candidates/{candidateId}/moderation-flags:
-    $ref: './cadentia-api.paths.yaml#/~1api~1admin~1import-candidates~1{candidateId}~1moderation-flags'
-  /api/admin/moderation-flags/{flagId}/assign:
-    $ref: './cadentia-api.paths.yaml#/~1api~1admin~1moderation-flags~1{flagId}~1assign'
-  /api/admin/moderation-flags/{flagId}/resolve:
-    $ref: './cadentia-api.paths.yaml#/~1api~1admin~1moderation-flags~1{flagId}~1resolve'
-  /api/admin/moderation-flags/{flagId}/escalate:
-    $ref: './cadentia-api.paths.yaml#/~1api~1admin~1moderation-flags~1{flagId}~1escalate'
-  /api/admin/rollback-previews:
-    $ref: './cadentia-api.paths.yaml#/~1api~1admin~1rollback-previews'
-  /api/admin/rollbacks:
-    $ref: './cadentia-api.paths.yaml#/~1api~1admin~1rollbacks'
-  /conversation-sessions/{sessionId}:
-    $ref: './cadentia-api.paths.yaml#/~1conversation-sessions~1{sessionId}'
-  /conversation-sessions/{sessionId}/slots:
-    $ref: './cadentia-api.paths.yaml#/~1conversation-sessions~1{sessionId}~1slots'
-  /conversation-sessions/{sessionId}/clarify:
-    $ref: './cadentia-api.paths.yaml#/~1conversation-sessions~1{sessionId}~1clarify'
-  /conversation-sessions/{sessionId}/confirm:
-    $ref: './cadentia-api.paths.yaml#/~1conversation-sessions~1{sessionId}~1confirm'
-  /conversation-sessions/{sessionId}/cancel:
-    $ref: './cadentia-api.paths.yaml#/~1conversation-sessions~1{sessionId}~1cancel'
-  /conversation-sessions/{sessionId}/recover:
-    $ref: './cadentia-api.paths.yaml#/~1conversation-sessions~1{sessionId}~1recover'
-  /setlists/proposals/natural-language:
-    $ref: './cadentia-api.paths.yaml#/~1setlists~1proposals~1natural-language'
-  /setlists/proposals:
-    $ref: './cadentia-api.paths.yaml#/~1setlists~1proposals'
-  /setlists:
-    $ref: './cadentia-api.paths.yaml#/~1setlists'
-  /setlists/{setlistId}/edits:
-    $ref: './cadentia-api.paths.yaml#/~1setlists~1{setlistId}~1edits'
-  /setlists/{setlistId}/versions:
-    $ref: './cadentia-api.paths.yaml#/~1setlists~1{setlistId}~1versions'
-  /setlists/{setlistId}/versions/{versionId}:
-    $ref: './cadentia-api.paths.yaml#/~1setlists~1{setlistId}~1versions~1{versionId}'
-  /setlists/{setlistId}/versions/{fromVersionId}/diff/{toVersionId}:
-    $ref: './cadentia-api.paths.yaml#/~1setlists~1{setlistId}~1versions~1{fromVersionId}~1diff~1{toVersionId}'
-  /service-plans:
-    $ref: './cadentia-api.paths.yaml#/~1service-plans'
-  /service-plans/{servicePlanId}:
-    $ref: './cadentia-api.paths.yaml#/~1service-plans~1{servicePlanId}'
-  /service-plans/{servicePlanId}/blocks:order:
-    $ref: './cadentia-api.paths.yaml#/~1service-plans~1{servicePlanId}~1blocks:order'
-  /service-plans/{servicePlanId}/setlist-attachments:
-    $ref: './cadentia-api.paths.yaml#/~1service-plans~1{servicePlanId}~1setlist-attachments'
-  /service-plans/{servicePlanId}/publish:
-    $ref: './cadentia-api.paths.yaml#/~1service-plans~1{servicePlanId}~1publish'
-  /team-assignments/services/{servicePlanId}:
-    $ref: './cadentia-api.paths.yaml#/~1team-assignments~1services~1{servicePlanId}'
-  /team-assignments/services/{servicePlanId}/assignments/{assignmentId}:
-    $ref: './cadentia-api.paths.yaml#/~1team-assignments~1services~1{servicePlanId}~1assignments~1{assignmentId}'
-  /team-assignments/services/{servicePlanId}/assignments/{assignmentId}/substitute:
-    $ref: './cadentia-api.paths.yaml#/~1team-assignments~1services~1{servicePlanId}~1assignments~1{assignmentId}~1substitute'
-  /team-assignments/services/{servicePlanId}/reorder:
-    $ref: './cadentia-api.paths.yaml#/~1team-assignments~1services~1{servicePlanId}~1reorder'
-  /team-assignments/rehearsals/{rehearsalEventId}:
-    $ref: './cadentia-api.paths.yaml#/~1team-assignments~1rehearsals~1{rehearsalEventId}'
-  /team-assignments/services/{servicePlanId}/song-overrides:
-    $ref: './cadentia-api.paths.yaml#/~1team-assignments~1services~1{servicePlanId}~1song-overrides'
-  /team-assignments/services/{servicePlanId}/roster:
-    $ref: './cadentia-api.paths.yaml#/~1team-assignments~1services~1{servicePlanId}~1roster'
-  /team-assignments/musicians/{musicianId}/upcoming:
-    $ref: './cadentia-api.paths.yaml#/~1team-assignments~1musicians~1{musicianId}~1upcoming'
-  /team-assignments/services/{servicePlanId}/history:
-    $ref: './cadentia-api.paths.yaml#/~1team-assignments~1services~1{servicePlanId}~1history'
-  /service-plans/{servicePlanId}/rehearsal-sessions:
-    $ref: './cadentia-api.paths.yaml#/~1service-plans~1{servicePlanId}~1rehearsal-sessions'
-  /service-plans/{servicePlanId}/rehearsal-sessions/{rehearsalSessionId}:
-    $ref: './cadentia-api.paths.yaml#/~1service-plans~1{servicePlanId}~1rehearsal-sessions~1{rehearsalSessionId}'
-  /service-plans/{servicePlanId}/workflow-status:
-    $ref: './cadentia-api.paths.yaml#/~1service-plans~1{servicePlanId}~1workflow-status'
-  /service-plans/{servicePlanId}/readiness-transitions:
-    $ref: './cadentia-api.paths.yaml#/~1service-plans~1{servicePlanId}~1readiness-transitions'
-  /service-plans/{servicePlanId}/notes:
-    $ref: './cadentia-api.paths.yaml#/~1service-plans~1{servicePlanId}~1notes'
-  /service-plans/{servicePlanId}/issues:
-    $ref: './cadentia-api.paths.yaml#/~1service-plans~1{servicePlanId}~1issues'
-  /service-plans/{servicePlanId}/issues/{issueId}/status:
-    $ref: './cadentia-api.paths.yaml#/~1service-plans~1{servicePlanId}~1issues~1{issueId}~1status'
-  /service-plans/{servicePlanId}/issues/{issueId}/actions:
-    $ref: './cadentia-api.paths.yaml#/~1service-plans~1{servicePlanId}~1issues~1{issueId}~1actions'
-  /service-plans/{servicePlanId}/issue-actions/{actionId}/owner:
-    $ref: './cadentia-api.paths.yaml#/~1service-plans~1{servicePlanId}~1issue-actions~1{actionId}~1owner'
-  /service-plans/{servicePlanId}/issue-actions/{actionId}/status:
-    $ref: './cadentia-api.paths.yaml#/~1service-plans~1{servicePlanId}~1issue-actions~1{actionId}~1status'
-  /service-plans/{servicePlanId}/arrangement-overrides:
-    $ref: './cadentia-api.paths.yaml#/~1service-plans~1{servicePlanId}~1arrangement-overrides'
-  /service-plans/{servicePlanId}/arrangement-overrides/{arrangementOverrideId}:
-    $ref: './cadentia-api.paths.yaml#/~1service-plans~1{servicePlanId}~1arrangement-overrides~1{arrangementOverrideId}'
+  "/feedback/events":
+    "$ref": "./paths/feedback-tuning.yaml#/~1feedback~1events"
+  "/feedback/scopes/{scopeLayer}/{scopeId}/state":
+    "$ref": "./paths/feedback-tuning.yaml#/~1feedback~1scopes~1{scopeLayer}~1{scopeId}~1state"
+  "/feedback/scopes/{scopeLayer}/{scopeId}/reset":
+    "$ref": "./paths/feedback-tuning.yaml#/~1feedback~1scopes~1{scopeLayer}~1{scopeId}~1reset"
+  "/api/admin/import-candidates":
+    "$ref": "./paths/admin-review.yaml#/~1api~1admin~1import-candidates"
+  "/api/admin/import-candidates/{candidateId}":
+    "$ref": "./paths/admin-review.yaml#/~1api~1admin~1import-candidates~1{candidateId}"
+  "/api/admin/import-candidates/{candidateId}/duplicates":
+    "$ref": "./paths/admin-review.yaml#/~1api~1admin~1import-candidates~1{candidateId}~1duplicates"
+  "/api/admin/import-candidates/{candidateId}/audit-history":
+    "$ref": "./paths/admin-review.yaml#/~1api~1admin~1import-candidates~1{candidateId}~1audit-history"
+  "/api/admin/import-candidates/{candidateId}/moderation-flags":
+    "$ref": "./paths/admin-review.yaml#/~1api~1admin~1import-candidates~1{candidateId}~1moderation-flags"
+  "/api/admin/moderation-flags/{flagId}/assign":
+    "$ref": "./paths/admin-review.yaml#/~1api~1admin~1moderation-flags~1{flagId}~1assign"
+  "/api/admin/moderation-flags/{flagId}/resolve":
+    "$ref": "./paths/admin-review.yaml#/~1api~1admin~1moderation-flags~1{flagId}~1resolve"
+  "/api/admin/moderation-flags/{flagId}/escalate":
+    "$ref": "./paths/admin-review.yaml#/~1api~1admin~1moderation-flags~1{flagId}~1escalate"
+  "/api/admin/rollback-previews":
+    "$ref": "./paths/admin-review.yaml#/~1api~1admin~1rollback-previews"
+  "/api/admin/rollbacks":
+    "$ref": "./paths/admin-review.yaml#/~1api~1admin~1rollbacks"
+  "/conversation-sessions/{sessionId}":
+    "$ref": "./paths/conversation-sessions.yaml#/~1conversation-sessions~1{sessionId}"
+  "/conversation-sessions/{sessionId}/slots":
+    "$ref": "./paths/conversation-sessions.yaml#/~1conversation-sessions~1{sessionId}~1slots"
+  "/conversation-sessions/{sessionId}/clarify":
+    "$ref": "./paths/conversation-sessions.yaml#/~1conversation-sessions~1{sessionId}~1clarify"
+  "/conversation-sessions/{sessionId}/confirm":
+    "$ref": "./paths/conversation-sessions.yaml#/~1conversation-sessions~1{sessionId}~1confirm"
+  "/conversation-sessions/{sessionId}/cancel":
+    "$ref": "./paths/conversation-sessions.yaml#/~1conversation-sessions~1{sessionId}~1cancel"
+  "/conversation-sessions/{sessionId}/recover":
+    "$ref": "./paths/conversation-sessions.yaml#/~1conversation-sessions~1{sessionId}~1recover"
+  "/setlists/proposals/natural-language":
+    "$ref": "./paths/setlists.yaml#/~1setlists~1proposals~1natural-language"
+  "/setlists/proposals":
+    "$ref": "./paths/setlists.yaml#/~1setlists~1proposals"
+  "/setlists":
+    "$ref": "./paths/setlists.yaml#/~1setlists"
+  "/setlists/{setlistId}/edits":
+    "$ref": "./paths/setlists.yaml#/~1setlists~1{setlistId}~1edits"
+  "/setlists/{setlistId}/versions":
+    "$ref": "./paths/setlists.yaml#/~1setlists~1{setlistId}~1versions"
+  "/setlists/{setlistId}/versions/{versionId}":
+    "$ref": "./paths/setlists.yaml#/~1setlists~1{setlistId}~1versions~1{versionId}"
+  "/setlists/{setlistId}/versions/{fromVersionId}/diff/{toVersionId}":
+    "$ref": "./paths/setlists.yaml#/~1setlists~1{setlistId}~1versions~1{fromVersionId}~1diff~1{toVersionId}"
+  "/service-plans":
+    "$ref": "./paths/service-plans.yaml#/~1service-plans"
+  "/service-plans/{servicePlanId}":
+    "$ref": "./paths/service-plans.yaml#/~1service-plans~1{servicePlanId}"
+  "/service-plans/{servicePlanId}/blocks:order":
+    "$ref": "./paths/service-plans.yaml#/~1service-plans~1{servicePlanId}~1blocks:order"
+  "/service-plans/{servicePlanId}/setlist-attachments":
+    "$ref": "./paths/service-plans.yaml#/~1service-plans~1{servicePlanId}~1setlist-attachments"
+  "/service-plans/{servicePlanId}/publish":
+    "$ref": "./paths/service-plans.yaml#/~1service-plans~1{servicePlanId}~1publish"
+  "/team-assignments/services/{servicePlanId}":
+    "$ref": "./paths/team-assignments.yaml#/~1team-assignments~1services~1{servicePlanId}"
+  "/team-assignments/services/{servicePlanId}/assignments/{assignmentId}":
+    "$ref": "./paths/team-assignments.yaml#/~1team-assignments~1services~1{servicePlanId}~1assignments~1{assignmentId}"
+  "/team-assignments/services/{servicePlanId}/assignments/{assignmentId}/substitute":
+    "$ref": "./paths/team-assignments.yaml#/~1team-assignments~1services~1{servicePlanId}~1assignments~1{assignmentId}~1substitute"
+  "/team-assignments/services/{servicePlanId}/reorder":
+    "$ref": "./paths/team-assignments.yaml#/~1team-assignments~1services~1{servicePlanId}~1reorder"
+  "/team-assignments/rehearsals/{rehearsalEventId}":
+    "$ref": "./paths/team-assignments.yaml#/~1team-assignments~1rehearsals~1{rehearsalEventId}"
+  "/team-assignments/services/{servicePlanId}/song-overrides":
+    "$ref": "./paths/team-assignments.yaml#/~1team-assignments~1services~1{servicePlanId}~1song-overrides"
+  "/team-assignments/services/{servicePlanId}/roster":
+    "$ref": "./paths/team-assignments.yaml#/~1team-assignments~1services~1{servicePlanId}~1roster"
+  "/team-assignments/musicians/{musicianId}/upcoming":
+    "$ref": "./paths/team-assignments.yaml#/~1team-assignments~1musicians~1{musicianId}~1upcoming"
+  "/team-assignments/services/{servicePlanId}/history":
+    "$ref": "./paths/team-assignments.yaml#/~1team-assignments~1services~1{servicePlanId}~1history"
+  "/service-plans/{servicePlanId}/rehearsal-sessions":
+    "$ref": "./paths/rehearsal-workflow.yaml#/~1service-plans~1{servicePlanId}~1rehearsal-sessions"
+  "/service-plans/{servicePlanId}/rehearsal-sessions/{rehearsalSessionId}":
+    "$ref": "./paths/rehearsal-workflow.yaml#/~1service-plans~1{servicePlanId}~1rehearsal-sessions~1{rehearsalSessionId}"
+  "/service-plans/{servicePlanId}/workflow-status":
+    "$ref": "./paths/rehearsal-workflow.yaml#/~1service-plans~1{servicePlanId}~1workflow-status"
+  "/service-plans/{servicePlanId}/readiness-transitions":
+    "$ref": "./paths/rehearsal-workflow.yaml#/~1service-plans~1{servicePlanId}~1readiness-transitions"
+  "/service-plans/{servicePlanId}/notes":
+    "$ref": "./paths/rehearsal-workflow.yaml#/~1service-plans~1{servicePlanId}~1notes"
+  "/service-plans/{servicePlanId}/issues":
+    "$ref": "./paths/rehearsal-workflow.yaml#/~1service-plans~1{servicePlanId}~1issues"
+  "/service-plans/{servicePlanId}/issues/{issueId}/status":
+    "$ref": "./paths/rehearsal-workflow.yaml#/~1service-plans~1{servicePlanId}~1issues~1{issueId}~1status"
+  "/service-plans/{servicePlanId}/issues/{issueId}/actions":
+    "$ref": "./paths/rehearsal-workflow.yaml#/~1service-plans~1{servicePlanId}~1issues~1{issueId}~1actions"
+  "/service-plans/{servicePlanId}/issue-actions/{actionId}/owner":
+    "$ref": "./paths/rehearsal-workflow.yaml#/~1service-plans~1{servicePlanId}~1issue-actions~1{actionId}~1owner"
+  "/service-plans/{servicePlanId}/issue-actions/{actionId}/status":
+    "$ref": "./paths/rehearsal-workflow.yaml#/~1service-plans~1{servicePlanId}~1issue-actions~1{actionId}~1status"
+  "/service-plans/{servicePlanId}/arrangement-overrides":
+    "$ref": "./paths/rehearsal-workflow.yaml#/~1service-plans~1{servicePlanId}~1arrangement-overrides"
+  "/service-plans/{servicePlanId}/arrangement-overrides/{arrangementOverrideId}":
+    "$ref": "./paths/rehearsal-workflow.yaml#/~1service-plans~1{servicePlanId}~1arrangement-overrides~1{arrangementOverrideId}"
 components:
   parameters:
     ServicePlanId:
-      $ref: './cadentia-api.components.yaml#/parameters/ServicePlanId'
+      "$ref": "./components/shared/parameters.yaml#/ServicePlanId"
     AssignmentId:
-      $ref: './cadentia-api.components.yaml#/parameters/AssignmentId'
+      "$ref": "./components/shared/parameters.yaml#/AssignmentId"
     RehearsalSessionId:
-      $ref: './cadentia-api.components.yaml#/parameters/RehearsalSessionId'
+      "$ref": "./components/shared/parameters.yaml#/RehearsalSessionId"
     IssueId:
-      $ref: './cadentia-api.components.yaml#/parameters/IssueId'
+      "$ref": "./components/shared/parameters.yaml#/IssueId"
     ActionId:
-      $ref: './cadentia-api.components.yaml#/parameters/ActionId'
+      "$ref": "./components/shared/parameters.yaml#/ActionId"
     ArrangementOverrideId:
-      $ref: './cadentia-api.components.yaml#/parameters/ArrangementOverrideId'
+      "$ref": "./components/shared/parameters.yaml#/ArrangementOverrideId"
   securitySchemes:
     bearerAuth:
-      $ref: './cadentia-api.components.yaml#/securitySchemes/bearerAuth'
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
   schemas:
     TeamMusicianRoleCode:
-      $ref: './cadentia-api.components.yaml#/schemas/TeamMusicianRoleCode'
+      "$ref": "./components/schemas/team-assignments.yaml#/TeamMusicianRoleCode"
     TeamInstrumentCode:
-      $ref: './cadentia-api.components.yaml#/schemas/TeamInstrumentCode'
+      "$ref": "./components/schemas/team-assignments.yaml#/TeamInstrumentCode"
     TeamVocalPartCode:
-      $ref: './cadentia-api.components.yaml#/schemas/TeamVocalPartCode'
+      "$ref": "./components/schemas/team-assignments.yaml#/TeamVocalPartCode"
     TeamAssignmentStatusCode:
-      $ref: './cadentia-api.components.yaml#/schemas/TeamAssignmentStatusCode'
+      "$ref": "./components/schemas/team-assignments.yaml#/TeamAssignmentStatusCode"
     TeamAssignmentType:
-      $ref: './cadentia-api.components.yaml#/schemas/TeamAssignmentType'
+      "$ref": "./components/schemas/team-assignments.yaml#/TeamAssignmentType"
     TeamServiceAssignmentRequest:
-      $ref: './cadentia-api.components.yaml#/schemas/TeamServiceAssignmentRequest'
+      "$ref": "./components/schemas/team-assignments.yaml#/TeamServiceAssignmentRequest"
     TeamServiceAssignmentResponse:
-      $ref: './cadentia-api.components.yaml#/schemas/TeamServiceAssignmentResponse'
+      "$ref": "./components/schemas/team-assignments.yaml#/TeamServiceAssignmentResponse"
     TeamRehearsalAssignmentRequest:
-      $ref: './cadentia-api.components.yaml#/schemas/TeamRehearsalAssignmentRequest'
+      "$ref": "./components/schemas/team-assignments.yaml#/TeamRehearsalAssignmentRequest"
     TeamRehearsalAssignmentResponse:
-      $ref: './cadentia-api.components.yaml#/schemas/TeamRehearsalAssignmentResponse'
+      "$ref": "./components/schemas/team-assignments.yaml#/TeamRehearsalAssignmentResponse"
     TeamSongAssignmentOverrideRequest:
-      $ref: './cadentia-api.components.yaml#/schemas/TeamSongAssignmentOverrideRequest'
+      "$ref": "./components/schemas/team-assignments.yaml#/TeamSongAssignmentOverrideRequest"
     TeamSongAssignmentOverrideResponse:
-      $ref: './cadentia-api.components.yaml#/schemas/TeamSongAssignmentOverrideResponse'
+      "$ref": "./components/schemas/team-assignments.yaml#/TeamSongAssignmentOverrideResponse"
     TeamSubstituteAssignmentRequest:
-      $ref: './cadentia-api.components.yaml#/schemas/TeamSubstituteAssignmentRequest'
+      "$ref": "./components/schemas/team-assignments.yaml#/TeamSubstituteAssignmentRequest"
     TeamReorderAssignmentsRequest:
-      $ref: './cadentia-api.components.yaml#/schemas/TeamReorderAssignmentsRequest'
+      "$ref": "./components/schemas/team-assignments.yaml#/TeamReorderAssignmentsRequest"
     TeamServiceRosterResponse:
-      $ref: './cadentia-api.components.yaml#/schemas/TeamServiceRosterResponse'
+      "$ref": "./components/schemas/team-assignments.yaml#/TeamServiceRosterResponse"
     TeamAssignmentHistoryResponse:
-      $ref: './cadentia-api.components.yaml#/schemas/TeamAssignmentHistoryResponse'
+      "$ref": "./components/schemas/team-assignments.yaml#/TeamAssignmentHistoryResponse"
     FeedbackOutcome:
-      $ref: './cadentia-api.components.yaml#/schemas/FeedbackOutcome'
+      "$ref": "./components/schemas/feedback-tuning.yaml#/FeedbackOutcome"
     FeedbackScopeLayer:
-      $ref: './cadentia-api.components.yaml#/schemas/FeedbackScopeLayer'
+      "$ref": "./components/schemas/feedback-tuning.yaml#/FeedbackScopeLayer"
     FeedbackReplacementReason:
-      $ref: './cadentia-api.components.yaml#/schemas/FeedbackReplacementReason'
+      "$ref": "./components/schemas/feedback-tuning.yaml#/FeedbackReplacementReason"
     CreateFeedbackEventRequest:
-      $ref: './cadentia-api.components.yaml#/schemas/CreateFeedbackEventRequest'
+      "$ref": "./components/schemas/feedback-tuning.yaml#/CreateFeedbackEventRequest"
     FeedbackEventResponse:
-      $ref: './cadentia-api.components.yaml#/schemas/FeedbackEventResponse'
+      "$ref": "./components/schemas/feedback-tuning.yaml#/FeedbackEventResponse"
     FeedbackScopeStateResponse:
-      $ref: './cadentia-api.components.yaml#/schemas/FeedbackScopeStateResponse'
+      "$ref": "./components/schemas/feedback-tuning.yaml#/FeedbackScopeStateResponse"
     FeedbackResetRequest:
-      $ref: './cadentia-api.components.yaml#/schemas/FeedbackResetRequest'
+      "$ref": "./components/schemas/feedback-tuning.yaml#/FeedbackResetRequest"
     FeedbackResetResponse:
-      $ref: './cadentia-api.components.yaml#/schemas/FeedbackResetResponse'
+      "$ref": "./components/schemas/feedback-tuning.yaml#/FeedbackResetResponse"
     NaturalLanguageSetlistRequest:
-      $ref: './cadentia-api.components.yaml#/schemas/NaturalLanguageSetlistRequest'
+      "$ref": "./components/schemas/setlists.yaml#/NaturalLanguageSetlistRequest"
     GenerateSetlistRequest:
-      $ref: './cadentia-api.components.yaml#/schemas/GenerateSetlistRequest'
+      "$ref": "./components/schemas/setlists.yaml#/GenerateSetlistRequest"
     RecommendationServiceTeamContext:
-      $ref: './cadentia-api.components.yaml#/schemas/RecommendationServiceTeamContext'
+      "$ref": "./components/schemas/setlists.yaml#/RecommendationServiceTeamContext"
     ExplicitRecommendationTeamConstraints:
-      $ref: './cadentia-api.components.yaml#/schemas/ExplicitRecommendationTeamConstraints'
+      "$ref": "./components/schemas/setlists.yaml#/ExplicitRecommendationTeamConstraints"
     RecommendationTeamAssignment:
-      $ref: './cadentia-api.components.yaml#/schemas/RecommendationTeamAssignment'
+      "$ref": "./components/schemas/setlists.yaml#/RecommendationTeamAssignment"
     RecommendationArrangementTeamRequirement:
-      $ref: './cadentia-api.components.yaml#/schemas/RecommendationArrangementTeamRequirement'
+      "$ref": "./components/schemas/setlists.yaml#/RecommendationArrangementTeamRequirement"
     RecommendationTeamRequirementSlot:
-      $ref: './cadentia-api.components.yaml#/schemas/RecommendationTeamRequirementSlot'
+      "$ref": "./components/schemas/setlists.yaml#/RecommendationTeamRequirementSlot"
     SetlistCounts:
-      $ref: './cadentia-api.components.yaml#/schemas/SetlistCounts'
+      "$ref": "./components/schemas/setlists.yaml#/SetlistCounts"
     KeyPolicy:
-      $ref: './cadentia-api.components.yaml#/schemas/KeyPolicy'
+      "$ref": "./components/schemas/setlists.yaml#/KeyPolicy"
     TempoPolicy:
-      $ref: './cadentia-api.components.yaml#/schemas/TempoPolicy'
+      "$ref": "./components/schemas/setlists.yaml#/TempoPolicy"
     RecommendationExplanation:
-      $ref: './cadentia-api.components.yaml#/schemas/RecommendationExplanation'
+      "$ref": "./components/schemas/setlists.yaml#/RecommendationExplanation"
     RecommendationRequestPolicySummary:
-      $ref: './cadentia-api.components.yaml#/schemas/RecommendationRequestPolicySummary'
+      "$ref": "./components/schemas/setlists.yaml#/RecommendationRequestPolicySummary"
     RecommendationTieBreakFact:
-      $ref: './cadentia-api.components.yaml#/schemas/RecommendationTieBreakFact'
+      "$ref": "./components/schemas/setlists.yaml#/RecommendationTieBreakFact"
     RecommendationExplanationEntry:
-      $ref: './cadentia-api.components.yaml#/schemas/RecommendationExplanationEntry'
+      "$ref": "./components/schemas/setlists.yaml#/RecommendationExplanationEntry"
     RecommendationExplanationScope:
-      $ref: './cadentia-api.components.yaml#/schemas/RecommendationExplanationScope'
+      "$ref": "./components/schemas/setlists.yaml#/RecommendationExplanationScope"
     RecommendationExplanationSubject:
-      $ref: './cadentia-api.components.yaml#/schemas/RecommendationExplanationSubject'
+      "$ref": "./components/schemas/setlists.yaml#/RecommendationExplanationSubject"
     RecommendationExplanationEvidence:
-      $ref: './cadentia-api.components.yaml#/schemas/RecommendationExplanationEvidence'
+      "$ref": "./components/schemas/setlists.yaml#/RecommendationExplanationEvidence"
     RecommendationExplanationCode:
-      $ref: './cadentia-api.components.yaml#/schemas/RecommendationExplanationCode'
+      "$ref": "./components/schemas/setlists.yaml#/RecommendationExplanationCode"
     SetlistProposalResponse:
-      $ref: './cadentia-api.components.yaml#/schemas/SetlistProposalResponse'
+      "$ref": "./components/schemas/setlists.yaml#/SetlistProposalResponse"
     SetlistProvenanceType:
-      $ref: './cadentia-api.components.yaml#/schemas/SetlistProvenanceType'
+      "$ref": "./components/schemas/setlists.yaml#/SetlistProvenanceType"
     SetlistItemChangeType:
-      $ref: './cadentia-api.components.yaml#/schemas/SetlistItemChangeType'
+      "$ref": "./components/schemas/setlists.yaml#/SetlistItemChangeType"
     SetlistVersionStatus:
-      $ref: './cadentia-api.components.yaml#/schemas/SetlistVersionStatus'
+      "$ref": "./components/schemas/setlists.yaml#/SetlistVersionStatus"
     CreateSetlistBaselineRequest:
-      $ref: './cadentia-api.components.yaml#/schemas/CreateSetlistBaselineRequest'
+      "$ref": "./components/schemas/setlists.yaml#/CreateSetlistBaselineRequest"
     CommitSetlistEditsRequest:
-      $ref: './cadentia-api.components.yaml#/schemas/CommitSetlistEditsRequest'
+      "$ref": "./components/schemas/setlists.yaml#/CommitSetlistEditsRequest"
     SetlistEditOperation:
-      $ref: './cadentia-api.components.yaml#/schemas/SetlistEditOperation'
+      "$ref": "./components/schemas/setlists.yaml#/SetlistEditOperation"
     SetlistVersionListResponse:
-      $ref: './cadentia-api.components.yaml#/schemas/SetlistVersionListResponse'
+      "$ref": "./components/schemas/setlists.yaml#/SetlistVersionListResponse"
     SetlistVersionSummary:
-      $ref: './cadentia-api.components.yaml#/schemas/SetlistVersionSummary'
+      "$ref": "./components/schemas/setlists.yaml#/SetlistVersionSummary"
     SetlistVersionEnvelope:
-      $ref: './cadentia-api.components.yaml#/schemas/SetlistVersionEnvelope'
+      "$ref": "./components/schemas/setlists.yaml#/SetlistVersionEnvelope"
     SetlistVersion:
-      $ref: './cadentia-api.components.yaml#/schemas/SetlistVersion'
+      "$ref": "./components/schemas/setlists.yaml#/SetlistVersion"
     SetlistVersionItem:
-      $ref: './cadentia-api.components.yaml#/schemas/SetlistVersionItem'
+      "$ref": "./components/schemas/setlists.yaml#/SetlistVersionItem"
     SetlistVersionDiffResponse:
-      $ref: './cadentia-api.components.yaml#/schemas/SetlistVersionDiffResponse'
+      "$ref": "./components/schemas/setlists.yaml#/SetlistVersionDiffResponse"
     SetlistDiffOperation:
-      $ref: './cadentia-api.components.yaml#/schemas/SetlistDiffOperation'
+      "$ref": "./components/schemas/setlists.yaml#/SetlistDiffOperation"
     ConversationState:
-      $ref: './cadentia-api.components.yaml#/schemas/ConversationState'
+      "$ref": "./components/schemas/conversation-sessions.yaml#/ConversationState"
     SlotValueSource:
-      $ref: './cadentia-api.components.yaml#/schemas/SlotValueSource'
+      "$ref": "./components/schemas/conversation-sessions.yaml#/SlotValueSource"
     ChannelType:
-      $ref: './cadentia-api.components.yaml#/schemas/ChannelType'
+      "$ref": "./components/schemas/conversation-sessions.yaml#/ChannelType"
     ConversationSlotSource:
-      $ref: './cadentia-api.components.yaml#/schemas/ConversationSlotSource'
+      "$ref": "./components/schemas/conversation-sessions.yaml#/ConversationSlotSource"
     ConversationRevisionEvent:
-      $ref: './cadentia-api.components.yaml#/schemas/ConversationRevisionEvent'
+      "$ref": "./components/schemas/conversation-sessions.yaml#/ConversationRevisionEvent"
     ConversationSessionStateResponse:
-      $ref: './cadentia-api.components.yaml#/schemas/ConversationSessionStateResponse'
+      "$ref": "./components/schemas/conversation-sessions.yaml#/ConversationSessionStateResponse"
     ConversationSlotUpdateRequest:
-      $ref: './cadentia-api.components.yaml#/schemas/ConversationSlotUpdateRequest'
+      "$ref": "./components/schemas/conversation-sessions.yaml#/ConversationSlotUpdateRequest"
     ConversationClarificationRequest:
-      $ref: './cadentia-api.components.yaml#/schemas/ConversationClarificationRequest'
+      "$ref": "./components/schemas/conversation-sessions.yaml#/ConversationClarificationRequest"
     ConversationConfirmRequest:
-      $ref: './cadentia-api.components.yaml#/schemas/ConversationConfirmRequest'
+      "$ref": "./components/schemas/conversation-sessions.yaml#/ConversationConfirmRequest"
     ConversationRecoveryResponse:
-      $ref: './cadentia-api.components.yaml#/schemas/ConversationRecoveryResponse'
+      "$ref": "./components/schemas/conversation-sessions.yaml#/ConversationRecoveryResponse"
     ImportCandidateStatus:
-      $ref: './cadentia-api.components.yaml#/schemas/ImportCandidateStatus'
+      "$ref": "./components/schemas/admin-review.yaml#/ImportCandidateStatus"
     AdminImportCandidateQueueItem:
-      $ref: './cadentia-api.components.yaml#/schemas/AdminImportCandidateQueueItem'
+      "$ref": "./components/schemas/admin-review.yaml#/AdminImportCandidateQueueItem"
     AdminDuplicateMatch:
-      $ref: './cadentia-api.components.yaml#/schemas/AdminDuplicateMatch'
+      "$ref": "./components/schemas/admin-review.yaml#/AdminDuplicateMatch"
     AdminImportCandidateDetailResponse:
-      $ref: './cadentia-api.components.yaml#/schemas/AdminImportCandidateDetailResponse'
+      "$ref": "./components/schemas/admin-review.yaml#/AdminImportCandidateDetailResponse"
     AdminReviewHistoryItem:
-      $ref: './cadentia-api.components.yaml#/schemas/AdminReviewHistoryItem'
+      "$ref": "./components/schemas/admin-review.yaml#/AdminReviewHistoryItem"
     ModerationFlagType:
-      $ref: './cadentia-api.components.yaml#/schemas/ModerationFlagType'
+      "$ref": "./components/schemas/admin-review.yaml#/ModerationFlagType"
     ModerationFlagStatus:
-      $ref: './cadentia-api.components.yaml#/schemas/ModerationFlagStatus'
+      "$ref": "./components/schemas/admin-review.yaml#/ModerationFlagStatus"
     OpenModerationFlagRequest:
-      $ref: './cadentia-api.components.yaml#/schemas/OpenModerationFlagRequest'
+      "$ref": "./components/schemas/admin-review.yaml#/OpenModerationFlagRequest"
     AssignModerationFlagRequest:
-      $ref: './cadentia-api.components.yaml#/schemas/AssignModerationFlagRequest'
+      "$ref": "./components/schemas/admin-review.yaml#/AssignModerationFlagRequest"
     ResolveModerationFlagRequest:
-      $ref: './cadentia-api.components.yaml#/schemas/ResolveModerationFlagRequest'
+      "$ref": "./components/schemas/admin-review.yaml#/ResolveModerationFlagRequest"
     EscalateModerationFlagRequest:
-      $ref: './cadentia-api.components.yaml#/schemas/EscalateModerationFlagRequest'
+      "$ref": "./components/schemas/admin-review.yaml#/EscalateModerationFlagRequest"
     ModerationFlagResponse:
-      $ref: './cadentia-api.components.yaml#/schemas/ModerationFlagResponse'
+      "$ref": "./components/schemas/admin-review.yaml#/ModerationFlagResponse"
     RollbackTargetType:
-      $ref: './cadentia-api.components.yaml#/schemas/RollbackTargetType'
+      "$ref": "./components/schemas/admin-review.yaml#/RollbackTargetType"
     CreateRollbackPreviewRequest:
-      $ref: './cadentia-api.components.yaml#/schemas/CreateRollbackPreviewRequest'
+      "$ref": "./components/schemas/admin-review.yaml#/CreateRollbackPreviewRequest"
     RollbackImpactedRecord:
-      $ref: './cadentia-api.components.yaml#/schemas/RollbackImpactedRecord'
+      "$ref": "./components/schemas/admin-review.yaml#/RollbackImpactedRecord"
     RollbackPreviewResponse:
-      $ref: './cadentia-api.components.yaml#/schemas/RollbackPreviewResponse'
+      "$ref": "./components/schemas/admin-review.yaml#/RollbackPreviewResponse"
     ExecuteRollbackRequest:
-      $ref: './cadentia-api.components.yaml#/schemas/ExecuteRollbackRequest'
+      "$ref": "./components/schemas/admin-review.yaml#/ExecuteRollbackRequest"
     RollbackExecutionResponse:
-      $ref: './cadentia-api.components.yaml#/schemas/RollbackExecutionResponse'
+      "$ref": "./components/schemas/admin-review.yaml#/RollbackExecutionResponse"
     AdminAuditHistoryItem:
-      $ref: './cadentia-api.components.yaml#/schemas/AdminAuditHistoryItem'
+      "$ref": "./components/schemas/admin-review.yaml#/AdminAuditHistoryItem"
     RehearsalReadinessStateCode:
-      $ref: './cadentia-api.components.yaml#/schemas/RehearsalReadinessStateCode'
+      "$ref": "./components/schemas/rehearsal-workflow.yaml#/RehearsalReadinessStateCode"
     RehearsalWorkflowTargetTypeCode:
-      $ref: './cadentia-api.components.yaml#/schemas/RehearsalWorkflowTargetTypeCode'
+      "$ref": "./components/schemas/rehearsal-workflow.yaml#/RehearsalWorkflowTargetTypeCode"
     RehearsalIssueCategoryCode:
-      $ref: './cadentia-api.components.yaml#/schemas/RehearsalIssueCategoryCode'
+      "$ref": "./components/schemas/rehearsal-workflow.yaml#/RehearsalIssueCategoryCode"
     RehearsalIssueSeverityCode:
-      $ref: './cadentia-api.components.yaml#/schemas/RehearsalIssueSeverityCode'
+      "$ref": "./components/schemas/rehearsal-workflow.yaml#/RehearsalIssueSeverityCode"
     RehearsalIssueStatusCode:
-      $ref: './cadentia-api.components.yaml#/schemas/RehearsalIssueStatusCode'
+      "$ref": "./components/schemas/rehearsal-workflow.yaml#/RehearsalIssueStatusCode"
     RehearsalIssueActionStatusCode:
-      $ref: './cadentia-api.components.yaml#/schemas/RehearsalIssueActionStatusCode'
+      "$ref": "./components/schemas/rehearsal-workflow.yaml#/RehearsalIssueActionStatusCode"
     RehearsalIssueOwnerType:
-      $ref: './cadentia-api.components.yaml#/schemas/RehearsalIssueOwnerType'
+      "$ref": "./components/schemas/rehearsal-workflow.yaml#/RehearsalIssueOwnerType"
     RehearsalNoteVisibilityCode:
-      $ref: './cadentia-api.components.yaml#/schemas/RehearsalNoteVisibilityCode'
+      "$ref": "./components/schemas/rehearsal-workflow.yaml#/RehearsalNoteVisibilityCode"
     WorkflowProblemCode:
-      $ref: './cadentia-api.components.yaml#/schemas/WorkflowProblemCode'
+      "$ref": "./components/schemas/rehearsal-workflow.yaml#/WorkflowProblemCode"
     WorkflowProblemResponse:
-      $ref: './cadentia-api.components.yaml#/schemas/WorkflowProblemResponse'
+      "$ref": "./components/schemas/rehearsal-workflow.yaml#/WorkflowProblemResponse"
     RehearsalWorkflowTarget:
-      $ref: './cadentia-api.components.yaml#/schemas/RehearsalWorkflowTarget'
+      "$ref": "./components/schemas/rehearsal-workflow.yaml#/RehearsalWorkflowTarget"
     RehearsalSessionResponse:
-      $ref: './cadentia-api.components.yaml#/schemas/RehearsalSessionResponse'
+      "$ref": "./components/schemas/rehearsal-workflow.yaml#/RehearsalSessionResponse"
     CreateRehearsalSessionRequest:
-      $ref: './cadentia-api.components.yaml#/schemas/CreateRehearsalSessionRequest'
+      "$ref": "./components/schemas/rehearsal-workflow.yaml#/CreateRehearsalSessionRequest"
     UpdateRehearsalSessionRequest:
-      $ref: './cadentia-api.components.yaml#/schemas/UpdateRehearsalSessionRequest'
+      "$ref": "./components/schemas/rehearsal-workflow.yaml#/UpdateRehearsalSessionRequest"
     WorkflowStatusResponse:
-      $ref: './cadentia-api.components.yaml#/schemas/WorkflowStatusResponse'
+      "$ref": "./components/schemas/rehearsal-workflow.yaml#/WorkflowStatusResponse"
     ReadinessTransitionRequest:
-      $ref: './cadentia-api.components.yaml#/schemas/ReadinessTransitionRequest'
+      "$ref": "./components/schemas/rehearsal-workflow.yaml#/ReadinessTransitionRequest"
     ReadinessHistoryResponse:
-      $ref: './cadentia-api.components.yaml#/schemas/ReadinessHistoryResponse'
+      "$ref": "./components/schemas/service-plans.yaml#/ReadinessHistoryResponse"
     RehearsalNoteResponse:
-      $ref: './cadentia-api.components.yaml#/schemas/RehearsalNoteResponse'
+      "$ref": "./components/schemas/rehearsal-workflow.yaml#/RehearsalNoteResponse"
     CreateRehearsalNoteRequest:
-      $ref: './cadentia-api.components.yaml#/schemas/CreateRehearsalNoteRequest'
+      "$ref": "./components/schemas/rehearsal-workflow.yaml#/CreateRehearsalNoteRequest"
     RehearsalIssueActionOwner:
-      $ref: './cadentia-api.components.yaml#/schemas/RehearsalIssueActionOwner'
+      "$ref": "./components/schemas/rehearsal-workflow.yaml#/RehearsalIssueActionOwner"
     RehearsalIssueActionResponse:
-      $ref: './cadentia-api.components.yaml#/schemas/RehearsalIssueActionResponse'
+      "$ref": "./components/schemas/rehearsal-workflow.yaml#/RehearsalIssueActionResponse"
     RehearsalIssueResponse:
-      $ref: './cadentia-api.components.yaml#/schemas/RehearsalIssueResponse'
+      "$ref": "./components/schemas/rehearsal-workflow.yaml#/RehearsalIssueResponse"
     IssueHistoryResponse:
-      $ref: './cadentia-api.components.yaml#/schemas/IssueHistoryResponse'
+      "$ref": "./components/schemas/rehearsal-workflow.yaml#/IssueHistoryResponse"
     CreateRehearsalIssueRequest:
-      $ref: './cadentia-api.components.yaml#/schemas/CreateRehearsalIssueRequest'
+      "$ref": "./components/schemas/rehearsal-workflow.yaml#/CreateRehearsalIssueRequest"
     UpdateIssueStatusRequest:
-      $ref: './cadentia-api.components.yaml#/schemas/UpdateIssueStatusRequest'
+      "$ref": "./components/schemas/rehearsal-workflow.yaml#/UpdateIssueStatusRequest"
     CreateIssueActionRequest:
-      $ref: './cadentia-api.components.yaml#/schemas/CreateIssueActionRequest'
+      "$ref": "./components/schemas/rehearsal-workflow.yaml#/CreateIssueActionRequest"
     UpdateIssueActionOwnerRequest:
-      $ref: './cadentia-api.components.yaml#/schemas/UpdateIssueActionOwnerRequest'
+      "$ref": "./components/schemas/rehearsal-workflow.yaml#/UpdateIssueActionOwnerRequest"
     UpdateIssueActionStatusRequest:
-      $ref: './cadentia-api.components.yaml#/schemas/UpdateIssueActionStatusRequest'
+      "$ref": "./components/schemas/rehearsal-workflow.yaml#/UpdateIssueActionStatusRequest"
     ArrangementOverrideResponse:
-      $ref: './cadentia-api.components.yaml#/schemas/ArrangementOverrideResponse'
+      "$ref": "./components/schemas/rehearsal-workflow.yaml#/ArrangementOverrideResponse"
     CreateArrangementOverrideRequest:
-      $ref: './cadentia-api.components.yaml#/schemas/CreateArrangementOverrideRequest'
+      "$ref": "./components/schemas/rehearsal-workflow.yaml#/CreateArrangementOverrideRequest"
     UpdateArrangementOverrideRequest:
-      $ref: './cadentia-api.components.yaml#/schemas/UpdateArrangementOverrideRequest'
+      "$ref": "./components/schemas/rehearsal-workflow.yaml#/UpdateArrangementOverrideRequest"
     ServicePlanStatus:
-      $ref: './cadentia-api.components.yaml#/schemas/ServicePlanStatus'
+      "$ref": "./components/schemas/service-plans.yaml#/ServicePlanStatus"
     ServicePlanBlockType:
-      $ref: './cadentia-api.components.yaml#/schemas/ServicePlanBlockType'
+      "$ref": "./components/schemas/service-plans.yaml#/ServicePlanBlockType"
     ServicePlanBlockSourceType:
-      $ref: './cadentia-api.components.yaml#/schemas/ServicePlanBlockSourceType'
+      "$ref": "./components/schemas/service-plans.yaml#/ServicePlanBlockSourceType"
     ServicePlanSummary:
-      $ref: './cadentia-api.components.yaml#/schemas/ServicePlanSummary'
+      "$ref": "./components/schemas/service-plans.yaml#/ServicePlanSummary"
     CreateServicePlanRequest:
-      $ref: './cadentia-api.components.yaml#/schemas/CreateServicePlanRequest'
+      "$ref": "./components/schemas/service-plans.yaml#/CreateServicePlanRequest"
     UpdateServicePlanRequest:
-      $ref: './cadentia-api.components.yaml#/schemas/UpdateServicePlanRequest'
+      "$ref": "./components/schemas/service-plans.yaml#/UpdateServicePlanRequest"
     AttachSetlistVersionRequest:
-      $ref: './cadentia-api.components.yaml#/schemas/AttachSetlistVersionRequest'
+      "$ref": "./components/schemas/service-plans.yaml#/AttachSetlistVersionRequest"
     ServicePlanSetlistAttachmentResponse:
-      $ref: './cadentia-api.components.yaml#/schemas/ServicePlanSetlistAttachmentResponse'
+      "$ref": "./components/schemas/service-plans.yaml#/ServicePlanSetlistAttachmentResponse"
     ServicePlanBlockProvenance:
-      $ref: './cadentia-api.components.yaml#/schemas/ServicePlanBlockProvenance'
+      "$ref": "./components/schemas/service-plans.yaml#/ServicePlanBlockProvenance"
     ServicePlanBlock:
-      $ref: './cadentia-api.components.yaml#/schemas/ServicePlanBlock'
+      "$ref": "./components/schemas/service-plans.yaml#/ServicePlanBlock"
     ReorderServicePlanBlocksRequest:
-      $ref: './cadentia-api.components.yaml#/schemas/ReorderServicePlanBlocksRequest'
+      "$ref": "./components/schemas/service-plans.yaml#/ReorderServicePlanBlocksRequest"
     ServicePlanEffectiveSequenceSnapshot:
-      $ref: './cadentia-api.components.yaml#/schemas/ServicePlanEffectiveSequenceSnapshot'
+      "$ref": "./components/schemas/service-plans.yaml#/ServicePlanEffectiveSequenceSnapshot"
     ServicePlanResponse:
-      $ref: './cadentia-api.components.yaml#/schemas/ServicePlanResponse'
+      "$ref": "./components/schemas/service-plans.yaml#/ServicePlanResponse"
     ReadinessStatus:
-      $ref: './cadentia-api.components.yaml#/schemas/ReadinessStatus'
+      "$ref": "./components/schemas/service-plans.yaml#/ReadinessStatus"
     ReadinessSummary:
-      $ref: './cadentia-api.components.yaml#/schemas/ReadinessSummary'
+      "$ref": "./components/schemas/service-plans.yaml#/ReadinessSummary"
     PublishServicePlanRequest:
-      $ref: './cadentia-api.components.yaml#/schemas/PublishServicePlanRequest'
+      "$ref": "./components/schemas/service-plans.yaml#/PublishServicePlanRequest"
     ServicePlanPublishResponse:
-      $ref: './cadentia-api.components.yaml#/schemas/ServicePlanPublishResponse'
+      "$ref": "./components/schemas/service-plans.yaml#/ServicePlanPublishResponse"
   responses:
     InvalidWorkflowPayload:
-      $ref: './cadentia-api.components.yaml#/responses/InvalidWorkflowPayload'
+      "$ref": "./components/shared/responses.yaml#/InvalidWorkflowPayload"
     BlockedWorkflowTransition:
-      $ref: './cadentia-api.components.yaml#/responses/BlockedWorkflowTransition'
+      "$ref": "./components/shared/responses.yaml#/BlockedWorkflowTransition"
     WorkflowVersionConflict:
-      $ref: './cadentia-api.components.yaml#/responses/WorkflowVersionConflict'
+      "$ref": "./components/shared/responses.yaml#/WorkflowVersionConflict"

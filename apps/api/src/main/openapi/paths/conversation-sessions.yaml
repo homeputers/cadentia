@@ -1,0 +1,192 @@
+"/conversation-sessions/{sessionId}":
+  get:
+    tags:
+    - Setlists
+    operationId: getConversationSessionState
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - WORSHIP_LEADER
+    - CATALOG_EDITOR
+    - DOCTRINAL_REVIEWER
+    - MUSICAL_REVIEWER
+    - ADMIN
+    summary: Read current conversation session state
+    parameters:
+    - in: path
+      name: sessionId
+      required: true
+      schema:
+        type: string
+        format: uuid
+    responses:
+      '200':
+        description: Session state snapshot.
+        content:
+          application/json:
+            schema:
+              "$ref": "../components/schemas/conversation-sessions.yaml#/ConversationSessionStateResponse"
+      '404':
+        description: Session not found.
+"/conversation-sessions/{sessionId}/slots":
+  patch:
+    tags:
+    - Setlists
+    operationId: updateConversationSessionSlots
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - WORSHIP_LEADER
+    - CATALOG_EDITOR
+    - DOCTRINAL_REVIEWER
+    - MUSICAL_REVIEWER
+    - ADMIN
+    summary: Merge slot updates into conversation session state
+    parameters:
+    - in: path
+      name: sessionId
+      required: true
+      schema:
+        type: string
+        format: uuid
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            "$ref": "../components/schemas/conversation-sessions.yaml#/ConversationSlotUpdateRequest"
+    responses:
+      '200':
+        description: Updated state snapshot after deterministic merge.
+        content:
+          application/json:
+            schema:
+              "$ref": "../components/schemas/conversation-sessions.yaml#/ConversationSessionStateResponse"
+      '409':
+        description: Conflict or invalid state transition.
+"/conversation-sessions/{sessionId}/clarify":
+  post:
+    tags:
+    - Setlists
+    operationId: requestConversationClarification
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - WORSHIP_LEADER
+    - CATALOG_EDITOR
+    - DOCTRINAL_REVIEWER
+    - MUSICAL_REVIEWER
+    - ADMIN
+    summary: Submit clarification answer and return updated state
+    parameters:
+    - in: path
+      name: sessionId
+      required: true
+      schema:
+        type: string
+        format: uuid
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            "$ref": "../components/schemas/conversation-sessions.yaml#/ConversationClarificationRequest"
+    responses:
+      '200':
+        description: Updated session state after clarification merge.
+        content:
+          application/json:
+            schema:
+              "$ref": "../components/schemas/conversation-sessions.yaml#/ConversationSessionStateResponse"
+"/conversation-sessions/{sessionId}/confirm":
+  post:
+    tags:
+    - Setlists
+    operationId: confirmConversationSession
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - WORSHIP_LEADER
+    - CATALOG_EDITOR
+    - DOCTRINAL_REVIEWER
+    - MUSICAL_REVIEWER
+    - ADMIN
+    summary: Confirm normalized request and transition to CONFIRMED
+    parameters:
+    - in: path
+      name: sessionId
+      required: true
+      schema:
+        type: string
+        format: uuid
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            "$ref": "../components/schemas/conversation-sessions.yaml#/ConversationConfirmRequest"
+    responses:
+      '200':
+        description: Confirmed session state.
+        content:
+          application/json:
+            schema:
+              "$ref": "../components/schemas/conversation-sessions.yaml#/ConversationSessionStateResponse"
+      '409':
+        description: Session not ready to confirm.
+"/conversation-sessions/{sessionId}/cancel":
+  post:
+    tags:
+    - Setlists
+    operationId: cancelConversationSession
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - WORSHIP_LEADER
+    - CATALOG_EDITOR
+    - DOCTRINAL_REVIEWER
+    - MUSICAL_REVIEWER
+    - ADMIN
+    summary: Cancel active session
+    parameters:
+    - in: path
+      name: sessionId
+      required: true
+      schema:
+        type: string
+        format: uuid
+    responses:
+      '200':
+        description: Cancelled session state.
+        content:
+          application/json:
+            schema:
+              "$ref": "../components/schemas/conversation-sessions.yaml#/ConversationSessionStateResponse"
+"/conversation-sessions/{sessionId}/recover":
+  post:
+    tags:
+    - Setlists
+    operationId: recoverConversationSession
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - WORSHIP_LEADER
+    - CATALOG_EDITOR
+    - DOCTRINAL_REVIEWER
+    - MUSICAL_REVIEWER
+    - ADMIN
+    summary: Recover from an expired session
+    parameters:
+    - in: path
+      name: sessionId
+      required: true
+      schema:
+        type: string
+        format: uuid
+    responses:
+      '200':
+        description: Recovery options and a restarted or resumed state.
+        content:
+          application/json:
+            schema:
+              "$ref": "../components/schemas/conversation-sessions.yaml#/ConversationRecoveryResponse"

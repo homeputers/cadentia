@@ -1,0 +1,382 @@
+TeamMusicianRoleCode:
+  type: string
+  enum:
+  - WORSHIP_LEADER
+  - VOCALIST
+  - INSTRUMENTALIST
+  - MUSIC_DIRECTOR
+  - TECH
+TeamInstrumentCode:
+  type: string
+  enum:
+  - ACOUSTIC_GUITAR
+  - ELECTRIC_GUITAR
+  - PIANO
+  - KEYS
+  - BASS
+  - DRUMS
+  - PERCUSSION
+  - BRASS
+  - WINDS
+  - OTHER
+TeamVocalPartCode:
+  type: string
+  enum:
+  - LEAD
+  - ALTO
+  - TENOR
+  - BARITONE
+  - SOPRANO
+  - BACKGROUND
+TeamAssignmentStatusCode:
+  type: string
+  enum:
+  - REQUESTED
+  - TENTATIVE
+  - ACCEPTED
+  - DECLINED
+  - UNAVAILABLE
+  - SUBSTITUTE
+TeamAssignmentType:
+  type: string
+  enum:
+  - SERVICE
+  - REHEARSAL
+  - SONG_OVERRIDE
+TeamServiceAssignmentRequest:
+  type: object
+  additionalProperties: false
+  required:
+  - musicianId
+  - roleCode
+  - statusCode
+  properties:
+    musicianId:
+      type: string
+      format: uuid
+    roleCode:
+      "$ref": "#/TeamMusicianRoleCode"
+    instrumentCode:
+      "$ref": "#/TeamInstrumentCode"
+    vocalPartCode:
+      "$ref": "#/TeamVocalPartCode"
+    statusCode:
+      "$ref": "#/TeamAssignmentStatusCode"
+    assignmentOrder:
+      type: integer
+      minimum: 0
+      nullable: true
+    overrideUnavailable:
+      type: boolean
+      default: false
+    reasonCode:
+      type: string
+      nullable: true
+    reference:
+      type: string
+      nullable: true
+TeamServiceAssignmentResponse:
+  type: object
+  required:
+  - assignmentId
+  - servicePlanId
+  - musicianId
+  - roleCode
+  - statusCode
+  properties:
+    assignmentId:
+      type: string
+      format: uuid
+    servicePlanId:
+      type: string
+      format: uuid
+    musicianId:
+      type: string
+      format: uuid
+    roleCode:
+      "$ref": "#/TeamMusicianRoleCode"
+    instrumentCode:
+      "$ref": "#/TeamInstrumentCode"
+    vocalPartCode:
+      "$ref": "#/TeamVocalPartCode"
+    statusCode:
+      "$ref": "#/TeamAssignmentStatusCode"
+    assignmentOrder:
+      type: integer
+      minimum: 0
+      nullable: true
+    substituteForAssignmentId:
+      type: string
+      format: uuid
+      nullable: true
+TeamRehearsalAssignmentRequest:
+  type: object
+  additionalProperties: false
+  required:
+  - servicePlanId
+  - musicianId
+  - roleCode
+  - statusCode
+  properties:
+    servicePlanId:
+      type: string
+      format: uuid
+    serviceAssignmentId:
+      type: string
+      format: uuid
+      nullable: true
+    musicianId:
+      type: string
+      format: uuid
+    roleCode:
+      "$ref": "#/TeamMusicianRoleCode"
+    instrumentCode:
+      "$ref": "#/TeamInstrumentCode"
+    vocalPartCode:
+      "$ref": "#/TeamVocalPartCode"
+    statusCode:
+      "$ref": "#/TeamAssignmentStatusCode"
+    substituteForAssignmentId:
+      type: string
+      format: uuid
+      nullable: true
+    overrideUnavailable:
+      type: boolean
+      default: false
+    reasonCode:
+      type: string
+      nullable: true
+    reference:
+      type: string
+      nullable: true
+TeamRehearsalAssignmentResponse:
+  type: object
+  required:
+  - assignmentId
+  - rehearsalEventId
+  - servicePlanId
+  - musicianId
+  - roleCode
+  - statusCode
+  properties:
+    assignmentId:
+      type: string
+      format: uuid
+    rehearsalEventId:
+      type: string
+      format: uuid
+    servicePlanId:
+      type: string
+      format: uuid
+    musicianId:
+      type: string
+      format: uuid
+    roleCode:
+      "$ref": "#/TeamMusicianRoleCode"
+    instrumentCode:
+      "$ref": "#/TeamInstrumentCode"
+    vocalPartCode:
+      "$ref": "#/TeamVocalPartCode"
+    statusCode:
+      "$ref": "#/TeamAssignmentStatusCode"
+    serviceAssignmentId:
+      type: string
+      format: uuid
+      nullable: true
+    substituteForAssignmentId:
+      type: string
+      format: uuid
+      nullable: true
+TeamSongAssignmentOverrideRequest:
+  type: object
+  additionalProperties: false
+  required:
+  - servicePlanBlockId
+  - baseServiceAssignmentId
+  - musicianId
+  - roleCode
+  - statusCode
+  properties:
+    servicePlanBlockId:
+      type: string
+      format: uuid
+    baseServiceAssignmentId:
+      type: string
+      format: uuid
+    musicianId:
+      type: string
+      format: uuid
+    roleCode:
+      "$ref": "#/TeamMusicianRoleCode"
+    instrumentCode:
+      "$ref": "#/TeamInstrumentCode"
+    vocalPartCode:
+      "$ref": "#/TeamVocalPartCode"
+    statusCode:
+      "$ref": "#/TeamAssignmentStatusCode"
+    reasonCode:
+      type: string
+      nullable: true
+    reference:
+      type: string
+      nullable: true
+TeamSongAssignmentOverrideResponse:
+  type: object
+  required:
+  - overrideId
+  - servicePlanId
+  - servicePlanBlockId
+  - baseServiceAssignmentId
+  - musicianId
+  - roleCode
+  - statusCode
+  properties:
+    overrideId:
+      type: string
+      format: uuid
+    servicePlanId:
+      type: string
+      format: uuid
+    servicePlanBlockId:
+      type: string
+      format: uuid
+    baseServiceAssignmentId:
+      type: string
+      format: uuid
+    musicianId:
+      type: string
+      format: uuid
+    roleCode:
+      "$ref": "#/TeamMusicianRoleCode"
+    instrumentCode:
+      "$ref": "#/TeamInstrumentCode"
+    vocalPartCode:
+      "$ref": "#/TeamVocalPartCode"
+    statusCode:
+      "$ref": "#/TeamAssignmentStatusCode"
+TeamSubstituteAssignmentRequest:
+  type: object
+  additionalProperties: false
+  required:
+  - substituteMusicianId
+  properties:
+    substituteMusicianId:
+      type: string
+      format: uuid
+    statusCode:
+      "$ref": "#/TeamAssignmentStatusCode"
+    overrideUnavailable:
+      type: boolean
+      default: false
+    reasonCode:
+      type: string
+      nullable: true
+    reference:
+      type: string
+      nullable: true
+TeamReorderAssignmentsRequest:
+  type: object
+  additionalProperties: false
+  required:
+  - orderedAssignmentIds
+  properties:
+    orderedAssignmentIds:
+      type: array
+      minItems: 1
+      items:
+        type: string
+        format: uuid
+    reasonCode:
+      type: string
+      nullable: true
+    reference:
+      type: string
+      nullable: true
+TeamServiceRosterResponse:
+  type: object
+  required:
+  - servicePlanId
+  - assignments
+  - staffingGaps
+  - availabilityConflicts
+  properties:
+    readinessSummary:
+      "$ref": "./service-plans.yaml#/ReadinessSummary"
+      nullable: true
+    servicePlanId:
+      type: string
+      format: uuid
+    assignments:
+      type: array
+      items:
+        "$ref": "#/TeamServiceAssignmentResponse"
+    staffingGaps:
+      type: array
+      items:
+        type: string
+    availabilityConflicts:
+      type: array
+      items:
+        type: string
+TeamAssignmentHistoryResponse:
+  type: object
+  required:
+  - historyId
+  - assignmentType
+  - assignmentId
+  - servicePlanId
+  - changeAction
+  - changedBy
+  - reasonCode
+  - changedAt
+  properties:
+    historyId:
+      type: string
+      format: uuid
+    assignmentType:
+      "$ref": "#/TeamAssignmentType"
+    assignmentId:
+      type: string
+      format: uuid
+    servicePlanId:
+      type: string
+      format: uuid
+    rehearsalEventId:
+      type: string
+      format: uuid
+      nullable: true
+    musicianId:
+      type: string
+      format: uuid
+      nullable: true
+    roleCode:
+      "$ref": "#/TeamMusicianRoleCode"
+    instrumentCode:
+      "$ref": "#/TeamInstrumentCode"
+    vocalPartCode:
+      "$ref": "#/TeamVocalPartCode"
+    statusCode:
+      "$ref": "#/TeamAssignmentStatusCode"
+    assignmentOrder:
+      type: integer
+      nullable: true
+    substituteForAssignmentId:
+      type: string
+      format: uuid
+      nullable: true
+    serviceAssignmentId:
+      type: string
+      format: uuid
+      nullable: true
+    changeAction:
+      type: string
+    changedBy:
+      type: string
+    reasonCode:
+      type: string
+    reference:
+      type: string
+      nullable: true
+    changedAt:
+      type: string
+      format: date-time

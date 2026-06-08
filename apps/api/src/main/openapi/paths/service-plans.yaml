@@ -1,0 +1,199 @@
+"/service-plans":
+  post:
+    tags:
+    - ServicePlans
+    operationId: createServicePlan
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - WORSHIP_LEADER
+    - CATALOG_EDITOR
+    - DOCTRINAL_REVIEWER
+    - MUSICAL_REVIEWER
+    - ADMIN
+    summary: Create a draft service plan
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            "$ref": "../components/schemas/service-plans.yaml#/CreateServicePlanRequest"
+    responses:
+      '201':
+        description: Draft service plan created.
+        content:
+          application/json:
+            schema:
+              "$ref": "../components/schemas/service-plans.yaml#/ServicePlanResponse"
+  get:
+    tags:
+    - ServicePlans
+    operationId: listServicePlans
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - WORSHIP_LEADER
+    - CATALOG_EDITOR
+    - DOCTRINAL_REVIEWER
+    - MUSICAL_REVIEWER
+    - ADMIN
+    summary: List service plans
+    description: 'User-facing plan payloads only expose approved and active song content
+      in attached setlist references.
+
+      '
+    responses:
+      '200':
+        description: Service plans matching filter criteria.
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                "$ref": "../components/schemas/service-plans.yaml#/ServicePlanSummary"
+"/service-plans/{servicePlanId}":
+  get:
+    tags:
+    - ServicePlans
+    operationId: getServicePlan
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - WORSHIP_LEADER
+    - CATALOG_EDITOR
+    - DOCTRINAL_REVIEWER
+    - MUSICAL_REVIEWER
+    - ADMIN
+    summary: Retrieve a service plan
+    description: 'User-facing plan payloads only expose approved and active song content
+      in attached setlist references.
+
+      '
+    parameters:
+    - "$ref": "../components/shared/parameters.yaml#/ServicePlanId"
+    responses:
+      '200':
+        description: Service plan detail.
+        content:
+          application/json:
+            schema:
+              "$ref": "../components/schemas/service-plans.yaml#/ServicePlanResponse"
+      '404':
+        description: Service plan not found.
+  patch:
+    tags:
+    - ServicePlans
+    operationId: updateServicePlan
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - WORSHIP_LEADER
+    - CATALOG_EDITOR
+    - DOCTRINAL_REVIEWER
+    - MUSICAL_REVIEWER
+    - ADMIN
+    summary: Update mutable draft service-plan metadata
+    parameters:
+    - "$ref": "../components/shared/parameters.yaml#/ServicePlanId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            "$ref": "../components/schemas/service-plans.yaml#/UpdateServicePlanRequest"
+    responses:
+      '200':
+        description: Updated service plan detail.
+        content:
+          application/json:
+            schema:
+              "$ref": "../components/schemas/service-plans.yaml#/ServicePlanResponse"
+"/service-plans/{servicePlanId}/blocks:order":
+  post:
+    tags:
+    - ServicePlans
+    operationId: reorderServicePlanBlocks
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - WORSHIP_LEADER
+    - CATALOG_EDITOR
+    - DOCTRINAL_REVIEWER
+    - MUSICAL_REVIEWER
+    - ADMIN
+    summary: Reorder service-plan blocks within a draft
+    parameters:
+    - "$ref": "../components/shared/parameters.yaml#/ServicePlanId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            "$ref": "../components/schemas/service-plans.yaml#/ReorderServicePlanBlocksRequest"
+    responses:
+      '200':
+        description: Updated block ordering and effective sequence preview.
+        content:
+          application/json:
+            schema:
+              "$ref": "../components/schemas/service-plans.yaml#/ServicePlanResponse"
+"/service-plans/{servicePlanId}/setlist-attachments":
+  post:
+    tags:
+    - ServicePlans
+    operationId: attachSetlistVersionToServicePlan
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - WORSHIP_LEADER
+    - CATALOG_EDITOR
+    - DOCTRINAL_REVIEWER
+    - MUSICAL_REVIEWER
+    - ADMIN
+    summary: Attach an immutable setlist version to a service plan
+    parameters:
+    - "$ref": "../components/shared/parameters.yaml#/ServicePlanId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            "$ref": "../components/schemas/service-plans.yaml#/AttachSetlistVersionRequest"
+    responses:
+      '201':
+        description: Setlist version attachment created.
+        content:
+          application/json:
+            schema:
+              "$ref": "../components/schemas/service-plans.yaml#/ServicePlanSetlistAttachmentResponse"
+"/service-plans/{servicePlanId}/publish":
+  post:
+    tags:
+    - ServicePlans
+    operationId: publishServicePlan
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - WORSHIP_LEADER
+    - CATALOG_EDITOR
+    - DOCTRINAL_REVIEWER
+    - MUSICAL_REVIEWER
+    - ADMIN
+    summary: Publish a service plan and persist immutable effective sequence
+    parameters:
+    - "$ref": "../components/shared/parameters.yaml#/ServicePlanId"
+    requestBody:
+      required: false
+      content:
+        application/json:
+          schema:
+            "$ref": "../components/schemas/service-plans.yaml#/PublishServicePlanRequest"
+    responses:
+      '200':
+        description: Service plan published with immutable snapshot.
+        content:
+          application/json:
+            schema:
+              "$ref": "../components/schemas/service-plans.yaml#/ServicePlanPublishResponse"
+      '409':
+        description: Service plan cannot be published due to validation or stale references.

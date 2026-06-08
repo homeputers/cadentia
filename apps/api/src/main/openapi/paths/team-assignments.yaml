@@ -1,0 +1,292 @@
+"/team-assignments/services/{servicePlanId}":
+  post:
+    tags:
+    - TeamAssignments
+    operationId: createServiceTeamAssignment
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - WORSHIP_LEADER
+    - TEAM_SCHEDULER
+    - ADMIN
+    summary: Create a service team assignment
+    description: 'Creates a structured assignment using controlled role, instrument,
+      vocal part, and assignment-status values. Unavailable musicians require an explicit
+      override.
+
+      '
+    parameters:
+    - "$ref": "../components/shared/parameters.yaml#/ServicePlanId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            "$ref": "../components/schemas/team-assignments.yaml#/TeamServiceAssignmentRequest"
+    responses:
+      '201':
+        description: Service assignment created.
+        content:
+          application/json:
+            schema:
+              "$ref": "../components/schemas/team-assignments.yaml#/TeamServiceAssignmentResponse"
+"/team-assignments/services/{servicePlanId}/assignments/{assignmentId}":
+  put:
+    tags:
+    - TeamAssignments
+    operationId: updateServiceTeamAssignment
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - WORSHIP_LEADER
+    - TEAM_SCHEDULER
+    - ADMIN
+    summary: Update a service team assignment
+    parameters:
+    - "$ref": "../components/shared/parameters.yaml#/ServicePlanId"
+    - "$ref": "../components/shared/parameters.yaml#/AssignmentId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            "$ref": "../components/schemas/team-assignments.yaml#/TeamServiceAssignmentRequest"
+    responses:
+      '200':
+        description: Service assignment updated.
+        content:
+          application/json:
+            schema:
+              "$ref": "../components/schemas/team-assignments.yaml#/TeamServiceAssignmentResponse"
+  delete:
+    tags:
+    - TeamAssignments
+    operationId: removeServiceTeamAssignment
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - WORSHIP_LEADER
+    - TEAM_SCHEDULER
+    - ADMIN
+    summary: Remove a service team assignment without deleting history
+    parameters:
+    - "$ref": "../components/shared/parameters.yaml#/ServicePlanId"
+    - "$ref": "../components/shared/parameters.yaml#/AssignmentId"
+    - in: query
+      name: reasonCode
+      schema:
+        type: string
+        default: remove_assignment
+    - in: query
+      name: reference
+      schema:
+        type: string
+        nullable: true
+    responses:
+      '204':
+        description: Assignment removed from the active roster.
+"/team-assignments/services/{servicePlanId}/assignments/{assignmentId}/substitute":
+  post:
+    tags:
+    - TeamAssignments
+    operationId: substituteServiceTeamAssignment
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - WORSHIP_LEADER
+    - TEAM_SCHEDULER
+    - ADMIN
+    summary: Add a substitute for a service assignment
+    description: Creates a substitute row linked to the original assignment rather
+      than overwriting history.
+    parameters:
+    - "$ref": "../components/shared/parameters.yaml#/ServicePlanId"
+    - "$ref": "../components/shared/parameters.yaml#/AssignmentId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            "$ref": "../components/schemas/team-assignments.yaml#/TeamSubstituteAssignmentRequest"
+    responses:
+      '201':
+        description: Substitute assignment created.
+        content:
+          application/json:
+            schema:
+              "$ref": "../components/schemas/team-assignments.yaml#/TeamServiceAssignmentResponse"
+"/team-assignments/services/{servicePlanId}/reorder":
+  post:
+    tags:
+    - TeamAssignments
+    operationId: reorderServiceTeamAssignments
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - WORSHIP_LEADER
+    - TEAM_SCHEDULER
+    - ADMIN
+    summary: Reorder service team assignments
+    parameters:
+    - "$ref": "../components/shared/parameters.yaml#/ServicePlanId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            "$ref": "../components/schemas/team-assignments.yaml#/TeamReorderAssignmentsRequest"
+    responses:
+      '200':
+        description: Ordered service assignments.
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                "$ref": "../components/schemas/team-assignments.yaml#/TeamServiceAssignmentResponse"
+"/team-assignments/rehearsals/{rehearsalEventId}":
+  post:
+    tags:
+    - TeamAssignments
+    operationId: createRehearsalTeamAssignment
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - WORSHIP_LEADER
+    - TEAM_SCHEDULER
+    - ADMIN
+    summary: Create a rehearsal team assignment
+    description: 'Optionally links rehearsal participation to a service assignment
+      while preserving separate rehearsal response/readiness status.
+
+      '
+    parameters:
+    - in: path
+      name: rehearsalEventId
+      required: true
+      schema:
+        type: string
+        format: uuid
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            "$ref": "../components/schemas/team-assignments.yaml#/TeamRehearsalAssignmentRequest"
+    responses:
+      '201':
+        description: Rehearsal assignment created.
+        content:
+          application/json:
+            schema:
+              "$ref": "../components/schemas/team-assignments.yaml#/TeamRehearsalAssignmentResponse"
+"/team-assignments/services/{servicePlanId}/song-overrides":
+  post:
+    tags:
+    - TeamAssignments
+    operationId: createSongTeamAssignmentOverride
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - WORSHIP_LEADER
+    - TEAM_SCHEDULER
+    - ADMIN
+    summary: Create a song-specific assignment override
+    description: Assigns a controlled responsibility for a specific song block without
+      changing catalog approval gates.
+    parameters:
+    - "$ref": "../components/shared/parameters.yaml#/ServicePlanId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            "$ref": "../components/schemas/team-assignments.yaml#/TeamSongAssignmentOverrideRequest"
+    responses:
+      '201':
+        description: Song-specific override created.
+        content:
+          application/json:
+            schema:
+              "$ref": "../components/schemas/team-assignments.yaml#/TeamSongAssignmentOverrideResponse"
+"/team-assignments/services/{servicePlanId}/roster":
+  get:
+    tags:
+    - TeamAssignments
+    operationId: getServiceTeamRoster
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - WORSHIP_LEADER
+    - TEAM_SCHEDULER
+    - REPORTING_VIEWER
+    - ADMIN
+    summary: Get a privacy-aware service roster summary
+    parameters:
+    - "$ref": "../components/shared/parameters.yaml#/ServicePlanId"
+    responses:
+      '200':
+        description: Service roster summary.
+        content:
+          application/json:
+            schema:
+              "$ref": "../components/schemas/team-assignments.yaml#/TeamServiceRosterResponse"
+"/team-assignments/musicians/{musicianId}/upcoming":
+  get:
+    tags:
+    - TeamAssignments
+    operationId: listUpcomingTeamAssignmentsForMusician
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - ASSIGNED_MUSICIAN
+    - WORSHIP_LEADER
+    - TEAM_SCHEDULER
+    - ADMIN
+    summary: List upcoming service assignments for a musician
+    parameters:
+    - in: path
+      name: musicianId
+      required: true
+      schema:
+        type: string
+        format: uuid
+    - in: query
+      name: fromInclusive
+      required: true
+      schema:
+        type: string
+        format: date-time
+    responses:
+      '200':
+        description: Upcoming service assignments.
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                "$ref": "../components/schemas/team-assignments.yaml#/TeamServiceAssignmentResponse"
+"/team-assignments/services/{servicePlanId}/history":
+  get:
+    tags:
+    - TeamAssignments
+    operationId: listTeamAssignmentHistory
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - WORSHIP_LEADER
+    - TEAM_SCHEDULER
+    - REPORTING_VIEWER
+    - ADMIN
+    summary: List assignment change history for a service
+    parameters:
+    - "$ref": "../components/shared/parameters.yaml#/ServicePlanId"
+    responses:
+      '200':
+        description: Assignment change history.
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                "$ref": "../components/schemas/team-assignments.yaml#/TeamAssignmentHistoryResponse"
