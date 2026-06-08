@@ -22,14 +22,14 @@
       content:
         application/json:
           schema:
-            "$ref": "../cadentia-api.components.yaml#/schemas/CreateFeedbackEventRequest"
+            "$ref": "../components/schemas/feedback-tuning.yaml#/CreateFeedbackEventRequest"
     responses:
       '201':
         description: Feedback event recorded.
         content:
           application/json:
             schema:
-              "$ref": "../cadentia-api.components.yaml#/schemas/FeedbackEventResponse"
+              "$ref": "../components/schemas/feedback-tuning.yaml#/FeedbackEventResponse"
   get:
     tags:
     - FeedbackTuning
@@ -49,7 +49,7 @@
     - in: query
       name: scopeLayer
       schema:
-        "$ref": "../cadentia-api.components.yaml#/schemas/FeedbackScopeLayer"
+        "$ref": "../components/schemas/feedback-tuning.yaml#/FeedbackScopeLayer"
     - in: query
       name: scopeId
       schema:
@@ -68,7 +68,7 @@
             schema:
               type: array
               items:
-                "$ref": "../cadentia-api.components.yaml#/schemas/FeedbackEventResponse"
+                "$ref": "../components/schemas/feedback-tuning.yaml#/FeedbackEventResponse"
 "/feedback/scopes/{scopeLayer}/{scopeId}/state":
   get:
     tags:
@@ -90,7 +90,7 @@
       name: scopeLayer
       required: true
       schema:
-        "$ref": "../cadentia-api.components.yaml#/schemas/FeedbackScopeLayer"
+        "$ref": "../components/schemas/feedback-tuning.yaml#/FeedbackScopeLayer"
     - in: path
       name: scopeId
       required: true
@@ -103,7 +103,7 @@
         content:
           application/json:
             schema:
-              "$ref": "../cadentia-api.components.yaml#/schemas/FeedbackScopeStateResponse"
+              "$ref": "../components/schemas/feedback-tuning.yaml#/FeedbackScopeStateResponse"
 "/feedback/scopes/{scopeLayer}/{scopeId}/reset":
   post:
     tags:
@@ -124,7 +124,7 @@
       name: scopeLayer
       required: true
       schema:
-        "$ref": "../cadentia-api.components.yaml#/schemas/FeedbackScopeLayer"
+        "$ref": "../components/schemas/feedback-tuning.yaml#/FeedbackScopeLayer"
     - in: path
       name: scopeId
       required: true
@@ -136,11 +136,11 @@
       content:
         application/json:
           schema:
-            "$ref": "../cadentia-api.components.yaml#/schemas/FeedbackResetRequest"
+            "$ref": "../components/schemas/feedback-tuning.yaml#/FeedbackResetRequest"
     responses:
       '200':
         description: Feedback scope reset was accepted and audited.
         content:
           application/json:
             schema:
-              "$ref": "../cadentia-api.components.yaml#/schemas/FeedbackResetResponse"
+              "$ref": "../components/schemas/feedback-tuning.yaml#/FeedbackResetResponse"

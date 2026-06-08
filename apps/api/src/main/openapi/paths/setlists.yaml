@@ -21,7 +21,7 @@
       content:
         application/json:
           schema:
-            "$ref": "../cadentia-api.components.yaml#/schemas/NaturalLanguageSetlistRequest"
+            "$ref": "../components/schemas/setlists.yaml#/NaturalLanguageSetlistRequest"
     responses:
       '202':
         description: Setlist proposal accepted, clarification requested, or safely
@@ -29,7 +29,7 @@
         content:
           application/json:
             schema:
-              "$ref": "../cadentia-api.components.yaml#/schemas/SetlistProposalResponse"
+              "$ref": "../components/schemas/setlists.yaml#/SetlistProposalResponse"
       '400':
         description: Request validation failed.
 "/setlists/proposals":
@@ -49,7 +49,7 @@
       content:
         application/json:
           schema:
-            "$ref": "../cadentia-api.components.yaml#/schemas/GenerateSetlistRequest"
+            "$ref": "../components/schemas/setlists.yaml#/GenerateSetlistRequest"
     responses:
       '202':
         description: Setlist proposal accepted or safely deferred until catalog support
@@ -57,7 +57,7 @@
         content:
           application/json:
             schema:
-              "$ref": "../cadentia-api.components.yaml#/schemas/SetlistProposalResponse"
+              "$ref": "../components/schemas/setlists.yaml#/SetlistProposalResponse"
       '400':
         description: Request validation failed.
 "/setlists":
@@ -82,14 +82,14 @@
       content:
         application/json:
           schema:
-            "$ref": "../cadentia-api.components.yaml#/schemas/CreateSetlistBaselineRequest"
+            "$ref": "../components/schemas/setlists.yaml#/CreateSetlistBaselineRequest"
     responses:
       '201':
         description: Baseline version created.
         content:
           application/json:
             schema:
-              "$ref": "../cadentia-api.components.yaml#/schemas/SetlistVersionEnvelope"
+              "$ref": "../components/schemas/setlists.yaml#/SetlistVersionEnvelope"
       '400':
         description: Request validation failed.
 "/setlists/{setlistId}/edits":
@@ -118,14 +118,14 @@
       content:
         application/json:
           schema:
-            "$ref": "../cadentia-api.components.yaml#/schemas/CommitSetlistEditsRequest"
+            "$ref": "../components/schemas/setlists.yaml#/CommitSetlistEditsRequest"
     responses:
       '201':
         description: Edit operations committed and a new immutable version created.
         content:
           application/json:
             schema:
-              "$ref": "../cadentia-api.components.yaml#/schemas/SetlistVersionEnvelope"
+              "$ref": "../components/schemas/setlists.yaml#/SetlistVersionEnvelope"
       '404':
         description: Setlist or base version does not exist.
       '409':
@@ -162,7 +162,7 @@
         content:
           application/json:
             schema:
-              "$ref": "../cadentia-api.components.yaml#/schemas/SetlistVersionListResponse"
+              "$ref": "../components/schemas/setlists.yaml#/SetlistVersionListResponse"
       '404':
         description: Setlist not found.
 "/setlists/{setlistId}/versions/{versionId}":
@@ -202,7 +202,7 @@
         content:
           application/json:
             schema:
-              "$ref": "../cadentia-api.components.yaml#/schemas/SetlistVersionEnvelope"
+              "$ref": "../components/schemas/setlists.yaml#/SetlistVersionEnvelope"
       '404':
         description: Setlist or version not found.
 "/setlists/{setlistId}/versions/{fromVersionId}/diff/{toVersionId}":
@@ -244,6 +244,6 @@
         content:
           application/json:
             schema:
-              "$ref": "../cadentia-api.components.yaml#/schemas/SetlistVersionDiffResponse"
+              "$ref": "../components/schemas/setlists.yaml#/SetlistVersionDiffResponse"
       '404':
         description: Setlist or requested versions not found.

@@ -55,13 +55,13 @@ TeamServiceAssignmentRequest:
       type: string
       format: uuid
     roleCode:
-      "$ref": "../../cadentia-api.components.yaml#/schemas/TeamMusicianRoleCode"
+      "$ref": "#/TeamMusicianRoleCode"
     instrumentCode:
-      "$ref": "../../cadentia-api.components.yaml#/schemas/TeamInstrumentCode"
+      "$ref": "#/TeamInstrumentCode"
     vocalPartCode:
-      "$ref": "../../cadentia-api.components.yaml#/schemas/TeamVocalPartCode"
+      "$ref": "#/TeamVocalPartCode"
     statusCode:
-      "$ref": "../../cadentia-api.components.yaml#/schemas/TeamAssignmentStatusCode"
+      "$ref": "#/TeamAssignmentStatusCode"
     assignmentOrder:
       type: integer
       minimum: 0
@@ -94,13 +94,13 @@ TeamServiceAssignmentResponse:
       type: string
       format: uuid
     roleCode:
-      "$ref": "../../cadentia-api.components.yaml#/schemas/TeamMusicianRoleCode"
+      "$ref": "#/TeamMusicianRoleCode"
     instrumentCode:
-      "$ref": "../../cadentia-api.components.yaml#/schemas/TeamInstrumentCode"
+      "$ref": "#/TeamInstrumentCode"
     vocalPartCode:
-      "$ref": "../../cadentia-api.components.yaml#/schemas/TeamVocalPartCode"
+      "$ref": "#/TeamVocalPartCode"
     statusCode:
-      "$ref": "../../cadentia-api.components.yaml#/schemas/TeamAssignmentStatusCode"
+      "$ref": "#/TeamAssignmentStatusCode"
     assignmentOrder:
       type: integer
       minimum: 0
@@ -129,13 +129,13 @@ TeamRehearsalAssignmentRequest:
       type: string
       format: uuid
     roleCode:
-      "$ref": "../../cadentia-api.components.yaml#/schemas/TeamMusicianRoleCode"
+      "$ref": "#/TeamMusicianRoleCode"
     instrumentCode:
-      "$ref": "../../cadentia-api.components.yaml#/schemas/TeamInstrumentCode"
+      "$ref": "#/TeamInstrumentCode"
     vocalPartCode:
-      "$ref": "../../cadentia-api.components.yaml#/schemas/TeamVocalPartCode"
+      "$ref": "#/TeamVocalPartCode"
     statusCode:
-      "$ref": "../../cadentia-api.components.yaml#/schemas/TeamAssignmentStatusCode"
+      "$ref": "#/TeamAssignmentStatusCode"
     substituteForAssignmentId:
       type: string
       format: uuid
@@ -172,13 +172,13 @@ TeamRehearsalAssignmentResponse:
       type: string
       format: uuid
     roleCode:
-      "$ref": "../../cadentia-api.components.yaml#/schemas/TeamMusicianRoleCode"
+      "$ref": "#/TeamMusicianRoleCode"
     instrumentCode:
-      "$ref": "../../cadentia-api.components.yaml#/schemas/TeamInstrumentCode"
+      "$ref": "#/TeamInstrumentCode"
     vocalPartCode:
-      "$ref": "../../cadentia-api.components.yaml#/schemas/TeamVocalPartCode"
+      "$ref": "#/TeamVocalPartCode"
     statusCode:
-      "$ref": "../../cadentia-api.components.yaml#/schemas/TeamAssignmentStatusCode"
+      "$ref": "#/TeamAssignmentStatusCode"
     serviceAssignmentId:
       type: string
       format: uuid
@@ -207,13 +207,13 @@ TeamSongAssignmentOverrideRequest:
       type: string
       format: uuid
     roleCode:
-      "$ref": "../../cadentia-api.components.yaml#/schemas/TeamMusicianRoleCode"
+      "$ref": "#/TeamMusicianRoleCode"
     instrumentCode:
-      "$ref": "../../cadentia-api.components.yaml#/schemas/TeamInstrumentCode"
+      "$ref": "#/TeamInstrumentCode"
     vocalPartCode:
-      "$ref": "../../cadentia-api.components.yaml#/schemas/TeamVocalPartCode"
+      "$ref": "#/TeamVocalPartCode"
     statusCode:
-      "$ref": "../../cadentia-api.components.yaml#/schemas/TeamAssignmentStatusCode"
+      "$ref": "#/TeamAssignmentStatusCode"
     reasonCode:
       type: string
       nullable: true
@@ -247,13 +247,13 @@ TeamSongAssignmentOverrideResponse:
       type: string
       format: uuid
     roleCode:
-      "$ref": "../../cadentia-api.components.yaml#/schemas/TeamMusicianRoleCode"
+      "$ref": "#/TeamMusicianRoleCode"
     instrumentCode:
-      "$ref": "../../cadentia-api.components.yaml#/schemas/TeamInstrumentCode"
+      "$ref": "#/TeamInstrumentCode"
     vocalPartCode:
-      "$ref": "../../cadentia-api.components.yaml#/schemas/TeamVocalPartCode"
+      "$ref": "#/TeamVocalPartCode"
     statusCode:
-      "$ref": "../../cadentia-api.components.yaml#/schemas/TeamAssignmentStatusCode"
+      "$ref": "#/TeamAssignmentStatusCode"
 TeamSubstituteAssignmentRequest:
   type: object
   additionalProperties: false
@@ -264,7 +264,7 @@ TeamSubstituteAssignmentRequest:
       type: string
       format: uuid
     statusCode:
-      "$ref": "../../cadentia-api.components.yaml#/schemas/TeamAssignmentStatusCode"
+      "$ref": "#/TeamAssignmentStatusCode"
     overrideUnavailable:
       type: boolean
       default: false
@@ -301,7 +301,7 @@ TeamServiceRosterResponse:
   - availabilityConflicts
   properties:
     readinessSummary:
-      "$ref": "../../cadentia-api.components.yaml#/schemas/ReadinessSummary"
+      "$ref": "./service-plans.yaml#/ReadinessSummary"
       nullable: true
     servicePlanId:
       type: string
@@ -309,7 +309,7 @@ TeamServiceRosterResponse:
     assignments:
       type: array
       items:
-        "$ref": "../../cadentia-api.components.yaml#/schemas/TeamServiceAssignmentResponse"
+        "$ref": "#/TeamServiceAssignmentResponse"
     staffingGaps:
       type: array
       items:
@@ -334,7 +334,7 @@ TeamAssignmentHistoryResponse:
       type: string
       format: uuid
     assignmentType:
-      "$ref": "../../cadentia-api.components.yaml#/schemas/TeamAssignmentType"
+      "$ref": "#/TeamAssignmentType"
     assignmentId:
       type: string
       format: uuid
@@ -350,13 +350,13 @@ TeamAssignmentHistoryResponse:
       format: uuid
       nullable: true
     roleCode:
-      "$ref": "../../cadentia-api.components.yaml#/schemas/TeamMusicianRoleCode"
+      "$ref": "#/TeamMusicianRoleCode"
     instrumentCode:
-      "$ref": "../../cadentia-api.components.yaml#/schemas/TeamInstrumentCode"
+      "$ref": "#/TeamInstrumentCode"
     vocalPartCode:
-      "$ref": "../../cadentia-api.components.yaml#/schemas/TeamVocalPartCode"
+      "$ref": "#/TeamVocalPartCode"
     statusCode:
-      "$ref": "../../cadentia-api.components.yaml#/schemas/TeamAssignmentStatusCode"
+      "$ref": "#/TeamAssignmentStatusCode"
     assignmentOrder:
       type: integer
       nullable: true

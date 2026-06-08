@@ -17,14 +17,14 @@
       content:
         application/json:
           schema:
-            "$ref": "../cadentia-api.components.yaml#/schemas/CreateServicePlanRequest"
+            "$ref": "../components/schemas/service-plans.yaml#/CreateServicePlanRequest"
     responses:
       '201':
         description: Draft service plan created.
         content:
           application/json:
             schema:
-              "$ref": "../cadentia-api.components.yaml#/schemas/ServicePlanResponse"
+              "$ref": "../components/schemas/service-plans.yaml#/ServicePlanResponse"
   get:
     tags:
     - ServicePlans
@@ -50,7 +50,7 @@
             schema:
               type: array
               items:
-                "$ref": "../cadentia-api.components.yaml#/schemas/ServicePlanSummary"
+                "$ref": "../components/schemas/service-plans.yaml#/ServicePlanSummary"
 "/service-plans/{servicePlanId}":
   get:
     tags:
@@ -70,14 +70,14 @@
 
       '
     parameters:
-    - "$ref": "../cadentia-api.components.yaml#/parameters/ServicePlanId"
+    - "$ref": "../components/shared/parameters.yaml#/ServicePlanId"
     responses:
       '200':
         description: Service plan detail.
         content:
           application/json:
             schema:
-              "$ref": "../cadentia-api.components.yaml#/schemas/ServicePlanResponse"
+              "$ref": "../components/schemas/service-plans.yaml#/ServicePlanResponse"
       '404':
         description: Service plan not found.
   patch:
@@ -94,20 +94,20 @@
     - ADMIN
     summary: Update mutable draft service-plan metadata
     parameters:
-    - "$ref": "../cadentia-api.components.yaml#/parameters/ServicePlanId"
+    - "$ref": "../components/shared/parameters.yaml#/ServicePlanId"
     requestBody:
       required: true
       content:
         application/json:
           schema:
-            "$ref": "../cadentia-api.components.yaml#/schemas/UpdateServicePlanRequest"
+            "$ref": "../components/schemas/service-plans.yaml#/UpdateServicePlanRequest"
     responses:
       '200':
         description: Updated service plan detail.
         content:
           application/json:
             schema:
-              "$ref": "../cadentia-api.components.yaml#/schemas/ServicePlanResponse"
+              "$ref": "../components/schemas/service-plans.yaml#/ServicePlanResponse"
 "/service-plans/{servicePlanId}/blocks:order":
   post:
     tags:
@@ -123,20 +123,20 @@
     - ADMIN
     summary: Reorder service-plan blocks within a draft
     parameters:
-    - "$ref": "../cadentia-api.components.yaml#/parameters/ServicePlanId"
+    - "$ref": "../components/shared/parameters.yaml#/ServicePlanId"
     requestBody:
       required: true
       content:
         application/json:
           schema:
-            "$ref": "../cadentia-api.components.yaml#/schemas/ReorderServicePlanBlocksRequest"
+            "$ref": "../components/schemas/service-plans.yaml#/ReorderServicePlanBlocksRequest"
     responses:
       '200':
         description: Updated block ordering and effective sequence preview.
         content:
           application/json:
             schema:
-              "$ref": "../cadentia-api.components.yaml#/schemas/ServicePlanResponse"
+              "$ref": "../components/schemas/service-plans.yaml#/ServicePlanResponse"
 "/service-plans/{servicePlanId}/setlist-attachments":
   post:
     tags:
@@ -152,20 +152,20 @@
     - ADMIN
     summary: Attach an immutable setlist version to a service plan
     parameters:
-    - "$ref": "../cadentia-api.components.yaml#/parameters/ServicePlanId"
+    - "$ref": "../components/shared/parameters.yaml#/ServicePlanId"
     requestBody:
       required: true
       content:
         application/json:
           schema:
-            "$ref": "../cadentia-api.components.yaml#/schemas/AttachSetlistVersionRequest"
+            "$ref": "../components/schemas/service-plans.yaml#/AttachSetlistVersionRequest"
     responses:
       '201':
         description: Setlist version attachment created.
         content:
           application/json:
             schema:
-              "$ref": "../cadentia-api.components.yaml#/schemas/ServicePlanSetlistAttachmentResponse"
+              "$ref": "../components/schemas/service-plans.yaml#/ServicePlanSetlistAttachmentResponse"
 "/service-plans/{servicePlanId}/publish":
   post:
     tags:
@@ -181,19 +181,19 @@
     - ADMIN
     summary: Publish a service plan and persist immutable effective sequence
     parameters:
-    - "$ref": "../cadentia-api.components.yaml#/parameters/ServicePlanId"
+    - "$ref": "../components/shared/parameters.yaml#/ServicePlanId"
     requestBody:
       required: false
       content:
         application/json:
           schema:
-            "$ref": "../cadentia-api.components.yaml#/schemas/PublishServicePlanRequest"
+            "$ref": "../components/schemas/service-plans.yaml#/PublishServicePlanRequest"
     responses:
       '200':
         description: Service plan published with immutable snapshot.
         content:
           application/json:
             schema:
-              "$ref": "../cadentia-api.components.yaml#/schemas/ServicePlanPublishResponse"
+              "$ref": "../components/schemas/service-plans.yaml#/ServicePlanPublishResponse"
       '409':
         description: Service plan cannot be published due to validation or stale references.

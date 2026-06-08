@@ -31,7 +31,7 @@ AdminImportCandidateQueueItem:
       type: string
       nullable: true
     status:
-      "$ref": "../../cadentia-api.components.yaml#/schemas/ImportCandidateStatus"
+      "$ref": "#/ImportCandidateStatus"
     updatedAt:
       type: string
       format: date-time
@@ -101,15 +101,15 @@ AdminImportCandidateDetailResponse:
       items:
         type: string
     status:
-      "$ref": "../../cadentia-api.components.yaml#/schemas/ImportCandidateStatus"
+      "$ref": "#/ImportCandidateStatus"
     duplicateMatches:
       type: array
       items:
-        "$ref": "../../cadentia-api.components.yaml#/schemas/AdminDuplicateMatch"
+        "$ref": "#/AdminDuplicateMatch"
     reviewHistory:
       type: array
       items:
-        "$ref": "../../cadentia-api.components.yaml#/schemas/AdminReviewHistoryItem"
+        "$ref": "#/AdminReviewHistoryItem"
 AdminReviewHistoryItem:
   type: object
   required:
@@ -170,9 +170,9 @@ ModerationFlagResponse:
       type: string
       format: uuid
     type:
-      "$ref": "../../cadentia-api.components.yaml#/schemas/ModerationFlagType"
+      "$ref": "#/ModerationFlagType"
     status:
-      "$ref": "../../cadentia-api.components.yaml#/schemas/ModerationFlagStatus"
+      "$ref": "#/ModerationFlagStatus"
     openedBy:
       type: string
     assignedTo:
@@ -203,7 +203,7 @@ CreateRollbackPreviewRequest:
   - actor
   properties:
     targetType:
-      "$ref": "../../cadentia-api.components.yaml#/schemas/RollbackTargetType"
+      "$ref": "#/RollbackTargetType"
     targetId:
       type: string
       format: uuid
@@ -228,7 +228,7 @@ RollbackPreviewResponse:
       type: string
       format: uuid
     targetType:
-      "$ref": "../../cadentia-api.components.yaml#/schemas/RollbackTargetType"
+      "$ref": "#/RollbackTargetType"
     targetId:
       type: string
       format: uuid
@@ -240,7 +240,7 @@ RollbackPreviewResponse:
     impactedRecords:
       type: array
       items:
-        "$ref": "../../cadentia-api.components.yaml#/schemas/RollbackImpactedRecord"
+        "$ref": "#/RollbackImpactedRecord"
     blockers:
       type: array
       items:
@@ -315,7 +315,7 @@ OpenModerationFlagRequest:
   - excludeFromRecommendation
   properties:
     type:
-      "$ref": "../../cadentia-api.components.yaml#/schemas/ModerationFlagType"
+      "$ref": "#/ModerationFlagType"
     openedBy:
       type: string
     reason:

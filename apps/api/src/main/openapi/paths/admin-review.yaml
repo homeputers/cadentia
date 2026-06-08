@@ -19,7 +19,7 @@
     - in: query
       name: status
       schema:
-        "$ref": "../cadentia-api.components.yaml#/schemas/ImportCandidateStatus"
+        "$ref": "../components/schemas/admin-review.yaml#/ImportCandidateStatus"
     responses:
       '200':
         description: Candidate queue page.
@@ -28,7 +28,7 @@
             schema:
               type: array
               items:
-                "$ref": "../cadentia-api.components.yaml#/schemas/AdminImportCandidateQueueItem"
+                "$ref": "../components/schemas/admin-review.yaml#/AdminImportCandidateQueueItem"
 "/api/admin/import-candidates/{candidateId}":
   get:
     tags:
@@ -53,7 +53,7 @@
         content:
           application/json:
             schema:
-              "$ref": "../cadentia-api.components.yaml#/schemas/AdminImportCandidateDetailResponse"
+              "$ref": "../components/schemas/admin-review.yaml#/AdminImportCandidateDetailResponse"
       '404':
         description: Candidate not found.
 "/api/admin/import-candidates/{candidateId}/duplicates":
@@ -82,7 +82,7 @@
             schema:
               type: array
               items:
-                "$ref": "../cadentia-api.components.yaml#/schemas/AdminDuplicateMatch"
+                "$ref": "../components/schemas/admin-review.yaml#/AdminDuplicateMatch"
 "/api/admin/import-candidates/{candidateId}/audit-history":
   get:
     tags:
@@ -109,7 +109,7 @@
             schema:
               type: array
               items:
-                "$ref": "../cadentia-api.components.yaml#/schemas/AdminAuditHistoryItem"
+                "$ref": "../components/schemas/admin-review.yaml#/AdminAuditHistoryItem"
 "/api/admin/import-candidates/{candidateId}/moderation-flags":
   post:
     tags:
@@ -133,14 +133,14 @@
       content:
         application/json:
           schema:
-            "$ref": "../cadentia-api.components.yaml#/schemas/OpenModerationFlagRequest"
+            "$ref": "../components/schemas/admin-review.yaml#/OpenModerationFlagRequest"
     responses:
       '200':
         description: Created moderation flag.
         content:
           application/json:
             schema:
-              "$ref": "../cadentia-api.components.yaml#/schemas/ModerationFlagResponse"
+              "$ref": "../components/schemas/admin-review.yaml#/ModerationFlagResponse"
 "/api/admin/moderation-flags/{flagId}/assign":
   post:
     tags:
@@ -164,14 +164,14 @@
       content:
         application/json:
           schema:
-            "$ref": "../cadentia-api.components.yaml#/schemas/AssignModerationFlagRequest"
+            "$ref": "../components/schemas/admin-review.yaml#/AssignModerationFlagRequest"
     responses:
       '200':
         description: Updated moderation flag.
         content:
           application/json:
             schema:
-              "$ref": "../cadentia-api.components.yaml#/schemas/ModerationFlagResponse"
+              "$ref": "../components/schemas/admin-review.yaml#/ModerationFlagResponse"
 "/api/admin/moderation-flags/{flagId}/resolve":
   post:
     tags:
@@ -195,14 +195,14 @@
       content:
         application/json:
           schema:
-            "$ref": "../cadentia-api.components.yaml#/schemas/ResolveModerationFlagRequest"
+            "$ref": "../components/schemas/admin-review.yaml#/ResolveModerationFlagRequest"
     responses:
       '200':
         description: Updated moderation flag.
         content:
           application/json:
             schema:
-              "$ref": "../cadentia-api.components.yaml#/schemas/ModerationFlagResponse"
+              "$ref": "../components/schemas/admin-review.yaml#/ModerationFlagResponse"
 "/api/admin/moderation-flags/{flagId}/escalate":
   post:
     tags:
@@ -226,14 +226,14 @@
       content:
         application/json:
           schema:
-            "$ref": "../cadentia-api.components.yaml#/schemas/EscalateModerationFlagRequest"
+            "$ref": "../components/schemas/admin-review.yaml#/EscalateModerationFlagRequest"
     responses:
       '200':
         description: Updated moderation flag.
         content:
           application/json:
             schema:
-              "$ref": "../cadentia-api.components.yaml#/schemas/ModerationFlagResponse"
+              "$ref": "../components/schemas/admin-review.yaml#/ModerationFlagResponse"
 "/api/admin/rollback-previews":
   post:
     tags:
@@ -249,14 +249,14 @@
       content:
         application/json:
           schema:
-            "$ref": "../cadentia-api.components.yaml#/schemas/CreateRollbackPreviewRequest"
+            "$ref": "../components/schemas/admin-review.yaml#/CreateRollbackPreviewRequest"
     responses:
       '200':
         description: Rollback preview.
         content:
           application/json:
             schema:
-              "$ref": "../cadentia-api.components.yaml#/schemas/RollbackPreviewResponse"
+              "$ref": "../components/schemas/admin-review.yaml#/RollbackPreviewResponse"
 "/api/admin/rollbacks":
   post:
     tags:
@@ -272,11 +272,11 @@
       content:
         application/json:
           schema:
-            "$ref": "../cadentia-api.components.yaml#/schemas/ExecuteRollbackRequest"
+            "$ref": "../components/schemas/admin-review.yaml#/ExecuteRollbackRequest"
     responses:
       '200':
         description: Rollback execution result.
         content:
           application/json:
             schema:
-              "$ref": "../cadentia-api.components.yaml#/schemas/RollbackExecutionResponse"
+              "$ref": "../components/schemas/admin-review.yaml#/RollbackExecutionResponse"

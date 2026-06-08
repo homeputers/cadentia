@@ -42,7 +42,7 @@ ConversationSlotSource:
       - excludedSongs
       - serviceMoment
     source:
-      "$ref": "../../cadentia-api.components.yaml#/schemas/SlotValueSource"
+      "$ref": "#/SlotValueSource"
     updatedAt:
       type: string
       format: date-time
@@ -68,7 +68,7 @@ ConversationRevisionEvent:
       - expire
       - recover
     source:
-      "$ref": "../../cadentia-api.components.yaml#/schemas/SlotValueSource"
+      "$ref": "#/SlotValueSource"
     occurredAt:
       type: string
       format: date-time
@@ -91,15 +91,15 @@ ConversationSessionStateResponse:
       type: string
       format: uuid
     state:
-      "$ref": "../../cadentia-api.components.yaml#/schemas/ConversationState"
+      "$ref": "#/ConversationState"
     channel:
-      "$ref": "../../cadentia-api.components.yaml#/schemas/ChannelType"
+      "$ref": "#/ChannelType"
     slots:
-      "$ref": "../../cadentia-api.components.yaml#/schemas/GenerateSetlistRequest"
+      "$ref": "./setlists.yaml#/GenerateSetlistRequest"
     slotSources:
       type: array
       items:
-        "$ref": "../../cadentia-api.components.yaml#/schemas/ConversationSlotSource"
+        "$ref": "#/ConversationSlotSource"
     clarificationQuestion:
       type: string
       nullable: true
@@ -110,7 +110,7 @@ ConversationSessionStateResponse:
     revisionHistory:
       type: array
       items:
-        "$ref": "../../cadentia-api.components.yaml#/schemas/ConversationRevisionEvent"
+        "$ref": "#/ConversationRevisionEvent"
     expiresAt:
       type: string
       format: date-time
@@ -129,7 +129,7 @@ ConversationSlotUpdateRequest:
   - source
   properties:
     source:
-      "$ref": "../../cadentia-api.components.yaml#/schemas/SlotValueSource"
+      "$ref": "#/SlotValueSource"
     slotPatch:
       type: object
       additionalProperties: false
@@ -145,11 +145,11 @@ ConversationSlotUpdateRequest:
           items:
             type: string
         counts:
-          "$ref": "../../cadentia-api.components.yaml#/schemas/SetlistCounts"
+          "$ref": "./setlists.yaml#/SetlistCounts"
         keyPolicy:
-          "$ref": "../../cadentia-api.components.yaml#/schemas/KeyPolicy"
+          "$ref": "./setlists.yaml#/KeyPolicy"
         tempoPolicy:
-          "$ref": "../../cadentia-api.components.yaml#/schemas/TempoPolicy"
+          "$ref": "./setlists.yaml#/TempoPolicy"
         language:
           type: string
           nullable: true
@@ -184,7 +184,7 @@ ConversationClarificationRequest:
   - clarificationAnswer
   properties:
     source:
-      "$ref": "../../cadentia-api.components.yaml#/schemas/SlotValueSource"
+      "$ref": "#/SlotValueSource"
     clarificationAnswer:
       type: string
       minLength: 1
@@ -213,9 +213,9 @@ ConversationRecoveryResponse:
       type: string
       format: uuid
     priorState:
-      "$ref": "../../cadentia-api.components.yaml#/schemas/ConversationState"
+      "$ref": "#/ConversationState"
     recoveredState:
-      "$ref": "../../cadentia-api.components.yaml#/schemas/ConversationSessionStateResponse"
+      "$ref": "#/ConversationSessionStateResponse"
     recoveryMessage:
       type: string
     restartSuggested:

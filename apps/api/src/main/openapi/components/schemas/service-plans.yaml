@@ -7,10 +7,10 @@ ReadinessHistoryResponse:
   - changedAt
   properties:
     previousStateCode:
-      "$ref": "../../cadentia-api.components.yaml#/schemas/RehearsalReadinessStateCode"
+      "$ref": "./rehearsal-workflow.yaml#/RehearsalReadinessStateCode"
       nullable: true
     newStateCode:
-      "$ref": "../../cadentia-api.components.yaml#/schemas/RehearsalReadinessStateCode"
+      "$ref": "./rehearsal-workflow.yaml#/RehearsalReadinessStateCode"
     changedBy:
       type: string
     changedAt:
@@ -56,7 +56,7 @@ ServicePlanSummary:
       type: string
       format: date-time
     status:
-      "$ref": "../../cadentia-api.components.yaml#/schemas/ServicePlanStatus"
+      "$ref": "#/ServicePlanStatus"
 CreateServicePlanRequest:
   type: object
   additionalProperties: false
@@ -82,7 +82,7 @@ CreateServicePlanRequest:
       nullable: true
 UpdateServicePlanRequest:
   allOf:
-  - "$ref": "../../cadentia-api.components.yaml#/schemas/CreateServicePlanRequest"
+  - "$ref": "#/CreateServicePlanRequest"
 AttachSetlistVersionRequest:
   type: object
   additionalProperties: false
@@ -130,7 +130,7 @@ ServicePlanBlockProvenance:
   type: object
   properties:
     sourceType:
-      "$ref": "../../cadentia-api.components.yaml#/schemas/ServicePlanBlockSourceType"
+      "$ref": "#/ServicePlanBlockSourceType"
     setlistId:
       type: string
       format: uuid
@@ -159,7 +159,7 @@ ServicePlanBlock:
       type: integer
       minimum: 0
     type:
-      "$ref": "../../cadentia-api.components.yaml#/schemas/ServicePlanBlockType"
+      "$ref": "#/ServicePlanBlockType"
     title:
       type: string
     notes:
@@ -172,7 +172,7 @@ ServicePlanBlock:
       type: string
       nullable: true
     provenance:
-      "$ref": "../../cadentia-api.components.yaml#/schemas/ServicePlanBlockProvenance"
+      "$ref": "#/ServicePlanBlockProvenance"
 ReorderServicePlanBlocksRequest:
   type: object
   additionalProperties: false
@@ -201,7 +201,7 @@ ServicePlanEffectiveSequenceSnapshot:
     blocks:
       type: array
       items:
-        "$ref": "../../cadentia-api.components.yaml#/schemas/ServicePlanBlock"
+        "$ref": "#/ServicePlanBlock"
 ServicePlanResponse:
   type: object
   required:
@@ -230,20 +230,20 @@ ServicePlanResponse:
       type: string
       nullable: true
     status:
-      "$ref": "../../cadentia-api.components.yaml#/schemas/ServicePlanStatus"
+      "$ref": "#/ServicePlanStatus"
     blocks:
       type: array
       items:
-        "$ref": "../../cadentia-api.components.yaml#/schemas/ServicePlanBlock"
+        "$ref": "#/ServicePlanBlock"
     setlistAttachments:
       type: array
       items:
-        "$ref": "../../cadentia-api.components.yaml#/schemas/ServicePlanSetlistAttachmentResponse"
+        "$ref": "#/ServicePlanSetlistAttachmentResponse"
     effectiveSequenceSnapshot:
-      "$ref": "../../cadentia-api.components.yaml#/schemas/ServicePlanEffectiveSequenceSnapshot"
+      "$ref": "#/ServicePlanEffectiveSequenceSnapshot"
       nullable: true
     readinessSummary:
-      "$ref": "../../cadentia-api.components.yaml#/schemas/ReadinessSummary"
+      "$ref": "#/ReadinessSummary"
       nullable: true
 ReadinessStatus:
   type: string
@@ -262,7 +262,7 @@ ReadinessSummary:
   - privateNoteCount
   properties:
     status:
-      "$ref": "../../cadentia-api.components.yaml#/schemas/ReadinessStatus"
+      "$ref": "#/ReadinessStatus"
     objectiveBlockers:
       type: array
       items:
@@ -295,7 +295,7 @@ PublishServicePlanRequest:
       nullable: true
 ServicePlanPublishResponse:
   allOf:
-  - "$ref": "../../cadentia-api.components.yaml#/schemas/ServicePlanResponse"
+  - "$ref": "#/ServicePlanResponse"
   - type: object
     required:
     - publishedAt

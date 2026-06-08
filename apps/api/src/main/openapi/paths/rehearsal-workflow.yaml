@@ -15,7 +15,7 @@
     - REPORTING_VIEWER
     summary: List service-scoped rehearsal sessions
     parameters:
-    - "$ref": "../cadentia-api.components.yaml#/parameters/ServicePlanId"
+    - "$ref": "../components/shared/parameters.yaml#/ServicePlanId"
     responses:
       '200':
         description: Rehearsal sessions visible to the caller.
@@ -24,7 +24,7 @@
             schema:
               type: array
               items:
-                "$ref": "../cadentia-api.components.yaml#/schemas/RehearsalSessionResponse"
+                "$ref": "../components/schemas/rehearsal-workflow.yaml#/RehearsalSessionResponse"
   post:
     tags:
     - RehearsalWorkflow
@@ -37,22 +37,22 @@
     - TEAM_SCHEDULER
     summary: Create a rehearsal session for a service plan
     parameters:
-    - "$ref": "../cadentia-api.components.yaml#/parameters/ServicePlanId"
+    - "$ref": "../components/shared/parameters.yaml#/ServicePlanId"
     requestBody:
       required: true
       content:
         application/json:
           schema:
-            "$ref": "../cadentia-api.components.yaml#/schemas/CreateRehearsalSessionRequest"
+            "$ref": "../components/schemas/rehearsal-workflow.yaml#/CreateRehearsalSessionRequest"
     responses:
       '201':
         description: Rehearsal session created.
         content:
           application/json:
             schema:
-              "$ref": "../cadentia-api.components.yaml#/schemas/RehearsalSessionResponse"
+              "$ref": "../components/schemas/rehearsal-workflow.yaml#/RehearsalSessionResponse"
       '400':
-        "$ref": "../cadentia-api.components.yaml#/responses/InvalidWorkflowPayload"
+        "$ref": "../components/shared/responses.yaml#/InvalidWorkflowPayload"
 "/service-plans/{servicePlanId}/rehearsal-sessions/{rehearsalSessionId}":
   patch:
     tags:
@@ -66,23 +66,23 @@
     - TEAM_SCHEDULER
     summary: Update mutable rehearsal session metadata
     parameters:
-    - "$ref": "../cadentia-api.components.yaml#/parameters/ServicePlanId"
-    - "$ref": "../cadentia-api.components.yaml#/parameters/RehearsalSessionId"
+    - "$ref": "../components/shared/parameters.yaml#/ServicePlanId"
+    - "$ref": "../components/shared/parameters.yaml#/RehearsalSessionId"
     requestBody:
       required: true
       content:
         application/json:
           schema:
-            "$ref": "../cadentia-api.components.yaml#/schemas/UpdateRehearsalSessionRequest"
+            "$ref": "../components/schemas/rehearsal-workflow.yaml#/UpdateRehearsalSessionRequest"
     responses:
       '200':
         description: Rehearsal session updated.
         content:
           application/json:
             schema:
-              "$ref": "../cadentia-api.components.yaml#/schemas/RehearsalSessionResponse"
+              "$ref": "../components/schemas/rehearsal-workflow.yaml#/RehearsalSessionResponse"
       '409':
-        "$ref": "../cadentia-api.components.yaml#/responses/WorkflowVersionConflict"
+        "$ref": "../components/shared/responses.yaml#/WorkflowVersionConflict"
   delete:
     tags:
     - RehearsalWorkflow
@@ -95,15 +95,15 @@
     - TEAM_SCHEDULER
     summary: Archive a rehearsal session without deleting audit history
     parameters:
-    - "$ref": "../cadentia-api.components.yaml#/parameters/ServicePlanId"
-    - "$ref": "../cadentia-api.components.yaml#/parameters/RehearsalSessionId"
+    - "$ref": "../components/shared/parameters.yaml#/ServicePlanId"
+    - "$ref": "../components/shared/parameters.yaml#/RehearsalSessionId"
     responses:
       '200':
         description: Rehearsal session archived.
         content:
           application/json:
             schema:
-              "$ref": "../cadentia-api.components.yaml#/schemas/RehearsalSessionResponse"
+              "$ref": "../components/schemas/rehearsal-workflow.yaml#/RehearsalSessionResponse"
 "/service-plans/{servicePlanId}/workflow-status":
   get:
     tags:
@@ -120,14 +120,14 @@
     - REPORTING_VIEWER
     summary: Retrieve service rehearsal workflow readiness status
     parameters:
-    - "$ref": "../cadentia-api.components.yaml#/parameters/ServicePlanId"
+    - "$ref": "../components/shared/parameters.yaml#/ServicePlanId"
     responses:
       '200':
         description: Service workflow status.
         content:
           application/json:
             schema:
-              "$ref": "../cadentia-api.components.yaml#/schemas/WorkflowStatusResponse"
+              "$ref": "../components/schemas/rehearsal-workflow.yaml#/WorkflowStatusResponse"
 "/service-plans/{servicePlanId}/readiness-transitions":
   post:
     tags:
@@ -143,24 +143,24 @@
     - MUSICAL_REVIEWER
     summary: Transition service readiness through the controlled state machine
     parameters:
-    - "$ref": "../cadentia-api.components.yaml#/parameters/ServicePlanId"
+    - "$ref": "../components/shared/parameters.yaml#/ServicePlanId"
     requestBody:
       required: true
       content:
         application/json:
           schema:
-            "$ref": "../cadentia-api.components.yaml#/schemas/ReadinessTransitionRequest"
+            "$ref": "../components/schemas/rehearsal-workflow.yaml#/ReadinessTransitionRequest"
     responses:
       '200':
         description: Updated workflow status.
         content:
           application/json:
             schema:
-              "$ref": "../cadentia-api.components.yaml#/schemas/WorkflowStatusResponse"
+              "$ref": "../components/schemas/rehearsal-workflow.yaml#/WorkflowStatusResponse"
       '400':
-        "$ref": "../cadentia-api.components.yaml#/responses/InvalidWorkflowPayload"
+        "$ref": "../components/shared/responses.yaml#/InvalidWorkflowPayload"
       '409':
-        "$ref": "../cadentia-api.components.yaml#/responses/BlockedWorkflowTransition"
+        "$ref": "../components/shared/responses.yaml#/BlockedWorkflowTransition"
 "/service-plans/{servicePlanId}/notes":
   get:
     tags:
@@ -178,7 +178,7 @@
     - REPORTING_VIEWER
     summary: List rehearsal notes redacted according to caller role
     parameters:
-    - "$ref": "../cadentia-api.components.yaml#/parameters/ServicePlanId"
+    - "$ref": "../components/shared/parameters.yaml#/ServicePlanId"
     responses:
       '200':
         description: Visible notes; private content is omitted for unauthorized roles.
@@ -187,7 +187,7 @@
             schema:
               type: array
               items:
-                "$ref": "../cadentia-api.components.yaml#/schemas/RehearsalNoteResponse"
+                "$ref": "../components/schemas/rehearsal-workflow.yaml#/RehearsalNoteResponse"
   post:
     tags:
     - RehearsalWorkflow
@@ -202,20 +202,20 @@
     - MUSICAL_REVIEWER
     summary: Add a targeted rehearsal note
     parameters:
-    - "$ref": "../cadentia-api.components.yaml#/parameters/ServicePlanId"
+    - "$ref": "../components/shared/parameters.yaml#/ServicePlanId"
     requestBody:
       required: true
       content:
         application/json:
           schema:
-            "$ref": "../cadentia-api.components.yaml#/schemas/CreateRehearsalNoteRequest"
+            "$ref": "../components/schemas/rehearsal-workflow.yaml#/CreateRehearsalNoteRequest"
     responses:
       '201':
         description: Note created.
         content:
           application/json:
             schema:
-              "$ref": "../cadentia-api.components.yaml#/schemas/RehearsalNoteResponse"
+              "$ref": "../components/schemas/rehearsal-workflow.yaml#/RehearsalNoteResponse"
 "/service-plans/{servicePlanId}/issues":
   get:
     tags:
@@ -233,7 +233,7 @@
     - REPORTING_VIEWER
     summary: List rehearsal issues and their visible actions
     parameters:
-    - "$ref": "../cadentia-api.components.yaml#/parameters/ServicePlanId"
+    - "$ref": "../components/shared/parameters.yaml#/ServicePlanId"
     responses:
       '200':
         description: Issues visible to the caller.
@@ -242,7 +242,7 @@
             schema:
               type: array
               items:
-                "$ref": "../cadentia-api.components.yaml#/schemas/RehearsalIssueResponse"
+                "$ref": "../components/schemas/rehearsal-workflow.yaml#/RehearsalIssueResponse"
   post:
     tags:
     - RehearsalWorkflow
@@ -257,20 +257,20 @@
     - MUSICAL_REVIEWER
     summary: Open a structured rehearsal issue
     parameters:
-    - "$ref": "../cadentia-api.components.yaml#/parameters/ServicePlanId"
+    - "$ref": "../components/shared/parameters.yaml#/ServicePlanId"
     requestBody:
       required: true
       content:
         application/json:
           schema:
-            "$ref": "../cadentia-api.components.yaml#/schemas/CreateRehearsalIssueRequest"
+            "$ref": "../components/schemas/rehearsal-workflow.yaml#/CreateRehearsalIssueRequest"
     responses:
       '201':
         description: Issue opened.
         content:
           application/json:
             schema:
-              "$ref": "../cadentia-api.components.yaml#/schemas/RehearsalIssueResponse"
+              "$ref": "../components/schemas/rehearsal-workflow.yaml#/RehearsalIssueResponse"
 "/service-plans/{servicePlanId}/issues/{issueId}/status":
   patch:
     tags:
@@ -286,25 +286,25 @@
     - MUSICAL_REVIEWER
     summary: Transition a rehearsal issue status using stable status codes
     parameters:
-    - "$ref": "../cadentia-api.components.yaml#/parameters/ServicePlanId"
-    - "$ref": "../cadentia-api.components.yaml#/parameters/IssueId"
+    - "$ref": "../components/shared/parameters.yaml#/ServicePlanId"
+    - "$ref": "../components/shared/parameters.yaml#/IssueId"
     requestBody:
       required: true
       content:
         application/json:
           schema:
-            "$ref": "../cadentia-api.components.yaml#/schemas/UpdateIssueStatusRequest"
+            "$ref": "../components/schemas/rehearsal-workflow.yaml#/UpdateIssueStatusRequest"
     responses:
       '200':
         description: Updated issue.
         content:
           application/json:
             schema:
-              "$ref": "../cadentia-api.components.yaml#/schemas/RehearsalIssueResponse"
+              "$ref": "../components/schemas/rehearsal-workflow.yaml#/RehearsalIssueResponse"
       '400':
-        "$ref": "../cadentia-api.components.yaml#/responses/InvalidWorkflowPayload"
+        "$ref": "../components/shared/responses.yaml#/InvalidWorkflowPayload"
       '409':
-        "$ref": "../cadentia-api.components.yaml#/responses/WorkflowVersionConflict"
+        "$ref": "../components/shared/responses.yaml#/WorkflowVersionConflict"
 "/service-plans/{servicePlanId}/issues/{issueId}/actions":
   post:
     tags:
@@ -320,21 +320,21 @@
     - MUSICAL_REVIEWER
     summary: Create an owned follow-up action for an issue
     parameters:
-    - "$ref": "../cadentia-api.components.yaml#/parameters/ServicePlanId"
-    - "$ref": "../cadentia-api.components.yaml#/parameters/IssueId"
+    - "$ref": "../components/shared/parameters.yaml#/ServicePlanId"
+    - "$ref": "../components/shared/parameters.yaml#/IssueId"
     requestBody:
       required: true
       content:
         application/json:
           schema:
-            "$ref": "../cadentia-api.components.yaml#/schemas/CreateIssueActionRequest"
+            "$ref": "../components/schemas/rehearsal-workflow.yaml#/CreateIssueActionRequest"
     responses:
       '201':
         description: Action created.
         content:
           application/json:
             schema:
-              "$ref": "../cadentia-api.components.yaml#/schemas/RehearsalIssueActionResponse"
+              "$ref": "../components/schemas/rehearsal-workflow.yaml#/RehearsalIssueActionResponse"
 "/service-plans/{servicePlanId}/issue-actions/{actionId}/owner":
   patch:
     tags:
@@ -348,21 +348,21 @@
     - TEAM_SCHEDULER
     summary: Update issue action ownership
     parameters:
-    - "$ref": "../cadentia-api.components.yaml#/parameters/ServicePlanId"
-    - "$ref": "../cadentia-api.components.yaml#/parameters/ActionId"
+    - "$ref": "../components/shared/parameters.yaml#/ServicePlanId"
+    - "$ref": "../components/shared/parameters.yaml#/ActionId"
     requestBody:
       required: true
       content:
         application/json:
           schema:
-            "$ref": "../cadentia-api.components.yaml#/schemas/UpdateIssueActionOwnerRequest"
+            "$ref": "../components/schemas/rehearsal-workflow.yaml#/UpdateIssueActionOwnerRequest"
     responses:
       '200':
         description: Updated action.
         content:
           application/json:
             schema:
-              "$ref": "../cadentia-api.components.yaml#/schemas/RehearsalIssueActionResponse"
+              "$ref": "../components/schemas/rehearsal-workflow.yaml#/RehearsalIssueActionResponse"
 "/service-plans/{servicePlanId}/issue-actions/{actionId}/status":
   patch:
     tags:
@@ -379,21 +379,21 @@
     description: Assigned musicians may update action status for actions relevant
       to their assignment without receiving workflow governance permissions.
     parameters:
-    - "$ref": "../cadentia-api.components.yaml#/parameters/ServicePlanId"
-    - "$ref": "../cadentia-api.components.yaml#/parameters/ActionId"
+    - "$ref": "../components/shared/parameters.yaml#/ServicePlanId"
+    - "$ref": "../components/shared/parameters.yaml#/ActionId"
     requestBody:
       required: true
       content:
         application/json:
           schema:
-            "$ref": "../cadentia-api.components.yaml#/schemas/UpdateIssueActionStatusRequest"
+            "$ref": "../components/schemas/rehearsal-workflow.yaml#/UpdateIssueActionStatusRequest"
     responses:
       '200':
         description: Updated action.
         content:
           application/json:
             schema:
-              "$ref": "../cadentia-api.components.yaml#/schemas/RehearsalIssueActionResponse"
+              "$ref": "../components/schemas/rehearsal-workflow.yaml#/RehearsalIssueActionResponse"
 "/service-plans/{servicePlanId}/arrangement-overrides":
   get:
     tags:
@@ -413,7 +413,7 @@
     description: Rehearsal overrides are service-scoped effective values only and
       never update approved catalog arrangements.
     parameters:
-    - "$ref": "../cadentia-api.components.yaml#/parameters/ServicePlanId"
+    - "$ref": "../components/shared/parameters.yaml#/ServicePlanId"
     responses:
       '200':
         description: Service-scoped arrangement overrides.
@@ -422,7 +422,7 @@
             schema:
               type: array
               items:
-                "$ref": "../cadentia-api.components.yaml#/schemas/ArrangementOverrideResponse"
+                "$ref": "../components/schemas/rehearsal-workflow.yaml#/ArrangementOverrideResponse"
   post:
     tags:
     - RehearsalWorkflow
@@ -437,20 +437,20 @@
     description: Creates effective arrangement values for this service only; approved
       catalog arrangements are not mutated by this workflow path.
     parameters:
-    - "$ref": "../cadentia-api.components.yaml#/parameters/ServicePlanId"
+    - "$ref": "../components/shared/parameters.yaml#/ServicePlanId"
     requestBody:
       required: true
       content:
         application/json:
           schema:
-            "$ref": "../cadentia-api.components.yaml#/schemas/CreateArrangementOverrideRequest"
+            "$ref": "../components/schemas/rehearsal-workflow.yaml#/CreateArrangementOverrideRequest"
     responses:
       '201':
         description: Override created.
         content:
           application/json:
             schema:
-              "$ref": "../cadentia-api.components.yaml#/schemas/ArrangementOverrideResponse"
+              "$ref": "../components/schemas/rehearsal-workflow.yaml#/ArrangementOverrideResponse"
 "/service-plans/{servicePlanId}/arrangement-overrides/{arrangementOverrideId}":
   patch:
     tags:
@@ -466,23 +466,23 @@
     description: Updates service-scoped effective values only; approved catalog arrangements
       are not mutated.
     parameters:
-    - "$ref": "../cadentia-api.components.yaml#/parameters/ServicePlanId"
-    - "$ref": "../cadentia-api.components.yaml#/parameters/ArrangementOverrideId"
+    - "$ref": "../components/shared/parameters.yaml#/ServicePlanId"
+    - "$ref": "../components/shared/parameters.yaml#/ArrangementOverrideId"
     requestBody:
       required: true
       content:
         application/json:
           schema:
-            "$ref": "../cadentia-api.components.yaml#/schemas/UpdateArrangementOverrideRequest"
+            "$ref": "../components/schemas/rehearsal-workflow.yaml#/UpdateArrangementOverrideRequest"
     responses:
       '200':
         description: Override updated.
         content:
           application/json:
             schema:
-              "$ref": "../cadentia-api.components.yaml#/schemas/ArrangementOverrideResponse"
+              "$ref": "../components/schemas/rehearsal-workflow.yaml#/ArrangementOverrideResponse"
       '409':
-        "$ref": "../cadentia-api.components.yaml#/responses/WorkflowVersionConflict"
+        "$ref": "../components/shared/responses.yaml#/WorkflowVersionConflict"
   delete:
     tags:
     - RehearsalWorkflow
@@ -495,8 +495,8 @@
     - TEAM_SCHEDULER
     summary: Archive a service-scoped arrangement override
     parameters:
-    - "$ref": "../cadentia-api.components.yaml#/parameters/ServicePlanId"
-    - "$ref": "../cadentia-api.components.yaml#/parameters/ArrangementOverrideId"
+    - "$ref": "../components/shared/parameters.yaml#/ServicePlanId"
+    - "$ref": "../components/shared/parameters.yaml#/ArrangementOverrideId"
     responses:
       '204':
         description: Override archived.

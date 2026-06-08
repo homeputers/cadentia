@@ -15,9 +15,9 @@ The API generator entrypoint remains `cadentia-api.yaml`. Keep this file focused
 
 1. Add or update endpoint operations in the matching `paths/<api-area>.yaml` file.
 2. Add domain-owned models in `components/schemas/<domain>.yaml`.
-3. Add cross-cutting parameters, auth schemes, and shared responses in `components/shared/`.
+3. Add cross-cutting parameters and shared responses in `components/shared/`; keep security schemes inline in the aggregate indexes unless generator support changes.
 4. Add corresponding `$ref` entries to the aggregate indexes so `cadentia-api.yaml` stays complete for generation.
-5. Use references through `cadentia-api.components.yaml` from split path/schema files to keep cross-file dependencies stable.
+5. Reference the owning split file directly from path and schema files; avoid routing nested `$ref` values back through `cadentia-api.components.yaml`, because that can make the OpenAPI generator emit duplicate `*1` model classes.
 6. After changing the contract, run:
 
    ```bash

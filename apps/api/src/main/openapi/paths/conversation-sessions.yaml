@@ -25,7 +25,7 @@
         content:
           application/json:
             schema:
-              "$ref": "../cadentia-api.components.yaml#/schemas/ConversationSessionStateResponse"
+              "$ref": "../components/schemas/conversation-sessions.yaml#/ConversationSessionStateResponse"
       '404':
         description: Session not found.
 "/conversation-sessions/{sessionId}/slots":
@@ -54,14 +54,14 @@
       content:
         application/json:
           schema:
-            "$ref": "../cadentia-api.components.yaml#/schemas/ConversationSlotUpdateRequest"
+            "$ref": "../components/schemas/conversation-sessions.yaml#/ConversationSlotUpdateRequest"
     responses:
       '200':
         description: Updated state snapshot after deterministic merge.
         content:
           application/json:
             schema:
-              "$ref": "../cadentia-api.components.yaml#/schemas/ConversationSessionStateResponse"
+              "$ref": "../components/schemas/conversation-sessions.yaml#/ConversationSessionStateResponse"
       '409':
         description: Conflict or invalid state transition.
 "/conversation-sessions/{sessionId}/clarify":
@@ -90,14 +90,14 @@
       content:
         application/json:
           schema:
-            "$ref": "../cadentia-api.components.yaml#/schemas/ConversationClarificationRequest"
+            "$ref": "../components/schemas/conversation-sessions.yaml#/ConversationClarificationRequest"
     responses:
       '200':
         description: Updated session state after clarification merge.
         content:
           application/json:
             schema:
-              "$ref": "../cadentia-api.components.yaml#/schemas/ConversationSessionStateResponse"
+              "$ref": "../components/schemas/conversation-sessions.yaml#/ConversationSessionStateResponse"
 "/conversation-sessions/{sessionId}/confirm":
   post:
     tags:
@@ -124,14 +124,14 @@
       content:
         application/json:
           schema:
-            "$ref": "../cadentia-api.components.yaml#/schemas/ConversationConfirmRequest"
+            "$ref": "../components/schemas/conversation-sessions.yaml#/ConversationConfirmRequest"
     responses:
       '200':
         description: Confirmed session state.
         content:
           application/json:
             schema:
-              "$ref": "../cadentia-api.components.yaml#/schemas/ConversationSessionStateResponse"
+              "$ref": "../components/schemas/conversation-sessions.yaml#/ConversationSessionStateResponse"
       '409':
         description: Session not ready to confirm.
 "/conversation-sessions/{sessionId}/cancel":
@@ -161,7 +161,7 @@
         content:
           application/json:
             schema:
-              "$ref": "../cadentia-api.components.yaml#/schemas/ConversationSessionStateResponse"
+              "$ref": "../components/schemas/conversation-sessions.yaml#/ConversationSessionStateResponse"
 "/conversation-sessions/{sessionId}/recover":
   post:
     tags:
@@ -189,4 +189,4 @@
         content:
           application/json:
             schema:
-              "$ref": "../cadentia-api.components.yaml#/schemas/ConversationRecoveryResponse"
+              "$ref": "../components/schemas/conversation-sessions.yaml#/ConversationRecoveryResponse"
