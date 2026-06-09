@@ -29,6 +29,10 @@ public interface RehearsalWorkflowRepository {
 
     Optional<ReadinessStateCode> findServiceReadiness(UUID servicePlanId);
 
+    default Optional<Instant> findServiceReadinessUpdatedAt(UUID servicePlanId) {
+        return Optional.empty();
+    }
+
     List<RehearsalSessionRecord> listSessions(UUID servicePlanId);
 
     List<RehearsalNoteRecord> listNotes(UUID servicePlanId);

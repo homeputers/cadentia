@@ -40,6 +40,19 @@ public class RehearsalWorkflowAuthorizationPolicy {
                         RbacAuthorities.ROLE_REPORTING_VIEWER));
     }
 
+
+
+    public void requireWorkflowReporting() {
+        Authentication authentication = authentication();
+        require(
+                "rehearsal.workflow.report",
+                hasAnyAuthority(
+                        authentication,
+                        RbacAuthorities.ROLE_ADMIN,
+                        RbacAuthorities.ROLE_WORSHIP_LEADER,
+                        RbacAuthorities.ROLE_TEAM_SCHEDULER,
+                        RbacAuthorities.ROLE_REPORTING_VIEWER));
+    }
     public void requireActionResponseMutation() {
         Authentication authentication = authentication();
         require(

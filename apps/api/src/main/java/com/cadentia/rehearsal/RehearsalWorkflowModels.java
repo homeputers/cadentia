@@ -320,7 +320,23 @@ public final class RehearsalWorkflowModels {
             String ownerActor,
             String ownerTeamRoleCode,
             UUID ownerServiceAssignmentId,
+            Instant dueAt,
             Instant completedAt) {
+
+        public RehearsalIssueActionRecord(
+                UUID actionId,
+                UUID issueId,
+                UUID servicePlanId,
+                IssueActionStatusCode actionStatusCode,
+                String actionSummary,
+                IssueOwnerType ownerType,
+                String ownerActor,
+                String ownerTeamRoleCode,
+                UUID ownerServiceAssignmentId,
+                Instant completedAt) {
+            this(actionId, issueId, servicePlanId, actionStatusCode, actionSummary, ownerType, ownerActor,
+                    ownerTeamRoleCode, ownerServiceAssignmentId, null, completedAt);
+        }
 
         public boolean open() {
             return actionStatusCode == IssueActionStatusCode.TODO
@@ -357,8 +373,23 @@ public final class RehearsalWorkflowModels {
             String ownerActor,
             String ownerTeamRoleCode,
             UUID ownerServiceAssignmentId,
+            Instant dueAt,
             Instant completedAt,
             boolean open) {
+
+        public RehearsalWorkflowIssueActionIndicator(
+                UUID actionId,
+                IssueActionStatusCode actionStatusCode,
+                String actionSummary,
+                IssueOwnerType ownerType,
+                String ownerActor,
+                String ownerTeamRoleCode,
+                UUID ownerServiceAssignmentId,
+                Instant completedAt,
+                boolean open) {
+            this(actionId, actionStatusCode, actionSummary, ownerType, ownerActor, ownerTeamRoleCode,
+                    ownerServiceAssignmentId, null, completedAt, open);
+        }
     }
 
     public record RehearsalWorkflowIssueIndicator(
@@ -410,6 +441,82 @@ public final class RehearsalWorkflowModels {
         }
     }
 
+
+
+    public record RehearsalReportServiceRow(
+            UUID servicePlanId,
+            ReadinessStateCode explicitStateCode,
+            ReadinessStateCode derivedStateCode,
+            Instant serviceDateTime,
+            int openBlockingIssueCount,
+            int openRequiredActionCount,
+            int openBlockerCount,
+            int unresolvedTransitionIssueCount,
+            int difficultSongIssueCount,
+            int overdueOwnerActionCount,
+            int activeOverrideCount) {
+    }
+
+    public record RehearsalReportIssueRow(
+            UUID issueId,
+            UUID servicePlanId,
+            RehearsalTarget target,
+            IssueCategoryCode categoryCode,
+            IssueSeverityCode severityCode,
+            IssueStatusCode statusCode,
+            Instant createdAt,
+            Instant resolvedAt) {
+    }
+
+    public record RehearsalReportActionRow(
+            UUID actionId,
+            UUID issueId,
+            UUID servicePlanId,
+            IssueActionStatusCode actionStatusCode,
+            IssueOwnerType ownerType,
+            String ownerTeamRoleCode,
+            UUID ownerServiceAssignmentId,
+            Instant dueAt,
+            Instant completedAt) {
+    }
+
+    public record RehearsalCompletedServiceHistoryRow(
+            UUID servicePlanId,
+            Instant serviceDateTime,
+            Instant completedAt,
+            int sessionCount,
+            int archivedSessionCount,
+            int issueCount,
+            int resolvedIssueCount,
+            int overrideCount,
+            int auditEventCount) {
+    }
+
+    public record RehearsalRetentionConfiguration(
+            int completedSessionsRetainDays,
+            int notesRetainDays,
+            int issuesRetainDays,
+            int overridesRetainDays,
+            int auditRetainDays,
+            int minCompletedSessionsRetainDays,
+            int minNotesRetainDays,
+            int minIssuesRetainDays,
+            int minOverridesRetainDays,
+            int minAuditRetainDays) {
+
+        public static RehearsalRetentionConfiguration defaults() {
+            return new RehearsalRetentionConfiguration(400, 180, 400, 400, 2555, 90, 30, 180, 180, 2555);
+        }
+    }
+
+    public record RehearsalRetentionArchiveResult(
+            Instant archivedBefore,
+            int archivedSessions,
+            int archivedNotes,
+            int archivedIssues,
+            int archivedOverrides,
+            int retainedAuditRecords) {
+    }
     public record RehearsalAuditRecord(
             UUID auditId,
             String actor,
