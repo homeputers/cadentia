@@ -665,6 +665,10 @@ SetlistProposalResponse:
       - No songs were selected because catalog retrieval is not implemented yet.
     explanation:
       "$ref": "#/RecommendationExplanation"
+    operationalWorkflowSummary:
+      "$ref": "./service-plans.yaml#/WorkflowOperationalSummary"
+      nullable: true
+      description: Optional service-scoped rehearsal workflow context for diagnostics. This is operational status and does not affect deterministic candidate eligibility, scoring, selection, or ordering.
 SetlistProvenanceType:
   type: string
   enum:

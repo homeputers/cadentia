@@ -6,6 +6,9 @@ import com.cadentia.generated.model.AttachSetlistVersionRequest;
 import com.cadentia.generated.model.CreateServicePlanRequest;
 import com.cadentia.generated.model.PublishServicePlanRequest;
 import com.cadentia.generated.model.ReorderServicePlanBlocksRequest;
+import com.cadentia.generated.model.ServicePlanBlockProvenance;
+import com.cadentia.generated.model.ServicePlanBlockSourceType;
+import com.cadentia.generated.model.ServicePlanBlockType;
 import com.cadentia.generated.model.ServicePlanPublishResponse;
 import com.cadentia.generated.model.ServicePlanResponse;
 import com.cadentia.generated.model.ServicePlanSetlistAttachmentResponse;
@@ -13,6 +16,9 @@ import com.cadentia.generated.model.ServicePlanStatus;
 import com.cadentia.generated.model.ServicePlanSummary;
 import com.cadentia.generated.model.UpdateServicePlanRequest;
 import com.cadentia.serviceplan.ServicePlanModels.ServicePlanRecord;
+import com.cadentia.rehearsal.RehearsalWorkflowModels.WorkflowSummaryAudience;
+import com.cadentia.rehearsal.RehearsalWorkflowSummaryService;
+import com.cadentia.serviceplan.ServicePlanModels.SetlistAttachment;
 import com.cadentia.serviceplan.ServicePlanService;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -26,9 +32,13 @@ import org.springframework.web.bind.annotation.RestController;
 public class ServicePlanController implements ServicePlansApi {
 
     private final ServicePlanService service;
+    private final RehearsalWorkflowSummaryService workflowSummaryService;
 
-    public ServicePlanController(ServicePlanService service) {
+    public ServicePlanController(
+            ServicePlanService service,
+            RehearsalWorkflowSummaryService workflowSummaryService) {
         this.service = service;
+        this.workflowSummaryService = workflowSummaryService;
     }
 
     @Override
@@ -121,9 +131,46 @@ public class ServicePlanController implements ServicePlansApi {
         response.setScripture(r.scripture());
         response.setNotes(r.notes());
         response.setStatus(toStatus(r));
+        response.setBlocks(r.blocks().stream().map(block -> toBlock(r.servicePlanId(), block)).toList());
+        response.setSetlistAttachments(r.attachments().stream()
+                .map(attachment -> toAttachment(r.servicePlanId(), attachment))
+                .toList());
         if (r.readinessSummary() != null) {
             response.setReadinessSummary(r.readinessSummary().toReadinessSummary());
         }
+        response.setWorkflowSummary(WorkflowSummaryResponseMapper.toResponse(
+                workflowSummaryService.summarize(r.servicePlanId(), WorkflowSummaryAudience.WORSHIP_LEADER)));
+        return response;
+    }
+
+    private com.cadentia.generated.model.ServicePlanBlock toBlock(
+            UUID servicePlanId,
+            com.cadentia.serviceplan.ServicePlanModels.ServicePlanBlock block) {
+        ServicePlanBlockProvenance provenance = new ServicePlanBlockProvenance()
+                .sourceType(block.sourceSetlistVersionId() == null
+                        ? ServicePlanBlockSourceType.MANUAL
+                        : ServicePlanBlockSourceType.SETLIST_VERSION)
+                .setlistVersionId(block.sourceSetlistVersionId())
+                .setlistEntryId(block.sourceSetlistItemId());
+        com.cadentia.generated.model.ServicePlanBlock response = new com.cadentia.generated.model.ServicePlanBlock(
+                block.blockId(),
+                block.positionIndex(),
+                ServicePlanBlockType.fromValue(block.blockType()),
+                block.blockType(),
+                provenance);
+        response.setNotes(block.serviceNotes());
+        response.setServiceKeyOverride(block.overrideKey());
+        response.setWorkflowIssues(WorkflowSummaryResponseMapper.toIssueResponses(
+                workflowSummaryService.songIssues(servicePlanId, block.blockId(), WorkflowSummaryAudience.WORSHIP_LEADER)));
+        return response;
+    }
+
+    private ServicePlanSetlistAttachmentResponse toAttachment(UUID servicePlanId, SetlistAttachment attachment) {
+        ServicePlanSetlistAttachmentResponse response = new ServicePlanSetlistAttachmentResponse();
+        response.setAttachmentId(attachment.attachmentId());
+        response.setServicePlanId(servicePlanId);
+        response.setSetlistId(attachment.setlistId());
+        response.setSetlistVersionId(attachment.setlistVersionId());
         return response;
     }
 

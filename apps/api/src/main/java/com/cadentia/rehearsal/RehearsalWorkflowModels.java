@@ -327,6 +327,84 @@ public final class RehearsalWorkflowModels {
         }
     }
 
+
+
+    public enum WorkflowSummaryAudience {
+        PUBLIC,
+        WORSHIP_LEADER,
+        ADMIN
+    }
+
+    public record WorkflowSummarySession(
+            UUID rehearsalSessionId,
+            String sessionCode,
+            Instant startsAt,
+            Instant endsAt,
+            String location,
+            ReadinessStateCode readinessStateCode) {
+    }
+
+    public record WorkflowIssueCount(
+            IssueCategoryCode categoryCode,
+            IssueSeverityCode severityCode,
+            int count) {
+    }
+
+    public record WorkflowIssueActionIndicator(
+            UUID actionId,
+            IssueActionStatusCode actionStatusCode,
+            String actionSummary,
+            IssueOwnerType ownerType,
+            String ownerActor,
+            String ownerTeamRoleCode,
+            UUID ownerServiceAssignmentId,
+            Instant completedAt,
+            boolean open) {
+    }
+
+    public record WorkflowIssueIndicator(
+            UUID issueId,
+            RehearsalTarget target,
+            IssueCategoryCode categoryCode,
+            IssueSeverityCode severityCode,
+            IssueStatusCode statusCode,
+            boolean blocking,
+            String title,
+            String detail,
+            String detectedBy,
+            java.util.List<WorkflowIssueActionIndicator> actions) {
+
+        public WorkflowIssueIndicator {
+            actions = actions == null ? java.util.List.of() : java.util.List.copyOf(actions);
+        }
+    }
+
+    public record WorkflowSummary(
+            UUID servicePlanId,
+            ReadinessStateCode explicitStateCode,
+            ReadinessStateCode derivedStateCode,
+            boolean readyForService,
+            String currentPhase,
+            WorkflowSummarySession nextRehearsalSession,
+            WorkflowSummarySession mostRecentPastRehearsalSession,
+            java.util.List<WorkflowSummarySession> rehearsalSessions,
+            int blockerCount,
+            int overdueActionCount,
+            java.util.List<WorkflowIssueCount> openIssueCounts,
+            int unresolvedTransitionIssueCount,
+            int difficultSongIssueCount,
+            int serviceSpecificOverrideCount,
+            boolean hasServiceSpecificOverrides,
+            java.util.List<WorkflowIssueIndicator> openIssues,
+            boolean redacted) {
+
+        public WorkflowSummary {
+            rehearsalSessions = rehearsalSessions == null ? java.util.List.of() : java.util.List.copyOf(rehearsalSessions);
+            openIssueCounts = openIssueCounts == null ? java.util.List.of() : java.util.List.copyOf(openIssueCounts);
+            openIssues = openIssues == null ? java.util.List.of() : java.util.List.copyOf(openIssues);
+        }
+    }
+
     public record RehearsalAuditRecord(
             UUID auditId,
             String actor,

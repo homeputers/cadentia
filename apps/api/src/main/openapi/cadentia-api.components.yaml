@@ -283,6 +283,16 @@ schemas:
     "$ref": "./components/schemas/service-plans.yaml#/ReadinessStatus"
   ReadinessSummary:
     "$ref": "./components/schemas/service-plans.yaml#/ReadinessSummary"
+  WorkflowSummarySession:
+    "$ref": "./components/schemas/service-plans.yaml#/WorkflowSummarySession"
+  WorkflowIssueCount:
+    "$ref": "./components/schemas/service-plans.yaml#/WorkflowIssueCount"
+  WorkflowIssueActionIndicator:
+    "$ref": "./components/schemas/service-plans.yaml#/WorkflowIssueActionIndicator"
+  WorkflowIssueIndicator:
+    "$ref": "./components/schemas/service-plans.yaml#/WorkflowIssueIndicator"
+  WorkflowOperationalSummary:
+    "$ref": "./components/schemas/service-plans.yaml#/WorkflowOperationalSummary"
   PublishServicePlanRequest:
     "$ref": "./components/schemas/service-plans.yaml#/PublishServicePlanRequest"
   ServicePlanPublishResponse:
