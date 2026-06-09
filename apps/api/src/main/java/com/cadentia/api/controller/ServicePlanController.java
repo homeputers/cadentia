@@ -7,18 +7,19 @@ import com.cadentia.generated.model.CreateServicePlanRequest;
 import com.cadentia.generated.model.PublishServicePlanRequest;
 import com.cadentia.generated.model.ReorderServicePlanBlocksRequest;
 import com.cadentia.generated.model.ServicePlanBlockProvenance;
-import com.cadentia.generated.model.ServicePlanPlanningBlock;
 import com.cadentia.generated.model.ServicePlanBlockSourceType;
 import com.cadentia.generated.model.ServicePlanBlockType;
+import com.cadentia.generated.model.ServicePlanPlanningBlock;
 import com.cadentia.generated.model.ServicePlanPublishResponse;
 import com.cadentia.generated.model.ServicePlanResponse;
 import com.cadentia.generated.model.ServicePlanSetlistAttachmentResponse;
 import com.cadentia.generated.model.ServicePlanStatus;
 import com.cadentia.generated.model.ServicePlanSummary;
 import com.cadentia.generated.model.UpdateServicePlanRequest;
-import com.cadentia.serviceplan.ServicePlanModels.ServicePlanRecord;
 import com.cadentia.rehearsal.RehearsalWorkflowModels.RehearsalWorkflowSummaryAudience;
 import com.cadentia.rehearsal.RehearsalWorkflowSummaryService;
+import com.cadentia.serviceplan.ServicePlanModels.ServicePlanBlock;
+import com.cadentia.serviceplan.ServicePlanModels.ServicePlanRecord;
 import com.cadentia.serviceplan.ServicePlanModels.SetlistAttachment;
 import com.cadentia.serviceplan.ServicePlanService;
 import java.time.OffsetDateTime;
@@ -144,9 +145,7 @@ public class ServicePlanController implements ServicePlansApi {
         return response;
     }
 
-    private ServicePlanPlanningBlock toBlock(
-            UUID servicePlanId,
-            com.cadentia.serviceplan.ServicePlanModels.ServicePlanBlock block) {
+    private ServicePlanPlanningBlock toBlock(UUID servicePlanId, ServicePlanBlock block) {
         ServicePlanBlockProvenance provenance = new ServicePlanBlockProvenance()
                 .sourceType(block.sourceSetlistVersionId() == null
                         ? ServicePlanBlockSourceType.MANUAL
