@@ -8,12 +8,12 @@ import com.cadentia.rehearsal.RehearsalWorkflowModels.RehearsalIssueActionRecord
 import com.cadentia.rehearsal.RehearsalWorkflowModels.RehearsalIssueRecord;
 import com.cadentia.rehearsal.RehearsalWorkflowModels.RehearsalSessionRecord;
 import com.cadentia.rehearsal.RehearsalWorkflowModels.RehearsalTarget;
-import com.cadentia.rehearsal.RehearsalWorkflowModels.WorkflowIssueActionIndicator;
-import com.cadentia.rehearsal.RehearsalWorkflowModels.WorkflowIssueCount;
-import com.cadentia.rehearsal.RehearsalWorkflowModels.WorkflowIssueIndicator;
-import com.cadentia.rehearsal.RehearsalWorkflowModels.WorkflowSummary;
-import com.cadentia.rehearsal.RehearsalWorkflowModels.WorkflowSummaryAudience;
-import com.cadentia.rehearsal.RehearsalWorkflowModels.WorkflowSummarySession;
+import com.cadentia.rehearsal.RehearsalWorkflowModels.RehearsalWorkflowIssueActionIndicator;
+import com.cadentia.rehearsal.RehearsalWorkflowModels.RehearsalWorkflowIssueCount;
+import com.cadentia.rehearsal.RehearsalWorkflowModels.RehearsalWorkflowIssueIndicator;
+import com.cadentia.rehearsal.RehearsalWorkflowModels.RehearsalWorkflowSummary;
+import com.cadentia.rehearsal.RehearsalWorkflowModels.RehearsalWorkflowSummaryAudience;
+import com.cadentia.rehearsal.RehearsalWorkflowModels.RehearsalWorkflowSummarySession;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.Comparator;
@@ -38,8 +38,8 @@ public class RehearsalWorkflowSummaryService implements RehearsalWorkflowSummary
         this.clock = clock;
     }
 
-    public WorkflowSummary summarize(UUID servicePlanId, WorkflowSummaryAudience audience) {
-        WorkflowSummaryAudience effectiveAudience = audience == null ? WorkflowSummaryAudience.PUBLIC : audience;
+    public RehearsalWorkflowSummary summarize(UUID servicePlanId, RehearsalWorkflowSummaryAudience audience) {
+        RehearsalWorkflowSummaryAudience effectiveAudience = audience == null ? RehearsalWorkflowSummaryAudience.PUBLIC : audience;
         var status = workflowService.workflowStatus(servicePlanId);
         List<RehearsalSessionRecord> sessions = workflowService.listSessions(servicePlanId).stream()
                 .filter(session -> session.archivedAt() == null)
@@ -54,25 +54,25 @@ public class RehearsalWorkflowSummaryService implements RehearsalWorkflowSummary
                 .collect(Collectors.groupingBy(RehearsalIssueActionRecord::issueId));
         List<ArrangementOverrideRecord> overrides = workflowService.listArrangementOverrides(servicePlanId);
         Instant now = Instant.now(clock);
-        WorkflowSummarySession nextSession = sessions.stream()
+        RehearsalWorkflowSummarySession nextSession = sessions.stream()
                 .filter(session -> !session.startsAt().isBefore(now))
                 .findFirst()
                 .map(this::sessionSummary)
                 .orElse(null);
-        WorkflowSummarySession mostRecentPastSession = sessions.stream()
+        RehearsalWorkflowSummarySession mostRecentPastSession = sessions.stream()
                 .filter(session -> session.startsAt().isBefore(now))
                 .max(Comparator.comparing(RehearsalSessionRecord::startsAt))
                 .map(this::sessionSummary)
                 .orElse(null);
-        List<WorkflowIssueCount> counts = issueCounts(openIssues);
-        List<WorkflowIssueIndicator> indicators = openIssues.stream()
+        List<RehearsalWorkflowIssueCount> counts = issueCounts(openIssues);
+        List<RehearsalWorkflowIssueIndicator> indicators = openIssues.stream()
                 .sorted(Comparator.comparing(RehearsalIssueRecord::blocking).reversed()
                         .thenComparing(issue -> issue.severityCode().ordinal(), Comparator.reverseOrder())
                         .thenComparing(RehearsalIssueRecord::title))
                 .map(issue -> issueIndicator(issue, actionsByIssueId.getOrDefault(issue.issueId(), List.of()), effectiveAudience))
                 .toList();
         long openActionCount = actions.stream().filter(RehearsalIssueActionRecord::open).count();
-        return new WorkflowSummary(
+        return new RehearsalWorkflowSummary(
                 servicePlanId,
                 status.explicitStateCode(),
                 status.derivedStateCode(),
@@ -93,30 +93,30 @@ public class RehearsalWorkflowSummaryService implements RehearsalWorkflowSummary
                 overrides.size(),
                 !overrides.isEmpty(),
                 indicators,
-                effectiveAudience != WorkflowSummaryAudience.ADMIN);
+                effectiveAudience != RehearsalWorkflowSummaryAudience.ADMIN);
     }
 
-    public List<WorkflowIssueIndicator> songIssues(UUID servicePlanId, UUID servicePlanBlockId, WorkflowSummaryAudience audience) {
+    public List<RehearsalWorkflowIssueIndicator> songIssues(UUID servicePlanId, UUID servicePlanBlockId, RehearsalWorkflowSummaryAudience audience) {
         return targetedIssues(servicePlanId, audience, target -> servicePlanBlockId != null
                 && servicePlanBlockId.equals(target.servicePlanBlockId()));
     }
 
-    public List<WorkflowIssueIndicator> transitionIssues(
+    public List<RehearsalWorkflowIssueIndicator> transitionIssues(
             UUID servicePlanId,
             UUID transitionFromBlockId,
             UUID transitionToBlockId,
-            WorkflowSummaryAudience audience) {
+            RehearsalWorkflowSummaryAudience audience) {
         return targetedIssues(servicePlanId, audience, target -> transitionFromBlockId != null
                 && transitionFromBlockId.equals(target.transitionFromBlockId())
                 && transitionToBlockId != null
                 && transitionToBlockId.equals(target.transitionToBlockId()));
     }
 
-    private List<WorkflowIssueIndicator> targetedIssues(
+    private List<RehearsalWorkflowIssueIndicator> targetedIssues(
             UUID servicePlanId,
-            WorkflowSummaryAudience audience,
+            RehearsalWorkflowSummaryAudience audience,
             java.util.function.Predicate<RehearsalTarget> predicate) {
-        WorkflowSummaryAudience effectiveAudience = audience == null ? WorkflowSummaryAudience.PUBLIC : audience;
+        RehearsalWorkflowSummaryAudience effectiveAudience = audience == null ? RehearsalWorkflowSummaryAudience.PUBLIC : audience;
         Map<UUID, List<RehearsalIssueActionRecord>> actionsByIssueId = workflowService.listIssueActions(servicePlanId).stream()
                 .collect(Collectors.groupingBy(RehearsalIssueActionRecord::issueId));
         return workflowService.listIssues(servicePlanId).stream()
@@ -127,21 +127,21 @@ public class RehearsalWorkflowSummaryService implements RehearsalWorkflowSummary
                 .toList();
     }
 
-    private List<WorkflowIssueCount> issueCounts(List<RehearsalIssueRecord> openIssues) {
+    private List<RehearsalWorkflowIssueCount> issueCounts(List<RehearsalIssueRecord> openIssues) {
         return openIssues.stream()
                 .collect(Collectors.groupingBy(issue -> new IssueCountKey(issue.categoryCode(), issue.severityCode()), Collectors.counting()))
                 .entrySet().stream()
                 .sorted(Map.Entry.<IssueCountKey, Long>comparingByKey())
-                .map(entry -> new WorkflowIssueCount(entry.getKey().categoryCode(), entry.getKey().severityCode(), entry.getValue().intValue()))
+                .map(entry -> new RehearsalWorkflowIssueCount(entry.getKey().categoryCode(), entry.getKey().severityCode(), entry.getValue().intValue()))
                 .toList();
     }
 
-    private WorkflowIssueIndicator issueIndicator(
+    private RehearsalWorkflowIssueIndicator issueIndicator(
             RehearsalIssueRecord issue,
             List<RehearsalIssueActionRecord> actions,
-            WorkflowSummaryAudience audience) {
-        boolean redactPrivateDetails = audience == WorkflowSummaryAudience.PUBLIC;
-        return new WorkflowIssueIndicator(
+            RehearsalWorkflowSummaryAudience audience) {
+        boolean redactPrivateDetails = audience == RehearsalWorkflowSummaryAudience.PUBLIC;
+        return new RehearsalWorkflowIssueIndicator(
                 issue.issueId(),
                 issue.target(),
                 issue.categoryCode(),
@@ -156,10 +156,10 @@ public class RehearsalWorkflowSummaryService implements RehearsalWorkflowSummary
                         .toList());
     }
 
-    private WorkflowIssueActionIndicator actionIndicator(
+    private RehearsalWorkflowIssueActionIndicator actionIndicator(
             RehearsalIssueActionRecord action,
             boolean redactPrivateDetails) {
-        return new WorkflowIssueActionIndicator(
+        return new RehearsalWorkflowIssueActionIndicator(
                 action.actionId(),
                 action.actionStatusCode(),
                 redactPrivateDetails ? null : action.actionSummary(),
@@ -179,8 +179,8 @@ public class RehearsalWorkflowSummaryService implements RehearsalWorkflowSummary
         return action.ownerType();
     }
 
-    private WorkflowSummarySession sessionSummary(RehearsalSessionRecord session) {
-        return new WorkflowSummarySession(
+    private RehearsalWorkflowSummarySession sessionSummary(RehearsalSessionRecord session) {
+        return new RehearsalWorkflowSummarySession(
                 session.rehearsalSessionId(),
                 session.sessionCode(),
                 session.startsAt(),

@@ -8,37 +8,37 @@ import com.cadentia.generated.model.RehearsalIssueStatusCode;
 import com.cadentia.generated.model.RehearsalReadinessStateCode;
 import com.cadentia.generated.model.RehearsalWorkflowTarget;
 import com.cadentia.generated.model.RehearsalWorkflowTargetTypeCode;
-import com.cadentia.generated.model.WorkflowIssueActionIndicator;
-import com.cadentia.generated.model.WorkflowIssueCount;
-import com.cadentia.generated.model.WorkflowIssueIndicator;
-import com.cadentia.generated.model.WorkflowOperationalSummary;
-import com.cadentia.generated.model.WorkflowSummarySession;
+import com.cadentia.generated.model.ServicePlanWorkflowIssueActionIndicator;
+import com.cadentia.generated.model.ServicePlanWorkflowIssueCount;
+import com.cadentia.generated.model.ServicePlanWorkflowIssueIndicator;
+import com.cadentia.generated.model.ServicePlanWorkflowSummary;
+import com.cadentia.generated.model.ServicePlanWorkflowSessionSummary;
 import com.cadentia.rehearsal.RehearsalWorkflowModels.RehearsalTarget;
-import com.cadentia.rehearsal.RehearsalWorkflowModels.WorkflowSummary;
+import com.cadentia.rehearsal.RehearsalWorkflowModels.RehearsalWorkflowSummary;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
 
-public final class WorkflowSummaryResponseMapper {
+public final class ServicePlanWorkflowSummaryResponseMapper {
 
-    private WorkflowSummaryResponseMapper() {
+    private ServicePlanWorkflowSummaryResponseMapper() {
     }
 
-    public static WorkflowOperationalSummary toResponse(WorkflowSummary summary) {
+    public static ServicePlanWorkflowSummary toResponse(RehearsalWorkflowSummary summary) {
         if (summary == null) {
             return null;
         }
-        WorkflowOperationalSummary response = new WorkflowOperationalSummary(
+        ServicePlanWorkflowSummary response = new ServicePlanWorkflowSummary(
                 summary.servicePlanId(),
                 readiness(summary.explicitStateCode().code()),
                 readiness(summary.derivedStateCode().code()),
                 summary.readyForService(),
-                WorkflowOperationalSummary.CurrentPhaseEnum.fromValue(summary.currentPhase()),
-                summary.rehearsalSessions().stream().map(WorkflowSummaryResponseMapper::session).toList(),
+                ServicePlanWorkflowSummary.CurrentPhaseEnum.fromValue(summary.currentPhase()),
+                summary.rehearsalSessions().stream().map(ServicePlanWorkflowSummaryResponseMapper::session).toList(),
                 summary.blockerCount(),
                 summary.overdueActionCount(),
-                summary.openIssueCounts().stream().map(WorkflowSummaryResponseMapper::issueCount).toList(),
+                summary.openIssueCounts().stream().map(ServicePlanWorkflowSummaryResponseMapper::issueCount).toList(),
                 summary.unresolvedTransitionIssueCount(),
                 summary.difficultSongIssueCount(),
                 summary.serviceSpecificOverrideCount(),
@@ -50,20 +50,20 @@ public final class WorkflowSummaryResponseMapper {
         return response;
     }
 
-    static List<WorkflowIssueIndicator> toIssueResponses(
-            List<com.cadentia.rehearsal.RehearsalWorkflowModels.WorkflowIssueIndicator> issues) {
+    static List<ServicePlanWorkflowIssueIndicator> toIssueResponses(
+            List<com.cadentia.rehearsal.RehearsalWorkflowModels.RehearsalWorkflowIssueIndicator> issues) {
         if (issues == null) {
             return List.of();
         }
-        return issues.stream().map(WorkflowSummaryResponseMapper::issue).toList();
+        return issues.stream().map(ServicePlanWorkflowSummaryResponseMapper::issue).toList();
     }
 
-    private static WorkflowSummarySession session(
-            com.cadentia.rehearsal.RehearsalWorkflowModels.WorkflowSummarySession session) {
+    private static ServicePlanWorkflowSessionSummary session(
+            com.cadentia.rehearsal.RehearsalWorkflowModels.RehearsalWorkflowSummarySession session) {
         if (session == null) {
             return null;
         }
-        return new WorkflowSummarySession(
+        return new ServicePlanWorkflowSessionSummary(
                 session.rehearsalSessionId(),
                 session.sessionCode(),
                 atOffset(session.startsAt()),
@@ -72,17 +72,17 @@ public final class WorkflowSummaryResponseMapper {
                 .location(session.location());
     }
 
-    private static WorkflowIssueCount issueCount(
-            com.cadentia.rehearsal.RehearsalWorkflowModels.WorkflowIssueCount count) {
-        return new WorkflowIssueCount(
+    private static ServicePlanWorkflowIssueCount issueCount(
+            com.cadentia.rehearsal.RehearsalWorkflowModels.RehearsalWorkflowIssueCount count) {
+        return new ServicePlanWorkflowIssueCount(
                 RehearsalIssueCategoryCode.fromValue(count.categoryCode().code()),
                 RehearsalIssueSeverityCode.fromValue(count.severityCode().code()),
                 count.count());
     }
 
-    private static WorkflowIssueIndicator issue(
-            com.cadentia.rehearsal.RehearsalWorkflowModels.WorkflowIssueIndicator issue) {
-        WorkflowIssueIndicator response = new WorkflowIssueIndicator(
+    private static ServicePlanWorkflowIssueIndicator issue(
+            com.cadentia.rehearsal.RehearsalWorkflowModels.RehearsalWorkflowIssueIndicator issue) {
+        ServicePlanWorkflowIssueIndicator response = new ServicePlanWorkflowIssueIndicator(
                 issue.issueId(),
                 target(issue.target()),
                 RehearsalIssueCategoryCode.fromValue(issue.categoryCode().code()),
@@ -90,15 +90,15 @@ public final class WorkflowSummaryResponseMapper {
                 RehearsalIssueStatusCode.fromValue(issue.statusCode().code()),
                 issue.blocking(),
                 issue.title(),
-                issue.actions().stream().map(WorkflowSummaryResponseMapper::action).toList());
+                issue.actions().stream().map(ServicePlanWorkflowSummaryResponseMapper::action).toList());
         response.setDetail(issue.detail());
         response.setDetectedBy(issue.detectedBy());
         return response;
     }
 
-    private static WorkflowIssueActionIndicator action(
-            com.cadentia.rehearsal.RehearsalWorkflowModels.WorkflowIssueActionIndicator action) {
-        WorkflowIssueActionIndicator response = new WorkflowIssueActionIndicator(
+    private static ServicePlanWorkflowIssueActionIndicator action(
+            com.cadentia.rehearsal.RehearsalWorkflowModels.RehearsalWorkflowIssueActionIndicator action) {
+        ServicePlanWorkflowIssueActionIndicator response = new ServicePlanWorkflowIssueActionIndicator(
                 action.actionId(),
                 RehearsalIssueActionStatusCode.fromValue(action.actionStatusCode().code()),
                 RehearsalIssueOwnerType.fromValue(action.ownerType().code()),

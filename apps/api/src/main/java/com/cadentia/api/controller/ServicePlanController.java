@@ -7,6 +7,7 @@ import com.cadentia.generated.model.CreateServicePlanRequest;
 import com.cadentia.generated.model.PublishServicePlanRequest;
 import com.cadentia.generated.model.ReorderServicePlanBlocksRequest;
 import com.cadentia.generated.model.ServicePlanBlockProvenance;
+import com.cadentia.generated.model.ServicePlanPlanningBlock;
 import com.cadentia.generated.model.ServicePlanBlockSourceType;
 import com.cadentia.generated.model.ServicePlanBlockType;
 import com.cadentia.generated.model.ServicePlanPublishResponse;
@@ -16,7 +17,7 @@ import com.cadentia.generated.model.ServicePlanStatus;
 import com.cadentia.generated.model.ServicePlanSummary;
 import com.cadentia.generated.model.UpdateServicePlanRequest;
 import com.cadentia.serviceplan.ServicePlanModels.ServicePlanRecord;
-import com.cadentia.rehearsal.RehearsalWorkflowModels.WorkflowSummaryAudience;
+import com.cadentia.rehearsal.RehearsalWorkflowModels.RehearsalWorkflowSummaryAudience;
 import com.cadentia.rehearsal.RehearsalWorkflowSummaryService;
 import com.cadentia.serviceplan.ServicePlanModels.SetlistAttachment;
 import com.cadentia.serviceplan.ServicePlanService;
@@ -138,12 +139,12 @@ public class ServicePlanController implements ServicePlansApi {
         if (r.readinessSummary() != null) {
             response.setReadinessSummary(r.readinessSummary().toReadinessSummary());
         }
-        response.setWorkflowSummary(WorkflowSummaryResponseMapper.toResponse(
-                workflowSummaryService.summarize(r.servicePlanId(), WorkflowSummaryAudience.WORSHIP_LEADER)));
+        response.setWorkflowSummary(ServicePlanWorkflowSummaryResponseMapper.toResponse(
+                workflowSummaryService.summarize(r.servicePlanId(), RehearsalWorkflowSummaryAudience.WORSHIP_LEADER)));
         return response;
     }
 
-    private com.cadentia.generated.model.ServicePlanBlock toBlock(
+    private ServicePlanPlanningBlock toBlock(
             UUID servicePlanId,
             com.cadentia.serviceplan.ServicePlanModels.ServicePlanBlock block) {
         ServicePlanBlockProvenance provenance = new ServicePlanBlockProvenance()
@@ -152,7 +153,7 @@ public class ServicePlanController implements ServicePlansApi {
                         : ServicePlanBlockSourceType.SETLIST_VERSION)
                 .setlistVersionId(block.sourceSetlistVersionId())
                 .setlistEntryId(block.sourceSetlistItemId());
-        com.cadentia.generated.model.ServicePlanBlock response = new com.cadentia.generated.model.ServicePlanBlock(
+        ServicePlanPlanningBlock response = new ServicePlanPlanningBlock(
                 block.blockId(),
                 block.positionIndex(),
                 ServicePlanBlockType.fromValue(block.blockType()),
@@ -160,8 +161,8 @@ public class ServicePlanController implements ServicePlansApi {
                 provenance);
         response.setNotes(block.serviceNotes());
         response.setServiceKeyOverride(block.overrideKey());
-        response.setWorkflowIssues(WorkflowSummaryResponseMapper.toIssueResponses(
-                workflowSummaryService.songIssues(servicePlanId, block.blockId(), WorkflowSummaryAudience.WORSHIP_LEADER)));
+        response.setWorkflowIssues(ServicePlanWorkflowSummaryResponseMapper.toIssueResponses(
+                workflowSummaryService.songIssues(servicePlanId, block.blockId(), RehearsalWorkflowSummaryAudience.WORSHIP_LEADER)));
         return response;
     }
 

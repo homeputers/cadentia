@@ -401,8 +401,8 @@ components:
       "$ref": "./components/schemas/service-plans.yaml#/ServicePlanSetlistAttachmentResponse"
     ServicePlanBlockProvenance:
       "$ref": "./components/schemas/service-plans.yaml#/ServicePlanBlockProvenance"
-    ServicePlanBlock:
-      "$ref": "./components/schemas/service-plans.yaml#/ServicePlanBlock"
+    ServicePlanPlanningBlock:
+      "$ref": "./components/schemas/service-plans.yaml#/ServicePlanPlanningBlock"
     ReorderServicePlanBlocksRequest:
       "$ref": "./components/schemas/service-plans.yaml#/ReorderServicePlanBlocksRequest"
     ServicePlanEffectiveSequenceSnapshot:

@@ -4,7 +4,11 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.cadentia.rehearsal.RehearsalWorkflowModels.ArrangementOverrideRecord;
 import com.cadentia.rehearsal.RehearsalWorkflowModels.ReadinessStateCode;
+import com.cadentia.rehearsal.RehearsalWorkflowModels.RehearsalIssueActionRecord;
+import com.cadentia.rehearsal.RehearsalWorkflowModels.RehearsalIssueRecord;
+import com.cadentia.rehearsal.RehearsalWorkflowModels.RehearsalSessionRecord;
 import com.cadentia.rehearsal.RehearsalWorkflowModels.WorkflowStatus;
 import com.cadentia.rehearsal.RehearsalWorkflowReader;
 import com.cadentia.rehearsal.RehearsalWorkflowSummaryService;
@@ -74,22 +78,22 @@ class ServicePlanControllerIntegrationTest {
     static class EmptyWorkflowReader implements RehearsalWorkflowReader {
 
         @Override
-        public List<com.cadentia.rehearsal.RehearsalWorkflowModels.RehearsalSessionRecord> listSessions(UUID servicePlanId) {
+        public List<RehearsalSessionRecord> listSessions(UUID servicePlanId) {
             return List.of();
         }
 
         @Override
-        public List<com.cadentia.rehearsal.RehearsalWorkflowModels.RehearsalIssueRecord> listIssues(UUID servicePlanId) {
+        public List<RehearsalIssueRecord> listIssues(UUID servicePlanId) {
             return List.of();
         }
 
         @Override
-        public List<com.cadentia.rehearsal.RehearsalWorkflowModels.RehearsalIssueActionRecord> listIssueActions(UUID servicePlanId) {
+        public List<RehearsalIssueActionRecord> listIssueActions(UUID servicePlanId) {
             return List.of();
         }
 
         @Override
-        public List<com.cadentia.rehearsal.RehearsalWorkflowModels.ArrangementOverrideRecord> listArrangementOverrides(UUID servicePlanId) {
+        public List<ArrangementOverrideRecord> listArrangementOverrides(UUID servicePlanId) {
             return List.of();
         }
 
@@ -133,7 +137,13 @@ class ServicePlanControllerIntegrationTest {
         }
 
         @Override
-        public ServicePlanRecord updateMetadata(UUID servicePlanId, Instant serviceDateTime, String title, String theme, String scripture, String notes) {
+        public ServicePlanRecord updateMetadata(
+                UUID servicePlanId,
+                Instant serviceDateTime,
+                String title,
+                String theme,
+                String scripture,
+                String notes) {
             throw new UnsupportedOperationException();
         }
 

@@ -1,10 +1,10 @@
 package com.cadentia.rehearsal;
 
-import com.cadentia.rehearsal.RehearsalWorkflowModels.WorkflowSummary;
-import com.cadentia.rehearsal.RehearsalWorkflowModels.WorkflowSummaryAudience;
+import com.cadentia.rehearsal.RehearsalWorkflowModels.RehearsalWorkflowSummary;
+import com.cadentia.rehearsal.RehearsalWorkflowModels.RehearsalWorkflowSummaryAudience;
 import java.util.UUID;
 
 public interface RehearsalWorkflowSummaryProvider {
 
-    WorkflowSummary summarize(UUID servicePlanId, WorkflowSummaryAudience audience);
+    RehearsalWorkflowSummary summarize(UUID servicePlanId, RehearsalWorkflowSummaryAudience audience);
 }

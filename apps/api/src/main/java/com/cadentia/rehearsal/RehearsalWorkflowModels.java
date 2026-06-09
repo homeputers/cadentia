@@ -1,6 +1,7 @@
 package com.cadentia.rehearsal;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 public final class RehearsalWorkflowModels {
@@ -327,15 +328,13 @@ public final class RehearsalWorkflowModels {
         }
     }
 
-
-
-    public enum WorkflowSummaryAudience {
+    public enum RehearsalWorkflowSummaryAudience {
         PUBLIC,
         WORSHIP_LEADER,
         ADMIN
     }
 
-    public record WorkflowSummarySession(
+    public record RehearsalWorkflowSummarySession(
             UUID rehearsalSessionId,
             String sessionCode,
             Instant startsAt,
@@ -344,13 +343,13 @@ public final class RehearsalWorkflowModels {
             ReadinessStateCode readinessStateCode) {
     }
 
-    public record WorkflowIssueCount(
+    public record RehearsalWorkflowIssueCount(
             IssueCategoryCode categoryCode,
             IssueSeverityCode severityCode,
             int count) {
     }
 
-    public record WorkflowIssueActionIndicator(
+    public record RehearsalWorkflowIssueActionIndicator(
             UUID actionId,
             IssueActionStatusCode actionStatusCode,
             String actionSummary,
@@ -362,7 +361,7 @@ public final class RehearsalWorkflowModels {
             boolean open) {
     }
 
-    public record WorkflowIssueIndicator(
+    public record RehearsalWorkflowIssueIndicator(
             UUID issueId,
             RehearsalTarget target,
             IssueCategoryCode categoryCode,
@@ -372,36 +371,42 @@ public final class RehearsalWorkflowModels {
             String title,
             String detail,
             String detectedBy,
-            java.util.List<WorkflowIssueActionIndicator> actions) {
+            List<RehearsalWorkflowIssueActionIndicator> actions) {
 
-        public WorkflowIssueIndicator {
-            actions = actions == null ? java.util.List.of() : java.util.List.copyOf(actions);
+        public RehearsalWorkflowIssueIndicator {
+            actions = actions == null ? List.of() : List.copyOf(actions);
         }
     }
 
-    public record WorkflowSummary(
+    public record RehearsalWorkflowSummary(
             UUID servicePlanId,
             ReadinessStateCode explicitStateCode,
             ReadinessStateCode derivedStateCode,
             boolean readyForService,
             String currentPhase,
-            WorkflowSummarySession nextRehearsalSession,
-            WorkflowSummarySession mostRecentPastRehearsalSession,
-            java.util.List<WorkflowSummarySession> rehearsalSessions,
+            RehearsalWorkflowSummarySession nextRehearsalSession,
+            RehearsalWorkflowSummarySession mostRecentPastRehearsalSession,
+            List<RehearsalWorkflowSummarySession> rehearsalSessions,
             int blockerCount,
             int overdueActionCount,
-            java.util.List<WorkflowIssueCount> openIssueCounts,
+            List<RehearsalWorkflowIssueCount> openIssueCounts,
             int unresolvedTransitionIssueCount,
             int difficultSongIssueCount,
             int serviceSpecificOverrideCount,
             boolean hasServiceSpecificOverrides,
-            java.util.List<WorkflowIssueIndicator> openIssues,
+            List<RehearsalWorkflowIssueIndicator> openIssues,
             boolean redacted) {
 
-        public WorkflowSummary {
-            rehearsalSessions = rehearsalSessions == null ? java.util.List.of() : java.util.List.copyOf(rehearsalSessions);
-            openIssueCounts = openIssueCounts == null ? java.util.List.of() : java.util.List.copyOf(openIssueCounts);
-            openIssues = openIssues == null ? java.util.List.of() : java.util.List.copyOf(openIssues);
+        public RehearsalWorkflowSummary {
+            rehearsalSessions = rehearsalSessions == null
+                    ? List.of()
+                    : List.copyOf(rehearsalSessions);
+            openIssueCounts = openIssueCounts == null
+                    ? List.of()
+                    : List.copyOf(openIssueCounts);
+            openIssues = openIssues == null
+                    ? List.of()
+                    : List.copyOf(openIssues);
         }
     }
 

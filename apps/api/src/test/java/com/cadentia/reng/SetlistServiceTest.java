@@ -9,8 +9,8 @@ import com.cadentia.generated.model.RecommendationServiceTeamContext;
 import com.cadentia.generated.model.SetlistProposalResponse;
 import com.cadentia.generated.model.TempoPolicy;
 import com.cadentia.rehearsal.RehearsalWorkflowModels.ReadinessStateCode;
-import com.cadentia.rehearsal.RehearsalWorkflowModels.WorkflowSummary;
-import com.cadentia.rehearsal.RehearsalWorkflowModels.WorkflowSummaryAudience;
+import com.cadentia.rehearsal.RehearsalWorkflowModels.RehearsalWorkflowSummary;
+import com.cadentia.rehearsal.RehearsalWorkflowModels.RehearsalWorkflowSummaryAudience;
 import com.cadentia.rehearsal.RehearsalWorkflowSummaryProvider;
 import com.cadentia.reng.scoring.ScoringRequestFactory;
 import com.cadentia.runtime.InstanceConfiguration;
@@ -59,7 +59,7 @@ class SetlistServiceTest {
         // Arrange
         UUID servicePlanId = UUID.randomUUID();
         RehearsalWorkflowSummaryProvider workflowSummaryService = (requestedServicePlanId, audience) ->
-                new WorkflowSummary(requestedServicePlanId, ReadinessStateCode.PLANNED, ReadinessStateCode.PLANNED, false,
+                new RehearsalWorkflowSummary(requestedServicePlanId, ReadinessStateCode.PLANNED, ReadinessStateCode.PLANNED, false,
                         "planned", null, null, List.of(), 0, 0, List.of(), 0, 0, 0, false, List.of(), true);
         SetlistService diagnosticService = new SetlistService(
                 configurationProvider,

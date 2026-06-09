@@ -1,12 +1,13 @@
 package com.cadentia.reng;
 
+import com.cadentia.api.controller.ServicePlanWorkflowSummaryResponseMapper;
 import com.cadentia.generated.model.GenerateSetlistRequest;
 import com.cadentia.generated.model.RecommendationServiceTeamContext;
 import com.cadentia.generated.model.SetlistProposalResponse;
-import com.cadentia.reng.scoring.ScoringRequest;
 import com.cadentia.reng.scoring.DiagnosticsAudience;
+import com.cadentia.reng.scoring.ScoringRequest;
 import com.cadentia.reng.scoring.ScoringRequestFactory;
-import com.cadentia.rehearsal.RehearsalWorkflowModels.WorkflowSummaryAudience;
+import com.cadentia.rehearsal.RehearsalWorkflowModels.RehearsalWorkflowSummaryAudience;
 import com.cadentia.rehearsal.RehearsalWorkflowSummaryProvider;
 import com.cadentia.runtime.InstanceConfiguration;
 import com.cadentia.runtime.InstanceConfigurationProvider;
@@ -103,17 +104,17 @@ public class SetlistService {
         if (context == null || context.getServicePlanId() == null) {
             return;
         }
-        response.setOperationalWorkflowSummary(com.cadentia.api.controller.WorkflowSummaryResponseMapper.toResponse(
+        response.setOperationalWorkflowSummary(ServicePlanWorkflowSummaryResponseMapper.toResponse(
                 workflowSummaryService.summarize(context.getServicePlanId(), workflowAudience(request))));
     }
 
-    private WorkflowSummaryAudience workflowAudience(GenerateSetlistRequest request) {
+    private RehearsalWorkflowSummaryAudience workflowAudience(GenerateSetlistRequest request) {
         DiagnosticsAudience audience = DiagnosticsAudience.fromWireValue(
                 request.getExplanationAudience() == null ? null : request.getExplanationAudience().getValue());
         return switch (audience) {
-            case ADMIN -> WorkflowSummaryAudience.ADMIN;
-            case WORSHIP_LEADER -> WorkflowSummaryAudience.WORSHIP_LEADER;
-            case PUBLIC -> WorkflowSummaryAudience.PUBLIC;
+            case ADMIN -> RehearsalWorkflowSummaryAudience.ADMIN;
+            case WORSHIP_LEADER -> RehearsalWorkflowSummaryAudience.WORSHIP_LEADER;
+            case PUBLIC -> RehearsalWorkflowSummaryAudience.PUBLIC;
         };
     }
 }

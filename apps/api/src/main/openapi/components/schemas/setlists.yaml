@@ -666,7 +666,7 @@ SetlistProposalResponse:
     explanation:
       "$ref": "#/RecommendationExplanation"
     operationalWorkflowSummary:
-      "$ref": "./service-plans.yaml#/WorkflowOperationalSummary"
+      "$ref": "./service-plans.yaml#/ServicePlanWorkflowSummary"
       nullable: true
       description: Optional service-scoped rehearsal workflow context for diagnostics. This is operational status and does not affect deterministic candidate eligibility, scoring, selection, or ordering.
 SetlistProvenanceType:
