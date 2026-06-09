@@ -143,7 +143,7 @@ ServicePlanBlockProvenance:
       type: string
       format: uuid
       nullable: true
-ServicePlanBlock:
+ServicePlanPlanningBlock:
   type: object
   required:
   - blockId
@@ -173,6 +173,12 @@ ServicePlanBlock:
       nullable: true
     provenance:
       "$ref": "#/ServicePlanBlockProvenance"
+    workflowIssues:
+      type: array
+      description: Open song-level rehearsal issues and action owner/status indicators for this block in the selected service context. Private note/action details are redacted in public modes.
+      items:
+        "$ref": "#/ServicePlanWorkflowIssueIndicator"
+      default: []
 ReorderServicePlanBlocksRequest:
   type: object
   additionalProperties: false
@@ -201,7 +207,7 @@ ServicePlanEffectiveSequenceSnapshot:
     blocks:
       type: array
       items:
-        "$ref": "#/ServicePlanBlock"
+        "$ref": "#/ServicePlanPlanningBlock"
 ServicePlanResponse:
   type: object
   required:
@@ -234,7 +240,7 @@ ServicePlanResponse:
     blocks:
       type: array
       items:
-        "$ref": "#/ServicePlanBlock"
+        "$ref": "#/ServicePlanPlanningBlock"
     setlistAttachments:
       type: array
       items:
@@ -245,6 +251,202 @@ ServicePlanResponse:
     readinessSummary:
       "$ref": "#/ReadinessSummary"
       nullable: true
+    workflowSummary:
+      "$ref": "#/ServicePlanWorkflowSummary"
+      nullable: true
+      description: Service-scoped rehearsal workflow summary. This is operational context and never catalog approval or recommendation scoring evidence.
+ServicePlanWorkflowSessionSummary:
+  type: object
+  required:
+  - rehearsalSessionId
+  - sessionCode
+  - startsAt
+  - endsAt
+  - readinessStateCode
+  properties:
+    rehearsalSessionId:
+      type: string
+      format: uuid
+    sessionCode:
+      type: string
+    startsAt:
+      type: string
+      format: date-time
+    endsAt:
+      type: string
+      format: date-time
+    location:
+      type: string
+      nullable: true
+    readinessStateCode:
+      "$ref": "./rehearsal-workflow.yaml#/RehearsalReadinessStateCode"
+ServicePlanWorkflowIssueCount:
+  type: object
+  required:
+  - categoryCode
+  - severityCode
+  - count
+  properties:
+    categoryCode:
+      "$ref": "./rehearsal-workflow.yaml#/RehearsalIssueCategoryCode"
+    severityCode:
+      "$ref": "./rehearsal-workflow.yaml#/RehearsalIssueSeverityCode"
+    count:
+      type: integer
+      minimum: 0
+ServicePlanWorkflowIssueActionIndicator:
+  type: object
+  required:
+  - actionId
+  - actionStatusCode
+  - ownerType
+  - open
+  properties:
+    actionId:
+      type: string
+      format: uuid
+    actionStatusCode:
+      "$ref": "./rehearsal-workflow.yaml#/RehearsalIssueActionStatusCode"
+    actionSummary:
+      type: string
+      nullable: true
+      description: Redacted from public/unauthorized modes.
+    ownerType:
+      "$ref": "./rehearsal-workflow.yaml#/RehearsalIssueOwnerType"
+    ownerActor:
+      type: string
+      nullable: true
+      description: Restricted personnel identifier; redacted outside authorized modes.
+    ownerTeamRoleCode:
+      type: string
+      nullable: true
+    ownerServiceAssignmentId:
+      type: string
+      format: uuid
+      nullable: true
+      description: Restricted personnel assignment reference; redacted outside authorized modes.
+    completedAt:
+      type: string
+      format: date-time
+      nullable: true
+    open:
+      type: boolean
+ServicePlanWorkflowIssueIndicator:
+  type: object
+  required:
+  - issueId
+  - target
+  - categoryCode
+  - severityCode
+  - statusCode
+  - blocking
+  - title
+  - actions
+  properties:
+    issueId:
+      type: string
+      format: uuid
+    target:
+      "$ref": "./rehearsal-workflow.yaml#/RehearsalWorkflowTarget"
+    categoryCode:
+      "$ref": "./rehearsal-workflow.yaml#/RehearsalIssueCategoryCode"
+    severityCode:
+      "$ref": "./rehearsal-workflow.yaml#/RehearsalIssueSeverityCode"
+    statusCode:
+      "$ref": "./rehearsal-workflow.yaml#/RehearsalIssueStatusCode"
+    blocking:
+      type: boolean
+    title:
+      type: string
+    detail:
+      type: string
+      nullable: true
+      description: Private issue detail; redacted from public/unauthorized modes.
+    detectedBy:
+      type: string
+      nullable: true
+      description: Restricted personnel identifier; redacted outside authorized modes.
+    actions:
+      type: array
+      items:
+        "$ref": "#/ServicePlanWorkflowIssueActionIndicator"
+ServicePlanWorkflowSummary:
+  type: object
+  required:
+  - servicePlanId
+  - explicitStateCode
+  - derivedStateCode
+  - readyForService
+  - currentPhase
+  - rehearsalSessions
+  - blockerCount
+  - overdueActionCount
+  - openIssueCounts
+  - unresolvedTransitionIssueCount
+  - difficultSongIssueCount
+  - serviceSpecificOverrideCount
+  - hasServiceSpecificOverrides
+  - openIssues
+  - redacted
+  properties:
+    servicePlanId:
+      type: string
+      format: uuid
+    explicitStateCode:
+      "$ref": "./rehearsal-workflow.yaml#/RehearsalReadinessStateCode"
+    derivedStateCode:
+      "$ref": "./rehearsal-workflow.yaml#/RehearsalReadinessStateCode"
+    readyForService:
+      type: boolean
+    currentPhase:
+      type: string
+      enum:
+      - planning
+      - planned
+      - rehearsal_active
+      - issues_open
+      - ready_for_service
+      - completed
+    nextRehearsalSession:
+      "$ref": "#/ServicePlanWorkflowSessionSummary"
+      nullable: true
+    mostRecentPastRehearsalSession:
+      "$ref": "#/ServicePlanWorkflowSessionSummary"
+      nullable: true
+    rehearsalSessions:
+      type: array
+      items:
+        "$ref": "#/ServicePlanWorkflowSessionSummary"
+    blockerCount:
+      type: integer
+      minimum: 0
+    overdueActionCount:
+      type: integer
+      minimum: 0
+      description: Open required action count surfaced as overdue/actionable workflow work until explicit due dates are modeled.
+    openIssueCounts:
+      type: array
+      items:
+        "$ref": "#/ServicePlanWorkflowIssueCount"
+    unresolvedTransitionIssueCount:
+      type: integer
+      minimum: 0
+    difficultSongIssueCount:
+      type: integer
+      minimum: 0
+    serviceSpecificOverrideCount:
+      type: integer
+      minimum: 0
+    hasServiceSpecificOverrides:
+      type: boolean
+      description: Service-specific override indicator; never an approved catalog fact.
+    openIssues:
+      type: array
+      items:
+        "$ref": "#/ServicePlanWorkflowIssueIndicator"
+    redacted:
+      type: boolean
+      description: True when private note content or restricted personnel details are omitted.
 ReadinessStatus:
   type: string
   enum:

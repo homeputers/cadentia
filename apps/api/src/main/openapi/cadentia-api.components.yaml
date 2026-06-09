@@ -271,8 +271,8 @@ schemas:
     "$ref": "./components/schemas/service-plans.yaml#/ServicePlanSetlistAttachmentResponse"
   ServicePlanBlockProvenance:
     "$ref": "./components/schemas/service-plans.yaml#/ServicePlanBlockProvenance"
-  ServicePlanBlock:
-    "$ref": "./components/schemas/service-plans.yaml#/ServicePlanBlock"
+  ServicePlanPlanningBlock:
+    "$ref": "./components/schemas/service-plans.yaml#/ServicePlanPlanningBlock"
   ReorderServicePlanBlocksRequest:
     "$ref": "./components/schemas/service-plans.yaml#/ReorderServicePlanBlocksRequest"
   ServicePlanEffectiveSequenceSnapshot:
@@ -283,6 +283,16 @@ schemas:
     "$ref": "./components/schemas/service-plans.yaml#/ReadinessStatus"
   ReadinessSummary:
     "$ref": "./components/schemas/service-plans.yaml#/ReadinessSummary"
+  ServicePlanWorkflowSessionSummary:
+    "$ref": "./components/schemas/service-plans.yaml#/ServicePlanWorkflowSessionSummary"
+  ServicePlanWorkflowIssueCount:
+    "$ref": "./components/schemas/service-plans.yaml#/ServicePlanWorkflowIssueCount"
+  ServicePlanWorkflowIssueActionIndicator:
+    "$ref": "./components/schemas/service-plans.yaml#/ServicePlanWorkflowIssueActionIndicator"
+  ServicePlanWorkflowIssueIndicator:
+    "$ref": "./components/schemas/service-plans.yaml#/ServicePlanWorkflowIssueIndicator"
+  ServicePlanWorkflowSummary:
+    "$ref": "./components/schemas/service-plans.yaml#/ServicePlanWorkflowSummary"
   PublishServicePlanRequest:
     "$ref": "./components/schemas/service-plans.yaml#/PublishServicePlanRequest"
   ServicePlanPublishResponse:

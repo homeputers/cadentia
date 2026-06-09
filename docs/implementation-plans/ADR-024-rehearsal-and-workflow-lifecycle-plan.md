@@ -401,3 +401,43 @@ proper provenance/licensing evidence, run musical and doctrinal review, and allo
 the normal approval workflow to publish the new canonical arrangement version.
 Until that governance workflow completes, the values remain service-scoped
 rehearsal metadata only.
+
+## Subtask 5 Implementation Notes: Planning Workflow Summaries and Diagnostics
+
+Service planning responses now expose an operational rehearsal workflow summary
+alongside legacy readiness notes. These fields are **operational context** only:
+
+- Explicit and derived rehearsal readiness state.
+- Current rehearsal phase.
+- Upcoming and most recent rehearsal sessions.
+- Blocking issue counts and open action counts.
+- Open issue counts by rehearsal category and severity.
+- Song-level and transition-level open rehearsal issue indicators.
+- Action owner/status indicators, with restricted personnel identifiers redacted
+  outside authorized modes.
+- Service-specific arrangement override counts and boolean indicators.
+
+Recommendation responses may include the same summary as
+`operationalWorkflowSummary` when an existing service plan context is supplied.
+That payload is intentionally outside deterministic scoring evidence. It may
+help worship leaders understand rehearsal readiness, blockers, difficult songs,
+transition issues, and service-specific overrides, but it must not be interpreted
+as catalog eligibility, approval provenance, score impact, or a candidate
+ordering reason.
+
+The following recommendation fields remain deterministic recommendation
+evidence and are not mutated by rehearsal workflow status:
+
+- Approved catalog candidate eligibility and approval-gate evidence.
+- Dataset and provenance references.
+- Musical, theme, scripture, energy, transition, team-suitability, and feedback
+  score components.
+- Hard-filter reasons, deterministic tie-breaks, selected songs, and selected
+  ordering.
+
+Public and unauthorized diagnostic modes preserve aggregate status indicators
+when allowed, but redact private issue detail, private action summaries,
+individual actor identifiers, and service-assignment identifiers. Service-scoped
+override indicators are labeled separately from approved catalog facts so clients
+can distinguish one-off service execution context from canonical arrangement
+metadata.

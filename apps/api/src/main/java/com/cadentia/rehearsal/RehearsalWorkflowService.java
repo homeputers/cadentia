@@ -25,7 +25,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-public class RehearsalWorkflowService {
+public class RehearsalWorkflowService implements RehearsalWorkflowReader {
 
     private static final Map<ReadinessStateCode, Set<ReadinessStateCode>> READINESS_TRANSITIONS =
             new EnumMap<>(ReadinessStateCode.class);

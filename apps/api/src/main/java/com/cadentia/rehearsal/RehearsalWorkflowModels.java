@@ -1,6 +1,7 @@
 package com.cadentia.rehearsal;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 public final class RehearsalWorkflowModels {
@@ -324,6 +325,88 @@ public final class RehearsalWorkflowModels {
         public boolean open() {
             return actionStatusCode == IssueActionStatusCode.TODO
                     || actionStatusCode == IssueActionStatusCode.IN_PROGRESS;
+        }
+    }
+
+    public enum RehearsalWorkflowSummaryAudience {
+        PUBLIC,
+        WORSHIP_LEADER,
+        ADMIN
+    }
+
+    public record RehearsalWorkflowSummarySession(
+            UUID rehearsalSessionId,
+            String sessionCode,
+            Instant startsAt,
+            Instant endsAt,
+            String location,
+            ReadinessStateCode readinessStateCode) {
+    }
+
+    public record RehearsalWorkflowIssueCount(
+            IssueCategoryCode categoryCode,
+            IssueSeverityCode severityCode,
+            int count) {
+    }
+
+    public record RehearsalWorkflowIssueActionIndicator(
+            UUID actionId,
+            IssueActionStatusCode actionStatusCode,
+            String actionSummary,
+            IssueOwnerType ownerType,
+            String ownerActor,
+            String ownerTeamRoleCode,
+            UUID ownerServiceAssignmentId,
+            Instant completedAt,
+            boolean open) {
+    }
+
+    public record RehearsalWorkflowIssueIndicator(
+            UUID issueId,
+            RehearsalTarget target,
+            IssueCategoryCode categoryCode,
+            IssueSeverityCode severityCode,
+            IssueStatusCode statusCode,
+            boolean blocking,
+            String title,
+            String detail,
+            String detectedBy,
+            List<RehearsalWorkflowIssueActionIndicator> actions) {
+
+        public RehearsalWorkflowIssueIndicator {
+            actions = actions == null ? List.of() : List.copyOf(actions);
+        }
+    }
+
+    public record RehearsalWorkflowSummary(
+            UUID servicePlanId,
+            ReadinessStateCode explicitStateCode,
+            ReadinessStateCode derivedStateCode,
+            boolean readyForService,
+            String currentPhase,
+            RehearsalWorkflowSummarySession nextRehearsalSession,
+            RehearsalWorkflowSummarySession mostRecentPastRehearsalSession,
+            List<RehearsalWorkflowSummarySession> rehearsalSessions,
+            int blockerCount,
+            int overdueActionCount,
+            List<RehearsalWorkflowIssueCount> openIssueCounts,
+            int unresolvedTransitionIssueCount,
+            int difficultSongIssueCount,
+            int serviceSpecificOverrideCount,
+            boolean hasServiceSpecificOverrides,
+            List<RehearsalWorkflowIssueIndicator> openIssues,
+            boolean redacted) {
+
+        public RehearsalWorkflowSummary {
+            rehearsalSessions = rehearsalSessions == null
+                    ? List.of()
+                    : List.copyOf(rehearsalSessions);
+            openIssueCounts = openIssueCounts == null
+                    ? List.of()
+                    : List.copyOf(openIssueCounts);
+            openIssues = openIssues == null
+                    ? List.of()
+                    : List.copyOf(openIssues);
         }
     }
 

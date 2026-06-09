@@ -6,13 +6,21 @@ import com.cadentia.generated.model.AttachSetlistVersionRequest;
 import com.cadentia.generated.model.CreateServicePlanRequest;
 import com.cadentia.generated.model.PublishServicePlanRequest;
 import com.cadentia.generated.model.ReorderServicePlanBlocksRequest;
+import com.cadentia.generated.model.ServicePlanBlockProvenance;
+import com.cadentia.generated.model.ServicePlanBlockSourceType;
+import com.cadentia.generated.model.ServicePlanBlockType;
+import com.cadentia.generated.model.ServicePlanPlanningBlock;
 import com.cadentia.generated.model.ServicePlanPublishResponse;
 import com.cadentia.generated.model.ServicePlanResponse;
 import com.cadentia.generated.model.ServicePlanSetlistAttachmentResponse;
 import com.cadentia.generated.model.ServicePlanStatus;
 import com.cadentia.generated.model.ServicePlanSummary;
 import com.cadentia.generated.model.UpdateServicePlanRequest;
+import com.cadentia.rehearsal.RehearsalWorkflowModels.RehearsalWorkflowSummaryAudience;
+import com.cadentia.rehearsal.RehearsalWorkflowSummaryService;
+import com.cadentia.serviceplan.ServicePlanModels.ServicePlanBlock;
 import com.cadentia.serviceplan.ServicePlanModels.ServicePlanRecord;
+import com.cadentia.serviceplan.ServicePlanModels.SetlistAttachment;
 import com.cadentia.serviceplan.ServicePlanService;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -26,9 +34,13 @@ import org.springframework.web.bind.annotation.RestController;
 public class ServicePlanController implements ServicePlansApi {
 
     private final ServicePlanService service;
+    private final RehearsalWorkflowSummaryService workflowSummaryService;
 
-    public ServicePlanController(ServicePlanService service) {
+    public ServicePlanController(
+            ServicePlanService service,
+            RehearsalWorkflowSummaryService workflowSummaryService) {
         this.service = service;
+        this.workflowSummaryService = workflowSummaryService;
     }
 
     @Override
@@ -121,9 +133,44 @@ public class ServicePlanController implements ServicePlansApi {
         response.setScripture(r.scripture());
         response.setNotes(r.notes());
         response.setStatus(toStatus(r));
+        response.setBlocks(r.blocks().stream().map(block -> toBlock(r.servicePlanId(), block)).toList());
+        response.setSetlistAttachments(r.attachments().stream()
+                .map(attachment -> toAttachment(r.servicePlanId(), attachment))
+                .toList());
         if (r.readinessSummary() != null) {
             response.setReadinessSummary(r.readinessSummary().toReadinessSummary());
         }
+        response.setWorkflowSummary(ServicePlanWorkflowSummaryResponseMapper.toResponse(
+                workflowSummaryService.summarize(r.servicePlanId(), RehearsalWorkflowSummaryAudience.WORSHIP_LEADER)));
+        return response;
+    }
+
+    private ServicePlanPlanningBlock toBlock(UUID servicePlanId, ServicePlanBlock block) {
+        ServicePlanBlockProvenance provenance = new ServicePlanBlockProvenance()
+                .sourceType(block.sourceSetlistVersionId() == null
+                        ? ServicePlanBlockSourceType.MANUAL
+                        : ServicePlanBlockSourceType.SETLIST_VERSION)
+                .setlistVersionId(block.sourceSetlistVersionId())
+                .setlistEntryId(block.sourceSetlistItemId());
+        ServicePlanPlanningBlock response = new ServicePlanPlanningBlock(
+                block.blockId(),
+                block.positionIndex(),
+                ServicePlanBlockType.fromValue(block.blockType()),
+                block.blockType(),
+                provenance);
+        response.setNotes(block.serviceNotes());
+        response.setServiceKeyOverride(block.overrideKey());
+        response.setWorkflowIssues(ServicePlanWorkflowSummaryResponseMapper.toIssueResponses(
+                workflowSummaryService.songIssues(servicePlanId, block.blockId(), RehearsalWorkflowSummaryAudience.WORSHIP_LEADER)));
+        return response;
+    }
+
+    private ServicePlanSetlistAttachmentResponse toAttachment(UUID servicePlanId, SetlistAttachment attachment) {
+        ServicePlanSetlistAttachmentResponse response = new ServicePlanSetlistAttachmentResponse();
+        response.setAttachmentId(attachment.attachmentId());
+        response.setServicePlanId(servicePlanId);
+        response.setSetlistId(attachment.setlistId());
+        response.setSetlistVersionId(attachment.setlistVersionId());
         return response;
     }
 

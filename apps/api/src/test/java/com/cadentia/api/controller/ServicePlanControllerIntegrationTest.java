@@ -4,6 +4,14 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.cadentia.rehearsal.RehearsalWorkflowModels.ArrangementOverrideRecord;
+import com.cadentia.rehearsal.RehearsalWorkflowModels.ReadinessStateCode;
+import com.cadentia.rehearsal.RehearsalWorkflowModels.RehearsalIssueActionRecord;
+import com.cadentia.rehearsal.RehearsalWorkflowModels.RehearsalIssueRecord;
+import com.cadentia.rehearsal.RehearsalWorkflowModels.RehearsalSessionRecord;
+import com.cadentia.rehearsal.RehearsalWorkflowModels.WorkflowStatus;
+import com.cadentia.rehearsal.RehearsalWorkflowReader;
+import com.cadentia.rehearsal.RehearsalWorkflowSummaryService;
 import com.cadentia.serviceplan.ServicePlanModels.ServicePlanRecord;
 import com.cadentia.serviceplan.ServicePlanModels.ServicePlanStatus;
 import com.cadentia.serviceplan.ServicePlanRepository;
@@ -60,6 +68,39 @@ class ServicePlanControllerIntegrationTest {
         ServicePlanService servicePlanService() {
             return new ServicePlanService(new StubRepository());
         }
+
+        @Bean
+        RehearsalWorkflowSummaryService rehearsalWorkflowSummaryService() {
+            return new RehearsalWorkflowSummaryService(new EmptyWorkflowReader());
+        }
+    }
+
+    static class EmptyWorkflowReader implements RehearsalWorkflowReader {
+
+        @Override
+        public List<RehearsalSessionRecord> listSessions(UUID servicePlanId) {
+            return List.of();
+        }
+
+        @Override
+        public List<RehearsalIssueRecord> listIssues(UUID servicePlanId) {
+            return List.of();
+        }
+
+        @Override
+        public List<RehearsalIssueActionRecord> listIssueActions(UUID servicePlanId) {
+            return List.of();
+        }
+
+        @Override
+        public List<ArrangementOverrideRecord> listArrangementOverrides(UUID servicePlanId) {
+            return List.of();
+        }
+
+        @Override
+        public WorkflowStatus workflowStatus(UUID servicePlanId) {
+            return new WorkflowStatus(servicePlanId, ReadinessStateCode.DRAFT, ReadinessStateCode.DRAFT, 0, 0);
+        }
     }
 
     static class StubRepository implements ServicePlanRepository {
@@ -96,7 +137,13 @@ class ServicePlanControllerIntegrationTest {
         }
 
         @Override
-        public ServicePlanRecord updateMetadata(UUID servicePlanId, Instant serviceDateTime, String title, String theme, String scripture, String notes) {
+        public ServicePlanRecord updateMetadata(
+                UUID servicePlanId,
+                Instant serviceDateTime,
+                String title,
+                String theme,
+                String scripture,
+                String notes) {
             throw new UnsupportedOperationException();
         }
 

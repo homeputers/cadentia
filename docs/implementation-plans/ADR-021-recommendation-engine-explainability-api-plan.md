@@ -347,3 +347,22 @@ existing `selectedSongs`, `warnings`, and `diagnostics` sections.
   internal staffing diagnostics. Worship-leader and admin views may receive
   aggregate, actionable gaps; private notes, contacts, exact musician vocal
   ranges, and raw skill records remain outside the public contract.
+
+## ADR-024 Operational Workflow Diagnostic Boundary
+
+Recommendation diagnostic payloads may carry an optional service-scoped
+`operationalWorkflowSummary` when a caller supplies an existing service plan
+context. This summary is rehearsal workflow context: readiness state, rehearsal
+phase, sessions, blockers, open issue/action counts, difficult-song indicators,
+transition issues, and service-specific override indicators.
+
+These workflow fields are not scoring evidence. The Recommendation Engine must
+continue to select and order candidates from approved catalog facts, deterministic
+request policy, scoring components, hard filters, and governed tie-break rules.
+Open rehearsal issues, private notes, readiness state, and service-scoped
+overrides must not approve, disqualify, reorder, or change scores unless a future
+ADR defines an explicit deterministic policy.
+
+Public or unauthorized diagnostic views redact private issue detail, private
+action summaries, restricted actor identifiers, and service-assignment
+identifiers while preserving allowed aggregate status indicators.
