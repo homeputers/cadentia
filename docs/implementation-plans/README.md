@@ -49,6 +49,8 @@ includes:
 - [ADR-023 Implementation Plan: Team and Musician Assignment Model](./ADR-023-team-and-musician-assignment-model-plan.md) — completed 2026-06-05
 - [ADR-024 Implementation Plan: Rehearsal and Workflow Lifecycle](./ADR-024-rehearsal-and-workflow-lifecycle-plan.md)
 - [ADR-025 Implementation Plan: Media and Asset Management](./ADR-025-media-and-asset-management-plan.md)
+- [ADR-026 Implementation Plan: Search Architecture and Discovery](./ADR-026-search-architecture-and-discovery-plan.md)
+- [ADR-027 Implementation Plan: Caching and Performance Strategy](./ADR-027-caching-and-performance-strategy-plan.md)
 
 ## Operational workflow docs
 
