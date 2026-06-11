@@ -444,8 +444,10 @@ sampled traces or short-lived logs.
   `docs/implementation-plans/ADR-005-approval-doctrinal-review-plan.md`
 - Security roles and permissions plan in
   `docs/implementation-plans/ADR-019-security-roles-and-permissions-plan.md`
-- External integration boundaries plan in
-  `docs/implementation-plans/ADR-020-external-integration-boundaries-plan.md`
+- Import connector architecture plan in
+  `docs/implementation-plans/ADR-008-song-acquisition-import-connector-architecture-plan.md`
+- Song import and deduplication plan in
+  `docs/implementation-plans/ADR-003-song-import-deduplication-plan.md`
 - Packaged deployment plan in
   `docs/implementation-plans/ADR-022-packaged-deployment-and-church-customization-model-plan.md`
 
