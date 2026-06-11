@@ -43,3 +43,15 @@ cadentia:
     streams: ${CADENTIA_EVENT_STREAMS:local.development.audit-events,local.development.catalog-import,local.development.recommendation-events}
   provisioning:
     manifest: ${CADENTIA_PROVISIONING_MANIFEST:}
+  rehearsal:
+    retention:
+      completed-sessions-retain-days: ${CADENTIA_REHEARSAL_COMPLETED_SESSIONS_RETAIN_DAYS:400}
+      notes-retain-days: ${CADENTIA_REHEARSAL_NOTES_RETAIN_DAYS:180}
+      issues-retain-days: ${CADENTIA_REHEARSAL_ISSUES_RETAIN_DAYS:400}
+      overrides-retain-days: ${CADENTIA_REHEARSAL_OVERRIDES_RETAIN_DAYS:400}
+      audit-retain-days: ${CADENTIA_REHEARSAL_AUDIT_RETAIN_DAYS:2555}
+      min-completed-sessions-retain-days: ${CADENTIA_REHEARSAL_MIN_COMPLETED_SESSIONS_RETAIN_DAYS:90}
+      min-notes-retain-days: ${CADENTIA_REHEARSAL_MIN_NOTES_RETAIN_DAYS:30}
+      min-issues-retain-days: ${CADENTIA_REHEARSAL_MIN_ISSUES_RETAIN_DAYS:180}
+      min-overrides-retain-days: ${CADENTIA_REHEARSAL_MIN_OVERRIDES_RETAIN_DAYS:180}
+      min-audit-retain-days: ${CADENTIA_REHEARSAL_MIN_AUDIT_RETAIN_DAYS:2555}

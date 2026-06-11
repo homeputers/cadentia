@@ -14,6 +14,8 @@ import com.cadentia.rehearsal.RehearsalWorkflowModels.RehearsalNoteRecord;
 import com.cadentia.rehearsal.RehearsalWorkflowModels.RehearsalSessionRecord;
 import com.cadentia.rehearsal.RehearsalWorkflowModels.RehearsalTarget;
 import com.cadentia.rehearsal.RehearsalWorkflowModels.WorkflowStatus;
+import io.micrometer.core.instrument.Metrics;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.EnumMap;
 import java.util.EnumSet;
@@ -21,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -45,12 +48,22 @@ public class RehearsalWorkflowService implements RehearsalWorkflowReader {
 
     private final RehearsalWorkflowRepository repository;
     private final RehearsalWorkflowAuthorizationPolicy authorizationPolicy;
+    private final RehearsalWorkflowTelemetryRecorder telemetryRecorder;
 
     public RehearsalWorkflowService(
             RehearsalWorkflowRepository repository,
             RehearsalWorkflowAuthorizationPolicy authorizationPolicy) {
+        this(repository, authorizationPolicy, new RehearsalWorkflowTelemetryRecorder(Metrics.globalRegistry));
+    }
+
+    @Autowired
+    public RehearsalWorkflowService(
+            RehearsalWorkflowRepository repository,
+            RehearsalWorkflowAuthorizationPolicy authorizationPolicy,
+            RehearsalWorkflowTelemetryRecorder telemetryRecorder) {
         this.repository = repository;
         this.authorizationPolicy = authorizationPolicy;
+        this.telemetryRecorder = telemetryRecorder;
     }
 
     public List<RehearsalSessionRecord> listSessions(UUID servicePlanId) {
@@ -160,6 +173,7 @@ public class RehearsalWorkflowService implements RehearsalWorkflowReader {
         String actor = authorizationPolicy.currentActor();
         RehearsalIssueRecord issue = repository.createIssue(
                 servicePlanId, target, categoryCode, severityCode, IssueStatusCode.OPEN, title, detail, actor);
+        telemetryRecorder.recordIssueCreated(categoryCode, severityCode);
         audit("REHEARSAL_ISSUE_OPENED", "rehearsal_issue", issue.issueId(), servicePlanId, target.rehearsalSessionId(),
                 null, issueSnapshot(issue), reason, reference);
         moveToIssuesOpenWhenBlocking(issue, reason, reference);
@@ -264,6 +278,7 @@ public class RehearsalWorkflowService implements RehearsalWorkflowReader {
         validateIssueTransition(beforeIssue.statusCode(), statusCode);
         RehearsalIssueRecord updated = repository.updateIssueStatus(
                 servicePlanId, issueId, statusCode, authorizationPolicy.currentActor());
+        telemetryRecorder.recordIssueStatusChanged(updated.categoryCode(), statusCode);
         audit("REHEARSAL_ISSUE_STATUS_CHANGED", "rehearsal_issue", issueId, servicePlanId,
                 updated.target().rehearsalSessionId(), issueSnapshot(beforeIssue), issueSnapshot(updated), reason, reference);
         moveToIssuesOpenWhenBlocking(updated, reason, reference);
@@ -299,6 +314,7 @@ public class RehearsalWorkflowService implements RehearsalWorkflowReader {
             String reference) {
         authorizationPolicy.requireWorkflowMutation();
         ArrangementOverrideRecord created = repository.createArrangementOverride(overrideRecord);
+        telemetryRecorder.recordOverrideChanged("created", "created");
         audit("REHEARSAL_OVERRIDE_CREATED", "service_arrangement_override", created.arrangementOverrideId(),
                 created.servicePlanId(), null, null, overrideSnapshot(created), reason, reference);
         return created;
@@ -311,6 +327,7 @@ public class RehearsalWorkflowService implements RehearsalWorkflowReader {
             String reference) {
         authorizationPolicy.requireWorkflowMutation();
         ArrangementOverrideRecord updated = repository.updateArrangementOverride(overrideRecord);
+        telemetryRecorder.recordOverrideChanged("updated", "updated");
         audit("REHEARSAL_OVERRIDE_UPDATED", "service_arrangement_override", updated.arrangementOverrideId(),
                 updated.servicePlanId(), null, null, overrideSnapshot(updated), reason, reference);
         return updated;
@@ -320,6 +337,7 @@ public class RehearsalWorkflowService implements RehearsalWorkflowReader {
     public void archiveArrangementOverride(UUID servicePlanId, UUID arrangementOverrideId, String reason, String reference) {
         authorizationPolicy.requireWorkflowMutation();
         repository.archiveArrangementOverride(servicePlanId, arrangementOverrideId, authorizationPolicy.currentActor());
+        telemetryRecorder.recordOverrideChanged("archived", "archived");
         audit("REHEARSAL_OVERRIDE_ARCHIVED", "service_arrangement_override", arrangementOverrideId,
                 servicePlanId, null, null, "{\"archived\":true}", reason, reference);
     }
@@ -329,6 +347,7 @@ public class RehearsalWorkflowService implements RehearsalWorkflowReader {
         int openBlockingIssues = openBlockingIssueCount(servicePlanId);
         int openRequiredActions = openRequiredActionCount(servicePlanId);
         ReadinessStateCode derived = derive(explicit, openBlockingIssues, openRequiredActions);
+        telemetryRecorder.recordBlockerCount(derived, openBlockingIssues, openRequiredActions);
         return new WorkflowStatus(servicePlanId, explicit, derived, openBlockingIssues, openRequiredActions);
     }
 
@@ -340,17 +359,36 @@ public class RehearsalWorkflowService implements RehearsalWorkflowReader {
             String reference,
             boolean emergencyCorrection) {
         ReadinessStateCode previous = explicitState(servicePlanId);
+        Instant previousStateStartedAt = repository.findServiceReadinessUpdatedAt(servicePlanId).orElse(null);
         if (!emergencyCorrection) {
-            validateReadinessTransition(previous, newStateCode);
-            validateReadyOrCompletedGate(servicePlanId, newStateCode);
+            try {
+                validateReadinessTransition(previous, newStateCode);
+                validateReadyOrCompletedGate(servicePlanId, newStateCode);
+            } catch (RehearsalWorkflowException ex) {
+                telemetryRecorder.recordFailedReadinessTransition(previous, newStateCode, failureReason(ex));
+                throw ex;
+            }
         } else if (reason == null || reason.isBlank()) {
+            telemetryRecorder.recordFailedReadinessTransition(previous, newStateCode, "validation");
             throw new RehearsalWorkflowException("Emergency readiness corrections require an audited reason.");
         }
         repository.recordServiceReadiness(servicePlanId, rehearsalSessionId, newStateCode, reason, authorizationPolicy.currentActor());
         String actionCode = emergencyCorrection ? "REHEARSAL_READINESS_EMERGENCY_CORRECTED" : "REHEARSAL_READINESS_CHANGED";
         audit(actionCode, "service_rehearsal_workflow_state", servicePlanId, servicePlanId, rehearsalSessionId,
                 readinessSnapshot(previous), readinessSnapshot(newStateCode), reason, reference);
+        telemetryRecorder.recordReadinessTransition(previous, newStateCode, "success", emergencyCorrection,
+                servicePlanId, rehearsalSessionId);
+        if (previousStateStartedAt != null) {
+            telemetryRecorder.recordReadinessStateDuration(previous, Duration.between(previousStateStartedAt, Instant.now()));
+        }
         return workflowStatus(servicePlanId);
+    }
+
+    private String failureReason(RehearsalWorkflowException exception) {
+        if (exception.getMessage() != null && exception.getMessage().contains("unresolved blocking issues")) {
+            return "readiness_gate";
+        }
+        return "invalid_state";
     }
 
     private void validateReadinessTransition(ReadinessStateCode previous, ReadinessStateCode next) {

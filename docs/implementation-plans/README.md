@@ -169,7 +169,7 @@ flowchart TD
    - Package authoring, promotion, seed governance, and contributor guardrails:
      [ADR-022 Package Governance, Promotion, and Contributor Runbook](../runbooks/adr-022-package-governance.md)
 3. [ADR-023: Team and Musician Assignment Model](./ADR-023-team-and-musician-assignment-model-plan.md) — completed 2026-06-05
-4. [ADR-024: Rehearsal and Workflow Lifecycle](./ADR-024-rehearsal-and-workflow-lifecycle-plan.md)
+4. [ADR-024: Rehearsal and Workflow Lifecycle](./ADR-024-rehearsal-and-workflow-lifecycle-plan.md) — reporting, observability, retention, and runbook coverage added for readiness blockers and completed-service history.
 
 Phase 4 starts by making ADR-010 scoring facts and ADR-013 explanation facts
 available through a stable, audience-partitioned API contract. ADR-022 then

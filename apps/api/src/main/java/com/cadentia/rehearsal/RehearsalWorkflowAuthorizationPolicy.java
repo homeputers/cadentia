@@ -5,6 +5,7 @@ import com.cadentia.api.security.SecurityObservabilityRecorder;
 import io.micrometer.core.instrument.Metrics;
 import java.util.Set;
 import java.util.stream.Collectors;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -17,6 +18,7 @@ public class RehearsalWorkflowAuthorizationPolicy {
 
     private final SecurityObservabilityRecorder observabilityRecorder;
 
+    @Autowired
     public RehearsalWorkflowAuthorizationPolicy(SecurityObservabilityRecorder observabilityRecorder) {
         this.observabilityRecorder = observabilityRecorder;
     }
@@ -37,6 +39,18 @@ public class RehearsalWorkflowAuthorizationPolicy {
                         RbacAuthorities.ROLE_ASSIGNED_MUSICIAN,
                         RbacAuthorities.ROLE_DOCTRINAL_REVIEWER,
                         RbacAuthorities.ROLE_MUSICAL_REVIEWER,
+                        RbacAuthorities.ROLE_REPORTING_VIEWER));
+    }
+
+    public void requireWorkflowReporting() {
+        Authentication authentication = authentication();
+        require(
+                "rehearsal.workflow.report",
+                hasAnyAuthority(
+                        authentication,
+                        RbacAuthorities.ROLE_ADMIN,
+                        RbacAuthorities.ROLE_WORSHIP_LEADER,
+                        RbacAuthorities.ROLE_TEAM_SCHEDULER,
                         RbacAuthorities.ROLE_REPORTING_VIEWER));
     }
 

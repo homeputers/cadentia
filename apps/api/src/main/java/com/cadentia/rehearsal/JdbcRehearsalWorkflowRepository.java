@@ -66,6 +66,21 @@ public class JdbcRehearsalWorkflowRepository implements RehearsalWorkflowReposit
                 .findFirst();
     }
 
+
+    @Override
+    public Optional<Instant> findServiceReadinessUpdatedAt(UUID servicePlanId) {
+        return jdbcTemplate.query(
+                        """
+                        SELECT updated_at
+                        FROM service_rehearsal_workflow_states
+                        WHERE service_plan_id = :id
+                        """,
+                        Map.of("id", servicePlanId),
+                        (rs, rowNum) -> rs.getTimestamp("updated_at").toInstant())
+                .stream()
+                .findFirst();
+    }
+
     @Override
     public List<RehearsalSessionRecord> listSessions(UUID servicePlanId) {
         return jdbcTemplate.query(
@@ -767,6 +782,7 @@ public class JdbcRehearsalWorkflowRepository implements RehearsalWorkflowReposit
                 rs.getString("owner_actor"),
                 rs.getString("owner_team_role_code"),
                 rs.getObject("owner_service_assignment_id", UUID.class),
+                instantOrNull(rs, "due_at"),
                 instantOrNull(rs, "completed_at"));
     }
 
