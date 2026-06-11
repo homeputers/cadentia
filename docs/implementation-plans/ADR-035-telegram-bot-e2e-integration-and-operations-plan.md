@@ -85,8 +85,8 @@ lifetimes.
   `docs/implementation-plans/ADR-015-guided-menu-and-conversational-request-flow-plan.md`
 - Security roles and permissions plan in
   `docs/implementation-plans/ADR-019-security-roles-and-permissions-plan.md`
-- External integration boundaries plan in
-  `docs/implementation-plans/ADR-020-external-integration-boundaries-plan.md`
+- Song acquisition and import connector architecture plan in
+  `docs/implementation-plans/ADR-008-song-acquisition-import-connector-architecture-plan.md`
 - Eventing and async processing plan in
   `docs/implementation-plans/ADR-028-eventing-and-async-processing-architecture-plan.md`
 - Observability strategy plan in
