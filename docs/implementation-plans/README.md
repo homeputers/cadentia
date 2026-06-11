@@ -53,6 +53,7 @@ includes:
 - [ADR-027 Implementation Plan: Caching and Performance Strategy](./ADR-027-caching-and-performance-strategy-plan.md)
 - [ADR-028 Implementation Plan: Eventing and Async Processing Architecture](./ADR-028-eventing-and-async-processing-architecture-plan.md)
 - [ADR-029 Implementation Plan: Observability and Telemetry Strategy](./ADR-029-observability-and-telemetry-strategy-plan.md)
+- [ADR-030 Implementation Plan: Plugin and Extension Architecture](./ADR-030-plugin-and-extension-architecture-plan.md)
 
 ## Operational workflow docs
 
