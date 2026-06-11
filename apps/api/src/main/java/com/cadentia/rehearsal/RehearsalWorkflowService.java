@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -55,6 +56,7 @@ public class RehearsalWorkflowService implements RehearsalWorkflowReader {
         this(repository, authorizationPolicy, new RehearsalWorkflowTelemetryRecorder(Metrics.globalRegistry));
     }
 
+    @Autowired
     public RehearsalWorkflowService(
             RehearsalWorkflowRepository repository,
             RehearsalWorkflowAuthorizationPolicy authorizationPolicy,
