@@ -54,6 +54,7 @@ includes:
 - [ADR-028 Implementation Plan: Eventing and Async Processing Architecture](./ADR-028-eventing-and-async-processing-architecture-plan.md)
 - [ADR-029 Implementation Plan: Observability and Telemetry Strategy](./ADR-029-observability-and-telemetry-strategy-plan.md)
 - [ADR-030 Implementation Plan: Plugin and Extension Architecture](./ADR-030-plugin-and-extension-architecture-plan.md)
+- [ADR-031 Implementation Plan: Musical Transition Analysis Engine](./ADR-031-musical-transition-analysis-engine-plan.md)
 
 ## Operational workflow docs
 
