@@ -48,6 +48,7 @@ includes:
 - [ADR-022 Implementation Plan: Packaged Deployment and Church Customization Model](./ADR-022-packaged-deployment-and-church-customization-model-plan.md)
 - [ADR-023 Implementation Plan: Team and Musician Assignment Model](./ADR-023-team-and-musician-assignment-model-plan.md) — completed 2026-06-05
 - [ADR-024 Implementation Plan: Rehearsal and Workflow Lifecycle](./ADR-024-rehearsal-and-workflow-lifecycle-plan.md)
+- [ADR-025 Implementation Plan: Media and Asset Management](./ADR-025-media-and-asset-management-plan.md)
 
 ## Operational workflow docs
 
