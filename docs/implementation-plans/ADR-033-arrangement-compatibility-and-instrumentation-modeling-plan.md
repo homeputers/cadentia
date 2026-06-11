@@ -26,7 +26,7 @@ Overall status: Planned.
 - Subtask 6: Planned - ADR-023 team capability integration and request policy resolution.
 - Subtask 7: Planned - church-specific overrides, packaged defaults, governance, and audit behavior.
 - Subtask 8: Planned - deterministic filtering, scoring, ordering, and Recommendation Engine integration.
-- Subtask 9: Planned - ADR-021 explanations, API/read-model exposure, and admin/search query surfaces.
+- Subtask 9: Planned - ADR-021 explanations, API/read-model exposure, admin/search query surfaces, and required OpenAPI updates for any API changes.
 - Subtask 10: Planned - migration, fixtures, testing, observability, rollout controls, and documentation.
 
 ## Guiding Principles
@@ -576,19 +576,28 @@ surfaces must avoid leaking private team details or cross-instance overrides.
   `docs/implementation-plans/ADR-026-search-architecture-and-discovery-plan.md`
 - Administrative web interface ADR in
   `docs/adr/ADR-036-administrative-web-interface.md`
-- OpenAPI files under `apps/api/src/main/openapi/`
+- OpenAPI files under `apps/api/src/main/openapi/`, especially the split
+  `cadentia-api.yaml`, `cadentia-api.paths.yaml`, and
+  `cadentia-api.components.yaml` contract files
 
 ### Prompt
 
 Add compatibility facts, warnings, reason codes, and query fields to explanation,
-API, search, and admin surfaces. Define audience-appropriate payloads for
+API, search, and admin surfaces. If any compatibility work introduces or changes
+public API request fields, response fields, endpoints, schemas, parameters, or
+shared responses, update the split OpenAPI contract under
+`apps/api/src/main/openapi/` in the same task before regenerating sources. Define
+audience-appropriate payloads for
 recommendation details, exclusion diagnostics, admin metadata review, search
 facets, and audit views. Include reason codes, score components, evidence
 references, slot matches, substitution details, missing requirements,
 unsupported configurations, vocal/choir findings, complexity findings,
 technical-dependency findings, override references, and snapshot identifiers.
-Update OpenAPI contracts and generated models when API changes are required, and
-verify the split OpenAPI files remain valid.
+Keep top-level API metadata and `$ref` indexes in `cadentia-api.yaml`, path
+operations in `cadentia-api.paths.yaml`, and reusable schemas, parameters,
+security schemes, and responses in `cadentia-api.components.yaml`. Regenerate
+models when API changes are required, and verify the split OpenAPI files remain
+valid.
 
 ### Acceptance criteria
 
@@ -602,6 +611,9 @@ verify the split OpenAPI files remain valid.
   compatibility metadata without exposing unauthorized private team data.
 - Search facets and filters use approved compatibility metadata and respect
   church-instance visibility and override overlays.
+- Any task that changes public API behavior updates the relevant OpenAPI split
+  files under `apps/api/src/main/openapi/` in the same implementation change,
+  and keeps generated interfaces/models in sync.
 - If OpenAPI changes are made, `mvn -pl apps/api -DskipTests generate-sources`
   passes and generated interfaces/models stay in sync.
 
@@ -612,6 +624,9 @@ verify the split OpenAPI files remain valid.
   explanations.
 - Do not return free-form prose as the only explanation for compatibility
   conflicts; include machine-readable reason codes and evidence references.
+- Do not change API request/response shapes, endpoints, schemas, parameters, or
+  shared responses without updating the OpenAPI spec in
+  `apps/api/src/main/openapi/`.
 - Do not add API fields directly to the aggregate OpenAPI entrypoint if they
   belong in the split paths or components files.
 - Do not let search index unapproved, retired, deleted, or unauthorized
