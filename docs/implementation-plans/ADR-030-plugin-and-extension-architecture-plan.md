@@ -67,7 +67,7 @@ and future integrations. It leaves open whether plugins run in-process,
 out-of-process, or both by trust tier, which certification process is required,
 and which extension points are stable enough for the first SPI release. Cadentia
 also has existing ADR plans for import connectors, scoring, exports, packaged
-church customization, external integration boundaries, eventing, observability,
+church customization, service-plan integrations, eventing, observability,
 and security.
 
 **Codebase anchors**
@@ -77,8 +77,8 @@ and security.
   `docs/implementation-plans/ADR-008-song-acquisition-import-connector-architecture-plan.md`
 - Recommendation scoring plan in
   `docs/implementation-plans/ADR-010-recommendation-engine-scoring-architecture-plan.md`
-- External integration boundary plan in
-  `docs/implementation-plans/ADR-020-external-integration-boundaries-plan.md`
+- Service plan integration plan in
+  `docs/implementation-plans/ADR-018-service-plan-integration-model-plan.md`
 - Packaged deployment and church customization plan in
   `docs/implementation-plans/ADR-022-packaged-deployment-and-church-customization-model-plan.md`
 - Eventing plan in
@@ -258,8 +258,8 @@ queried, or presented.
   `docs/implementation-plans/ADR-001-song-data-infrastructure-plan.md`
 - Packaged deployment plan in
   `docs/implementation-plans/ADR-022-packaged-deployment-and-church-customization-model-plan.md`
-- External integration boundaries plan in
-  `docs/implementation-plans/ADR-020-external-integration-boundaries-plan.md`
+- Eventing and async processing plan in
+  `docs/implementation-plans/ADR-028-eventing-and-async-processing-architecture-plan.md`
 
 ### Prompt
 
@@ -492,12 +492,12 @@ ADR-030 includes export formats and future integrations as plugin candidates.
 Export and outbound plugins may produce documents, payloads, or calls to external
 systems from setlists, service plans, schedules, assets, or catalog metadata.
 They must respect role visibility, licensing, media restrictions, instance
-boundaries, and integration governance.
+boundaries, service-plan ownership, and async job governance.
 
 **Codebase anchors**
 
-- External integration boundaries plan in
-  `docs/implementation-plans/ADR-020-external-integration-boundaries-plan.md`
+- Eventing and async processing plan in
+  `docs/implementation-plans/ADR-028-eventing-and-async-processing-architecture-plan.md`
 - Service plan integration plan in
   `docs/implementation-plans/ADR-018-service-plan-integration-model-plan.md`
 - Setlist persistence and versioning plan in
