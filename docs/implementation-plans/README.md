@@ -51,6 +51,7 @@ includes:
 - [ADR-025 Implementation Plan: Media and Asset Management](./ADR-025-media-and-asset-management-plan.md)
 - [ADR-026 Implementation Plan: Search Architecture and Discovery](./ADR-026-search-architecture-and-discovery-plan.md)
 - [ADR-027 Implementation Plan: Caching and Performance Strategy](./ADR-027-caching-and-performance-strategy-plan.md)
+- [ADR-028 Implementation Plan: Eventing and Async Processing Architecture](./ADR-028-eventing-and-async-processing-architecture-plan.md)
 
 ## Operational workflow docs
 
@@ -173,15 +174,21 @@ flowchart TD
      [ADR-022 Package Governance, Promotion, and Contributor Runbook](../runbooks/adr-022-package-governance.md)
 3. [ADR-023: Team and Musician Assignment Model](./ADR-023-team-and-musician-assignment-model-plan.md) — completed 2026-06-05
 4. [ADR-024: Rehearsal and Workflow Lifecycle](./ADR-024-rehearsal-and-workflow-lifecycle-plan.md) — reporting, observability, retention, and runbook coverage added for readiness blockers and completed-service history.
+5. [ADR-025: Media and Asset Management](./ADR-025-media-and-asset-management-plan.md)
+6. [ADR-026: Search Architecture and Discovery](./ADR-026-search-architecture-and-discovery-plan.md)
+7. [ADR-027: Caching and Performance Strategy](./ADR-027-caching-and-performance-strategy-plan.md)
+8. [ADR-028: Eventing and Async Processing Architecture](./ADR-028-eventing-and-async-processing-architecture-plan.md)
 
 Phase 4 starts by making ADR-010 scoring facts and ADR-013 explanation facts
 available through a stable, audience-partitioned API contract. ADR-022 then
 hardens instance packaging and local customization boundaries before ADR-023
 adds private, instance-scoped personnel and team-capability data that feeds
-service planning and deterministic recommendation constraints. This preserves
+service planning and deterministic recommendation constraints. ADR-024 through
+ADR-027 add workflow, media, search, and caching capabilities whose derived side
+effects are made explicit and recoverable by ADR-028 eventing. This preserves
 the deterministic Recommendation Engine boundary while allowing web clients,
-audit views, and localization layers to render explanations from structured
-facts rather than generated prose.
+audit views, localization layers, and background processors to render and update
+structured facts rather than generated prose.
 
 ## Cross-plan guardrails
 
