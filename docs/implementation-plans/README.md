@@ -57,6 +57,7 @@ includes:
 - [ADR-031 Implementation Plan: Musical Transition Analysis Engine](./ADR-031-musical-transition-analysis-engine-plan.md)
 - [ADR-032 Implementation Plan: Energy Arc Modeling](./ADR-032-energy-arc-modeling-plan.md)
 - [ADR-033 Implementation Plan: Arrangement Compatibility and Instrumentation Modeling](./ADR-033-arrangement-compatibility-and-instrumentation-modeling-plan.md)
+- [ADR-034 Implementation Plan: Congregational Familiarity Model](./ADR-034-congregational-familiarity-model-plan.md)
 
 ## Operational workflow docs
 
