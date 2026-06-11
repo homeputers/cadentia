@@ -323,8 +323,8 @@ than once.
   `docs/implementation-plans/ADR-026-search-architecture-and-discovery-plan.md`
 - Caching strategy plan in
   `docs/implementation-plans/ADR-027-caching-and-performance-strategy-plan.md`
-- External integration boundaries plan in
-  `docs/implementation-plans/ADR-020-external-integration-boundaries-plan.md`
+- Song acquisition and import connector plan in
+  `docs/implementation-plans/ADR-008-song-acquisition-import-connector-architecture-plan.md`
 
 ### Prompt
 
@@ -379,8 +379,8 @@ handler repeatedly violates a schema or business invariant.
   `docs/adr/ADR-036-administrative-web-interface.md`
 - Security roles and permissions plan in
   `docs/implementation-plans/ADR-019-security-roles-and-permissions-plan.md`
-- External integration boundaries plan in
-  `docs/implementation-plans/ADR-020-external-integration-boundaries-plan.md`
+- Song acquisition and import connector plan in
+  `docs/implementation-plans/ADR-008-song-acquisition-import-connector-architecture-plan.md`
 - Existing runbooks under `docs/runbooks/`
 
 ### Prompt
