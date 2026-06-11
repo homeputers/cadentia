@@ -56,6 +56,7 @@ includes:
 - [ADR-030 Implementation Plan: Plugin and Extension Architecture](./ADR-030-plugin-and-extension-architecture-plan.md)
 - [ADR-031 Implementation Plan: Musical Transition Analysis Engine](./ADR-031-musical-transition-analysis-engine-plan.md)
 - [ADR-032 Implementation Plan: Energy Arc Modeling](./ADR-032-energy-arc-modeling-plan.md)
+- [ADR-033 Implementation Plan: Arrangement Compatibility and Instrumentation Modeling](./ADR-033-arrangement-compatibility-and-instrumentation-modeling-plan.md)
 
 ## Operational workflow docs
 
