@@ -52,6 +52,7 @@ includes:
 - [ADR-026 Implementation Plan: Search Architecture and Discovery](./ADR-026-search-architecture-and-discovery-plan.md)
 - [ADR-027 Implementation Plan: Caching and Performance Strategy](./ADR-027-caching-and-performance-strategy-plan.md)
 - [ADR-028 Implementation Plan: Eventing and Async Processing Architecture](./ADR-028-eventing-and-async-processing-architecture-plan.md)
+- [ADR-029 Implementation Plan: Observability and Telemetry Strategy](./ADR-029-observability-and-telemetry-strategy-plan.md)
 
 ## Operational workflow docs
 
@@ -178,6 +179,7 @@ flowchart TD
 6. [ADR-026: Search Architecture and Discovery](./ADR-026-search-architecture-and-discovery-plan.md)
 7. [ADR-027: Caching and Performance Strategy](./ADR-027-caching-and-performance-strategy-plan.md)
 8. [ADR-028: Eventing and Async Processing Architecture](./ADR-028-eventing-and-async-processing-architecture-plan.md)
+9. [ADR-029: Observability and Telemetry Strategy](./ADR-029-observability-and-telemetry-strategy-plan.md)
 
 Phase 4 starts by making ADR-010 scoring facts and ADR-013 explanation facts
 available through a stable, audience-partitioned API contract. ADR-022 then
@@ -188,7 +190,10 @@ ADR-027 add workflow, media, search, and caching capabilities whose derived side
 effects are made explicit and recoverable by ADR-028 eventing. This preserves
 the deterministic Recommendation Engine boundary while allowing web clients,
 audit views, localization layers, and background processors to render and update
-structured facts rather than generated prose.
+structured facts rather than generated prose. ADR-029 then standardizes
+privacy-aware observability across the preceding synchronous and asynchronous
+workflows so release readiness can be verified through correlated logs, metrics,
+traces, and audit records without leaking sensitive church-instance data.
 
 ## Cross-plan guardrails
 
