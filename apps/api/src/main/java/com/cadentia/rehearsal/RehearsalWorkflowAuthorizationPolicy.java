@@ -40,8 +40,6 @@ public class RehearsalWorkflowAuthorizationPolicy {
                         RbacAuthorities.ROLE_REPORTING_VIEWER));
     }
 
-
-
     public void requireWorkflowReporting() {
         Authentication authentication = authentication();
         require(
@@ -53,6 +51,7 @@ public class RehearsalWorkflowAuthorizationPolicy {
                         RbacAuthorities.ROLE_TEAM_SCHEDULER,
                         RbacAuthorities.ROLE_REPORTING_VIEWER));
     }
+
     public void requireActionResponseMutation() {
         Authentication authentication = authentication();
         require(

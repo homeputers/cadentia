@@ -2,6 +2,7 @@ package com.cadentia.rehearsal;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 public final class RehearsalWorkflowModels {
@@ -244,7 +245,8 @@ public final class RehearsalWorkflowModels {
             UUID songAssignmentOverrideId) {
 
         public static RehearsalTarget service() {
-            return new RehearsalTarget(TargetTypeCode.SERVICE, null, null, null, null, null, null, null, null, null, null);
+            return new RehearsalTarget(
+                    TargetTypeCode.SERVICE, null, null, null, null, null, null, null, null, null, null);
         }
 
         public static RehearsalTarget session(UUID rehearsalSessionId) {
@@ -441,8 +443,6 @@ public final class RehearsalWorkflowModels {
         }
     }
 
-
-
     public record RehearsalReportServiceRow(
             UUID servicePlanId,
             ReadinessStateCode explicitStateCode,
@@ -517,10 +517,11 @@ public final class RehearsalWorkflowModels {
             int archivedOverrides,
             int retainedAuditRecords) {
     }
+
     public record RehearsalAuditRecord(
             UUID auditId,
             String actor,
-            java.util.Set<String> actorRoles,
+            Set<String> actorRoles,
             String actionCode,
             String targetType,
             UUID targetId,
@@ -581,8 +582,8 @@ public final class RehearsalWorkflowModels {
                 String updatedBy) {
             this(arrangementOverrideId, servicePlanId, servicePlanBlockId, setlistVersionItemId, sourceArrangementId,
                     sourceArrangementVersionRef, effectiveKey, effectiveMode, effectiveTempoBpm, effectiveTimeSignature,
-                    effectiveDurationSeconds, effectiveEnergyLevel, effectiveDifficultyLevel, effectiveNotes, null, null,
-                    null, null, null, null, null, rationale, provenanceNote, createdBy, updatedBy);
+                    effectiveDurationSeconds, effectiveEnergyLevel, effectiveDifficultyLevel, effectiveNotes,
+                    null, null, null, null, null, null, null, rationale, provenanceNote, createdBy, updatedBy);
         }
     }
 
