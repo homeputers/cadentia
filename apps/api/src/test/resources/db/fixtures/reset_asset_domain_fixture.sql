@@ -1,0 +1,5 @@
+DELETE FROM asset_version_lifecycle_events WHERE asset_version_id = '10000000-0000-4000-8000-000000000201';
+UPDATE logical_assets SET current_asset_version_id = NULL WHERE id = '10000000-0000-4000-8000-000000000001';
+DELETE FROM asset_version_licenses WHERE asset_version_id = '10000000-0000-4000-8000-000000000201';
+DELETE FROM asset_versions WHERE id = '10000000-0000-4000-8000-000000000201';
+DELETE FROM logical_assets WHERE id = '10000000-0000-4000-8000-000000000001';
