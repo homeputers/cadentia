@@ -44,27 +44,6 @@ public class AssetStorageProperties {
         return cap(requested == null ? signedDownloadUrlTtl : requested);
     }
 
-    private Duration cap(Duration requested) {
-        if (requested.compareTo(maximumSignedUrlTtl) > 0) {
-            return maximumSignedUrlTtl;
-        }
-        return requested;
-    }
-
-    private static Map<AssetTypeCode, List<String>> defaultAllowedMimeTypes() {
-        EnumMap<AssetTypeCode, List<String>> defaults = new EnumMap<>(AssetTypeCode.class);
-        defaults.put(AssetTypeCode.PDF, List.of("application/pdf"));
-        defaults.put(AssetTypeCode.CHORD_CHART, List.of("application/pdf", "text/plain", "text/markdown"));
-        defaults.put(AssetTypeCode.STEM, List.of("audio/mpeg", "audio/wav", "audio/x-wav", "audio/flac"));
-        defaults.put(AssetTypeCode.BACKING_TRACK, List.of("audio/mpeg", "audio/wav", "audio/x-wav", "audio/flac"));
-        defaults.put(AssetTypeCode.CLICK_TRACK, List.of("audio/mpeg", "audio/wav", "audio/x-wav", "audio/flac"));
-        defaults.put(AssetTypeCode.MIDI_CUE, List.of("audio/midi", "audio/x-midi"));
-        defaults.put(AssetTypeCode.REHEARSAL_RECORDING, List.of("audio/mpeg", "audio/wav", "audio/x-wav", "video/mp4"));
-        defaults.put(AssetTypeCode.PREVIEW, List.of("image/png", "image/jpeg", "audio/mpeg", "application/pdf"));
-        defaults.put(AssetTypeCode.LOCAL_EXTENSION, List.of("application/octet-stream"));
-        return defaults;
-    }
-
     public String getProvider() {
         return provider;
     }
@@ -175,5 +154,26 @@ public class AssetStorageProperties {
 
     public void setAllowedMimeTypes(Map<AssetTypeCode, List<String>> allowedMimeTypes) {
         this.allowedMimeTypes = new EnumMap<>(allowedMimeTypes);
+    }
+
+    private Duration cap(Duration requested) {
+        if (requested.compareTo(maximumSignedUrlTtl) > 0) {
+            return maximumSignedUrlTtl;
+        }
+        return requested;
+    }
+
+    private static Map<AssetTypeCode, List<String>> defaultAllowedMimeTypes() {
+        EnumMap<AssetTypeCode, List<String>> defaults = new EnumMap<>(AssetTypeCode.class);
+        defaults.put(AssetTypeCode.PDF, List.of("application/pdf"));
+        defaults.put(AssetTypeCode.CHORD_CHART, List.of("application/pdf", "text/plain", "text/markdown"));
+        defaults.put(AssetTypeCode.STEM, List.of("audio/mpeg", "audio/wav", "audio/x-wav", "audio/flac"));
+        defaults.put(AssetTypeCode.BACKING_TRACK, List.of("audio/mpeg", "audio/wav", "audio/x-wav", "audio/flac"));
+        defaults.put(AssetTypeCode.CLICK_TRACK, List.of("audio/mpeg", "audio/wav", "audio/x-wav", "audio/flac"));
+        defaults.put(AssetTypeCode.MIDI_CUE, List.of("audio/midi", "audio/x-midi"));
+        defaults.put(AssetTypeCode.REHEARSAL_RECORDING, List.of("audio/mpeg", "audio/wav", "audio/x-wav", "video/mp4"));
+        defaults.put(AssetTypeCode.PREVIEW, List.of("image/png", "image/jpeg", "audio/mpeg", "application/pdf"));
+        defaults.put(AssetTypeCode.LOCAL_EXTENSION, List.of("application/octet-stream"));
+        return defaults;
     }
 }
