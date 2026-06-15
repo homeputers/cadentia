@@ -35,6 +35,52 @@ cadentia:
     bucket: ${CADENTIA_ASSET_STORAGE_BUCKET:cadentia-local-assets}
     namespace: ${CADENTIA_ASSET_STORAGE_NAMESPACE:local-development}
     encryption-key-ref: ${CADENTIA_ASSET_STORAGE_ENCRYPTION_KEY_REF:env:CADENTIA_LOCAL_ASSET_KEY_REF}
+    local-root: ${CADENTIA_ASSET_STORAGE_LOCAL_ROOT:.cadentia/asset-storage}
+    signed-upload-url-ttl: ${CADENTIA_ASSET_STORAGE_SIGNED_UPLOAD_URL_TTL:PT15M}
+    signed-download-url-ttl: ${CADENTIA_ASSET_STORAGE_SIGNED_DOWNLOAD_URL_TTL:PT10M}
+    maximum-signed-url-ttl: ${CADENTIA_ASSET_STORAGE_MAXIMUM_SIGNED_URL_TTL:PT1H}
+    pending-upload-ttl: ${CADENTIA_ASSET_STORAGE_PENDING_UPLOAD_TTL:PT2H}
+    maximum-object-size-bytes: ${CADENTIA_ASSET_STORAGE_MAXIMUM_OBJECT_SIZE_BYTES:262144000}
+    processing-prefix: ${CADENTIA_ASSET_STORAGE_PROCESSING_PREFIX:processing}
+    quarantine-prefix: ${CADENTIA_ASSET_STORAGE_QUARANTINE_PREFIX:quarantine}
+    available-prefix: ${CADENTIA_ASSET_STORAGE_AVAILABLE_PREFIX:assets}
+    allowed-mime-types:
+      PDF:
+        - application/pdf
+      CHORD_CHART:
+        - application/pdf
+        - text/plain
+        - text/markdown
+      STEM:
+        - audio/mpeg
+        - audio/wav
+        - audio/x-wav
+        - audio/flac
+      BACKING_TRACK:
+        - audio/mpeg
+        - audio/wav
+        - audio/x-wav
+        - audio/flac
+      CLICK_TRACK:
+        - audio/mpeg
+        - audio/wav
+        - audio/x-wav
+        - audio/flac
+      MIDI_CUE:
+        - audio/midi
+        - audio/x-midi
+      REHEARSAL_RECORDING:
+        - audio/mpeg
+        - audio/wav
+        - audio/x-wav
+        - video/mp4
+      PREVIEW:
+        - image/png
+        - image/jpeg
+        - audio/mpeg
+        - application/pdf
+      LOCAL_EXTENSION:
+        - application/octet-stream
   cache:
     namespace: ${CADENTIA_CACHE_NAMESPACE:cadentia:local:development}
     url-ref: ${CADENTIA_CACHE_URL_REF:env:CADENTIA_LOCAL_CACHE_URL}
