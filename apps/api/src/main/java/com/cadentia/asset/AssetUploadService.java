@@ -34,6 +34,7 @@ import com.cadentia.asset.AssetUploadModels.UploadInstructions;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.UUID;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -45,6 +46,7 @@ public class AssetUploadService {
     private final AssetStorageProperties storageProperties;
     private final Clock clock;
 
+    @Autowired
     public AssetUploadService(
             AssetRepository assetRepository,
             PendingAssetUploadRepository pendingUploadRepository,
