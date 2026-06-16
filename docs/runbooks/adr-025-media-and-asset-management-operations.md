@@ -30,6 +30,84 @@ package overrides them through reviewed configuration:
   only for generated previews, local test fixtures, or assets explicitly marked
   non-licensed by an administrator.
 
+
+## Configuring S3-compatible storage
+
+Cadentia's production baseline is S3-compatible private object storage, but the
+application must be started with an S3-capable `AssetStorageAdapter` supplied by
+the deployment package. The built-in local adapter is for development and tests;
+do not set `provider=s3` in production unless the package includes and health
+checks the S3 adapter.
+
+### Required bucket controls
+
+Before switching an instance to S3-compatible storage, provision a dedicated
+bucket or a dedicated bucket prefix for that church instance and enable:
+
+- Block public access for the bucket and all objects.
+- Server-side encryption using the deployment's managed KMS/key alias.
+- Bucket versioning, lifecycle rules, and object access logs.
+- CORS rules that allow only the approved Cadentia application origins and only
+  the upload/download methods required by the storage adapter.
+- Lifecycle transitions for pending, quarantine, generated-preview, and
+  instance-deletion purge prefixes that match the retention defaults in this
+  runbook.
+
+### Cadentia environment configuration
+
+Set only non-secret storage routing values in application configuration. Store
+access keys, role credentials, session tokens, KMS grants, and endpoint signing
+secrets in the deployment secret manager or workload identity provider; never
+paste them into `application.yml`, runbooks, tickets, logs, or PRs.
+
+```bash
+export CADENTIA_ASSET_STORAGE_PROVIDER=s3
+export CADENTIA_ASSET_STORAGE_BUCKET=cadentia-prod-assets
+export CADENTIA_ASSET_STORAGE_NAMESPACE=church-000123
+export CADENTIA_ASSET_STORAGE_ENCRYPTION_KEY_REF=aws-kms:alias/cadentia-assets-prod
+export CADENTIA_ASSET_STORAGE_SIGNED_UPLOAD_URL_TTL=PT15M
+export CADENTIA_ASSET_STORAGE_SIGNED_DOWNLOAD_URL_TTL=PT10M
+export CADENTIA_ASSET_STORAGE_MAXIMUM_SIGNED_URL_TTL=PT1H
+export CADENTIA_ASSET_STORAGE_PENDING_UPLOAD_TTL=PT24H
+export CADENTIA_ASSET_STORAGE_MAXIMUM_OBJECT_SIZE_BYTES=262144000
+export CADENTIA_ASSET_STORAGE_PROCESSING_PREFIX=processing
+export CADENTIA_ASSET_STORAGE_QUARANTINE_PREFIX=quarantine
+export CADENTIA_ASSET_STORAGE_AVAILABLE_PREFIX=assets
+```
+
+For AWS-hosted deployments, prefer IAM role or workload identity credentials for
+the Cadentia runtime. For self-hosted S3-compatible providers, configure the
+adapter-specific endpoint, region, path-style addressing flag, CA bundle, and
+credential reference in secret-backed deployment configuration rather than in
+Cadentia metadata or API responses.
+
+### S3 rollout verification
+
+1. Confirm the runtime reports the S3 adapter as active and does not fall back to
+   the unsupported-provider adapter.
+2. Create a pending upload in a non-production or canary instance and verify the
+   object lands under `<namespace>/<processing-prefix>/`.
+3. Finalize the upload and verify Cadentia checks object existence, checksum,
+   MIME type, byte size, actor, instance id, and upload expiration before moving
+   the object to `<namespace>/<available-prefix>/`.
+4. Request signed download access as an authorized actor and confirm the signed
+   URL TTL is at or below `maximum-signed-url-ttl`.
+5. Attempt an unauthorized or expired-license access request and confirm Cadentia
+   denies it before issuing a signed URL.
+6. Exercise quarantine and cleanup dry runs against only the configured namespace
+   prefix; never run provider-wide delete commands for normal recovery.
+7. Confirm storage access logs, Cadentia audit events, and the metrics in this
+   runbook carry asset ids, version ids, decision reasons, and request ids but
+   not signed URLs, filenames, licensing terms, or credentials.
+
+### S3 incident notes
+
+During S3 incidents, operators may rotate the signing role/session, disable the
+instance signing key alias, or deny the namespace prefix at the bucket policy.
+Do not share signed URLs or plaintext storage credentials while troubleshooting.
+If the adapter cannot prove object existence or checksum metadata, keep the asset
+version non-downloadable and follow the missing-object or quarantine workflow.
+
 ## Upload lifecycle
 
 1. Create a pending upload. Cadentia records expected asset type, byte size,

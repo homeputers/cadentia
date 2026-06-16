@@ -29,6 +29,10 @@ class AssetOperationsRunbookTest {
 
         // Act / Assert
         assertThat(runbook)
+                .contains("## Configuring S3-compatible storage")
+                .contains("CADENTIA_ASSET_STORAGE_PROVIDER=s3")
+                .contains("Block public access")
+                .contains("workload identity credentials")
                 .contains("## Upload lifecycle")
                 .contains("## Signed access troubleshooting and incident response")
                 .contains("## Quarantine workflow")
