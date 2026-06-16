@@ -17,7 +17,13 @@ public interface AssetRepository {
 
     Optional<AssetRecord> findAsset(UUID assetId);
 
+    List<AssetRecord> listAssets();
+
     Optional<AssetVersionRecord> findVersion(UUID assetVersionId);
+
+    AssetRecord archiveAsset(UUID assetId, String archivedBy, String reason);
+
+    AssetVersionRecord archiveVersion(UUID assetVersionId, String archivedBy, String reason);
 
     List<ControlledVocabularyRecord> listAssetTypes();
 

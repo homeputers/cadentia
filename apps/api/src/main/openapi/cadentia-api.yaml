@@ -20,7 +20,29 @@ tags:
 - name: RehearsalWorkflow
   description: Versioned rehearsal workflow, readiness, issue, note, and service-scoped
     override operations
+- name: Assets
+  description: Versioned media asset metadata, upload lifecycle, attachments, licensing, and signed access operations
 paths:
+  "/assets/uploads":
+    "$ref": "./paths/assets.yaml#/~1assets~1uploads"
+  "/assets/uploads/{uploadId}/finalize":
+    "$ref": "./paths/assets.yaml#/~1assets~1uploads~1{uploadId}~1finalize"
+  "/assets":
+    "$ref": "./paths/assets.yaml#/~1assets"
+  "/assets/{assetId}":
+    "$ref": "./paths/assets.yaml#/~1assets~1{assetId}"
+  "/assets/{assetId}/versions":
+    "$ref": "./paths/assets.yaml#/~1assets~1{assetId}~1versions"
+  "/assets/{assetId}/versions/{assetVersionId}":
+    "$ref": "./paths/assets.yaml#/~1assets~1{assetId}~1versions~1{assetVersionId}"
+  "/assets/{assetId}/versions/{assetVersionId}/licensing":
+    "$ref": "./paths/assets.yaml#/~1assets~1{assetId}~1versions~1{assetVersionId}~1licensing"
+  "/assets/{assetId}/versions/{assetVersionId}/access-requests":
+    "$ref": "./paths/assets.yaml#/~1assets~1{assetId}~1versions~1{assetVersionId}~1access-requests"
+  "/asset-attachments":
+    "$ref": "./paths/assets.yaml#/~1asset-attachments"
+  "/asset-attachments/{attachmentId}":
+    "$ref": "./paths/assets.yaml#/~1asset-attachments~1{attachmentId}"
   "/feedback/events":
     "$ref": "./paths/feedback-tuning.yaml#/~1feedback~1events"
   "/feedback/scopes/{scopeLayer}/{scopeId}/state":

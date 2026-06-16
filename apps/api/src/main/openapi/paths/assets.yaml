@@ -1,0 +1,310 @@
+"/assets/uploads":
+  post:
+    tags:
+    - Assets
+    operationId: createAssetUpload
+    security:
+    - bearerAuth: []
+    summary: Create a pending asset upload and signed upload instructions
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/assets.yaml#/AssetUploadRequest
+    responses:
+      '201':
+        description: Pending upload created.
+        content:
+          application/json:
+            schema:
+              $ref: ../components/schemas/assets.yaml#/AssetUploadInstructions
+      '400':
+        description: Invalid asset upload request.
+        content:
+          application/json:
+            schema:
+              $ref: ../components/schemas/assets.yaml#/AssetProblemResponse
+"/assets/uploads/{uploadId}/finalize":
+  post:
+    tags:
+    - Assets
+    operationId: finalizeAssetUpload
+    security:
+    - bearerAuth: []
+    parameters:
+    - name: uploadId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/assets.yaml#/AssetUploadFinalizationRequest
+    responses:
+      '200':
+        description: Finalized immutable asset version.
+        content:
+          application/json:
+            schema:
+              $ref: ../components/schemas/assets.yaml#/AssetVersion
+      '409':
+        description: Upload expired, already completed, or conflicts with target version.
+        content:
+          application/json:
+            schema:
+              $ref: ../components/schemas/assets.yaml#/AssetProblemResponse
+"/assets":
+  get:
+    tags:
+    - Assets
+    operationId: listAssets
+    security:
+    - bearerAuth: []
+    summary: List redacted asset metadata
+    responses:
+      '200':
+        description: Redacted assets.
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: ../components/schemas/assets.yaml#/Asset
+"/assets/{assetId}":
+  get:
+    tags:
+    - Assets
+    operationId: getAsset
+    security:
+    - bearerAuth: []
+    parameters:
+    - name: assetId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    responses:
+      '200':
+        description: Redacted asset metadata.
+        content:
+          application/json:
+            schema:
+              $ref: ../components/schemas/assets.yaml#/Asset
+  delete:
+    tags:
+    - Assets
+    operationId: archiveAsset
+    security:
+    - bearerAuth: []
+    parameters:
+    - name: assetId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    responses:
+      '204':
+        description: Asset archived.
+"/assets/{assetId}/versions":
+  get:
+    tags:
+    - Assets
+    operationId: listAssetVersions
+    security:
+    - bearerAuth: []
+    parameters:
+    - name: assetId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    responses:
+      '200':
+        description: Asset versions.
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: ../components/schemas/assets.yaml#/AssetVersion
+  post:
+    tags:
+    - Assets
+    operationId: createAssetVersionUpload
+    security:
+    - bearerAuth: []
+    parameters:
+    - name: assetId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/assets.yaml#/AssetUploadRequest
+    responses:
+      '201':
+        description: Pending upload for a new version.
+        content:
+          application/json:
+            schema:
+              $ref: ../components/schemas/assets.yaml#/AssetUploadInstructions
+"/assets/{assetId}/versions/{assetVersionId}":
+  delete:
+    tags:
+    - Assets
+    operationId: archiveAssetVersion
+    security:
+    - bearerAuth: []
+    parameters:
+    - name: assetId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    - name: assetVersionId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    responses:
+      '204':
+        description: Asset version archived.
+"/assets/{assetId}/versions/{assetVersionId}/licensing":
+  get:
+    tags:
+    - Assets
+    operationId: getAssetVersionLicensing
+    security:
+    - bearerAuth: []
+    parameters:
+    - name: assetId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    - name: assetVersionId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    responses:
+      '200':
+        description: Role-aware licensing metadata.
+        content:
+          application/json:
+            schema:
+              $ref: ../components/schemas/assets.yaml#/AssetLicensingMetadata
+"/assets/{assetId}/versions/{assetVersionId}/access-requests":
+  post:
+    tags:
+    - Assets
+    operationId: requestAssetAccess
+    security:
+    - bearerAuth: []
+    parameters:
+    - name: assetId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    - name: assetVersionId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/assets.yaml#/AssetSignedAccessRequest
+    responses:
+      '200':
+        description: Signed access decision; URL present only when permitted.
+        content:
+          application/json:
+            schema:
+              $ref: ../components/schemas/assets.yaml#/AssetSignedAccessResponse
+"/asset-attachments":
+  post:
+    tags:
+    - Assets
+    operationId: createAssetAttachment
+    security:
+    - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/assets.yaml#/CreateAssetAttachmentRequest
+    responses:
+      '201':
+        description: Attachment created.
+        content:
+          application/json:
+            schema:
+              $ref: ../components/schemas/assets.yaml#/AssetAttachment
+  get:
+    tags:
+    - Assets
+    operationId: listAssetAttachments
+    security:
+    - bearerAuth: []
+    parameters:
+    - name: targetType
+      in: query
+      required: true
+      schema:
+        $ref: ../components/schemas/assets.yaml#/AssetAttachmentTargetType
+    - name: targetId
+      in: query
+      required: true
+      schema:
+        type: string
+        format: uuid
+    responses:
+      '200':
+        description: Attachments for target.
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: ../components/schemas/assets.yaml#/AssetAttachment
+"/asset-attachments/{attachmentId}":
+  delete:
+    tags:
+    - Assets
+    operationId: archiveAssetAttachment
+    security:
+    - bearerAuth: []
+    parameters:
+    - name: attachmentId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    responses:
+      '204':
+        description: Attachment archived.

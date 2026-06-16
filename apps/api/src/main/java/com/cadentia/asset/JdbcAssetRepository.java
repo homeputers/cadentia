@@ -154,12 +154,60 @@ public class JdbcAssetRepository implements AssetRepository {
     }
 
     @Override
+    public List<AssetRecord> listAssets() {
+        return jdbcTemplate.query(
+                "SELECT * FROM logical_assets ORDER BY created_at DESC, id ASC",
+                (rs, rowNum) -> mapAsset(rs));
+    }
+
+    @Override
     public Optional<AssetVersionRecord> findVersion(UUID assetVersionId) {
         List<AssetVersionRecord> rows = jdbcTemplate.query(
                 "SELECT * FROM asset_versions WHERE id = :assetVersionId",
                 Map.of("assetVersionId", assetVersionId),
                 (rs, rowNum) -> mapVersion(rs));
         return rows.stream().findFirst();
+    }
+
+    @Override
+    @Transactional
+    public AssetRecord archiveAsset(UUID assetId, String archivedBy, String reason) {
+        jdbcTemplate.update(
+                """
+                UPDATE logical_assets
+                SET lifecycle_status_code = 'ARCHIVED',
+                    updated_at = NOW()
+                WHERE id = :assetId
+                """,
+                Map.of("assetId", assetId));
+        return findAsset(assetId).orElseThrow();
+    }
+
+    @Override
+    @Transactional
+    public AssetVersionRecord archiveVersion(UUID assetVersionId, String archivedBy, String reason) {
+        AssetVersionRecord existing = findVersion(assetVersionId).orElseThrow();
+        jdbcTemplate.update(
+                """
+                UPDATE asset_versions
+                SET lifecycle_status_code = 'ARCHIVED'
+                WHERE id = :assetVersionId
+                """,
+                Map.of("assetVersionId", assetVersionId));
+        jdbcTemplate.update(
+                """
+                INSERT INTO asset_version_lifecycle_events (
+                    asset_version_id, from_lifecycle_status_code, to_lifecycle_status_code, reason_code, changed_by
+                ) VALUES (
+                    :assetVersionId, :fromLifecycleStatusCode, 'ARCHIVED', :reasonCode, :changedBy
+                )
+                """,
+                new MapSqlParameterSource()
+                        .addValue("assetVersionId", assetVersionId)
+                        .addValue("fromLifecycleStatusCode", existing.lifecycleStatusCode().name())
+                        .addValue("reasonCode", reason == null ? "API_ARCHIVE" : reason)
+                        .addValue("changedBy", archivedBy));
+        return findVersion(assetVersionId).orElseThrow();
     }
 
     @Override

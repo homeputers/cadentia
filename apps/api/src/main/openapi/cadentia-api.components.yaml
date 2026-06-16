@@ -17,6 +17,30 @@ securitySchemes:
     scheme: bearer
     bearerFormat: JWT
 schemas:
+  AssetType:
+    "$ref": "./components/schemas/assets.yaml#/AssetType"
+  AssetLifecycleStatus:
+    "$ref": "./components/schemas/assets.yaml#/AssetLifecycleStatus"
+  AssetProcessingStatus:
+    "$ref": "./components/schemas/assets.yaml#/AssetProcessingStatus"
+  AssetLicensingMetadata:
+    "$ref": "./components/schemas/assets.yaml#/AssetLicensingMetadata"
+  AssetAccessPolicy:
+    "$ref": "./components/schemas/assets.yaml#/AssetAccessPolicy"
+  AssetUploadRequest:
+    "$ref": "./components/schemas/assets.yaml#/AssetUploadRequest"
+  AssetUploadInstructions:
+    "$ref": "./components/schemas/assets.yaml#/AssetUploadInstructions"
+  AssetUploadFinalizationRequest:
+    "$ref": "./components/schemas/assets.yaml#/AssetUploadFinalizationRequest"
+  AssetAttachment:
+    "$ref": "./components/schemas/assets.yaml#/AssetAttachment"
+  AssetSignedAccessRequest:
+    "$ref": "./components/schemas/assets.yaml#/AssetSignedAccessRequest"
+  AssetSignedAccessResponse:
+    "$ref": "./components/schemas/assets.yaml#/AssetSignedAccessResponse"
+  AssetDenialReason:
+    "$ref": "./components/schemas/assets.yaml#/AssetDenialReason"
   TeamMusicianRoleCode:
     "$ref": "./components/schemas/team-assignments.yaml#/TeamMusicianRoleCode"
   TeamInstrumentCode:

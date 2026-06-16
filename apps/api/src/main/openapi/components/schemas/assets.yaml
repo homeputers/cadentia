@@ -1,0 +1,478 @@
+AssetType:
+  type: string
+  enum:
+  - pdf
+  - chord_chart
+  - stem
+  - backing_track
+  - click_track
+  - midi_cue
+  - rehearsal_recording
+  - preview
+  - local_extension
+AssetLifecycleStatus:
+  type: string
+  enum:
+  - draft
+  - available
+  - archived
+  - quarantined
+  - replaced
+  - deleted
+AssetProcessingStatus:
+  type: string
+  enum:
+  - not_required
+  - pending_scan
+  - scanning
+  - processing
+  - ready
+  - failed
+  - rejected
+AssetLicenseStatus:
+  type: string
+  enum:
+  - unknown
+  - not_required
+  - ccli_covered
+  - direct_permission
+  - purchased
+  - expires
+  - restricted
+  - expired
+  - revoked
+AssetAccessPolicy:
+  type: string
+  enum:
+  - public_metadata
+  - catalog_reviewers
+  - worship_team
+  - service_participants
+  - admins_only
+  - local_policy
+AssetDenialReason:
+  type: string
+  enum:
+  - none
+  - unauthenticated_actor
+  - cross_instance
+  - role_not_permitted
+  - access_policy_denied
+  - license_visibility_denied
+  - lifecycle_not_available
+  - archived_version
+  - quarantined_version
+  - failed_scan
+  - processing_not_ready
+  - license_expired
+  - license_restricted
+  - validation_failed
+  - version_conflict
+  - expired_upload_session
+AssetLicensingMetadata:
+  type: object
+  additionalProperties: false
+  required:
+  - licenseStatus
+  - privateFieldsVisible
+  properties:
+    licenseStatus:
+      $ref: '#/AssetLicenseStatus'
+    licenseSource:
+      type: string
+      nullable: true
+    usageRestrictions:
+      type: string
+      nullable: true
+    expiresAt:
+      type: string
+      format: date-time
+      nullable: true
+    privateFieldsVisible:
+      type: boolean
+    licenseReference:
+      type: string
+      nullable: true
+    licenseHolder:
+      type: string
+      nullable: true
+    visibilityPolicy:
+      $ref: '#/AssetAccessPolicy'
+AssetVersion:
+  type: object
+  additionalProperties: false
+  required:
+  - assetVersionId
+  - stableIdentifier
+  - assetId
+  - versionNumber
+  - mimeType
+  - byteSize
+  - checksumAlgorithm
+  - checksumValue
+  - lifecycleStatus
+  - processingStatus
+  - accessPolicy
+  - createdAt
+  - licensing
+  properties:
+    assetVersionId:
+      type: string
+      format: uuid
+    stableIdentifier:
+      type: string
+      format: uuid
+    assetId:
+      type: string
+      format: uuid
+    versionNumber:
+      type: integer
+      minimum: 1
+    revisionCode:
+      type: string
+      nullable: true
+    mimeType:
+      type: string
+    byteSize:
+      type: integer
+      format: int64
+      minimum: 1
+    checksumAlgorithm:
+      type: string
+    checksumValue:
+      type: string
+    sourceUri:
+      type: string
+      nullable: true
+    provenanceSummary:
+      type: string
+      nullable: true
+    lifecycleStatus:
+      $ref: '#/AssetLifecycleStatus'
+    processingStatus:
+      $ref: '#/AssetProcessingStatus'
+    accessPolicy:
+      $ref: '#/AssetAccessPolicy'
+    createdBy:
+      type: string
+      nullable: true
+    createdAt:
+      type: string
+      format: date-time
+    licensing:
+      $ref: '#/AssetLicensingMetadata'
+Asset:
+  type: object
+  additionalProperties: false
+  required:
+  - assetId
+  - stableIdentifier
+  - assetType
+  - title
+  - accessPolicy
+  - lifecycleStatus
+  - createdAt
+  properties:
+    assetId:
+      type: string
+      format: uuid
+    stableIdentifier:
+      type: string
+      format: uuid
+    assetType:
+      $ref: '#/AssetType'
+    title:
+      type: string
+    description:
+      type: string
+      nullable: true
+    ownerActor:
+      type: string
+      nullable: true
+    owningMinistry:
+      type: string
+      nullable: true
+    accessPolicy:
+      $ref: '#/AssetAccessPolicy'
+    lifecycleStatus:
+      $ref: '#/AssetLifecycleStatus'
+    currentAssetVersionId:
+      type: string
+      format: uuid
+      nullable: true
+    createdAt:
+      type: string
+      format: date-time
+    updatedAt:
+      type: string
+      format: date-time
+      nullable: true
+    versions:
+      type: array
+      items:
+        $ref: '#/AssetVersion'
+AssetUploadRequest:
+  type: object
+  additionalProperties: false
+  required:
+  - assetType
+  - title
+  - expectedMimeType
+  - expectedByteSize
+  - checksumAlgorithm
+  - checksumValue
+  - accessPolicy
+  properties:
+    assetId:
+      type: string
+      format: uuid
+      nullable: true
+    assetType:
+      $ref: '#/AssetType'
+    title:
+      type: string
+      minLength: 1
+      maxLength: 160
+    description:
+      type: string
+      nullable: true
+    expectedMimeType:
+      type: string
+    expectedByteSize:
+      type: integer
+      format: int64
+      minimum: 1
+    checksumAlgorithm:
+      type: string
+    checksumValue:
+      type: string
+    versionNumber:
+      type: integer
+      minimum: 1
+      nullable: true
+    revisionCode:
+      type: string
+      nullable: true
+    accessPolicy:
+      $ref: '#/AssetAccessPolicy'
+    licensing:
+      $ref: '#/AssetLicensingMetadata'
+AssetUploadInstructions:
+  type: object
+  additionalProperties: false
+  required:
+  - uploadId
+  - uploadMethod
+  - uploadUrl
+  - expiresAt
+  - expectedMimeType
+  - expectedByteSize
+  - checksumAlgorithm
+  - checksumValue
+  properties:
+    uploadId:
+      type: string
+      format: uuid
+    uploadMethod:
+      type: string
+    uploadUrl:
+      type: string
+      format: uri
+    expiresAt:
+      type: string
+      format: date-time
+    expectedMimeType:
+      type: string
+    expectedByteSize:
+      type: integer
+      format: int64
+    checksumAlgorithm:
+      type: string
+    checksumValue:
+      type: string
+AssetUploadFinalizationRequest:
+  type: object
+  additionalProperties: false
+  required:
+  - storageKey
+  - checksumAlgorithm
+  - checksumValue
+  - mimeType
+  - byteSize
+  properties:
+    storageKey:
+      type: string
+    checksumAlgorithm:
+      type: string
+    checksumValue:
+      type: string
+    mimeType:
+      type: string
+    byteSize:
+      type: integer
+      format: int64
+      minimum: 1
+AssetAttachmentTargetType:
+  type: string
+  enum:
+  - song
+  - arrangement
+  - service
+  - service_item
+  - rehearsal_session
+  - rehearsal_issue
+  - rehearsal_issue_action
+  - service_arrangement_override
+AssetAttachmentPurpose:
+  type: string
+  enum:
+  - primary_chart
+  - reference
+  - rehearsal
+  - performance
+  - evidence
+  - follow_up
+  - local_override
+AssetAttachment:
+  type: object
+  additionalProperties: false
+  required:
+  - attachmentId
+  - targetType
+  - targetId
+  - assetVersionId
+  - attachmentType
+  - displayLabel
+  - sortOrder
+  - purpose
+  - requiredForUse
+  - visibilityPolicy
+  - createdAt
+  properties:
+    attachmentId:
+      type: string
+      format: uuid
+    targetType:
+      $ref: '#/AssetAttachmentTargetType'
+    targetId:
+      type: string
+      format: uuid
+    servicePlanId:
+      type: string
+      format: uuid
+      nullable: true
+    assetVersionId:
+      type: string
+      format: uuid
+    attachmentType:
+      $ref: '#/AssetType'
+    displayLabel:
+      type: string
+    sortOrder:
+      type: integer
+      minimum: 0
+    purpose:
+      $ref: '#/AssetAttachmentPurpose'
+    requiredForUse:
+      type: boolean
+    visibilityPolicy:
+      $ref: '#/AssetAccessPolicy'
+    archivedAt:
+      type: string
+      format: date-time
+      nullable: true
+    createdAt:
+      type: string
+      format: date-time
+CreateAssetAttachmentRequest:
+  type: object
+  additionalProperties: false
+  required:
+  - targetType
+  - targetId
+  - assetVersionId
+  - attachmentType
+  - displayLabel
+  - sortOrder
+  - purpose
+  - requiredForUse
+  - visibilityPolicy
+  properties:
+    targetType:
+      $ref: '#/AssetAttachmentTargetType'
+    targetId:
+      type: string
+      format: uuid
+    servicePlanId:
+      type: string
+      format: uuid
+      nullable: true
+    assetVersionId:
+      type: string
+      format: uuid
+    attachmentType:
+      $ref: '#/AssetType'
+    displayLabel:
+      type: string
+      minLength: 1
+      maxLength: 160
+    sortOrder:
+      type: integer
+      minimum: 0
+    purpose:
+      $ref: '#/AssetAttachmentPurpose'
+    requiredForUse:
+      type: boolean
+    visibilityPolicy:
+      $ref: '#/AssetAccessPolicy'
+AssetSignedAccessRequest:
+  type: object
+  additionalProperties: false
+  required:
+  - accessMode
+  properties:
+    accessMode:
+      type: string
+      enum:
+      - download
+      - stream
+    servicePlanId:
+      type: string
+      format: uuid
+      nullable: true
+    rehearsalSessionId:
+      type: string
+      format: uuid
+      nullable: true
+AssetSignedAccessResponse:
+  type: object
+  additionalProperties: false
+  required:
+  - permitted
+  - denialReason
+  properties:
+    permitted:
+      type: boolean
+    denialReason:
+      $ref: '#/AssetDenialReason'
+    accessUrl:
+      type: string
+      format: uri
+      nullable: true
+    method:
+      type: string
+      nullable: true
+    expiresAt:
+      type: string
+      format: date-time
+      nullable: true
+AssetProblemResponse:
+  type: object
+  required:
+  - code
+  - message
+  properties:
+    code:
+      $ref: '#/AssetDenialReason'
+    message:
+      type: string
