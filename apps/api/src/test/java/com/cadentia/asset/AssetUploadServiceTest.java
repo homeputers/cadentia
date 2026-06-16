@@ -3,7 +3,7 @@ package com.cadentia.asset;
 import static com.cadentia.asset.AssetModels.AssetAccessPolicyCode.WORSHIP_TEAM;
 import static com.cadentia.asset.AssetModels.AssetLifecycleStatusCode.AVAILABLE;
 import static com.cadentia.asset.AssetModels.AssetLicenseStatusCode.CCLI_COVERED;
-import static com.cadentia.asset.AssetModels.AssetProcessingStatusCode.READY;
+import static com.cadentia.asset.AssetModels.AssetProcessingStatusCode.PENDING_SCAN;
 import static com.cadentia.asset.AssetModels.AssetTypeCode.CHORD_CHART;
 import static com.cadentia.asset.AssetModels.AssetTypeCode.PDF;
 import static com.cadentia.asset.AssetUploadErrorCode.CHECKSUM_MISMATCH;
@@ -98,7 +98,7 @@ class AssetUploadServiceTest {
 
         // Assert
         assertThat(version.lifecycleStatusCode()).isEqualTo(AVAILABLE);
-        assertThat(version.processingStatusCode()).isEqualTo(READY);
+        assertThat(version.processingStatusCode()).isEqualTo(PENDING_SCAN);
         assertThat(version.storageKey()).contains("local-development/assets/" + assetId + "/v1/");
         assertThat(version.storageBucketAlias()).isEqualTo("local:local-development");
         assertThat(pendingUploadRepository.find(instructions.uploadId()).orElseThrow().status()).isEqualTo(PendingUploadStatus.FINALIZED);

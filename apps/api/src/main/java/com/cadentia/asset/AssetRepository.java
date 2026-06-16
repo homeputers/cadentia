@@ -21,6 +21,14 @@ public interface AssetRepository {
 
     Optional<AssetVersionRecord> findVersion(UUID assetVersionId);
 
+    AssetVersionRecord transitionProcessingStatus(
+            UUID assetVersionId,
+            AssetModels.AssetProcessingStatusCode processingStatusCode,
+            String changedBy,
+            String reasonCode);
+
+    AssetVersionRecord quarantineVersion(UUID assetVersionId, String changedBy, String reasonCode);
+
     AssetRecord archiveAsset(UUID assetId, String archivedBy, String reason);
 
     AssetVersionRecord archiveVersion(UUID assetVersionId, String archivedBy, String reason);
