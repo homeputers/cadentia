@@ -6,9 +6,12 @@ import com.cadentia.asset.AssetModels.AssetAccessPolicyCode;
 import com.cadentia.asset.AssetModels.AssetLicenseStatusCode;
 import com.cadentia.asset.AssetModels.AssetTypeCode;
 import com.cadentia.asset.AssetModels.LicenseMetadata;
-import java.io.IOException;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
+import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
@@ -234,14 +237,14 @@ class AssetOperationsRunbookTest {
     }
 
     private String readFile(String path) throws IOException {
-        java.nio.file.Path current = java.nio.file.Path.of("").toAbsolutePath();
-        for (java.nio.file.Path candidate = current; candidate != null; candidate = candidate.getParent()) {
-            java.nio.file.Path resolved = candidate.resolve(path);
-            if (java.nio.file.Files.exists(resolved)) {
-                return java.nio.file.Files.readString(resolved, StandardCharsets.UTF_8);
+        Path current = Path.of("").toAbsolutePath();
+        for (Path candidate = current; candidate != null; candidate = candidate.getParent()) {
+            Path resolved = candidate.resolve(path);
+            if (Files.exists(resolved)) {
+                return Files.readString(resolved, StandardCharsets.UTF_8);
             }
         }
-        throw new java.nio.file.NoSuchFileException(path);
+        throw new NoSuchFileException(path);
     }
 
     private record LicenseExpirationWarning(
