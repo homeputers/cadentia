@@ -1,5 +1,11 @@
 package com.cadentia.api.controller;
 
+import static com.cadentia.api.security.RbacAuthorities.ROLE_ADMIN;
+
+import com.cadentia.api.security.AssetAuthorizationPolicy.AssetAccessContext;
+import com.cadentia.api.security.AssetAuthorizationPolicy.AssetAction;
+import com.cadentia.api.security.AssetAuthorizationPolicy.AssetActor;
+import com.cadentia.api.security.AssetAuthorizationPolicy.AssetAuthorizationRequest;
 import com.cadentia.asset.AssetAccessService;
 import com.cadentia.asset.AssetAttachmentRepository;
 import com.cadentia.asset.AssetModels;
@@ -17,6 +23,7 @@ import com.cadentia.generated.api.AssetsApi;
 import com.cadentia.generated.model.Asset;
 import com.cadentia.generated.model.AssetAccessPolicy;
 import com.cadentia.generated.model.AssetAttachment;
+import com.cadentia.generated.model.AssetAttachmentPurpose;
 import com.cadentia.generated.model.AssetAttachmentTargetType;
 import com.cadentia.generated.model.AssetDenialReason;
 import com.cadentia.generated.model.AssetLicenseStatus;
@@ -27,6 +34,7 @@ import com.cadentia.generated.model.AssetSignedAccessRequest;
 import com.cadentia.generated.model.AssetSignedAccessResponse;
 import com.cadentia.generated.model.AssetType;
 import com.cadentia.generated.model.AssetUploadFinalizationRequest;
+import com.cadentia.generated.model.AssetUploadInstructions;
 import com.cadentia.generated.model.AssetUploadRequest;
 import com.cadentia.generated.model.AssetVersion;
 import com.cadentia.generated.model.CreateAssetAttachmentRequest;
@@ -34,6 +42,7 @@ import java.net.URI;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
@@ -61,7 +70,7 @@ public class AssetController implements AssetsApi {
     }
 
     @Override
-    public ResponseEntity<com.cadentia.generated.model.AssetUploadInstructions> createAssetUpload(AssetUploadRequest request) {
+    public ResponseEntity<AssetUploadInstructions> createAssetUpload(AssetUploadRequest request) {
         UUID assetId = request.getAssetId();
         if (assetId == null) {
             AssetRecord created = assetRepository.createAsset(new CreateAssetCommand(
@@ -90,7 +99,7 @@ public class AssetController implements AssetsApi {
                 ACTOR,
                 modelPolicy(request.getAccessPolicy()),
                 license(request.getLicensing(), modelPolicy(request.getAccessPolicy()))));
-        return ResponseEntity.status(201).body(new com.cadentia.generated.model.AssetUploadInstructions(
+        return ResponseEntity.status(201).body(new AssetUploadInstructions(
                 instructions.uploadId(),
                 instructions.method(),
                 URI.create(instructions.uploadUrl()),
@@ -102,7 +111,7 @@ public class AssetController implements AssetsApi {
     }
 
     @Override
-    public ResponseEntity<com.cadentia.generated.model.AssetUploadInstructions> createAssetVersionUpload(
+    public ResponseEntity<AssetUploadInstructions> createAssetVersionUpload(
             UUID assetId,
             AssetUploadRequest request) {
         request.setAssetId(assetId);
@@ -121,7 +130,9 @@ public class AssetController implements AssetsApi {
 
     @Override
     public ResponseEntity<List<Asset>> listAssets() {
-        return ResponseEntity.ok(List.of());
+        return ResponseEntity.ok(assetRepository.listAssets().stream()
+                .map(this::toAsset)
+                .toList());
     }
 
     @Override
@@ -138,7 +149,8 @@ public class AssetController implements AssetsApi {
 
     @Override
     public ResponseEntity<AssetLicensingMetadata> getAssetVersionLicensing(UUID assetId, UUID assetVersionId) {
-        return ResponseEntity.ok(toLicense(assetRepository.findVersion(assetVersionId).orElseThrow().licenseMetadata(), true));
+        AssetVersionRecord version = assetRepository.findVersion(assetVersionId).orElseThrow();
+        return ResponseEntity.ok(toLicense(version.licenseMetadata(), true));
     }
 
     @Override
@@ -146,8 +158,34 @@ public class AssetController implements AssetsApi {
             UUID assetId,
             UUID assetVersionId,
             AssetSignedAccessRequest request) {
-        AssetSignedAccessResponse response = new AssetSignedAccessResponse(false, AssetDenialReason.ACCESS_POLICY_DENIED);
-        response.setAccessUrl(null);
+        AssetRecord asset = assetRepository.findAsset(assetId).orElseThrow();
+        AssetVersionRecord version = assetRepository.findVersion(assetVersionId).orElseThrow();
+        AssetAuthorizationRequest authorizationRequest = new AssetAuthorizationRequest(
+                AssetAction.GENERATE_SIGNED_DOWNLOAD_URL,
+                new AssetActor(ACTOR, INSTANCE_ID, Set.of(ROLE_ADMIN), true),
+                INSTANCE_ID,
+                asset,
+                version,
+                null,
+                new AssetAccessContext(
+                        request.getServicePlanId(),
+                        request.getRehearsalSessionId(),
+                        null,
+                        false,
+                        false,
+                        false));
+        AssetAccessService.SignedAssetAccess access =
+                request.getAccessMode() == AssetSignedAccessRequest.AccessModeEnum.STREAM
+                        ? accessService.authorizeStreaming(authorizationRequest)
+                        : accessService.authorizeSignedDownload(authorizationRequest);
+        AssetSignedAccessResponse response = new AssetSignedAccessResponse(
+                access.decision().permitted(),
+                AssetDenialReason.valueOf(access.decision().reasonCode().name()));
+        if (access.signedUrl() != null) {
+            response.setAccessUrl(access.signedUrl().url());
+            response.setMethod(access.signedUrl().method());
+            response.setExpiresAt(OffsetDateTime.ofInstant(access.signedUrl().expiresAt(), ZoneOffset.UTC));
+        }
         return ResponseEntity.ok(response);
     }
 
@@ -171,7 +209,9 @@ public class AssetController implements AssetsApi {
     }
 
     @Override
-    public ResponseEntity<List<AssetAttachment>> listAssetAttachments(AssetAttachmentTargetType targetType, UUID targetId) {
+    public ResponseEntity<List<AssetAttachment>> listAssetAttachments(
+            AssetAttachmentTargetType targetType,
+            UUID targetId) {
         return ResponseEntity.ok(attachmentRepository.listAttachments(modelTarget(targetType), targetId).stream()
                 .map(this::toAttachment)
                 .toList());
@@ -179,23 +219,35 @@ public class AssetController implements AssetsApi {
 
     @Override
     public ResponseEntity<Void> archiveAsset(UUID assetId) {
+        assetRepository.archiveAsset(assetId, ACTOR, "API_ARCHIVE");
         return ResponseEntity.noContent().build();
     }
 
     @Override
     public ResponseEntity<Void> archiveAssetVersion(UUID assetId, UUID assetVersionId) {
+        AssetVersionRecord version = assetRepository.findVersion(assetVersionId).orElseThrow();
+        if (!version.assetId().equals(assetId)) {
+            throw new IllegalArgumentException("Asset version does not belong to asset");
+        }
+        assetRepository.archiveVersion(assetVersionId, ACTOR, "API_ARCHIVE");
         return ResponseEntity.noContent().build();
     }
 
     @Override
     public ResponseEntity<Void> archiveAssetAttachment(UUID attachmentId) {
-        attachmentRepository.archiveAttachment(new AssetModels.ArchiveAssetAttachmentCommand(attachmentId, ACTOR, "api archive"));
+        attachmentRepository.archiveAttachment(
+                new AssetModels.ArchiveAssetAttachmentCommand(attachmentId, ACTOR, "api archive"));
         return ResponseEntity.noContent().build();
     }
 
     private Asset toAsset(AssetRecord record) {
-        Asset asset = new Asset(record.id(), record.stableIdentifier(), AssetType.valueOf(record.assetTypeCode().name()), record.title(),
-                AssetAccessPolicy.valueOf(record.defaultAccessPolicyCode().name()), AssetLifecycleStatus.valueOf(record.lifecycleStatusCode().name()),
+        Asset asset = new Asset(
+                record.id(),
+                record.stableIdentifier(),
+                AssetType.valueOf(record.assetTypeCode().name()),
+                record.title(),
+                AssetAccessPolicy.valueOf(record.defaultAccessPolicyCode().name()),
+                AssetLifecycleStatus.valueOf(record.lifecycleStatusCode().name()),
                 OffsetDateTime.ofInstant(record.createdAt(), ZoneOffset.UTC));
         asset.setDescription(record.description());
         asset.setOwnerActor(record.ownerActor());
@@ -207,10 +259,20 @@ public class AssetController implements AssetsApi {
     }
 
     private AssetVersion toVersion(AssetVersionRecord record) {
-        return new AssetVersion(record.id(), record.stableIdentifier(), record.assetId(), record.versionNumber(), record.mimeType(),
-                record.byteSize(), record.checksumAlgorithm(), record.checksumValue(), AssetLifecycleStatus.valueOf(record.lifecycleStatusCode().name()),
-                AssetProcessingStatus.valueOf(record.processingStatusCode().name()), AssetAccessPolicy.valueOf(record.accessPolicyCode().name()),
-                OffsetDateTime.ofInstant(record.createdAt(), ZoneOffset.UTC), toLicense(record.licenseMetadata(), false))
+        return new AssetVersion(
+                record.id(),
+                record.stableIdentifier(),
+                record.assetId(),
+                record.versionNumber(),
+                record.mimeType(),
+                record.byteSize(),
+                record.checksumAlgorithm(),
+                record.checksumValue(),
+                AssetLifecycleStatus.valueOf(record.lifecycleStatusCode().name()),
+                AssetProcessingStatus.valueOf(record.processingStatusCode().name()),
+                AssetAccessPolicy.valueOf(record.accessPolicyCode().name()),
+                OffsetDateTime.ofInstant(record.createdAt(), ZoneOffset.UTC),
+                toLicense(record.licenseMetadata(), false))
                 .revisionCode(record.revisionCode())
                 .sourceUri(record.sourceUri())
                 .provenanceSummary(record.provenanceSummary())
@@ -218,10 +280,17 @@ public class AssetController implements AssetsApi {
     }
 
     private AssetAttachment toAttachment(AssetModels.AssetAttachmentRecord record) {
-        AssetAttachment attachment = new AssetAttachment(record.id(), AssetAttachmentTargetType.valueOf(record.targetTypeCode().name()),
-                record.targetId(), record.assetVersionId(), AssetType.valueOf(record.attachmentTypeCode().name()), record.displayLabel(),
-                record.sortOrder(), com.cadentia.generated.model.AssetAttachmentPurpose.valueOf(record.purposeCode().name()),
-                record.requiredForUse(), AssetAccessPolicy.valueOf(record.visibilityPolicyCode().name()),
+        AssetAttachment attachment = new AssetAttachment(
+                record.id(),
+                AssetAttachmentTargetType.valueOf(record.targetTypeCode().name()),
+                record.targetId(),
+                record.assetVersionId(),
+                AssetType.valueOf(record.attachmentTypeCode().name()),
+                record.displayLabel(),
+                record.sortOrder(),
+                AssetAttachmentPurpose.valueOf(record.purposeCode().name()),
+                record.requiredForUse(),
+                AssetAccessPolicy.valueOf(record.visibilityPolicyCode().name()),
                 OffsetDateTime.ofInstant(record.createdAt(), ZoneOffset.UTC));
         attachment.setServicePlanId(record.servicePlanId());
         if (record.archivedAt() != null) {
@@ -231,10 +300,14 @@ public class AssetController implements AssetsApi {
     }
 
     private AssetLicensingMetadata toLicense(LicenseMetadata metadata, boolean privateVisible) {
-        AssetLicensingMetadata dto = new AssetLicensingMetadata(AssetLicenseStatus.valueOf(metadata.licenseStatusCode().name()), privateVisible);
+        AssetLicensingMetadata dto = new AssetLicensingMetadata(
+                AssetLicenseStatus.valueOf(metadata.licenseStatusCode().name()),
+                privateVisible);
         dto.setLicenseSource(metadata.licenseSource());
         dto.setUsageRestrictions(metadata.usageRestrictions());
-        dto.setExpiresAt(metadata.expiresAt() == null ? null : OffsetDateTime.ofInstant(metadata.expiresAt(), ZoneOffset.UTC));
+        dto.setExpiresAt(metadata.expiresAt() == null
+                ? null
+                : OffsetDateTime.ofInstant(metadata.expiresAt(), ZoneOffset.UTC));
         dto.setLicenseReference(privateVisible ? metadata.licenseReference() : null);
         dto.setLicenseHolder(privateVisible ? metadata.licenseHolder() : null);
         dto.setVisibilityPolicy(AssetAccessPolicy.valueOf(metadata.visibilityPolicyCode().name()));
@@ -243,10 +316,23 @@ public class AssetController implements AssetsApi {
 
     private LicenseMetadata license(AssetLicensingMetadata dto, AssetModels.AssetAccessPolicyCode fallbackPolicy) {
         if (dto == null) {
-            return new LicenseMetadata(AssetModels.AssetLicenseStatusCode.UNKNOWN, null, null, null, null, null, null, fallbackPolicy);
+            return new LicenseMetadata(
+                    AssetModels.AssetLicenseStatusCode.UNKNOWN,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    fallbackPolicy);
         }
-        return new LicenseMetadata(AssetModels.AssetLicenseStatusCode.valueOf(dto.getLicenseStatus().name()), dto.getLicenseSource(),
-                dto.getLicenseReference(), dto.getUsageRestrictions(), dto.getLicenseHolder(), null,
+        return new LicenseMetadata(
+                AssetModels.AssetLicenseStatusCode.valueOf(dto.getLicenseStatus().name()),
+                dto.getLicenseSource(),
+                dto.getLicenseReference(),
+                dto.getUsageRestrictions(),
+                dto.getLicenseHolder(),
+                null,
                 dto.getExpiresAt() == null ? null : dto.getExpiresAt().toInstant(),
                 dto.getVisibilityPolicy() == null ? fallbackPolicy : modelPolicy(dto.getVisibilityPolicy()));
     }

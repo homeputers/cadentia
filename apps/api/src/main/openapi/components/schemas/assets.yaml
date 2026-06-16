@@ -1,25 +1,80 @@
 AssetType:
   type: string
-  enum: [pdf, chord_chart, stem, backing_track, click_track, midi_cue, rehearsal_recording, preview, local_extension]
+  enum:
+  - pdf
+  - chord_chart
+  - stem
+  - backing_track
+  - click_track
+  - midi_cue
+  - rehearsal_recording
+  - preview
+  - local_extension
 AssetLifecycleStatus:
   type: string
-  enum: [draft, available, archived, quarantined, replaced, deleted]
+  enum:
+  - draft
+  - available
+  - archived
+  - quarantined
+  - replaced
+  - deleted
 AssetProcessingStatus:
   type: string
-  enum: [not_required, pending_scan, scanning, processing, ready, failed, rejected]
+  enum:
+  - not_required
+  - pending_scan
+  - scanning
+  - processing
+  - ready
+  - failed
+  - rejected
 AssetLicenseStatus:
   type: string
-  enum: [unknown, not_required, ccli_covered, direct_permission, purchased, expires, restricted, expired, revoked]
+  enum:
+  - unknown
+  - not_required
+  - ccli_covered
+  - direct_permission
+  - purchased
+  - expires
+  - restricted
+  - expired
+  - revoked
 AssetAccessPolicy:
   type: string
-  enum: [public_metadata, catalog_reviewers, worship_team, service_participants, admins_only, local_policy]
+  enum:
+  - public_metadata
+  - catalog_reviewers
+  - worship_team
+  - service_participants
+  - admins_only
+  - local_policy
 AssetDenialReason:
   type: string
-  enum: [none, unauthenticated_actor, cross_instance, role_not_permitted, access_policy_denied, license_visibility_denied, lifecycle_not_available, archived_version, quarantined_version, failed_scan, processing_not_ready, license_expired, license_restricted, validation_failed, version_conflict, expired_upload_session]
+  enum:
+  - none
+  - unauthenticated_actor
+  - cross_instance
+  - role_not_permitted
+  - access_policy_denied
+  - license_visibility_denied
+  - lifecycle_not_available
+  - archived_version
+  - quarantined_version
+  - failed_scan
+  - processing_not_ready
+  - license_expired
+  - license_restricted
+  - validation_failed
+  - version_conflict
+  - expired_upload_session
 AssetLicensingMetadata:
   type: object
   additionalProperties: false
-  required: [licenseStatus, privateFieldsVisible]
+  required:
+  - licenseStatus
+  - privateFieldsVisible
   properties:
     licenseStatus:
       $ref: '#/AssetLicenseStatus'
@@ -46,7 +101,20 @@ AssetLicensingMetadata:
 AssetVersion:
   type: object
   additionalProperties: false
-  required: [assetVersionId, stableIdentifier, assetId, versionNumber, mimeType, byteSize, checksumAlgorithm, checksumValue, lifecycleStatus, processingStatus, accessPolicy, createdAt, licensing]
+  required:
+  - assetVersionId
+  - stableIdentifier
+  - assetId
+  - versionNumber
+  - mimeType
+  - byteSize
+  - checksumAlgorithm
+  - checksumValue
+  - lifecycleStatus
+  - processingStatus
+  - accessPolicy
+  - createdAt
+  - licensing
   properties:
     assetVersionId:
       type: string
@@ -96,7 +164,14 @@ AssetVersion:
 Asset:
   type: object
   additionalProperties: false
-  required: [assetId, stableIdentifier, assetType, title, accessPolicy, lifecycleStatus, createdAt]
+  required:
+  - assetId
+  - stableIdentifier
+  - assetType
+  - title
+  - accessPolicy
+  - lifecycleStatus
+  - createdAt
   properties:
     assetId:
       type: string
@@ -139,7 +214,14 @@ Asset:
 AssetUploadRequest:
   type: object
   additionalProperties: false
-  required: [assetType, title, expectedMimeType, expectedByteSize, checksumAlgorithm, checksumValue, accessPolicy]
+  required:
+  - assetType
+  - title
+  - expectedMimeType
+  - expectedByteSize
+  - checksumAlgorithm
+  - checksumValue
+  - accessPolicy
   properties:
     assetId:
       type: string
@@ -178,7 +260,15 @@ AssetUploadRequest:
 AssetUploadInstructions:
   type: object
   additionalProperties: false
-  required: [uploadId, uploadMethod, uploadUrl, expiresAt, expectedMimeType, expectedByteSize, checksumAlgorithm, checksumValue]
+  required:
+  - uploadId
+  - uploadMethod
+  - uploadUrl
+  - expiresAt
+  - expectedMimeType
+  - expectedByteSize
+  - checksumAlgorithm
+  - checksumValue
   properties:
     uploadId:
       type: string
@@ -203,7 +293,12 @@ AssetUploadInstructions:
 AssetUploadFinalizationRequest:
   type: object
   additionalProperties: false
-  required: [storageKey, checksumAlgorithm, checksumValue, mimeType, byteSize]
+  required:
+  - storageKey
+  - checksumAlgorithm
+  - checksumValue
+  - mimeType
+  - byteSize
   properties:
     storageKey:
       type: string
@@ -219,28 +314,76 @@ AssetUploadFinalizationRequest:
       minimum: 1
 AssetAttachmentTargetType:
   type: string
-  enum: [song, arrangement, service, service_item, rehearsal_session, rehearsal_issue, rehearsal_issue_action, service_arrangement_override]
+  enum:
+  - song
+  - arrangement
+  - service
+  - service_item
+  - rehearsal_session
+  - rehearsal_issue
+  - rehearsal_issue_action
+  - service_arrangement_override
 AssetAttachmentPurpose:
   type: string
-  enum: [primary_chart, reference, rehearsal, performance, evidence, follow_up, local_override]
+  enum:
+  - primary_chart
+  - reference
+  - rehearsal
+  - performance
+  - evidence
+  - follow_up
+  - local_override
 AssetAttachment:
   type: object
   additionalProperties: false
-  required: [attachmentId, targetType, targetId, assetVersionId, attachmentType, displayLabel, sortOrder, purpose, requiredForUse, visibilityPolicy, createdAt]
+  required:
+  - attachmentId
+  - targetType
+  - targetId
+  - assetVersionId
+  - attachmentType
+  - displayLabel
+  - sortOrder
+  - purpose
+  - requiredForUse
+  - visibilityPolicy
+  - createdAt
   properties:
-    attachmentId: { type: string, format: uuid }
-    targetType: { $ref: '#/AssetAttachmentTargetType' }
-    targetId: { type: string, format: uuid }
-    servicePlanId: { type: string, format: uuid, nullable: true }
-    assetVersionId: { type: string, format: uuid }
-    attachmentType: { $ref: '#/AssetType' }
-    displayLabel: { type: string }
-    sortOrder: { type: integer, minimum: 0 }
-    purpose: { $ref: '#/AssetAttachmentPurpose' }
-    requiredForUse: { type: boolean }
-    visibilityPolicy: { $ref: '#/AssetAccessPolicy' }
-    archivedAt: { type: string, format: date-time, nullable: true }
-    createdAt: { type: string, format: date-time }
+    attachmentId:
+      type: string
+      format: uuid
+    targetType:
+      $ref: '#/AssetAttachmentTargetType'
+    targetId:
+      type: string
+      format: uuid
+    servicePlanId:
+      type: string
+      format: uuid
+      nullable: true
+    assetVersionId:
+      type: string
+      format: uuid
+    attachmentType:
+      $ref: '#/AssetType'
+    displayLabel:
+      type: string
+    sortOrder:
+      type: integer
+      minimum: 0
+    purpose:
+      $ref: '#/AssetAttachmentPurpose'
+    requiredForUse:
+      type: boolean
+    visibilityPolicy:
+      $ref: '#/AssetAccessPolicy'
+    archivedAt:
+      type: string
+      format: date-time
+      nullable: true
+    createdAt:
+      type: string
+      format: date-time
 CreateAssetAttachmentRequest:
   type: object
   additionalProperties: false
@@ -285,26 +428,49 @@ CreateAssetAttachmentRequest:
 AssetSignedAccessRequest:
   type: object
   additionalProperties: false
-  required: [accessMode]
+  required:
+  - accessMode
   properties:
     accessMode:
       type: string
-      enum: [download, stream]
-    servicePlanId: { type: string, format: uuid, nullable: true }
-    rehearsalSessionId: { type: string, format: uuid, nullable: true }
+      enum:
+      - download
+      - stream
+    servicePlanId:
+      type: string
+      format: uuid
+      nullable: true
+    rehearsalSessionId:
+      type: string
+      format: uuid
+      nullable: true
 AssetSignedAccessResponse:
   type: object
   additionalProperties: false
-  required: [permitted, denialReason]
+  required:
+  - permitted
+  - denialReason
   properties:
-    permitted: { type: boolean }
-    denialReason: { $ref: '#/AssetDenialReason' }
-    accessUrl: { type: string, format: uri, nullable: true }
-    method: { type: string, nullable: true }
-    expiresAt: { type: string, format: date-time, nullable: true }
+    permitted:
+      type: boolean
+    denialReason:
+      $ref: '#/AssetDenialReason'
+    accessUrl:
+      type: string
+      format: uri
+      nullable: true
+    method:
+      type: string
+      nullable: true
+    expiresAt:
+      type: string
+      format: date-time
+      nullable: true
 AssetProblemResponse:
   type: object
-  required: [code, message]
+  required:
+  - code
+  - message
   properties:
     code:
       $ref: '#/AssetDenialReason'

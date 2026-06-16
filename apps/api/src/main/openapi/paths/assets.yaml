@@ -1,6 +1,7 @@
-"/api/v1/assets/uploads":
+"/assets/uploads":
   post:
-    tags: [Assets]
+    tags:
+    - Assets
     operationId: createAssetUpload
     security:
     - bearerAuth: []
@@ -24,9 +25,10 @@
           application/json:
             schema:
               $ref: ../components/schemas/assets.yaml#/AssetProblemResponse
-"/api/v1/assets/uploads/{uploadId}/finalize":
+"/assets/uploads/{uploadId}/finalize":
   post:
-    tags: [Assets]
+    tags:
+    - Assets
     operationId: finalizeAssetUpload
     security:
     - bearerAuth: []
@@ -56,9 +58,10 @@
           application/json:
             schema:
               $ref: ../components/schemas/assets.yaml#/AssetProblemResponse
-"/api/v1/assets":
+"/assets":
   get:
-    tags: [Assets]
+    tags:
+    - Assets
     operationId: listAssets
     security:
     - bearerAuth: []
@@ -72,9 +75,10 @@
               type: array
               items:
                 $ref: ../components/schemas/assets.yaml#/Asset
-"/api/v1/assets/{assetId}":
+"/assets/{assetId}":
   get:
-    tags: [Assets]
+    tags:
+    - Assets
     operationId: getAsset
     security:
     - bearerAuth: []
@@ -93,7 +97,8 @@
             schema:
               $ref: ../components/schemas/assets.yaml#/Asset
   delete:
-    tags: [Assets]
+    tags:
+    - Assets
     operationId: archiveAsset
     security:
     - bearerAuth: []
@@ -107,9 +112,10 @@
     responses:
       '204':
         description: Asset archived.
-"/api/v1/assets/{assetId}/versions":
+"/assets/{assetId}/versions":
   get:
-    tags: [Assets]
+    tags:
+    - Assets
     operationId: listAssetVersions
     security:
     - bearerAuth: []
@@ -130,7 +136,8 @@
               items:
                 $ref: ../components/schemas/assets.yaml#/AssetVersion
   post:
-    tags: [Assets]
+    tags:
+    - Assets
     operationId: createAssetVersionUpload
     security:
     - bearerAuth: []
@@ -154,9 +161,10 @@
           application/json:
             schema:
               $ref: ../components/schemas/assets.yaml#/AssetUploadInstructions
-"/api/v1/assets/{assetId}/versions/{assetVersionId}":
+"/assets/{assetId}/versions/{assetVersionId}":
   delete:
-    tags: [Assets]
+    tags:
+    - Assets
     operationId: archiveAssetVersion
     security:
     - bearerAuth: []
@@ -164,17 +172,22 @@
     - name: assetId
       in: path
       required: true
-      schema: { type: string, format: uuid }
+      schema:
+        type: string
+        format: uuid
     - name: assetVersionId
       in: path
       required: true
-      schema: { type: string, format: uuid }
+      schema:
+        type: string
+        format: uuid
     responses:
       '204':
         description: Asset version archived.
-"/api/v1/assets/{assetId}/versions/{assetVersionId}/licensing":
+"/assets/{assetId}/versions/{assetVersionId}/licensing":
   get:
-    tags: [Assets]
+    tags:
+    - Assets
     operationId: getAssetVersionLicensing
     security:
     - bearerAuth: []
@@ -182,11 +195,15 @@
     - name: assetId
       in: path
       required: true
-      schema: { type: string, format: uuid }
+      schema:
+        type: string
+        format: uuid
     - name: assetVersionId
       in: path
       required: true
-      schema: { type: string, format: uuid }
+      schema:
+        type: string
+        format: uuid
     responses:
       '200':
         description: Role-aware licensing metadata.
@@ -194,9 +211,10 @@
           application/json:
             schema:
               $ref: ../components/schemas/assets.yaml#/AssetLicensingMetadata
-"/api/v1/assets/{assetId}/versions/{assetVersionId}/access-requests":
+"/assets/{assetId}/versions/{assetVersionId}/access-requests":
   post:
-    tags: [Assets]
+    tags:
+    - Assets
     operationId: requestAssetAccess
     security:
     - bearerAuth: []
@@ -204,11 +222,15 @@
     - name: assetId
       in: path
       required: true
-      schema: { type: string, format: uuid }
+      schema:
+        type: string
+        format: uuid
     - name: assetVersionId
       in: path
       required: true
-      schema: { type: string, format: uuid }
+      schema:
+        type: string
+        format: uuid
     requestBody:
       required: true
       content:
@@ -222,9 +244,10 @@
           application/json:
             schema:
               $ref: ../components/schemas/assets.yaml#/AssetSignedAccessResponse
-"/api/v1/asset-attachments":
+"/asset-attachments":
   post:
-    tags: [Assets]
+    tags:
+    - Assets
     operationId: createAssetAttachment
     security:
     - bearerAuth: []
@@ -242,7 +265,8 @@
             schema:
               $ref: ../components/schemas/assets.yaml#/AssetAttachment
   get:
-    tags: [Assets]
+    tags:
+    - Assets
     operationId: listAssetAttachments
     security:
     - bearerAuth: []
@@ -267,9 +291,10 @@
               type: array
               items:
                 $ref: ../components/schemas/assets.yaml#/AssetAttachment
-"/api/v1/asset-attachments/{attachmentId}":
+"/asset-attachments/{attachmentId}":
   delete:
-    tags: [Assets]
+    tags:
+    - Assets
     operationId: archiveAssetAttachment
     security:
     - bearerAuth: []
