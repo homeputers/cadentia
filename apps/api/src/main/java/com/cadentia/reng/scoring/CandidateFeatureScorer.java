@@ -24,6 +24,7 @@ public class CandidateFeatureScorer {
     public static final String METADATA_CONFIDENCE = "metadata_confidence";
     public static final String FEEDBACK_TUNING = "feedback_tuning";
     public static final String TEAM_SUITABILITY = "team_suitability";
+    public static final String ASSET_AVAILABILITY = "asset_availability";
 
     private final TeamSuitabilityEvaluator teamSuitabilityEvaluator = new TeamSuitabilityEvaluator();
 
@@ -39,9 +40,18 @@ public class CandidateFeatureScorer {
             ScoringRequest request,
             ScoringProfile profile,
             Map<UUID, Double> feedbackContributions) {
+        return scoreCandidates(candidates, request, profile, feedbackContributions, Map.of());
+    }
+
+    public List<CandidateFeatureScore> scoreCandidates(
+            List<RecommendableArrangement> candidates,
+            ScoringRequest request,
+            ScoringProfile profile,
+            Map<UUID, Double> feedbackContributions,
+            Map<UUID, Boolean> assetAvailability) {
         emitFeedbackImpactDistribution(feedbackContributions);
         return candidates.stream()
-                .map(candidate -> scoreCandidate(candidate, request, profile, feedbackContributions))
+                .map(candidate -> scoreCandidate(candidate, request, profile, feedbackContributions, assetAvailability))
                 .sorted(Comparator
                         .comparingDouble(CandidateFeatureScore::totalScore)
                         .reversed()
@@ -62,6 +72,15 @@ public class CandidateFeatureScorer {
             ScoringRequest request,
             ScoringProfile profile,
             Map<UUID, Double> feedbackContributions) {
+        return scoreCandidate(candidate, request, profile, feedbackContributions, Map.of());
+    }
+
+    public CandidateFeatureScore scoreCandidate(
+            RecommendableArrangement candidate,
+            ScoringRequest request,
+            ScoringProfile profile,
+            Map<UUID, Double> feedbackContributions,
+            Map<UUID, Boolean> assetAvailability) {
         List<ScoringComponentScore> componentScores = new ArrayList<>();
         componentScores.add(componentScore(THEME_MATCH, themeMatch(candidate, request), profile.componentWeights()));
         componentScores.add(componentScore(SCRIPTURE_MATCH, scriptureMatch(candidate, request), profile.componentWeights()));
@@ -76,6 +95,12 @@ public class CandidateFeatureScorer {
                 FEEDBACK_TUNING,
                 feedbackContributions.getOrDefault(candidate.arrangementId(), 0.0d),
                 profile.componentWeights()));
+        if (profile.componentWeights().containsKey(ASSET_AVAILABILITY)) {
+            componentScores.add(componentScore(
+                    ASSET_AVAILABILITY,
+                    assetAvailability.getOrDefault(candidate.arrangementId(), false) ? 1.0d : 0.0d,
+                    profile.componentWeights()));
+        }
         if (hasTeamScoringInput(profile)) {
             componentScores.add(componentScore(
                     TEAM_SUITABILITY,
