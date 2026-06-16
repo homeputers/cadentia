@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -41,6 +42,7 @@ public class AssetWorkflowResolutionService {
     private final AssetAuthorizationPolicy authorizationPolicy;
     private final Clock clock;
 
+    @Autowired
     public AssetWorkflowResolutionService(
             AssetAttachmentRepository attachmentRepository,
             AssetRepository assetRepository,
@@ -48,7 +50,7 @@ public class AssetWorkflowResolutionService {
         this(attachmentRepository, assetRepository, authorizationPolicy, Clock.systemUTC());
     }
 
-    public AssetWorkflowResolutionService(
+    AssetWorkflowResolutionService(
             AssetAttachmentRepository attachmentRepository,
             AssetRepository assetRepository,
             AssetAuthorizationPolicy authorizationPolicy,
