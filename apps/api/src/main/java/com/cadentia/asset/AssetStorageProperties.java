@@ -17,6 +17,9 @@ public class AssetStorageProperties {
     private String bucket = "cadentia-local-assets";
     private String namespace = "local-development";
     private String encryptionKeyRef = "env:CADENTIA_LOCAL_ASSET_KEY_REF";
+    private String region = "us-east-1";
+    private String endpoint = "";
+    private boolean pathStyleAccessEnabled;
     private Path localRoot = Path.of(".cadentia", "asset-storage");
     private Duration signedUploadUrlTtl = Duration.ofMinutes(15);
     private Duration signedDownloadUrlTtl = Duration.ofMinutes(10);
@@ -74,6 +77,30 @@ public class AssetStorageProperties {
 
     public void setEncryptionKeyRef(String encryptionKeyRef) {
         this.encryptionKeyRef = encryptionKeyRef;
+    }
+
+    public String getRegion() {
+        return region;
+    }
+
+    public void setRegion(String region) {
+        this.region = region;
+    }
+
+    public String getEndpoint() {
+        return endpoint;
+    }
+
+    public void setEndpoint(String endpoint) {
+        this.endpoint = endpoint;
+    }
+
+    public boolean isPathStyleAccessEnabled() {
+        return pathStyleAccessEnabled;
+    }
+
+    public void setPathStyleAccessEnabled(boolean pathStyleAccessEnabled) {
+        this.pathStyleAccessEnabled = pathStyleAccessEnabled;
     }
 
     public Path getLocalRoot() {

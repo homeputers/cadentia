@@ -35,6 +35,9 @@ cadentia:
     bucket: ${CADENTIA_ASSET_STORAGE_BUCKET:cadentia-local-assets}
     namespace: ${CADENTIA_ASSET_STORAGE_NAMESPACE:local-development}
     encryption-key-ref: ${CADENTIA_ASSET_STORAGE_ENCRYPTION_KEY_REF:env:CADENTIA_LOCAL_ASSET_KEY_REF}
+    region: ${CADENTIA_ASSET_STORAGE_REGION:us-east-1}
+    endpoint: ${CADENTIA_ASSET_STORAGE_ENDPOINT:}
+    path-style-access-enabled: ${CADENTIA_ASSET_STORAGE_PATH_STYLE_ACCESS_ENABLED:false}
     local-root: ${CADENTIA_ASSET_STORAGE_LOCAL_ROOT:.cadentia/asset-storage}
     signed-upload-url-ttl: ${CADENTIA_ASSET_STORAGE_SIGNED_UPLOAD_URL_TTL:PT15M}
     signed-download-url-ttl: ${CADENTIA_ASSET_STORAGE_SIGNED_DOWNLOAD_URL_TTL:PT10M}

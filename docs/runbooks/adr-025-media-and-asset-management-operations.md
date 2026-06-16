@@ -33,11 +33,11 @@ package overrides them through reviewed configuration:
 
 ## Configuring S3-compatible storage
 
-Cadentia's production baseline is S3-compatible private object storage, but the
-application must be started with an S3-capable `AssetStorageAdapter` supplied by
-the deployment package. The built-in local adapter is for development and tests;
-do not set `provider=s3` in production unless the package includes and health
-checks the S3 adapter.
+Cadentia ships a generic S3-compatible `AssetStorageAdapter` for production
+private object storage. Set `CADENTIA_ASSET_STORAGE_PROVIDER=s3` to activate the
+built-in adapter; the local adapter remains the default for development and
+tests, and production startup checks must confirm the S3 adapter is active before
+accepting asset uploads.
 
 ### Required bucket controls
 
@@ -64,6 +64,9 @@ paste them into `application.yml`, runbooks, tickets, logs, or PRs.
 export CADENTIA_ASSET_STORAGE_PROVIDER=s3
 export CADENTIA_ASSET_STORAGE_BUCKET=cadentia-prod-assets
 export CADENTIA_ASSET_STORAGE_NAMESPACE=church-000123
+export CADENTIA_ASSET_STORAGE_REGION=us-east-1
+export CADENTIA_ASSET_STORAGE_ENDPOINT=
+export CADENTIA_ASSET_STORAGE_PATH_STYLE_ACCESS_ENABLED=false
 export CADENTIA_ASSET_STORAGE_ENCRYPTION_KEY_REF=aws-kms:alias/cadentia-assets-prod
 export CADENTIA_ASSET_STORAGE_SIGNED_UPLOAD_URL_TTL=PT15M
 export CADENTIA_ASSET_STORAGE_SIGNED_DOWNLOAD_URL_TTL=PT10M
@@ -76,10 +79,14 @@ export CADENTIA_ASSET_STORAGE_AVAILABLE_PREFIX=assets
 ```
 
 For AWS-hosted deployments, prefer IAM role or workload identity credentials for
-the Cadentia runtime. For self-hosted S3-compatible providers, configure the
-adapter-specific endpoint, region, path-style addressing flag, CA bundle, and
-credential reference in secret-backed deployment configuration rather than in
-Cadentia metadata or API responses.
+the Cadentia runtime; the built-in adapter uses the AWS SDK default credential
+provider chain and does not require plaintext credentials in application
+configuration. For self-hosted S3-compatible providers, set
+`CADENTIA_ASSET_STORAGE_ENDPOINT` and
+`CADENTIA_ASSET_STORAGE_PATH_STYLE_ACCESS_ENABLED=true` when the provider
+requires path-style addressing, and keep CA bundles and credential references in
+secret-backed deployment configuration rather than in Cadentia metadata or API
+responses.
 
 ### S3 rollout verification
 
