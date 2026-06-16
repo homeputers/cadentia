@@ -27,7 +27,7 @@ Overall status: Planned.
   previews, waveforms, and transcoding.
 - Subtask 7: Planned - recommendation, service-planning, and rehearsal
   integration safeguards.
-- Subtask 8: Planned - operations runbook, observability, retention, and fixture
+- Subtask 8: Completed - operations runbook, observability, retention, and fixture
   coverage.
 
 ## Guiding Principles

@@ -57,8 +57,10 @@ Tradeoffs:
 3. Treat assets as catalog approval evidence only.
    - Rejected: assets have independent lifecycle, licensing, and service-use concerns.
 
-## Open Questions
+## Production Operations Decisions
 
-- Which object storage provider is the production baseline?
-- What asset retention policy applies after instance deletion or service completion?
-- Which licensing fields are mandatory by asset type?
+- Production baseline storage is S3-compatible private object storage, with provider-neutral adapters remaining required for self-hosted and local deployments.
+- Asset retention defaults are documented in the ADR-025 operations runbook: 24 hours for pending/rejected upload cleanup eligibility, 7 years for service/rehearsal history after service completion, and a 30-day deletion hold before purge after instance deletion unless a deployment package documents a stricter policy.
+- Mandatory licensing metadata is required for downloadable or streamable asset versions: license status, source, reference when issued by the source, usage restrictions, license holder, effective timestamp, optional expiration timestamp, and visibility policy. Generated previews, local fixtures, or administrator-approved non-licensed assets may use `NOT_REQUIRED`.
+
+Operational details, incident procedures, observability names, and fixture rules are maintained in [ADR-025 Media and Asset Management Operations Runbook](../runbooks/adr-025-media-and-asset-management-operations.md).

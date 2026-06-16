@@ -39,24 +39,29 @@ cadentia:
     available-prefix: assets
 ```
 
-## Production provider placeholders
+## Production S3 storage mode
 
-Production or self-hosted deployments should supply another `AssetStorageAdapter`
-bean and select it with `cadentia.asset-storage.provider` without changing domain
-services or API controllers. The shared configuration already carries the common
-provider-neutral values that a cloud adapter needs:
+Production or self-hosted deployments can use the built-in
+`S3AssetStorageAdapter` by setting `cadentia.asset-storage.provider=s3` without
+changing domain services or API controllers. The shared configuration carries the
+common provider-neutral values that the local and S3 adapters need:
 
 - Provider type (`provider`).
 - Non-secret bucket/container alias (`bucket`).
 - Instance namespace prefix (`namespace`).
-- Secret-manager reference for encryption (`encryption-key-ref`).
+- Secret-manager or KMS reference for encryption (`encryption-key-ref`), such as
+  `aws-kms:alias/cadentia-assets-prod` or `sse-s3`.
+- S3 region (`region`), optional endpoint override (`endpoint`), and path-style
+  addressing flag (`path-style-access-enabled`) for self-hosted S3-compatible
+  providers.
 - Signed URL TTL caps.
 - Maximum object size.
 - Processing, quarantine, and available prefixes.
 - Allowed MIME types by `AssetTypeCode`.
 
-Raw bucket/container names and credentials should remain in deployment secrets or
-adapter-specific infrastructure configuration, not in normal API responses.
+Raw credentials, session tokens, and signing secrets should remain in workload
+identity or deployment secret configuration, not in normal API responses. The S3
+adapter uses the AWS SDK default credential provider chain.
 
 ## Upload lifecycle
 

@@ -9,6 +9,7 @@ import static com.cadentia.asset.AssetModels.AssetTypeCode.PDF;
 import static com.cadentia.asset.AssetUploadErrorCode.CHECKSUM_MISMATCH;
 import static com.cadentia.asset.AssetUploadErrorCode.EXPIRED_UPLOAD;
 import static com.cadentia.asset.AssetUploadErrorCode.MIME_TYPE_NOT_ALLOWED;
+import static com.cadentia.asset.AssetUploadErrorCode.OBJECT_NOT_FOUND;
 import static com.cadentia.asset.AssetUploadErrorCode.STORAGE_FAILURE;
 import static com.cadentia.asset.AssetUploadErrorCode.UNAUTHORIZED_ACTOR;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -228,6 +229,24 @@ class AssetUploadServiceTest {
                 .extracting(candidate -> candidate.uploadId())
                 .contains(abandoned.uploadId())
                 .doesNotContain(active.uploadId());
+    }
+
+    @Test
+    void rejectsFinalizationWhenStorageObjectIsMissing() {
+        // Arrange
+        var instructions = service.createPendingUpload(command(CHORD_CHART, "application/pdf", 128L));
+        when(storageAdapter.metadata(instructions.storageKey())).thenReturn(Optional.empty());
+
+        // Act / Assert
+        assertThatThrownBy(() -> service.finalizeUpload(new FinalizeUploadCommand(
+                instructions.uploadId(),
+                INSTANCE_ID,
+                ACTOR,
+                instructions.storageKey())))
+                .isInstanceOf(AssetUploadException.class)
+                .extracting("errorCode")
+                .isEqualTo(OBJECT_NOT_FOUND);
+        assertThat(pendingUploadRepository.find(instructions.uploadId()).orElseThrow().status()).isEqualTo(PendingUploadStatus.REJECTED);
     }
 
     private CreatePendingUploadCommand command(AssetModels.AssetTypeCode assetTypeCode, String mimeType, long byteSize) {
