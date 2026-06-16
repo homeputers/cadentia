@@ -107,3 +107,44 @@ CREATE TRIGGER asset_versions_immutable_update
     BEFORE UPDATE ON asset_versions
     FOR EACH ROW
     EXECUTE FUNCTION prevent_asset_version_update();
+
+COMMENT ON TABLE asset_processing_job_types IS 'Controlled vocabulary of asynchronous processing job types used by ADR-025 media processing orchestration.';
+COMMENT ON COLUMN asset_processing_job_types.code IS 'Stable machine-readable processing job type code, such as VIRUS_SCAN or AUDIO_TRANSCODING.';
+COMMENT ON COLUMN asset_processing_job_types.display_name IS 'Human-readable processing job type label for operator tooling.';
+COMMENT ON COLUMN asset_processing_job_types.sort_order IS 'Deterministic display order for job type lists.';
+
+COMMENT ON TABLE asset_processing_jobs IS 'Durable, idempotent work queue records for asynchronous processing of a specific immutable asset version.';
+COMMENT ON COLUMN asset_processing_jobs.id IS 'Internal unique identifier for this processing job and operator diagnostic reference.';
+COMMENT ON COLUMN asset_processing_jobs.asset_version_id IS 'Immutable source asset version that this job reads; jobs never target a mutable logical asset pointer.';
+COMMENT ON COLUMN asset_processing_jobs.job_type_code IS 'Type of processing work to perform, such as virus scan, preview generation, waveform analysis, transcoding, or metadata extraction.';
+COMMENT ON COLUMN asset_processing_jobs.processor_type IS 'Stable processor implementation identifier used for idempotency, replay, and audit.';
+COMMENT ON COLUMN asset_processing_jobs.processor_version IS 'Processor implementation version used so reruns after processor upgrades produce separate auditable jobs.';
+COMMENT ON COLUMN asset_processing_jobs.input_checksum IS 'Checksum of the source asset version input; included in idempotency so historical processing remains tied to exact bytes.';
+COMMENT ON COLUMN asset_processing_jobs.status_code IS 'Current job execution status: QUEUED, RUNNING, SUCCEEDED, FAILED, or DEAD_LETTERED.';
+COMMENT ON COLUMN asset_processing_jobs.attempts IS 'Number of started processing attempts recorded for retry and dead-letter decisions.';
+COMMENT ON COLUMN asset_processing_jobs.max_attempts IS 'Maximum attempts allowed before the job is moved to dead-letter status.';
+COMMENT ON COLUMN asset_processing_jobs.created_at IS 'Timestamp when the processing job was first enqueued.';
+COMMENT ON COLUMN asset_processing_jobs.available_at IS 'Earliest timestamp when the queued job is eligible for execution, including retry backoff scheduling.';
+COMMENT ON COLUMN asset_processing_jobs.started_at IS 'Timestamp when the most recent processing attempt started.';
+COMMENT ON COLUMN asset_processing_jobs.completed_at IS 'Timestamp when the job reached a terminal successful or dead-letter state.';
+COMMENT ON COLUMN asset_processing_jobs.error_code IS 'Sanitized machine-readable failure code for operator diagnosis without payload or credential disclosure.';
+COMMENT ON COLUMN asset_processing_jobs.sanitized_error_detail IS 'Optional human-readable diagnostic detail with sensitive URLs, credentials, lyrics, and private notes excluded.';
+COMMENT ON COLUMN asset_processing_jobs.output_result_id IS 'Optional pointer to the processing result produced by a successful job.';
+
+COMMENT ON TABLE asset_processing_results IS 'Version-pinned processing outputs and analysis metadata produced by asynchronous jobs without overwriting source binary metadata.';
+COMMENT ON COLUMN asset_processing_results.id IS 'Internal unique identifier for this processing result.';
+COMMENT ON COLUMN asset_processing_results.job_id IS 'Processing job that produced this result.';
+COMMENT ON COLUMN asset_processing_results.asset_version_id IS 'Immutable source asset version for which this result was produced.';
+COMMENT ON COLUMN asset_processing_results.result_type_code IS 'Type of processing result, aligned with the originating processing job type.';
+COMMENT ON COLUMN asset_processing_results.processor_type IS 'Stable processor implementation identifier that produced the result.';
+COMMENT ON COLUMN asset_processing_results.processor_version IS 'Processor implementation version that produced the result.';
+COMMENT ON COLUMN asset_processing_results.input_checksum IS 'Checksum of the source asset bytes used to produce this result.';
+COMMENT ON COLUMN asset_processing_results.status_code IS 'Result safety/availability status: CLEAN, UNSAFE, AVAILABLE, or FAILED.';
+COMMENT ON COLUMN asset_processing_results.output_storage_key IS 'Storage key for derived output artifacts such as previews, transcodes, or waveform documents; never stores signed URLs or credentials.';
+COMMENT ON COLUMN asset_processing_results.output_mime_type IS 'MIME type of the derived output artifact when one exists.';
+COMMENT ON COLUMN asset_processing_results.output_byte_size IS 'Byte size of the derived output artifact when one exists.';
+COMMENT ON COLUMN asset_processing_results.result_metadata IS 'Small JSON metadata produced by processors, excluding raw payloads, lyrics, private notes, signed URLs, and credentials.';
+COMMENT ON COLUMN asset_processing_results.created_at IS 'Timestamp when the processing result was recorded.';
+
+COMMENT ON FUNCTION prevent_asset_version_update() IS 'Allows only lifecycle and processing status transitions on asset_versions while preserving immutable source binary metadata.';
+COMMENT ON TRIGGER asset_versions_immutable_update ON asset_versions IS 'Prevents mutation of historical asset version metadata except controlled lifecycle and processing state transitions.';
