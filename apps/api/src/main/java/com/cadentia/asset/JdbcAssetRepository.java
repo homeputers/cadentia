@@ -169,6 +169,54 @@ public class JdbcAssetRepository implements AssetRepository {
         return rows.stream().findFirst();
     }
 
+
+    @Override
+    @Transactional
+    public AssetVersionRecord transitionProcessingStatus(
+            UUID assetVersionId,
+            AssetProcessingStatusCode processingStatusCode,
+            String changedBy,
+            String reasonCode) {
+        jdbcTemplate.update(
+                """
+                UPDATE asset_versions
+                SET processing_status_code = :processingStatusCode
+                WHERE id = :assetVersionId
+                """,
+                new MapSqlParameterSource()
+                        .addValue("assetVersionId", assetVersionId)
+                        .addValue("processingStatusCode", processingStatusCode.name()));
+        return findVersion(assetVersionId).orElseThrow();
+    }
+
+    @Override
+    @Transactional
+    public AssetVersionRecord quarantineVersion(UUID assetVersionId, String changedBy, String reasonCode) {
+        AssetVersionRecord existing = findVersion(assetVersionId).orElseThrow();
+        jdbcTemplate.update(
+                """
+                UPDATE asset_versions
+                SET lifecycle_status_code = 'QUARANTINED',
+                    processing_status_code = 'REJECTED'
+                WHERE id = :assetVersionId
+                """,
+                Map.of("assetVersionId", assetVersionId));
+        jdbcTemplate.update(
+                """
+                INSERT INTO asset_version_lifecycle_events (
+                    asset_version_id, from_lifecycle_status_code, to_lifecycle_status_code, reason_code, changed_by
+                ) VALUES (
+                    :assetVersionId, :fromLifecycleStatusCode, 'QUARANTINED', :reasonCode, :changedBy
+                )
+                """,
+                new MapSqlParameterSource()
+                        .addValue("assetVersionId", assetVersionId)
+                        .addValue("fromLifecycleStatusCode", existing.lifecycleStatusCode().name())
+                        .addValue("reasonCode", reasonCode)
+                        .addValue("changedBy", changedBy));
+        return findVersion(assetVersionId).orElseThrow();
+    }
+
     @Override
     @Transactional
     public AssetRecord archiveAsset(UUID assetId, String archivedBy, String reason) {

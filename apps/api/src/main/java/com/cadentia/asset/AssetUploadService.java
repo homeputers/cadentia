@@ -1,7 +1,7 @@
 package com.cadentia.asset;
 
 import static com.cadentia.asset.AssetModels.AssetLifecycleStatusCode.AVAILABLE;
-import static com.cadentia.asset.AssetModels.AssetProcessingStatusCode.READY;
+import static com.cadentia.asset.AssetModels.AssetProcessingStatusCode.PENDING_SCAN;
 import static com.cadentia.asset.AssetUploadErrorCode.ASSET_TYPE_MISMATCH;
 import static com.cadentia.asset.AssetUploadErrorCode.BYTE_SIZE_MISMATCH;
 import static com.cadentia.asset.AssetUploadErrorCode.CHECKSUM_MISMATCH;
@@ -45,14 +45,16 @@ public class AssetUploadService {
     private final AssetStorageAdapter storageAdapter;
     private final AssetStorageProperties storageProperties;
     private final Clock clock;
+    private final AssetProcessingOrchestrator processingOrchestrator;
 
     @Autowired
     public AssetUploadService(
             AssetRepository assetRepository,
             PendingAssetUploadRepository pendingUploadRepository,
             AssetStorageAdapter storageAdapter,
-            AssetStorageProperties storageProperties) {
-        this(assetRepository, pendingUploadRepository, storageAdapter, storageProperties, Clock.systemUTC());
+            AssetStorageProperties storageProperties,
+            AssetProcessingOrchestrator processingOrchestrator) {
+        this(assetRepository, pendingUploadRepository, storageAdapter, storageProperties, processingOrchestrator, Clock.systemUTC());
     }
 
     AssetUploadService(
@@ -61,11 +63,22 @@ public class AssetUploadService {
             AssetStorageAdapter storageAdapter,
             AssetStorageProperties storageProperties,
             Clock clock) {
+        this(assetRepository, pendingUploadRepository, storageAdapter, storageProperties, null, clock);
+    }
+
+    AssetUploadService(
+            AssetRepository assetRepository,
+            PendingAssetUploadRepository pendingUploadRepository,
+            AssetStorageAdapter storageAdapter,
+            AssetStorageProperties storageProperties,
+            AssetProcessingOrchestrator processingOrchestrator,
+            Clock clock) {
         this.assetRepository = assetRepository;
         this.pendingUploadRepository = pendingUploadRepository;
         this.storageAdapter = storageAdapter;
         this.storageProperties = storageProperties;
         this.clock = clock;
+        this.processingOrchestrator = processingOrchestrator;
     }
 
     public UploadInstructions createPendingUpload(CreatePendingUploadCommand command) {
@@ -146,11 +159,14 @@ public class AssetUploadService {
                     pendingUpload.provenanceSummary(),
                     pendingUpload.actor(),
                     AVAILABLE,
-                    READY,
+                    PENDING_SCAN,
                     pendingUpload.accessPolicyCode(),
                     pendingUpload.licenseMetadata(),
                     true));
             pendingUploadRepository.updateStatus(pendingUpload.id(), FINALIZED, null, clock.instant());
+            if (processingOrchestrator != null) {
+                processingOrchestrator.scheduleForFinalizedVersion(version);
+            }
             return version;
         } catch (AssetUploadException ex) {
             markRejectedOrFailed(pendingUpload, ex.errorCode());
