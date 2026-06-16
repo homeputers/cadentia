@@ -496,3 +496,41 @@ fixture assets safe for tests.
   as high-cardinality telemetry labels.
 - Do not leave provider, retention, or mandatory licensing defaults implicit for
   production deployments.
+
+## Subtask 3 attachment model
+
+Cadentia stores media links in `asset_attachments`, a typed attachment table
+rather than incidental service notes, rehearsal notes, or arrangement comments.
+Each attachment identifies a supported target with `target_type_code` and
+`target_id`; service-scoped targets also carry `service_plan_id` so trigger
+validation can prove the target belongs to the expected service context.
+Supported targets are catalog songs, catalog arrangements, services, service
+items, rehearsal sessions, rehearsal issues, rehearsal issue actions, and
+service-specific arrangement overrides.
+
+Attachments always reference `asset_versions.id`, not only
+`logical_assets.current_asset_version_id`. This means a service plan,
+service item, rehearsal session, issue/action, or service arrangement override
+pins the exact binary metadata version selected for rehearsal or performance.
+If a catalog asset later receives a new current version, historical service and
+rehearsal attachments continue to resolve to the original immutable version
+until a user performs an explicit, audited replacement workflow. Catalog song
+and arrangement attachments use the same version-pinned model for consistency,
+while catalog approval gates remain the source of truth for recommendation
+eligibility.
+
+The attachment row captures display and planning metadata: attachment type,
+display label, sort order, purpose, required/optional flag, effective date
+range, visibility policy, archive metadata, and creator/updater audit metadata.
+The schema prevents active duplicate positions for the same target and purpose,
+rejects unsupported target types, rejects missing or mismatched service-context
+target records, rejects active references to archived asset versions, and
+verifies that the attachment type matches the referenced logical asset type.
+`asset_attachment_audit_events` records create, reorder, archive, and future
+explicit replacement events without mutating immutable asset-version rows.
+
+Service-specific arrangement override attachments are attached to
+`SERVICE_ARRANGEMENT_OVERRIDE` targets. They do not update canonical
+`arrangements` rows or catalog song/arrangement attachments, preserving the
+separation between approved catalog data and service-specific rehearsal or
+performance decisions.

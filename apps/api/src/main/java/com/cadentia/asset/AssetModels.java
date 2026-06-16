@@ -52,6 +52,34 @@ public final class AssetModels {
         REVOKED
     }
 
+    public enum AssetAttachmentTargetTypeCode {
+        SONG,
+        ARRANGEMENT,
+        SERVICE,
+        SERVICE_ITEM,
+        REHEARSAL_SESSION,
+        REHEARSAL_ISSUE,
+        REHEARSAL_ISSUE_ACTION,
+        SERVICE_ARRANGEMENT_OVERRIDE
+    }
+
+    public enum AssetAttachmentPurposeCode {
+        PRIMARY_CHART,
+        REFERENCE,
+        REHEARSAL,
+        PERFORMANCE,
+        EVIDENCE,
+        FOLLOW_UP,
+        LOCAL_OVERRIDE
+    }
+
+    public enum AssetAttachmentAuditEventType {
+        CREATED,
+        REORDERED,
+        ARCHIVED,
+        REPLACED
+    }
+
     public enum AssetAccessPolicyCode {
         PUBLIC_METADATA,
         CATALOG_REVIEWERS,
@@ -110,6 +138,71 @@ public final class AssetModels {
             Instant effectiveAt,
             Instant expiresAt,
             AssetAccessPolicyCode visibilityPolicyCode) {
+    }
+
+    public record CreateAssetAttachmentCommand(
+            AssetAttachmentTargetTypeCode targetTypeCode,
+            UUID targetId,
+            UUID servicePlanId,
+            UUID assetVersionId,
+            AssetTypeCode attachmentTypeCode,
+            String displayLabel,
+            int sortOrder,
+            AssetAttachmentPurposeCode purposeCode,
+            boolean requiredForUse,
+            Instant effectiveFrom,
+            Instant effectiveUntil,
+            AssetAccessPolicyCode visibilityPolicyCode,
+            String createdBy) {
+    }
+
+    public record ReorderAssetAttachmentCommand(
+            UUID attachmentId,
+            int sortOrder,
+            String updatedBy,
+            String reason) {
+    }
+
+    public record ArchiveAssetAttachmentCommand(
+            UUID attachmentId,
+            String archivedBy,
+            String reason) {
+    }
+
+    public record AssetAttachmentRecord(
+            UUID id,
+            AssetAttachmentTargetTypeCode targetTypeCode,
+            UUID targetId,
+            UUID servicePlanId,
+            UUID assetVersionId,
+            AssetTypeCode attachmentTypeCode,
+            String displayLabel,
+            int sortOrder,
+            AssetAttachmentPurposeCode purposeCode,
+            boolean requiredForUse,
+            Instant effectiveFrom,
+            Instant effectiveUntil,
+            AssetAccessPolicyCode visibilityPolicyCode,
+            Instant archivedAt,
+            String archivedBy,
+            String archiveReason,
+            String createdBy,
+            String updatedBy,
+            Instant createdAt,
+            Instant updatedAt) {
+    }
+
+    public record AssetAttachmentAuditEventRecord(
+            UUID id,
+            UUID attachmentId,
+            AssetAttachmentAuditEventType eventType,
+            UUID previousAssetVersionId,
+            UUID newAssetVersionId,
+            Integer previousSortOrder,
+            Integer newSortOrder,
+            String reason,
+            String changedBy,
+            Instant changedAt) {
     }
 
     public record AssetRecord(
