@@ -321,6 +321,207 @@ schemas:
     "$ref": "./components/schemas/service-plans.yaml#/PublishServicePlanRequest"
   ServicePlanPublishResponse:
     "$ref": "./components/schemas/service-plans.yaml#/ServicePlanPublishResponse"
+  PluginPackageVersion:
+    type: object
+    required:
+    - pluginVersionId
+    - stablePluginId
+    - packageName
+    - provider
+    - semanticVersion
+    - supportedSpiVersions
+    - extensionPoints
+    - trustTier
+    - certificationStatus
+    - lifecycleStatus
+    properties:
+      pluginVersionId:
+        type: string
+        format: uuid
+      stablePluginId:
+        type: string
+      packageName:
+        type: string
+      provider:
+        type: string
+      semanticVersion:
+        type: string
+      supportedSpiVersions:
+        type: array
+        items:
+          type: string
+      extensionPoints:
+        type: array
+        items:
+          type: string
+      trustTier:
+        type: string
+        enum:
+        - CORE
+        - VERIFIED
+        - COMMUNITY
+        - LOCAL
+      checksumSha256:
+        type: string
+      signatureRef:
+        type: string
+      certificationStatus:
+        type: string
+        enum:
+        - PENDING
+        - CERTIFIED
+        - REJECTED
+        - EXPIRED
+      installationSource:
+        type: string
+      lifecycleStatus:
+        type: string
+      deprecationStatus:
+        type: string
+      configurationSchema:
+        type: object
+      createdAt:
+        type: string
+        format: date-time
+      updatedAt:
+        type: string
+        format: date-time
+  RegisterPluginPackageRequest:
+    type: object
+    required:
+    - stablePluginId
+    - packageName
+    - provider
+    - semanticVersion
+    - supportedSpiVersions
+    - extensionPoints
+    - trustTier
+    - checksumSha256
+    - certificationStatus
+    - installationSource
+    - configurationSchema
+    properties:
+      stablePluginId:
+        type: string
+      packageName:
+        type: string
+      provider:
+        type: string
+      semanticVersion:
+        type: string
+      supportedSpiVersions:
+        type: array
+        items:
+          type: string
+      extensionPoints:
+        type: array
+        items:
+          type: string
+      trustTier:
+        type: string
+      checksumSha256:
+        type: string
+      signatureRef:
+        type: string
+      certificationStatus:
+        type: string
+      installationSource:
+        type: string
+      configurationSchema:
+        type: object
+  PluginConfigurationSnapshotRequest:
+    type: object
+    required:
+    - churchInstanceId
+    - environment
+    - extensionPoint
+    - configurationValues
+    - secretRefs
+    properties:
+      churchInstanceId:
+        type: string
+      environment:
+        type: string
+        enum:
+        - DEVELOPMENT
+        - STAGING
+        - PRODUCTION
+      extensionPoint:
+        type: string
+      configurationValues:
+        type: object
+        description: Non-secret configuration values only.
+      secretRefs:
+        type: object
+        additionalProperties:
+          type: string
+        description: Secret-manager references keyed by schema property name.
+  PluginConfigurationSnapshot:
+    allOf:
+    - "$ref": "#/schemas/PluginConfigurationSnapshotRequest"
+    - type: object
+      required:
+      - configurationVersionId
+      - pluginVersionId
+      properties:
+        configurationVersionId:
+          type: string
+          format: uuid
+        pluginVersionId:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+  PluginEnablementRequest:
+    type: object
+    required:
+    - configurationVersionId
+    - churchInstanceId
+    - environment
+    - extensionPoint
+    properties:
+      configurationVersionId:
+        type: string
+        format: uuid
+      churchInstanceId:
+        type: string
+      environment:
+        type: string
+        enum:
+        - DEVELOPMENT
+        - STAGING
+        - PRODUCTION
+      extensionPoint:
+        type: string
+  PluginEnablement:
+    allOf:
+    - "$ref": "#/schemas/PluginEnablementRequest"
+    - type: object
+      required:
+      - enablementId
+      - pluginVersionId
+      - lifecycleStatus
+      properties:
+        enablementId:
+          type: string
+          format: uuid
+        pluginVersionId:
+          type: string
+          format: uuid
+        lifecycleStatus:
+          type: string
+          enum:
+          - ENABLED
+          - DISABLED
+          - REVOKED
+        enabledAt:
+          type: string
+          format: date-time
+        disabledAt:
+          type: string
+          format: date-time
+
 responses:
   InvalidWorkflowPayload:
     "$ref": "./components/shared/responses.yaml#/InvalidWorkflowPayload"

@@ -1,0 +1,161 @@
+"/admin/plugins":
+  get:
+    operationId: listPluginPackages
+    tags:
+    - Plugins
+    summary: List registered plugin package versions
+    security:
+    - bearerAuth: []
+    responses:
+      "200":
+        description: Registered plugin package versions
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                "$ref": "../cadentia-api.components.yaml#/schemas/PluginPackageVersion"
+  post:
+    operationId: registerPluginPackage
+    tags:
+    - Plugins
+    summary: Register an approved plugin package version
+    security:
+    - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            "$ref": "../cadentia-api.components.yaml#/schemas/RegisterPluginPackageRequest"
+    responses:
+      "201":
+        description: Registered plugin package version
+        content:
+          application/json:
+            schema:
+              "$ref": "../cadentia-api.components.yaml#/schemas/PluginPackageVersion"
+"/admin/plugins/{pluginVersionId}/configuration-snapshots":
+  post:
+    operationId: createPluginConfigurationSnapshot
+    tags:
+    - Plugins
+    summary: Create a versioned plugin configuration snapshot
+    security:
+    - bearerAuth: []
+    parameters:
+    - name: pluginVersionId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            "$ref": "../cadentia-api.components.yaml#/schemas/PluginConfigurationSnapshotRequest"
+    responses:
+      "201":
+        description: Created immutable configuration snapshot
+        content:
+          application/json:
+            schema:
+              "$ref": "../cadentia-api.components.yaml#/schemas/PluginConfigurationSnapshot"
+"/admin/plugins/{pluginVersionId}/enablements":
+  post:
+    operationId: enablePluginForScope
+    tags:
+    - Plugins
+    summary: Enable a plugin version for one instance, environment, and extension point
+    security:
+    - bearerAuth: []
+    parameters:
+    - name: pluginVersionId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            "$ref": "../cadentia-api.components.yaml#/schemas/PluginEnablementRequest"
+    responses:
+      "201":
+        description: Scoped plugin enablement
+        content:
+          application/json:
+            schema:
+              "$ref": "../cadentia-api.components.yaml#/schemas/PluginEnablement"
+"/admin/plugins/{pluginVersionId}/history":
+  get:
+    operationId: listPluginVersionHistory
+    tags:
+    - Plugins
+    summary: View version history for a stable plugin ID
+    security:
+    - bearerAuth: []
+    parameters:
+    - name: pluginVersionId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    responses:
+      "200":
+        description: Plugin version history
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                "$ref": "../cadentia-api.components.yaml#/schemas/PluginPackageVersion"
+"/admin/plugin-enablements/{enablementId}:disable":
+  post:
+    operationId: disablePluginEnablement
+    tags:
+    - Plugins
+    summary: Disable a scoped plugin enablement
+    security:
+    - bearerAuth: []
+    parameters:
+    - name: enablementId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    responses:
+      "200":
+        description: Disabled scoped plugin enablement
+        content:
+          application/json:
+            schema:
+              "$ref": "../cadentia-api.components.yaml#/schemas/PluginEnablement"
+"/admin/plugins/{pluginVersionId}:revoke":
+  post:
+    operationId: revokePluginPackage
+    tags:
+    - Plugins
+    summary: Revoke a plugin package version
+    security:
+    - bearerAuth: []
+    parameters:
+    - name: pluginVersionId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    responses:
+      "200":
+        description: Revoked plugin package version
+        content:
+          application/json:
+            schema:
+              "$ref": "../cadentia-api.components.yaml#/schemas/PluginPackageVersion"
