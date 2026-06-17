@@ -10,11 +10,40 @@ public final class PluginModels {
     private PluginModels() {
     }
 
-    public enum TrustTier { CORE, VERIFIED, COMMUNITY, LOCAL }
-    public enum CertificationStatus { PENDING, CERTIFIED, REJECTED, EXPIRED }
-    public enum LifecycleStatus { REGISTERED, APPROVED, ENABLED, DISABLED, REVOKED, DELETED }
-    public enum DeprecationStatus { ACTIVE, DEPRECATED, END_OF_LIFE }
-    public enum Environment { DEVELOPMENT, STAGING, PRODUCTION }
+    public enum TrustTier {
+        CORE,
+        VERIFIED,
+        COMMUNITY,
+        LOCAL
+    }
+
+    public enum CertificationStatus {
+        PENDING,
+        CERTIFIED,
+        REJECTED,
+        EXPIRED
+    }
+
+    public enum LifecycleStatus {
+        REGISTERED,
+        APPROVED,
+        ENABLED,
+        DISABLED,
+        REVOKED,
+        DELETED
+    }
+
+    public enum DeprecationStatus {
+        ACTIVE,
+        DEPRECATED,
+        END_OF_LIFE
+    }
+
+    public enum Environment {
+        DEVELOPMENT,
+        STAGING,
+        PRODUCTION
+    }
 
     public record PluginPackage(
             UUID pluginVersionId,

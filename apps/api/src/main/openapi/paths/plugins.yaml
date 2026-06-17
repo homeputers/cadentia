@@ -1,4 +1,4 @@
-"/api/admin/plugins":
+"/admin/plugins":
   get:
     operationId: listPluginPackages
     tags:
@@ -35,7 +35,7 @@
           application/json:
             schema:
               "$ref": "../cadentia-api.components.yaml#/schemas/PluginPackageVersion"
-"/api/admin/plugins/{pluginVersionId}/configuration-snapshots":
+"/admin/plugins/{pluginVersionId}/configuration-snapshots":
   post:
     operationId: createPluginConfigurationSnapshot
     tags:
@@ -63,7 +63,7 @@
           application/json:
             schema:
               "$ref": "../cadentia-api.components.yaml#/schemas/PluginConfigurationSnapshot"
-"/api/admin/plugins/{pluginVersionId}/enablements":
+"/admin/plugins/{pluginVersionId}/enablements":
   post:
     operationId: enablePluginForScope
     tags:
@@ -91,7 +91,7 @@
           application/json:
             schema:
               "$ref": "../cadentia-api.components.yaml#/schemas/PluginEnablement"
-"/api/admin/plugins/{pluginVersionId}/history":
+"/admin/plugins/{pluginVersionId}/history":
   get:
     operationId: listPluginVersionHistory
     tags:
@@ -115,7 +115,7 @@
               type: array
               items:
                 "$ref": "../cadentia-api.components.yaml#/schemas/PluginPackageVersion"
-"/api/admin/plugin-enablements/{enablementId}:disable":
+"/admin/plugin-enablements/{enablementId}:disable":
   post:
     operationId: disablePluginEnablement
     tags:
@@ -137,7 +137,7 @@
           application/json:
             schema:
               "$ref": "../cadentia-api.components.yaml#/schemas/PluginEnablement"
-"/api/admin/plugins/{pluginVersionId}:revoke":
+"/admin/plugins/{pluginVersionId}:revoke":
   post:
     operationId: revokePluginPackage
     tags:

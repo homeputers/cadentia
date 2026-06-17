@@ -70,3 +70,45 @@ COMMENT ON TABLE plugin_configuration_snapshots IS
     'Immutable plugin configuration snapshots; secrets are stored only as references.';
 COMMENT ON TABLE plugin_instance_enablements IS
     'Explicit church-instance, environment, extension-point plugin enablement records.';
+
+COMMENT ON COLUMN plugin_package_versions.plugin_version_id IS 'Stable identifier for one immutable plugin package version record.';
+COMMENT ON COLUMN plugin_package_versions.stable_plugin_id IS 'Canonical plugin identifier that remains stable across package versions.';
+COMMENT ON COLUMN plugin_package_versions.package_name IS 'Package name from the plugin distribution metadata.';
+COMMENT ON COLUMN plugin_package_versions.provider IS 'Organization or maintainer providing the plugin package.';
+COMMENT ON COLUMN plugin_package_versions.semantic_version IS 'Semver package version for deterministic upgrade and downgrade history.';
+COMMENT ON COLUMN plugin_package_versions.supported_spi_versions IS 'JSON array of plugin SPI versions supported by this package version.';
+COMMENT ON COLUMN plugin_package_versions.extension_points IS 'JSON array of extension points implemented by this package version.';
+COMMENT ON COLUMN plugin_package_versions.trust_tier IS 'Trust classification such as CORE, VERIFIED, COMMUNITY, or LOCAL.';
+COMMENT ON COLUMN plugin_package_versions.checksum_sha256 IS 'Package checksum metadata used for supply-chain integrity checks.';
+COMMENT ON COLUMN plugin_package_versions.signature_ref IS 'Optional reference to a detached signature, transparency log entry, or attestation bundle.';
+COMMENT ON COLUMN plugin_package_versions.certification_status IS 'Certification review state for the package version.';
+COMMENT ON COLUMN plugin_package_versions.installation_source IS 'Registry, OCI, file, or package source used to install this plugin version.';
+COMMENT ON COLUMN plugin_package_versions.lifecycle_status IS 'Registry lifecycle status for the package version.';
+COMMENT ON COLUMN plugin_package_versions.deprecation_status IS 'Deprecation status used to steer admins away from unsupported versions.';
+COMMENT ON COLUMN plugin_package_versions.configuration_schema IS 'JSON schema-like configuration contract; plaintext secret values are forbidden.';
+COMMENT ON COLUMN plugin_package_versions.created_at IS 'Timestamp when the package version was first registered.';
+COMMENT ON COLUMN plugin_package_versions.updated_at IS 'Timestamp when lifecycle or deprecation metadata last changed.';
+COMMENT ON COLUMN plugin_package_versions.created_by IS 'Actor that registered the package version.';
+COMMENT ON COLUMN plugin_package_versions.updated_by IS 'Actor that last changed the package lifecycle metadata.';
+
+COMMENT ON COLUMN plugin_configuration_snapshots.configuration_version_id IS 'Immutable identifier for one plugin configuration snapshot.';
+COMMENT ON COLUMN plugin_configuration_snapshots.plugin_version_id IS 'Plugin package version that this configuration snapshot applies to.';
+COMMENT ON COLUMN plugin_configuration_snapshots.church_instance_id IS 'Church instance scope for the configuration snapshot.';
+COMMENT ON COLUMN plugin_configuration_snapshots.environment IS 'Deployment environment scope for the configuration snapshot.';
+COMMENT ON COLUMN plugin_configuration_snapshots.extension_point IS 'Extension point scope for the configuration snapshot.';
+COMMENT ON COLUMN plugin_configuration_snapshots.configuration_values IS 'Non-secret JSON configuration values captured for audit and execution replay.';
+COMMENT ON COLUMN plugin_configuration_snapshots.secret_refs IS 'Secret-manager references keyed by configuration property; raw secrets are not stored.';
+COMMENT ON COLUMN plugin_configuration_snapshots.created_at IS 'Timestamp when this immutable configuration snapshot was created.';
+COMMENT ON COLUMN plugin_configuration_snapshots.created_by IS 'Actor that created this configuration snapshot.';
+
+COMMENT ON COLUMN plugin_instance_enablements.enablement_id IS 'Stable identifier for a scoped plugin enablement record.';
+COMMENT ON COLUMN plugin_instance_enablements.plugin_version_id IS 'Plugin package version explicitly enabled for this scope.';
+COMMENT ON COLUMN plugin_instance_enablements.configuration_version_id IS 'Configuration snapshot used when this plugin executes for the scope.';
+COMMENT ON COLUMN plugin_instance_enablements.church_instance_id IS 'Church instance allowed to use the plugin for this scope.';
+COMMENT ON COLUMN plugin_instance_enablements.environment IS 'Environment allowed to use the plugin for this scope.';
+COMMENT ON COLUMN plugin_instance_enablements.extension_point IS 'Extension point allowed to invoke the plugin for this scope.';
+COMMENT ON COLUMN plugin_instance_enablements.lifecycle_status IS 'Scoped enablement lifecycle state.';
+COMMENT ON COLUMN plugin_instance_enablements.enabled_at IS 'Timestamp when this scoped enablement was activated.';
+COMMENT ON COLUMN plugin_instance_enablements.disabled_at IS 'Timestamp when this scoped enablement was disabled, if applicable.';
+COMMENT ON COLUMN plugin_instance_enablements.enabled_by IS 'Actor that enabled the plugin for this scope.';
+COMMENT ON COLUMN plugin_instance_enablements.disabled_by IS 'Actor that disabled the plugin for this scope, if applicable.';
