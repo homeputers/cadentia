@@ -1,0 +1,12 @@
+{
+  "status": "SUCCESS",
+  "adjustments": [
+    {
+      "candidateId": "song-1",
+      "componentCode": "TEAM_FAMILIARITY",
+      "delta": 0.1,
+      "reasonCode": "RECENT_REHEARSAL"
+    }
+  ],
+  "errors": []
+}

@@ -1,0 +1,9 @@
+{
+  "status": "SUCCESS",
+  "mimeType": "application/pdf",
+  "filename": "service-plan.pdf",
+  "checksumSha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "artifactRef": "artifact://exports/1",
+  "errors": [],
+  "warnings": []
+}

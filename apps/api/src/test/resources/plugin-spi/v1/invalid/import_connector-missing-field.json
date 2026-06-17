@@ -1,0 +1,15 @@
+{
+  "status": "SUCCESS",
+  "documents": [
+    {
+      "sourceId": "src-1",
+      "title": "Known Song",
+      "contentHashSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "provenanceRef": "prov-1",
+      "licenseClaim": "CCLI_REVIEW_REQUIRED",
+      "stagedCandidateId": "stage-1"
+    }
+  ],
+  "errors": [],
+  "warnings": []
+}

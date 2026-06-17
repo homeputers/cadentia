@@ -1,0 +1,13 @@
+{
+  "status": "FAILURE",
+  "externalReference": "",
+  "reconciliationStatus": "NOT_DELIVERED",
+  "errors": [
+    {
+      "code": "REMOTE_TIMEOUT",
+      "message": "Remote endpoint timed out.",
+      "retryable": true,
+      "retryAfter": "PT5M"
+    }
+  ]
+}

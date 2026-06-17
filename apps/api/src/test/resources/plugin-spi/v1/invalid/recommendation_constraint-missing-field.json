@@ -1,0 +1,12 @@
+{
+  "status": "SUCCESS",
+  "constraints": [
+    {
+      "code": "THEME_ALIGNMENT",
+      "type": "SOFT_PENALTY",
+      "weight": 0.3,
+      "explanationLabel": "Theme alignment boost"
+    }
+  ],
+  "errors": []
+}
