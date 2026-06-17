@@ -12,6 +12,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -22,6 +23,7 @@ public class PluginRegistryService {
     private final PluginRegistryAuditRecorder auditRecorder;
     private final Clock clock;
 
+    @Autowired
     public PluginRegistryService(PluginRegistryRepository repository, PluginConfigurationValidator validator,
             PluginRegistryAuthorizationPolicy authorizationPolicy, PluginRegistryAuditRecorder auditRecorder) {
         this(repository, validator, authorizationPolicy, auditRecorder, Clock.systemUTC());
