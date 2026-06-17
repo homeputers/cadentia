@@ -1,0 +1,33 @@
+{
+  "envelope": {
+    "spiVersion": "3.0.0",
+    "extensionPoint": "IMPORT_CONNECTOR",
+    "executionId": "11111111-1111-1111-1111-111111111111",
+    "correlationId": "corr-1",
+    "churchInstanceId": "church-1",
+    "environment": "STAGING",
+    "pluginVersionId": "22222222-2222-2222-2222-222222222222",
+    "configurationVersionId": "33333333-3333-3333-3333-333333333333",
+    "registrySnapshotId": "registry-2026-06-17",
+    "policySnapshotId": "policy-7",
+    "catalogSnapshotId": "catalog-42",
+    "actorContext": "user:admin",
+    "systemContext": "import-job",
+    "locale": "en-US",
+    "deterministicSeed": "seed-1",
+    "runId": "run-1"
+  },
+  "status": "SUCCESS",
+  "documents": [
+    {
+      "sourceId": "src-1",
+      "title": "Known Song",
+      "contentHashSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "provenanceRef": "prov-1",
+      "licenseClaim": "CCLI_REVIEW_REQUIRED",
+      "stagedCandidateId": "stage-1"
+    }
+  ],
+  "errors": [],
+  "warnings": []
+}

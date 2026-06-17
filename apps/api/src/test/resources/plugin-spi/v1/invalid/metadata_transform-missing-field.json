@@ -1,0 +1,19 @@
+{
+  "status": "DEGRADED",
+  "proposedMetadata": {
+    "title": "Known Song",
+    "theme": "Advent"
+  },
+  "confidence": 0.82,
+  "errors": [
+    {
+      "code": "LOW_CONFIDENCE_AUTHOR",
+      "message": "Author confidence below review threshold.",
+      "retryable": false,
+      "retryAfter": null
+    }
+  ],
+  "reviewNotes": [
+    "Requires reviewer confirmation."
+  ]
+}
