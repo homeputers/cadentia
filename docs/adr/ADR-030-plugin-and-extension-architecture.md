@@ -59,6 +59,18 @@ Tradeoffs:
 
 ## Open Questions
 
-- Should plugins run in-process, out-of-process, or both by trust tier?
-- What certification process is required for third-party plugins?
-- Which extension points are stable enough for the first SPI release?
+- Answered for SPI v1 in the implementation plan: core-maintained plugins may
+  run in-process or as managed sidecars, partner certified and church-local
+  plugins run out-of-process, and experimental plugins are sandbox-only.
+- Answered for SPI v1 in the implementation plan: third-party production
+  plugins require signed artifacts, SBOM/checksum metadata, contract fixtures,
+  policy-gate tests, failure/timeout tests, and security/license review;
+  church-local packages require administrator attestation and contract
+  validation with reduced support expectations.
+- Answered for SPI v1 in the implementation plan: stable extension points are
+  limited to import connectors, staged metadata transforms, export renderers,
+  outbound publish-notification hooks, and static package customization
+  manifests. Recommendation constraint contributions, scoring policy
+  contributions, inbound webhooks, general async event processors, UI
+  extensions, observability exporters, and LLM/prompt provider extensions remain
+  deferred until their dependencies and policy controls mature.
