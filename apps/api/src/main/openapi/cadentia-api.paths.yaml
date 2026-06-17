@@ -1,3 +1,15 @@
+"/api/admin/plugins":
+  "$ref": "./paths/plugins.yaml#/~1api~1admin~1plugins"
+"/api/admin/plugins/{pluginVersionId}/configuration-snapshots":
+  "$ref": "./paths/plugins.yaml#/~1api~1admin~1plugins~1{pluginVersionId}~1configuration-snapshots"
+"/api/admin/plugins/{pluginVersionId}/enablements":
+  "$ref": "./paths/plugins.yaml#/~1api~1admin~1plugins~1{pluginVersionId}~1enablements"
+"/api/admin/plugins/{pluginVersionId}/history":
+  "$ref": "./paths/plugins.yaml#/~1api~1admin~1plugins~1{pluginVersionId}~1history"
+"/api/admin/plugin-enablements/{enablementId}:disable":
+  "$ref": "./paths/plugins.yaml#/~1api~1admin~1plugin-enablements~1{enablementId}:disable"
+"/api/admin/plugins/{pluginVersionId}:revoke":
+  "$ref": "./paths/plugins.yaml#/~1api~1admin~1plugins~1{pluginVersionId}:revoke"
 "/feedback/events":
   "$ref": "./paths/feedback-tuning.yaml#/~1feedback~1events"
 "/feedback/scopes/{scopeLayer}/{scopeId}/state":

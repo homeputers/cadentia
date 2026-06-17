@@ -10,6 +10,7 @@ public final class RbacAuthorities {
     public static final String ROLE_TEAM_SCHEDULER = "role.team_scheduler";
     public static final String ROLE_ASSIGNED_MUSICIAN = "role.assigned_musician";
     public static final String ROLE_REPORTING_VIEWER = "role.reporting_viewer";
+    public static final String ROLE_INTEGRATION_MANAGER = "role.integration_manager";
 
     private RbacAuthorities() {
     }
