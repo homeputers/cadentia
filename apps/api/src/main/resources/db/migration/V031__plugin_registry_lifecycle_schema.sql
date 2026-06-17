@@ -19,7 +19,7 @@ CREATE TABLE plugin_package_versions (
     created_by varchar(128) NOT NULL,
     updated_by varchar(128) NOT NULL,
     CONSTRAINT plugin_package_versions_identity_unique UNIQUE (stable_plugin_id, semantic_version),
-    CONSTRAINT plugin_package_versions_semver CHECK (semantic_version ~ '^\d+\.\d+\.\d+([-+][0-9A-Za-z.-]+)?$'),
+    CONSTRAINT plugin_package_versions_semver CHECK (semantic_version ~ '^[0-9]+\.[0-9]+\.[0-9]+([-+][0-9A-Za-z.-]+)?$'),
     CONSTRAINT plugin_package_versions_lifecycle CHECK (lifecycle_status IN ('REGISTERED', 'APPROVED', 'ENABLED', 'DISABLED', 'REVOKED', 'DELETED')),
     CONSTRAINT plugin_package_versions_no_plaintext_secrets CHECK (configuration_schema::text !~* '(passwordValue|secretValue|tokenValue|apiKeyValue|credentialValue)')
 );
