@@ -70,6 +70,7 @@ public class PluginRuntimeService implements PluginRuntimeGateway {
         this.objectMapper = objectMapper;
     }
 
+    @Override
     public PluginRuntimeResult execute(PluginRuntimeInvocation invocation) {
         ExtensionPointRuntimePolicy runtimePolicy = DEFAULT_POLICIES.get(invocation.extensionPoint());
         if (runtimePolicy == null || invocation.coreTransactionActive()) {

@@ -47,15 +47,15 @@ class ImportTransformExtensionServiceTest {
 
     @Test
     void stagesValidPluginImportCandidatesThroughSharedImportPipelineOnly() {
-        // Given
+        // Arrange
         runtimeService.result = success(Map.of(
                 "stagedImportCandidates", List.of(candidate("song-1", List.of("ext-1"), List.of("license-ref"),
                         List.of("prov-ref"), Map.of()))));
 
-        // When
+        // Act
         var result = service.runImportConnector(invocation("IMPORT_CONNECTOR"), context());
 
-        // Then
+        // Assert
         assertThat(result.status()).isEqualTo(JobStatus.SUCCEEDED);
         assertThat(result.stagedCandidates())
                 .extracting(StagedImportCandidate::status)
@@ -67,15 +67,15 @@ class ImportTransformExtensionServiceTest {
 
     @Test
     void rejectsDuplicateMissingProvenanceUnauthorizedInstanceAndInvalidLicensingImportCandidates() {
-        // Given
+        // Arrange
         runtimeService.result = success(Map.of(
                 "stagedImportCandidates", List.of(candidate("song-1", List.of("dup", "dup"), List.of(), List.of(),
                         Map.of("churchInstanceId", "other")))));
 
-        // When
+        // Act
         var result = service.runImportConnector(invocation("IMPORT_CONNECTOR"), context());
 
-        // Then
+        // Assert
         assertThat(result.status()).isEqualTo(JobStatus.DEGRADED);
         assertThat(result.stagedCandidates()).isEmpty();
         assertThat(result.safeErrors()).contains(
@@ -87,14 +87,14 @@ class ImportTransformExtensionServiceTest {
 
     @Test
     void turnsFailedImportRuntimeIntoJobStatusRetryMetadataAndAuditEvent() {
-        // Given
+        // Arrange
         runtimeService.result = new PluginRuntimeResult(
                 ExecutionStatus.JOB_FAILED, List.of(), List.of(), List.of("PLUGIN_EXCEPTION"), true);
 
-        // When
+        // Act
         var result = service.runImportConnector(invocation("IMPORT_CONNECTOR"), context());
 
-        // Then
+        // Assert
         assertThat(result.status()).isEqualTo(JobStatus.FAILED);
         assertThat(result.retryable()).isTrue();
         assertThat(result.safeErrors()).containsExactly("PLUGIN_EXCEPTION");
@@ -105,15 +105,15 @@ class ImportTransformExtensionServiceTest {
 
     @Test
     void proposesMetadataTransformChangesetsForReviewWithoutDirectApprovalMutation() {
-        // Given
+        // Arrange
         runtimeService.result = success(Map.of(
                 "metadataChangeSets", List.of(new MetadataTransformChangeSet(null, "candidate-1", true,
                         Map.of("normalizedTitle", "Song"), List.of("theme:praise"), List.of("normalized"), null))));
 
-        // When
+        // Act
         var result = service.runMetadataTransform(invocation("METADATA_TRANSFORM"));
 
-        // Then
+        // Assert
         assertThat(result.status()).isEqualTo(JobStatus.SUCCEEDED);
         assertThat(result.changeSets()).hasSize(1);
         assertThat(result.changeSets().get(0).reviewStatus()).isEqualTo(ImportCandidateStatus.DEDUPLICATION_REVIEW);
@@ -122,15 +122,15 @@ class ImportTransformExtensionServiceTest {
 
     @Test
     void rejectsInvalidTagMappingsAndAttemptsToApproveOrRecommendContent() {
-        // Given
+        // Arrange
         runtimeService.result = success(Map.of(
                 "metadataChangeSets", List.of(new MetadataTransformChangeSet(null, "candidate-1", true,
                         Map.of("approved", "true", "recommendable", "true"), List.of("freeform:new-tag"), List.of(), null))));
 
-        // When
+        // Act
         var result = service.runMetadataTransform(invocation("METADATA_TRANSFORM"));
 
-        // Then
+        // Assert
         assertThat(result.status()).isEqualTo(JobStatus.DEGRADED);
         assertThat(result.changeSets()).isEmpty();
         assertThat(result.safeErrors()).contains(
