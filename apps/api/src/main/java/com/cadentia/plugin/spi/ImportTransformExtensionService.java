@@ -25,9 +25,11 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.stereotype.Service;
 
 @Service
+@ConditionalOnBean(SharedImportPipeline.class)
 public class ImportTransformExtensionService {
     private static final Set<String> RESERVED_TRANSFORM_FIELDS = Set.of(
             "approvalStatus", "approved", "recommendable", "recommendationEligible", "canonicalSongId");
