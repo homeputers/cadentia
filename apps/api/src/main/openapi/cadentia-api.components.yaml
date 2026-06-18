@@ -17,6 +17,42 @@ securitySchemes:
     scheme: bearer
     bearerFormat: JWT
 schemas:
+  TelegramWebhookAcceptedResponse:
+    "$ref": "./components/schemas/telegram.yaml#/TelegramWebhookAcceptedResponse"
+  TelegramProblemResponse:
+    "$ref": "./components/schemas/telegram.yaml#/TelegramProblemResponse"
+  TelegramValidationError:
+    "$ref": "./components/schemas/telegram.yaml#/TelegramValidationError"
+  TelegramUpdate:
+    "$ref": "./components/schemas/telegram.yaml#/TelegramUpdate"
+  TelegramMessage:
+    "$ref": "./components/schemas/telegram.yaml#/TelegramMessage"
+  TelegramUser:
+    "$ref": "./components/schemas/telegram.yaml#/TelegramUser"
+  TelegramChat:
+    "$ref": "./components/schemas/telegram.yaml#/TelegramChat"
+  TelegramMessageEntity:
+    "$ref": "./components/schemas/telegram.yaml#/TelegramMessageEntity"
+  TelegramCallbackQuery:
+    "$ref": "./components/schemas/telegram.yaml#/TelegramCallbackQuery"
+  TelegramBotStatusResponse:
+    "$ref": "./components/schemas/telegram.yaml#/TelegramBotStatusResponse"
+  TelegramChannelSettingsRequest:
+    "$ref": "./components/schemas/telegram.yaml#/TelegramChannelSettingsRequest"
+  TelegramChannelSettingsResponse:
+    "$ref": "./components/schemas/telegram.yaml#/TelegramChannelSettingsResponse"
+  TelegramAccountLinkInitiationRequest:
+    "$ref": "./components/schemas/telegram.yaml#/TelegramAccountLinkInitiationRequest"
+  TelegramAccountLinkInitiationResponse:
+    "$ref": "./components/schemas/telegram.yaml#/TelegramAccountLinkInitiationResponse"
+  TelegramAccountLinkConfirmationRequest:
+    "$ref": "./components/schemas/telegram.yaml#/TelegramAccountLinkConfirmationRequest"
+  TelegramAccountLinkConfirmationResponse:
+    "$ref": "./components/schemas/telegram.yaml#/TelegramAccountLinkConfirmationResponse"
+  TelegramSessionStatusResponse:
+    "$ref": "./components/schemas/telegram.yaml#/TelegramSessionStatusResponse"
+  TelegramSessionCancellationRequest:
+    "$ref": "./components/schemas/telegram.yaml#/TelegramSessionCancellationRequest"
   AssetType:
     "$ref": "./components/schemas/assets.yaml#/AssetType"
   AssetLifecycleStatus:
