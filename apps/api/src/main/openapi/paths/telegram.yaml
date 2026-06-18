@@ -1,0 +1,273 @@
+"/telegram/webhooks/{botId}":
+  post:
+    tags:
+    - Telegram
+    operationId: acceptTelegramWebhookUpdate
+    summary: Accept a Telegram webhook update for asynchronous processing
+    description: Validates the Telegram secret-token header and accepts retry-safe, idempotent processing without synchronously completing setlist generation.
+    parameters:
+    - in: path
+      name: botId
+      required: true
+      schema:
+        type: string
+    - in: header
+      name: X-Telegram-Bot-Api-Secret-Token
+      required: true
+      schema:
+        type: string
+        minLength: 1
+      description: Telegram webhook secret-token verification header. Never echoed in responses or logs.
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/telegram.yaml#/TelegramUpdate
+    responses:
+      '202':
+        description: Update accepted or duplicate-accepted for asynchronous processing.
+        content:
+          application/json:
+            schema:
+              $ref: ../components/schemas/telegram.yaml#/TelegramWebhookAcceptedResponse
+      '400':
+        description: Telegram update payload failed validation.
+        content:
+          application/json:
+            schema:
+              $ref: ../components/schemas/telegram.yaml#/TelegramProblemResponse
+      '401':
+        description: Missing Telegram secret-token header.
+        content:
+          application/json:
+            schema:
+              $ref: ../components/schemas/telegram.yaml#/TelegramProblemResponse
+      '403':
+        description: Telegram secret-token header did not match configured bot secret.
+        content:
+          application/json:
+            schema:
+              $ref: ../components/schemas/telegram.yaml#/TelegramProblemResponse
+      '500':
+        description: Retry-safe server failure. Telegram may retry this update.
+        content:
+          application/json:
+            schema:
+              $ref: ../components/schemas/telegram.yaml#/TelegramProblemResponse
+"/admin/telegram/bots/{botId}/status":
+  get:
+    tags:
+    - Telegram
+    operationId: getTelegramBotStatus
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - ADMIN
+    summary: Read Telegram bot health and webhook status for a church instance
+    parameters:
+    - in: path
+      name: botId
+      required: true
+      schema:
+        type: string
+    - in: query
+      name: churchInstanceId
+      required: true
+      schema:
+        type: string
+    responses:
+      '200':
+        description: Redacted bot status scoped to the requested church instance.
+        content:
+          application/json:
+            schema:
+              $ref: ../components/schemas/telegram.yaml#/TelegramBotStatusResponse
+      '401':
+        description: Authentication is required.
+      '403':
+        description: Caller is not authorized for the requested church instance.
+      '404':
+        description: Bot configuration was not found for this church instance.
+"/admin/telegram/channels/{channelId}/settings":
+  put:
+    tags:
+    - Telegram
+    operationId: updateTelegramChannelSettings
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - ADMIN
+    summary: Enable or disable Telegram channel processing for a church instance
+    parameters:
+    - in: path
+      name: channelId
+      required: true
+      schema:
+        type: string
+    - in: query
+      name: churchInstanceId
+      required: true
+      schema:
+        type: string
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/telegram.yaml#/TelegramChannelSettingsRequest
+    responses:
+      '200':
+        description: Updated channel settings.
+        content:
+          application/json:
+            schema:
+              $ref: ../components/schemas/telegram.yaml#/TelegramChannelSettingsResponse
+      '400':
+        description: Invalid channel settings request.
+      '401':
+        description: Authentication is required.
+      '403':
+        description: Caller is not authorized for the requested church instance.
+      '404':
+        description: Channel was not found for this church instance.
+"/telegram/account-links":
+  post:
+    tags:
+    - Telegram
+    operationId: initiateTelegramAccountLink
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - WORSHIP_LEADER
+    - ADMIN
+    summary: Initiate linking a Telegram account to a Cadentia user
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/telegram.yaml#/TelegramAccountLinkInitiationRequest
+    responses:
+      '201':
+        description: Account-link request created for confirmation.
+        content:
+          application/json:
+            schema:
+              $ref: ../components/schemas/telegram.yaml#/TelegramAccountLinkInitiationResponse
+      '400':
+        description: Invalid link request.
+      '401':
+        description: Authentication is required.
+      '403':
+        description: Caller is not authorized for the requested church instance.
+"/telegram/account-links:confirm":
+  post:
+    tags:
+    - Telegram
+    operationId: confirmTelegramAccountLink
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - WORSHIP_LEADER
+    - ADMIN
+    summary: Confirm a pending Telegram account-link request
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/telegram.yaml#/TelegramAccountLinkConfirmationRequest
+    responses:
+      '200':
+        description: Account-link confirmation result.
+        content:
+          application/json:
+            schema:
+              $ref: ../components/schemas/telegram.yaml#/TelegramAccountLinkConfirmationResponse
+      '400':
+        description: Invalid or expired confirmation request.
+      '401':
+        description: Authentication is required.
+      '403':
+        description: Caller is not authorized for the requested church instance.
+"/telegram/sessions/{sessionId}":
+  get:
+    tags:
+    - Telegram
+    operationId: getTelegramSessionStatus
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - WORSHIP_LEADER
+    - ADMIN
+    summary: Read Telegram channel-session status mapped to a Cadentia conversation session
+    parameters:
+    - in: path
+      name: sessionId
+      required: true
+      schema:
+        type: string
+        format: uuid
+    - in: query
+      name: churchInstanceId
+      required: true
+      schema:
+        type: string
+    responses:
+      '200':
+        description: Telegram session status scoped to the requested church instance.
+        content:
+          application/json:
+            schema:
+              $ref: ../components/schemas/telegram.yaml#/TelegramSessionStatusResponse
+      '401':
+        description: Authentication is required.
+      '403':
+        description: Caller is not authorized for the requested church instance.
+      '404':
+        description: Session was not found for this church instance.
+"/telegram/sessions/{sessionId}:cancel":
+  post:
+    tags:
+    - Telegram
+    operationId: cancelTelegramSession
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - WORSHIP_LEADER
+    - ADMIN
+    summary: Cancel an active Telegram channel session
+    parameters:
+    - in: path
+      name: sessionId
+      required: true
+      schema:
+        type: string
+        format: uuid
+    - in: query
+      name: churchInstanceId
+      required: true
+      schema:
+        type: string
+    requestBody:
+      required: false
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/telegram.yaml#/TelegramSessionCancellationRequest
+    responses:
+      '200':
+        description: Cancelled Telegram session status.
+        content:
+          application/json:
+            schema:
+              $ref: ../components/schemas/telegram.yaml#/TelegramSessionStatusResponse
+      '401':
+        description: Authentication is required.
+      '403':
+        description: Caller is not authorized for the requested church instance.
+      '404':
+        description: Session was not found for this church instance.
+      '409':
+        description: Session cannot be cancelled from its current state.

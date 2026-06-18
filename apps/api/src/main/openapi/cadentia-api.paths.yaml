@@ -1,3 +1,17 @@
+"/telegram/webhooks/{botId}":
+  "$ref": "./paths/telegram.yaml#/~1telegram~1webhooks~1{botId}"
+"/admin/telegram/bots/{botId}/status":
+  "$ref": "./paths/telegram.yaml#/~1admin~1telegram~1bots~1{botId}~1status"
+"/admin/telegram/channels/{channelId}/settings":
+  "$ref": "./paths/telegram.yaml#/~1admin~1telegram~1channels~1{channelId}~1settings"
+"/telegram/account-links":
+  "$ref": "./paths/telegram.yaml#/~1telegram~1account-links"
+"/telegram/account-links:confirm":
+  "$ref": "./paths/telegram.yaml#/~1telegram~1account-links:confirm"
+"/telegram/sessions/{sessionId}":
+  "$ref": "./paths/telegram.yaml#/~1telegram~1sessions~1{sessionId}"
+"/telegram/sessions/{sessionId}:cancel":
+  "$ref": "./paths/telegram.yaml#/~1telegram~1sessions~1{sessionId}:cancel"
 "/admin/plugins":
   "$ref": "./paths/plugins.yaml#/~1admin~1plugins"
 "/admin/plugins/{pluginVersionId}/configuration-snapshots":

@@ -1,0 +1,333 @@
+TelegramWebhookAcceptedResponse:
+  type: object
+  required:
+  - accepted
+  - updateId
+  - idempotencyKey
+  - status
+  properties:
+    accepted:
+      type: boolean
+      description: True when the update was accepted for idempotent asynchronous processing.
+    updateId:
+      type: integer
+      format: int64
+    idempotencyKey:
+      type: string
+      description: Server-derived idempotency key for this Telegram update; does not expose secrets.
+    status:
+      type: string
+      enum:
+      - ACCEPTED
+      - DUPLICATE_ACCEPTED
+      - IGNORED_DISABLED_CHANNEL
+    queuedAt:
+      type: string
+      format: date-time
+    retryAfterSeconds:
+      type: integer
+      minimum: 0
+TelegramProblemResponse:
+  type: object
+  required:
+  - type
+  - title
+  - status
+  - detail
+  - correlationId
+  properties:
+    type:
+      type: string
+      format: uri
+    title:
+      type: string
+    status:
+      type: integer
+      format: int32
+    detail:
+      type: string
+      description: Redacted human-readable detail. Must not contain bot tokens, webhook secrets, or raw Telegram profile data.
+    correlationId:
+      type: string
+    errors:
+      type: array
+      items:
+        $ref: '#/TelegramValidationError'
+TelegramValidationError:
+  type: object
+  required:
+  - field
+  - code
+  - message
+  properties:
+    field:
+      type: string
+    code:
+      type: string
+    message:
+      type: string
+TelegramUpdate:
+  type: object
+  required:
+  - update_id
+  properties:
+    update_id:
+      type: integer
+      format: int64
+    message:
+      $ref: '#/TelegramMessage'
+    edited_message:
+      $ref: '#/TelegramMessage'
+    channel_post:
+      $ref: '#/TelegramMessage'
+    callback_query:
+      $ref: '#/TelegramCallbackQuery'
+  additionalProperties: true
+TelegramMessage:
+  type: object
+  required:
+  - message_id
+  - chat
+  properties:
+    message_id:
+      type: integer
+      format: int64
+    from:
+      $ref: '#/TelegramUser'
+    chat:
+      $ref: '#/TelegramChat'
+    date:
+      type: integer
+      format: int64
+      description: Telegram Unix timestamp.
+    text:
+      type: string
+      maxLength: 4096
+    entities:
+      type: array
+      items:
+        $ref: '#/TelegramMessageEntity'
+  additionalProperties: true
+TelegramUser:
+  type: object
+  required:
+  - id
+  - is_bot
+  properties:
+    id:
+      type: integer
+      format: int64
+    is_bot:
+      type: boolean
+    username:
+      type: string
+    language_code:
+      type: string
+  additionalProperties: true
+TelegramChat:
+  type: object
+  required:
+  - id
+  - type
+  properties:
+    id:
+      type: integer
+      format: int64
+    type:
+      type: string
+      enum:
+      - private
+      - group
+      - supergroup
+      - channel
+    title:
+      type: string
+    username:
+      type: string
+  additionalProperties: true
+TelegramMessageEntity:
+  type: object
+  required:
+  - type
+  - offset
+  - length
+  properties:
+    type:
+      type: string
+    offset:
+      type: integer
+      format: int32
+    length:
+      type: integer
+      format: int32
+  additionalProperties: true
+TelegramCallbackQuery:
+  type: object
+  required:
+  - id
+  - from
+  properties:
+    id:
+      type: string
+    from:
+      $ref: '#/TelegramUser'
+    message:
+      $ref: '#/TelegramMessage'
+    data:
+      type: string
+      maxLength: 4096
+  additionalProperties: true
+TelegramBotStatusResponse:
+  type: object
+  required:
+  - botId
+  - churchInstanceId
+  - enabled
+  - webhookConfigured
+  - health
+  properties:
+    botId:
+      type: string
+    churchInstanceId:
+      type: string
+    enabled:
+      type: boolean
+    webhookConfigured:
+      type: boolean
+    health:
+      type: string
+      enum:
+      - HEALTHY
+      - DEGRADED
+      - DISABLED
+      - UNKNOWN
+    lastUpdateAt:
+      type: string
+      format: date-time
+    pendingUpdateCount:
+      type: integer
+      minimum: 0
+TelegramChannelSettingsRequest:
+  type: object
+  required:
+  - enabled
+  properties:
+    enabled:
+      type: boolean
+    disabledReason:
+      type: string
+      maxLength: 280
+TelegramChannelSettingsResponse:
+  allOf:
+  - $ref: '#/TelegramChannelSettingsRequest'
+  - type: object
+    required:
+    - channelId
+    - churchInstanceId
+    - updatedAt
+    properties:
+      channelId:
+        type: string
+      churchInstanceId:
+        type: string
+      updatedAt:
+        type: string
+        format: date-time
+TelegramAccountLinkInitiationRequest:
+  type: object
+  required:
+  - churchInstanceId
+  - telegramUserId
+  properties:
+    churchInstanceId:
+      type: string
+    telegramUserId:
+      type: integer
+      format: int64
+    requestedByUserId:
+      type: string
+TelegramAccountLinkInitiationResponse:
+  type: object
+  required:
+  - linkRequestId
+  - expiresAt
+  - status
+  properties:
+    linkRequestId:
+      type: string
+      format: uuid
+    expiresAt:
+      type: string
+      format: date-time
+    status:
+      type: string
+      enum:
+      - PENDING_CONFIRMATION
+TelegramAccountLinkConfirmationRequest:
+  type: object
+  required:
+  - linkRequestId
+  - confirmationCode
+  properties:
+    linkRequestId:
+      type: string
+      format: uuid
+    confirmationCode:
+      type: string
+      minLength: 6
+      maxLength: 64
+TelegramAccountLinkConfirmationResponse:
+  type: object
+  required:
+  - churchInstanceId
+  - linkedUserId
+  - status
+  properties:
+    churchInstanceId:
+      type: string
+    linkedUserId:
+      type: string
+    status:
+      type: string
+      enum:
+      - LINKED
+      - EXPIRED
+      - REJECTED
+TelegramSessionStatusResponse:
+  type: object
+  required:
+  - sessionId
+  - churchInstanceId
+  - channelId
+  - state
+  properties:
+    sessionId:
+      type: string
+      format: uuid
+    churchInstanceId:
+      type: string
+    channelId:
+      type: string
+    telegramChatId:
+      type: integer
+      format: int64
+    state:
+      type: string
+      enum:
+      - ACTIVE
+      - WAITING_FOR_CLARIFICATION
+      - CONFIRMED
+      - CANCELLED
+      - EXPIRED
+    conversationSessionId:
+      type: string
+      format: uuid
+    expiresAt:
+      type: string
+      format: date-time
+TelegramSessionCancellationRequest:
+  type: object
+  properties:
+    reason:
+      type: string
+      maxLength: 280
