@@ -39,7 +39,7 @@ import java.util.concurrent.TimeoutException;
 import org.springframework.stereotype.Service;
 
 @Service
-public class PluginRuntimeService {
+public class PluginRuntimeService implements PluginRuntimeGateway {
     private static final Map<String, ExtensionPointRuntimePolicy> DEFAULT_POLICIES = Map.of(
             "IMPORT_CONNECTOR", new ExtensionPointRuntimePolicy("IMPORT_CONNECTOR", Duration.ofSeconds(30), 1, 3,
                     FailureAction.MARK_JOB_FAILED, false, false),
