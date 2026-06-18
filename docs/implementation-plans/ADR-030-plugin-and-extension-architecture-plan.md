@@ -32,8 +32,8 @@ Overall status: Planned.
 - Subtask 7: Planned - recommendation constraint and scoring contribution
   extension points.
 - Subtask 8: Planned - export format and outbound integration extension points.
-- Subtask 9: Planned - administrative operations, audit logging,
-  observability, certification, and rollout validation.
+- Subtask 9: Complete - administrative operations, audit logging,
+  observability, certification, and rollout validation defined.
 
 ## Guiding Principles
 
@@ -690,3 +690,252 @@ partner-certified, and church-local plugins.
   circuit-breaker thresholds require disablement.
 - Do not certify third-party plugins without repeatable tests and documented
   operational ownership.
+
+### Subtask 9 Decision: Administrative Operations, Audit, Observability, Certification, and Rollout Validation
+
+Plugin administration is a governed operational surface rather than a generic
+plugin control panel. Every action that can change plugin availability,
+configuration, certification, external side effects, catalog state, privileged
+review state, or recommendation-path behavior must produce an audit event and an
+operator-visible status record. Successful plugin execution only means the SPI
+call completed; core Cadentia approval, licensing, provenance, role, instance,
+and deterministic-recommendation checks still decide whether output is accepted.
+
+#### Administrative operation model
+
+| Operation | Required role or actor | Scope | Resulting state change | Required safeguards | Operator-visible follow-up |
+| --- | --- | --- | --- | --- | --- |
+| Register package version | Platform plugin administrator or signed release automation | Package, provider, version, trust tier, supported SPI versions | Creates a registry version in `registered` or `quarantined` state | Signature/checksum verification, SBOM presence, source ownership record, SPI compatibility check, duplicate-version rejection | Registry history, certification queue item, package health baseline |
+| Change certification status | Certification reviewer and release approver, or automated expiry job | Package version and trust tier | Moves between `uncertified`, `certified`, `partner_certified`, `church_local_attested`, `expired`, or `quarantined` | Separation of duties for third-party promotion, evidence checklist, expiry/recertification date, immutable decision reason | Certification timeline, evidence links, affected enabled instances |
+| Enable plugin | Instance integration administrator, platform admin, or rollout automation | Instance, environment, extension point, package version, config version | Creates or activates an enablement record | Certification must allow the trust tier and environment; policy snapshot must permit extension point; config validation must pass; production gates must be satisfied | Instance plugin inventory, current rollout wave, rollback target |
+| Disable plugin | Instance integration administrator, platform admin, circuit breaker, or revocation job | Instance/environment or package-wide | Marks enablement disabled while preserving history | In-flight executions receive extension-point-specific cancellation/degradation; credentials may remain stored but unavailable to runtime | Disable reason, affected jobs/imports/exports/recommendations, safe user messaging |
+| Revoke plugin | Platform security administrator, certification authority, revocation feed, or emergency automation | Package version, provider, trust tier, environment, or instance | Marks package or version revoked and forces matching enablements disabled | Mandatory immediate disablement when revocation policy matches; credential access blocked; cached workers drained; new executions denied | Revocation incident record, affected surface report, remediation checklist |
+| Upgrade plugin version | Instance integration administrator or staged rollout automation | Instance/environment/extension point | Moves enablement to a newer certified version with a new config snapshot | Compatibility matrix pass, migration validation, rollback version retained, canary health gate | Upgrade diff, version history, compatibility warnings |
+| Update configuration | Instance integration administrator, church-local owner, or automation | Enablement and config version | Creates immutable configuration version and optionally activates it | Schema validation, secret references only, policy lint, dry-run test, sensitive-field redaction | Config version history, validation report, impacted execution contexts |
+| Test configuration | Authorized administrator or CI/CD release automation | Draft or active config version | Produces non-mutating validation execution and health report | Uses synthetic or explicitly selected safe fixtures; no catalog mutation, external call dry-run unless approved | Test transcript with redacted inputs, outcome class, recommended fixes |
+| View health and recent executions | Platform operator, instance admin, security reviewer, or support role scoped by policy | Package, instance, environment, extension point, job, import, export, or recommendation | Read-only | Row-level instance authorization; payload redaction; support access audit | Health tiles, execution timeline, failure drill-down, affected object graph |
+| Force retry or dead-letter replay | Platform operator or integration admin where policy allows | Job or event attempt | Adds retry attempt or moves item from dead-letter to queued | Retry budget, idempotency key reuse, policy re-evaluation, downstream circuit-breaker check | Retry timeline, final status, downstream correlation ID |
+| Circuit-breaker action | Runtime circuit breaker, platform operator, or incident automation | Plugin version, extension point, instance, or environment | Opens, half-opens, closes, or forces disabled state | Thresholds based on safe telemetry only; required plugins fail closed where applicable; optional plugins degrade | Incident banner, alert link, affected recommendations/imports/exports |
+
+Administrative screens and APIs must support these workflows:
+
+1. **Plugin inventory** filtered by provider, trust tier, certification status,
+   lifecycle status, SPI version, extension point, instance, and environment.
+2. **Health by plugin and instance** with latency percentiles, success rate,
+   runtime failure rate, timeout rate, invalid-output rate, policy-denial rate,
+   retry/dead-letter counts, circuit-breaker state, compatibility status, and
+   last successful execution.
+3. **Recent executions** with correlation ID, execution ID, job/import/export or
+   recommendation reference, sanitized status, accepted/rejected output summary,
+   retry lineage, and linked audit records.
+4. **Affected surface analysis** for disabling, revoking, or upgrading a plugin,
+   including queued jobs, active imports, generated exports, outbound deliveries,
+   staged candidates, recommendation runs, and scheduled automation that used or
+   will use the plugin.
+5. **Configuration validation** with schema linting, policy linting, secret
+   reference checks, compatibility warnings, fixture-based dry runs, and clear
+   separation between plugin execution success and downstream approval outcome.
+
+#### Audit event taxonomy and record contract
+
+All privileged, catalog-mutating, external-side-effecting, recommendation-path,
+or administrative plugin events must be written to append-only audit storage and
+linked to the domain object being changed or evaluated. Audit records are
+retained according to the governance and security retention policy and must be
+queryable by incident response without revealing sensitive payloads.
+
+| Audit event type | When emitted | Outcome values | Notes |
+| --- | --- | --- | --- |
+| `plugin.package.registered` | Package version enters registry | `accepted`, `rejected`, `quarantined` | Includes checksum/signature result and source ownership summary. |
+| `plugin.certification.changed` | Certification state or expiry changes | `certified`, `denied`, `expired`, `revoked`, `quarantined` | Includes reviewer/system identity and evidence checklist version. |
+| `plugin.enablement.changed` | Enablement is created, enabled, disabled, revoked, or migrated | `enabled`, `disabled`, `revoked`, `upgraded`, `rolled_back`, `denied` | Records scope, reason, prior version, and replacement version where applicable. |
+| `plugin.configuration.changed` | Draft or active config version changes | `created`, `validated`, `activated`, `rejected`, `redacted`, `rolled_back` | Stores config hash, schema version, secret-reference IDs, and safe diff summary only. |
+| `plugin.execution.invoked` | Runtime starts a plugin call | `started`, `skipped`, `denied` | Records policy snapshot and schema versions before payload construction. |
+| `plugin.execution.completed` | Runtime call returns or times out | `succeeded`, `failed`, `timed_out`, `cancelled`, `degraded` | Completion does not imply output approval. |
+| `plugin.output.privileged` | Output affects privileged review, admin, export, or external integration context | `accepted`, `rejected`, `redacted`, `requires_review` | Stores output digest, reason codes, and safe summary. |
+| `plugin.output.catalog_mutation` | Output proposes or performs staged catalog mutation | `staged`, `accepted`, `rejected`, `rolled_back` | Links to import candidate, staged record, provenance evidence, and reviewer action. |
+| `plugin.policy.denied` | Policy blocks registration, config, invocation, output, or delivery | `denied`, `fail_closed`, `degraded` | Includes policy rule IDs and snapshot hash, not sensitive payloads. |
+| `plugin.execution.retry` | Retry is scheduled, attempted, exhausted, or dead-lettered | `scheduled`, `attempted`, `exhausted`, `dead_lettered`, `replayed` | Links idempotency key, attempt number, and event/job ID. |
+| `plugin.circuit_breaker.changed` | Circuit state changes or threshold disables plugin | `opened`, `half_opened`, `closed`, `forced_disabled` | Forced disablement must trigger enablement audit and operator alert. |
+| `plugin.version.upgraded` | Enablement migrates to a new version | `upgraded`, `rolled_back`, `migration_failed` | Includes compatibility matrix row, migration test digest, and rollback target. |
+| `plugin.revoked` | Package, version, or enablement is revoked | `revoked`, `blocked`, `credential_access_disabled` | Must identify affected scopes and follow-up remediation state. |
+
+Minimum audit fields for these records are:
+
+- `auditEventId`, `eventType`, `occurredAt`, `correlationId`, `causationId`,
+  and optional `jobId`, `importId`, `exportId`, `recommendationRunId`, or
+  `domainObjectRef`.
+- Actor context: authenticated actor ID, service account ID, automation ID, or
+  `system` identity; role at decision time; support-access reason when
+  applicable.
+- Scope: authorized instance ID, environment, extension point, provider,
+  plugin ID, plugin semantic version, package checksum or signature digest,
+  trust tier, lifecycle status, and certification status.
+- Versioning: configuration version, input schema version, output schema
+  version, SPI version, policy snapshot ID/hash, catalog snapshot ID where
+  relevant, and recommendation profile version where relevant.
+- Invocation metadata: execution mode, worker pool, timeout budget, retry
+  attempt, idempotency key, circuit-breaker state, and sanitized dependency
+  class if a downstream integration was called.
+- Outcome: normalized outcome enum, policy reason codes, safe error summary,
+  accepted/rejected output reason codes, approval/provenance/licensing check
+  status, and remediation link.
+- Redaction metadata: payload digests, redaction rule version, field classes
+  removed, and proof that raw lyrics, raw prompts, credentials, private
+  personnel details, privileged review notes, unauthorized instance identifiers,
+  and full external payloads were not stored.
+
+#### Telemetry, dashboards, and alerts
+
+Plugin telemetry follows the ADR-029 redaction model: emit structured events,
+metrics, and traces with stable low-cardinality labels and sanitized summaries,
+never raw plugin payloads. Metrics must distinguish failure classes so operators
+can tell whether Cadentia should retry, disable, revoke, request certification
+fixes, or route work to manual review.
+
+| Signal | Required labels | Purpose |
+| --- | --- | --- |
+| `plugin_execution_duration_seconds` histogram | plugin ID, plugin version, extension point, trust tier, environment, execution mode, outcome class | Latency SLO, timeout tuning, canary comparison. |
+| `plugin_execution_total` counter | plugin ID, extension point, environment, outcome class | Success/failure trend and execution volume. |
+| `plugin_runtime_failure_total` counter | plugin ID, version, extension point, failure class | Plugin process crashes, exceptions, worker startup failures. |
+| `plugin_policy_denial_total` counter | policy rule ID, extension point, trust tier, environment | Policy denials separated from runtime defects. |
+| `plugin_invalid_output_total` counter | schema version, extension point, plugin version, validation rule | Schema, compatibility, range, or deterministic-contract violations. |
+| `plugin_timeout_total` counter | plugin ID, extension point, timeout policy, environment | Timeout degradation and circuit-breaker input. |
+| `plugin_downstream_failure_total` counter | downstream class, retryability, extension point | External provider/API failures without storing provider payloads. |
+| `plugin_retry_total` and `plugin_dead_letter_total` counters | job type, extension point, plugin ID, reason class | Async retry budget and dead-letter monitoring. |
+| `plugin_circuit_breaker_state` gauge | plugin ID, version, instance scope hash, environment, extension point | Current breaker state and forced-disable visibility. |
+| `plugin_compatibility_status` gauge | plugin version, SPI version, extension point, environment | Compatibility matrix and upgrade readiness. |
+| `plugin_recommendation_determinism_failure_total` counter | plugin ID, recommendation profile, SPI version, catalog snapshot class | Recommendation-path replay failures requiring immediate investigation. |
+
+Logs must use event names matching the audit taxonomy, include correlation IDs
+and safe reason codes, and omit sensitive payload fields. Traces must create a
+plugin span below the owning workflow span and annotate extension point, plugin
+version, config version, policy snapshot hash, timeout budget, and outcome class.
+Trace attributes must not include raw lyrics, prompts, notes, credentials,
+private personnel details, unauthorized tenant identifiers, or full external
+payloads.
+
+Minimum dashboards:
+
+1. **Plugin fleet overview**: installed versions, certification state,
+   enablement count by environment, top failures, open circuit breakers, and
+   revocations.
+2. **Instance plugin health**: per-instance enabled plugins, last execution,
+   p50/p95/p99 latency, failure classes, policy denials, invalid outputs, and
+   affected jobs.
+3. **Extension point SLO**: latency/error budgets by import, transform, export,
+   outbound hook, and future recommendation-path extension points.
+4. **Release and rollout**: canary wave status, compatibility matrix, config
+   validation results, upgrade failures, rollback readiness, and production gate
+   status.
+5. **Recommendation determinism**: replay pass/fail status, deterministic digest
+   differences, rejected contribution counts, and fail-closed events.
+6. **Security and revocation**: policy denials, credential access blocks,
+   revoked packages still queued for execution, circuit-breaker forced disables,
+   and audit export status.
+
+Minimum alerts:
+
+- Page on revoked plugin still enabled or invoked in any production scope.
+- Page on recommendation-path determinism failure, required approval/licensing
+  policy bypass attempt, credential access violation, or unsafe plugin not
+  disabled after circuit-breaker threshold.
+- Ticket on sustained invalid-output rate, SPI compatibility regression,
+  certification expiry within the configured window, or dead-letter growth.
+- Warn rollout owner when canary latency/failure/policy-denial rates exceed the
+  pre-approved baseline or when production gates lack required evidence.
+
+#### Certification checklist
+
+Certification produces an evidence bundle referenced by certification audit
+records. Third-party certification is not allowed without repeatable tests,
+explicit operational ownership, and a rollback plan.
+
+| Checklist area | Core-maintained | Partner-certified | Church-local |
+| --- | --- | --- | --- |
+| Source ownership and provenance | Repository ownership, release approver, signed artifact, reproducible build. | Vendor identity, contract/support owner, signed artifact, source or escrow/review evidence as policy requires. | Local owner attestation, package source location, unsupported/custom-code acknowledgement. |
+| Dependency and SBOM review | SBOM, vulnerability scan, license policy pass, dependency pinning. | SBOM, vulnerability scan, transitive license review, remediation SLA. | Dependency manifest, known-risk warning, scan where tooling is available. |
+| SPI compatibility tests | Full fixture suite for every declared SPI version and extension point. | Full fixture suite plus provider-specific integration fixtures. | Required fixture suite for enabled extension points; production support may require review. |
+| Deterministic recommendation tests | Required for any recommendation-path code, including replay digest stability. | Required before any future partner recommendation-path eligibility; not allowed in SPI v1. | Required before future church-local recommendation constraints; not allowed until stable admin UX exists. |
+| Security review | Threat model, sandbox/isolation review, credential-reference validation, policy-denial tests. | Threat model, isolation boundary review, credential scoping, vulnerability remediation evidence. | Local risk acknowledgement, secret-reference validation, no direct database/raw credential access. |
+| Data-sensitivity review | Data classes accepted/emitted, redaction rules, payload minimization, retention policy. | Data processing agreement where applicable, field-level sensitivity map, external transfer review. | Instance-local data classification and administrator acknowledgement. |
+| Licensing and provenance review | License allowlist, copyright/provenance preservation, export restrictions. | Vendor license terms, content-source rights, external API terms, attribution requirements. | Local responsibility acknowledgement and source/legal-mode validation. |
+| Observability readiness | Metrics, logs, traces, dashboards, alerts, safe error taxonomy, runbook links. | Same plus partner escalation path and support contacts. | Minimum health metrics, safe logs, local owner contact, unsupported badge where applicable. |
+| Operational ownership | On-call or support group, SLO, incident process, release notes. | Partner owner, Cadentia boundary owner, escalation SLA, recertification schedule. | Church owner, backup contact, manual disable procedure. |
+| Rollback and revocation plan | Tested rollback version, kill switch, migration reversibility, emergency patch path. | Version quarantine, package revocation, credential revocation, data cleanup responsibilities. | Safe-mode startup, per-instance kill switch, config rollback, local removal steps. |
+
+#### Rollout validation runbook
+
+Every plugin release, upgrade, or production enablement follows this runbook.
+A lower-risk church-local plugin may use a shortened path only when it remains
+out-of-process, instance-local, non-recommendation-path, and non-production or
+explicitly accepted by the church owner.
+
+1. **Local contract validation**
+   - Run schema validation for package manifest, configuration schema, declared
+     SPI versions, input/output DTOs, and extension-point policy metadata.
+   - Execute local/test fixtures with safe synthetic payloads and redacted
+     golden outputs.
+   - Verify no fixture or log captures raw lyrics, raw prompts, credentials,
+     private personnel details, privileged review notes, unauthorized instance
+     identifiers, or full external payloads.
+2. **Compatibility matrix**
+   - Test every supported SPI version, Cadentia release version, extension point,
+     trust tier, execution mode, and environment class declared for the package.
+   - Record compatible, incompatible, deprecated, and blocked combinations in the
+     registry before enablement.
+3. **Seeded failure scenarios**
+   - Simulate runtime crash, timeout, invalid schema output, policy denial,
+     downstream integration failure, retry exhaustion, dead-letter replay,
+     circuit-breaker threshold, revoked package, expired certification, and
+     config migration failure.
+   - Confirm required plugins fail closed and optional plugins degrade without
+     mutating protected state.
+4. **Security regression tests**
+   - Attempt unauthorized instance access, role escalation, raw credential
+     access, unauthorized privileged review note access, oversize payloads,
+     malformed output, replayed idempotency keys, and blocked external endpoint
+     access.
+   - Confirm each denial is audited and telemetry remains redacted.
+5. **Deterministic recommendation regression tests**
+   - Required for recommendation-path plugins and pre-release harnesses even
+     while those extension points remain deferred from SPI v1.
+   - Replay identical recommendation inputs, catalog snapshots, policy snapshots,
+     config versions, and plugin versions; compare output digests, ordering
+     influence, explanation reason codes, and rejection reasons.
+6. **Staging dry run**
+   - Enable the plugin in staging with production-like config references and
+     synthetic or approved test data.
+   - Run import/export/outbound/recommendation-path dry runs as applicable;
+     verify dashboards, alerts, execution history, affected-object graph, and
+     rollback path.
+7. **Production enablement gates**
+   - Require completed certification evidence, passing compatibility matrix,
+     staging dry-run sign-off, operational owner, rollback target, alert routing,
+     policy snapshot approval, and support communication.
+   - Enable by canary wave: environment, instance group, extension point, and
+     plugin version. Freeze rollout on SLO breach, policy-denial spike,
+     invalid-output spike, determinism failure, or revocation feed match.
+8. **Post-enable monitoring and rollback**
+   - Monitor the release dashboard for the full observation window.
+   - Roll back or disable when thresholds are exceeded; revoke when security,
+     certification, approval, licensing, or provenance policy requires it.
+   - Record incident notes, remediation owners, and recertification requirements
+     before re-enablement.
+
+#### Implementation sequencing
+
+1. Extend the registry/admin APIs from Subtask 2 with read models for inventory,
+   health, recent executions, affected objects, certification evidence,
+   configuration validation, disablement, revocation, upgrade, retry, and
+   circuit-breaker state.
+2. Add the append-only audit writer and event taxonomy above before enabling any
+   privileged, catalog-mutating, outbound, or recommendation-path plugin action.
+3. Add structured telemetry instrumentation to the runtime from Subtask 5 and to
+   each SPI from Subtasks 6 through 8 using the failure classes and redaction
+   rules in this decision.
+4. Build dashboards and alerts as deployable observability assets tied to the
+   ADR-029 telemetry naming conventions.
+5. Add certification evidence templates, compatibility-matrix storage, rollout
+   runbook checklists, and production gate enforcement to the administrative UI
+   described by ADR-036 and the governance UI plan.
