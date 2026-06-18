@@ -3,6 +3,8 @@ package com.cadentia.reng.scoring;
 import com.cadentia.catalog.model.ApprovalStatus;
 import com.cadentia.reng.ApprovalGateSummary;
 import com.cadentia.reng.RecommendableArrangement;
+import com.cadentia.reng.scoring.RecommendationPluginContributionModels.ConstraintContributionType;
+import com.cadentia.reng.scoring.RecommendationPluginContributionModels.ValidatedPluginContributions;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -18,6 +20,14 @@ public class HardConstraintFilter {
     }
 
     public HardFilterResult filter(List<RecommendableArrangement> candidates, ScoringRequest request, ScoringProfile profile) {
+        return filter(candidates, request, profile, null);
+    }
+
+    public HardFilterResult filter(
+            List<RecommendableArrangement> candidates,
+            ScoringRequest request,
+            ScoringProfile profile,
+            ValidatedPluginContributions pluginContributions) {
         List<RecommendableArrangement> eligible = new ArrayList<>();
         List<HardFilterResult.ExcludedCandidate> excluded = new ArrayList<>();
         Set<UUID> excludedSongIds = request.excludedSongIds().stream()
@@ -28,6 +38,9 @@ public class HardConstraintFilter {
             List<HardFilterReasonCode> reasons = new ArrayList<>(exclusionReasons(candidate, request.language(), excludedSongIds));
             if (reasons.isEmpty()) {
                 reasons.addAll(teamExclusionReasons(candidate, request, profile));
+            }
+            if (reasons.isEmpty() && hardRejectedByPlugin(candidate, pluginContributions)) {
+                reasons.add(HardFilterReasonCode.PLUGIN_HARD_REJECT);
             }
             if (reasons.isEmpty()) {
                 eligible.add(candidate);
@@ -40,6 +53,16 @@ public class HardConstraintFilter {
                 eligible,
                 excluded,
                 new HardFilterResult.CountRequirement(request.praiseCount(), request.worshipCount()));
+    }
+
+    private static boolean hardRejectedByPlugin(
+            RecommendableArrangement candidate,
+            ValidatedPluginContributions pluginContributions) {
+        return pluginContributions != null
+                && pluginContributions.constraintsByArrangement()
+                        .getOrDefault(candidate.arrangementId(), List.of())
+                        .stream()
+                        .anyMatch(contribution -> contribution.type() == ConstraintContributionType.HARD_REJECT);
     }
 
     private List<HardFilterReasonCode> teamExclusionReasons(
