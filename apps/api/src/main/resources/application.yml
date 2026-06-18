@@ -30,6 +30,13 @@ cadentia:
 
   instance:
     id: ${CADENTIA_INSTANCE_ID:local-development}
+  telegram:
+    webhook:
+      bot-token-ref: ${CADENTIA_TELEGRAM_BOT_TOKEN_REF:env:CADENTIA_TELEGRAM_BOT_TOKEN}
+      secret-token-ref: ${CADENTIA_TELEGRAM_WEBHOOK_SECRET_REF:env:CADENTIA_TELEGRAM_WEBHOOK_SECRET}
+      previous-secret-token-ref: ${CADENTIA_TELEGRAM_PREVIOUS_WEBHOOK_SECRET_REF:}
+      max-update-age: ${CADENTIA_TELEGRAM_WEBHOOK_MAX_UPDATE_AGE:PT24H}
+      max-payload-bytes: ${CADENTIA_TELEGRAM_WEBHOOK_MAX_PAYLOAD_BYTES:262144}
   asset-storage:
     provider: ${CADENTIA_ASSET_STORAGE_PROVIDER:local}
     bucket: ${CADENTIA_ASSET_STORAGE_BUCKET:cadentia-local-assets}
