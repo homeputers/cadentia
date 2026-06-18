@@ -3,6 +3,8 @@ package com.cadentia.reng.scoring;
 import com.cadentia.catalog.model.TagType;
 import com.cadentia.reng.RecommendableArrangement;
 import com.cadentia.reng.RecommendationTag;
+import com.cadentia.reng.scoring.RecommendationPluginContributionModels.ScoringAdjustment;
+import com.cadentia.reng.scoring.RecommendationPluginContributionModels.ValidatedPluginContributions;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -47,11 +49,35 @@ public class CandidateFeatureScorer {
             List<RecommendableArrangement> candidates,
             ScoringRequest request,
             ScoringProfile profile,
+            ValidatedPluginContributions pluginContributions) {
+        return scoreCandidates(candidates, request, profile, Map.of(), Map.of(), pluginContributions);
+    }
+
+    public List<CandidateFeatureScore> scoreCandidates(
+            List<RecommendableArrangement> candidates,
+            ScoringRequest request,
+            ScoringProfile profile,
             Map<UUID, Double> feedbackContributions,
             Map<UUID, Boolean> assetAvailability) {
+        return scoreCandidates(candidates, request, profile, feedbackContributions, assetAvailability, null);
+    }
+
+    public List<CandidateFeatureScore> scoreCandidates(
+            List<RecommendableArrangement> candidates,
+            ScoringRequest request,
+            ScoringProfile profile,
+            Map<UUID, Double> feedbackContributions,
+            Map<UUID, Boolean> assetAvailability,
+            ValidatedPluginContributions pluginContributions) {
         emitFeedbackImpactDistribution(feedbackContributions);
         return candidates.stream()
-                .map(candidate -> scoreCandidate(candidate, request, profile, feedbackContributions, assetAvailability))
+                .map(candidate -> scoreCandidate(
+                        candidate,
+                        request,
+                        profile,
+                        feedbackContributions,
+                        assetAvailability,
+                        pluginContributions))
                 .sorted(Comparator
                         .comparingDouble(CandidateFeatureScore::totalScore)
                         .reversed()
@@ -81,6 +107,16 @@ public class CandidateFeatureScorer {
             ScoringProfile profile,
             Map<UUID, Double> feedbackContributions,
             Map<UUID, Boolean> assetAvailability) {
+        return scoreCandidate(candidate, request, profile, feedbackContributions, assetAvailability, null);
+    }
+
+    public CandidateFeatureScore scoreCandidate(
+            RecommendableArrangement candidate,
+            ScoringRequest request,
+            ScoringProfile profile,
+            Map<UUID, Double> feedbackContributions,
+            Map<UUID, Boolean> assetAvailability,
+            ValidatedPluginContributions pluginContributions) {
         List<ScoringComponentScore> componentScores = new ArrayList<>();
         componentScores.add(componentScore(THEME_MATCH, themeMatch(candidate, request), profile.componentWeights()));
         componentScores.add(componentScore(SCRIPTURE_MATCH, scriptureMatch(candidate, request), profile.componentWeights()));
@@ -107,9 +143,54 @@ public class CandidateFeatureScorer {
                     teamSuitabilityEvaluator.scoringRawScore(candidate, request, profile),
                     profile.componentWeights()));
         }
+        if (pluginContributions != null) {
+            componentScores.add(pluginComponentScore(candidate, pluginContributions));
+        }
 
         double total = componentScores.stream().mapToDouble(ScoringComponentScore::weightedContribution).sum();
         return new CandidateFeatureScore(candidate, List.copyOf(componentScores), total);
+    }
+
+    private static ScoringComponentScore pluginComponentScore(
+            RecommendableArrangement candidate,
+            ValidatedPluginContributions pluginContributions) {
+        if (pluginContributions == null) {
+            return new ScoringComponentScore(
+                    RecommendationPluginContributionModels.PLUGIN_COMPONENT_CODE,
+                    0.0d,
+                    0.0d,
+                    1.0d,
+                    List.of("PLUGIN_CONTRIBUTION_NONE"));
+        }
+        double delta = pluginContributions.scoringDeltaByArrangement().getOrDefault(candidate.arrangementId(), 0.0d);
+        List<String> reasonCodes = pluginContributions.scoringAdjustmentsByArrangement()
+                .getOrDefault(candidate.arrangementId(), List.of())
+                .stream()
+                .map(CandidateFeatureScorer::safePluginReasonCode)
+                .distinct()
+                .sorted()
+                .toList();
+        return new ScoringComponentScore(
+                RecommendationPluginContributionModels.PLUGIN_COMPONENT_CODE,
+                delta,
+                delta,
+                1.0d,
+                reasonCodes.isEmpty() ? ScoringComponentScore.contributionReasonCodes(delta) : reasonCodes);
+    }
+
+    private static String safePluginReasonCode(ScoringAdjustment adjustment) {
+        return "PLUGIN:"
+                + normalizeReason(adjustment.metadata().pluginId())
+                + ":"
+                + normalizeReason(adjustment.metadata().pluginVersion())
+                + ":"
+                + normalizeReason(adjustment.metadata().configurationVersion())
+                + ":"
+                + normalizeReason(adjustment.reasonCode());
+    }
+
+    private static String normalizeReason(String value) {
+        return value == null ? "UNKNOWN" : value.replaceAll("[^A-Za-z0-9_.:-]", "_");
     }
 
     private static boolean hasTeamScoringInput(ScoringProfile profile) {
