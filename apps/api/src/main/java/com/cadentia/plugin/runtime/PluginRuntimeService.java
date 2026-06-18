@@ -47,11 +47,11 @@ public class PluginRuntimeService implements PluginRuntimeGateway {
                     FailureAction.SKIP_PLUGIN_CONTINUE, false, true),
             "EXPORT_RENDERER", new ExtensionPointRuntimePolicy("EXPORT_RENDERER", Duration.ofSeconds(10), 1, 3,
                     FailureAction.FAIL_CLOSED, false, false),
-            "OUTBOUND_INTEGRATION", new ExtensionPointRuntimePolicy("OUTBOUND_INTEGRATION", Duration.ofSeconds(5), 2, 5,
+            "OUTBOUND_PUBLISH_HOOK", new ExtensionPointRuntimePolicy("OUTBOUND_PUBLISH_HOOK", Duration.ofSeconds(5), 2, 5,
                     FailureAction.RETRY_ASYNCHRONOUSLY, false, true),
             "RECOMMENDATION_CONSTRAINT", new ExtensionPointRuntimePolicy("RECOMMENDATION_CONSTRAINT", Duration.ofMillis(500), 1, 1,
                     FailureAction.SKIP_PLUGIN_CONTINUE, true, true),
-            "SCORING_POLICY", new ExtensionPointRuntimePolicy("SCORING_POLICY", Duration.ofMillis(500), 1, 1,
+            "SCORING_CONTRIBUTION", new ExtensionPointRuntimePolicy("SCORING_CONTRIBUTION", Duration.ofMillis(500), 1, 1,
                     FailureAction.FAIL_CLOSED, true, false));
 
     private final PluginRegistryRepository repository;
