@@ -17,7 +17,7 @@ authorization, observability, or operational controls.
 
 Overall status: Planned.
 
-- Subtask 1: Planned - Telegram integration contract, ownership boundaries,
+- Subtask 1: Completed - Telegram integration contract, ownership boundaries,
   configuration model, and open questions.
 - Subtask 2: Planned - OpenAPI-first webhook, channel-session, and bot
   management API contract.
@@ -125,6 +125,10 @@ and explanation rendering policy for v1.
   deterministic recommendation behavior.
 - The contract identifies every downstream API or domain boundary the adapter is
   allowed to call and every boundary it is forbidden to call directly.
+
+### Contract artifact
+
+- [Telegram Channel Integration Contract v1](../telegram-channel-integration-contract-v1.md)
 
 ### Restrictions
 
