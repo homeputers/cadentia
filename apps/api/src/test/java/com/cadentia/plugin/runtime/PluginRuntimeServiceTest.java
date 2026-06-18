@@ -61,6 +61,20 @@ class PluginRuntimeServiceTest {
         assertThat(result.metadata().get(0).inputDigest()).isNotBlank();
     }
 
+
+    @Test
+    void resolvesBootstrappedAdapterRegistrationAfterRestart() {
+        adapterRegistry = new PluginAdapterRegistry(List.of(new PluginAdapterRegistration("stable", "1.0.0",
+                "RECOMMENDATION_CONSTRAINT", envelope -> output(List.of("approved-visible"), List.of("approved-visible"), Map.of()))));
+        service = new PluginRuntimeService(repository, new PluginPolicyEnforcementService(repository, new PluginRegistryAuditRecorder()),
+                adapterRegistry, new PluginRegistryAuditRecorder(), new ObjectMapper());
+
+        var result = service.execute(invocation(false));
+
+        assertThat(result.status()).isEqualTo(ExecutionStatus.SUCCEEDED);
+        assertThat(result.outputs().get(0).recommendableSongIds()).containsExactly("approved-visible");
+    }
+
     @Test
     void doesNotExecuteDisabledOrRevokedPluginVersions() {
         repository.savePackage(pluginPackage(LifecycleStatus.REVOKED));

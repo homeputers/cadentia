@@ -91,7 +91,7 @@ public class PluginRuntimeService {
         if (circuitBreakerFailures.getOrDefault(pluginPackage.pluginVersionId(), 0) >= runtimePolicy.circuitBreakerFailureThreshold()) {
             return degraded(runtimePolicy, "PLUGIN_CIRCUIT_OPEN", List.of());
         }
-        PluginAdapter adapter = adapterRegistry.find(pluginPackage.pluginVersionId()).orElse(null);
+        PluginAdapter adapter = adapterRegistry.find(pluginPackage, invocation.extensionPoint()).orElse(null);
         if (adapter == null) {
             return degraded(runtimePolicy, "PLUGIN_ADAPTER_NOT_APPROVED", List.of());
         }
