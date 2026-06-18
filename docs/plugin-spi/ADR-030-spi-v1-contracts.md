@@ -2,6 +2,8 @@
 
 SPI v1 uses semantic version `1.0.0` and immutable JSON DTO envelopes. Core adapters must validate every input before plugin invocation and every output before persisting, displaying, scoring, exporting, or emitting plugin-derived data.
 
+For developer packaging, installation, upgrade, certification, and operational workflows, see [Plugin Development and Installation Guide](plugin-development-and-installation.md).
+
 ## Common envelope
 
 Required fields: `spiVersion`, `extensionPoint`, `executionId`, `correlationId`, `churchInstanceId`, `environment`, `pluginVersionId`, `configurationVersionId`, `registrySnapshotId`, `policySnapshotId`, and `locale`. Recommendation-path contracts also require `catalogSnapshotId`, `deterministicSeed`, and `runId` for replay. Actor context is allowed only when the workflow has already authorized the actor; system context is allowed for batch or event-driven runs.

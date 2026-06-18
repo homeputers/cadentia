@@ -636,6 +636,7 @@ environment.
 
 **Codebase anchors**
 
+- Plugin SPI contracts and developer/operator guide in `docs/plugin-spi/`
 - Admin review and governance UI plan in
   `docs/implementation-plans/ADR-011-admin-review-catalog-governance-ui-plan.md`
 - Administrative web interface ADR in
