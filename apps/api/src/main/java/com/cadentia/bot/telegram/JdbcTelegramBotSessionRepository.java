@@ -2,7 +2,8 @@ package com.cadentia.bot.telegram;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.time.Instant;
+import java.sql.Timestamp;
+import java.sql.Types;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -57,25 +58,25 @@ public class JdbcTelegramBotSessionRepository implements TelegramBotSessionRepos
     @Override
     public void transition(UUID sessionId, TelegramSessionState state) {
         jdbcTemplate.update("UPDATE telegram_bot_session SET state = :state, updated_at = now() WHERE id = :id",
-                Map.of("id", sessionId, "state", state.name()));
+                new MapSqlParameterSource().addValue("id", sessionId, Types.OTHER).addValue("state", state.name()));
     }
 
     private MapSqlParameterSource params(TelegramBotSession s) {
         return new MapSqlParameterSource()
-                .addValue("id", s.id())
+                .addValue("id", s.id(), Types.OTHER)
                 .addValue("channel", s.channel())
                 .addValue("chatHash", s.chatHash())
                 .addValue("userHash", s.userHash())
                 .addValue("churchInstanceId", s.churchInstanceId())
-                .addValue("actorId", s.actorId())
+                .addValue("actorId", s.actorId(), Types.OTHER)
                 .addValue("state", s.state().name())
                 .addValue("pendingConfirmationRef", s.pendingConfirmationRef())
                 .addValue("lastUpdateId", s.lastUpdateId())
                 .addValue("lastMessageId", s.lastMessageId())
-                .addValue("createdAt", s.createdAt())
-                .addValue("updatedAt", s.updatedAt())
-                .addValue("inactivityDeadline", s.inactivityDeadline())
-                .addValue("absoluteExpiration", s.absoluteExpiration())
+                .addValue("createdAt", Timestamp.from(s.createdAt()))
+                .addValue("updatedAt", Timestamp.from(s.updatedAt()))
+                .addValue("inactivityDeadline", Timestamp.from(s.inactivityDeadline()))
+                .addValue("absoluteExpiration", Timestamp.from(s.absoluteExpiration()))
                 .addValue("auditMetadata", s.auditMetadataJson() == null ? "{}" : s.auditMetadataJson());
     }
 

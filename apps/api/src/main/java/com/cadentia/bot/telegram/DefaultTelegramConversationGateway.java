@@ -5,6 +5,7 @@ import com.cadentia.generated.model.ConversationSlotUpdateRequest;
 import com.cadentia.generated.model.SlotValueSource;
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -12,6 +13,7 @@ public class DefaultTelegramConversationGateway implements TelegramConversationG
     private final ConversationSessionFacade facade;
     private final TelegramAuthorizationService authorizationService;
 
+    @Autowired
     public DefaultTelegramConversationGateway(ConversationSessionFacade facade, TelegramAuthorizationService authorizationService) {
         this.facade = facade;
         this.authorizationService = authorizationService;
