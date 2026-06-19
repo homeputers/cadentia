@@ -9,9 +9,9 @@ import com.cadentia.intent.GenerateSetlistSlots;
 import org.springframework.stereotype.Component;
 
 @Component
-class ValidatedSetlistRequestMapper {
+public class ValidatedSetlistRequestMapper {
 
-    GenerateSetlistRequest toGenerateSetlistRequest(GenerateSetlistIntent intent) {
+    public GenerateSetlistRequest toGenerateSetlistRequest(GenerateSetlistIntent intent) {
         GenerateSetlistSlots slots = intent.slots();
         return new GenerateSetlistRequest()
                 .verseText(slots.verseText())
