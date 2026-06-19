@@ -13,6 +13,9 @@ import java.util.ArrayList;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.env.Environment;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
@@ -32,6 +35,20 @@ public class TelegramWebhookAuthenticationFilter extends OncePerRequestFilter {
     private final TelegramSecretResolver secretResolver;
     private final TelegramWebhookProblemFactory problemFactory;
     private final ObjectMapper objectMapper;
+
+    @Autowired
+    public TelegramWebhookAuthenticationFilter(
+            ObjectProvider<TelegramWebhookProperties> propertiesProvider,
+            ObjectProvider<TelegramSecretResolver> secretResolverProvider,
+            ObjectProvider<TelegramWebhookProblemFactory> problemFactoryProvider,
+            ObjectMapper objectMapper,
+            Environment environment) {
+        this(
+                propertiesProvider.getIfAvailable(TelegramWebhookProperties::new),
+                secretResolverProvider.getIfAvailable(() -> new TelegramSecretResolver(environment)),
+                problemFactoryProvider.getIfAvailable(TelegramWebhookProblemFactory::new),
+                objectMapper);
+    }
 
     public TelegramWebhookAuthenticationFilter(
             TelegramWebhookProperties properties,

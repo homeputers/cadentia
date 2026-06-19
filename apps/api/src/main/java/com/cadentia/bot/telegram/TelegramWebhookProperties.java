@@ -2,7 +2,9 @@ package com.cadentia.bot.telegram;
 
 import java.time.Duration;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.stereotype.Component;
 
+@Component
 @ConfigurationProperties(prefix = "cadentia.telegram.webhook")
 public class TelegramWebhookProperties {
 

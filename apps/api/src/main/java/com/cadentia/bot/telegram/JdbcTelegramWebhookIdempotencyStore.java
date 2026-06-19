@@ -3,6 +3,7 @@ package com.cadentia.bot.telegram;
 import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -14,6 +15,7 @@ public class JdbcTelegramWebhookIdempotencyStore implements TelegramWebhookIdemp
     private final NamedParameterJdbcTemplate jdbcTemplate;
     private final Clock clock;
 
+    @Autowired
     public JdbcTelegramWebhookIdempotencyStore(NamedParameterJdbcTemplate jdbcTemplate) {
         this(jdbcTemplate, Clock.systemUTC());
     }
