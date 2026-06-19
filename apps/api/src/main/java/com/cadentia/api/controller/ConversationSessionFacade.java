@@ -48,30 +48,30 @@ public class ConversationSessionFacade {
         this.absoluteLifetime = absoluteLifetime;
     }
 
-    ConversationSessionStateResponse get(UUID sessionId) {
+    public ConversationSessionStateResponse get(UUID sessionId) {
         SessionRecord record = currentRecord(sessionId, ConversationState.COLLECTING);
         return snapshot(sessionId, record, List.of("Session state emitted."));
     }
 
-    ConversationSessionStateResponse clarify(UUID sessionId, ConversationClarificationRequest request) {
+    public ConversationSessionStateResponse clarify(UUID sessionId, ConversationClarificationRequest request) {
         SessionRecord record = transition(currentRecord(sessionId, ConversationState.COLLECTING), ConversationState.CLARIFICATION_REQUIRED);
         sessions.put(sessionId, record);
         return snapshot(sessionId, record, List.of("Clarification requested."));
     }
 
-    ConversationSessionStateResponse confirm(UUID sessionId, ConversationConfirmRequest request) {
+    public ConversationSessionStateResponse confirm(UUID sessionId, ConversationConfirmRequest request) {
         SessionRecord record = transition(currentRecord(sessionId, ConversationState.COLLECTING), ConversationState.CONFIRMED);
         sessions.put(sessionId, record);
         return snapshot(sessionId, record, List.of("Session confirmed."));
     }
 
-    ConversationSessionStateResponse cancel(UUID sessionId) {
+    public ConversationSessionStateResponse cancel(UUID sessionId) {
         SessionRecord record = transition(currentRecord(sessionId, ConversationState.COLLECTING), ConversationState.CANCELLED);
         sessions.put(sessionId, record);
         return snapshot(sessionId, record, List.of("Session cancelled."));
     }
 
-    ConversationSessionStateResponse update(UUID sessionId, ConversationSlotUpdateRequest request) {
+    public ConversationSessionStateResponse update(UUID sessionId, ConversationSlotUpdateRequest request) {
         SessionRecord baselineRecord = currentRecord(sessionId, ConversationState.COLLECTING);
         GenerateSetlistSlots baseline = baselineRecord.slots();
         SessionMergeResult merged = mergeService.merge(
@@ -89,7 +89,7 @@ public class ConversationSessionFacade {
         return snapshot(sessionId, updated, List.of("Session slots updated via deterministic merge."));
     }
 
-    ConversationRecoveryResponse recover(UUID sessionId) {
+    public ConversationRecoveryResponse recover(UUID sessionId) {
         SessionRecord prior = currentRecord(sessionId, ConversationState.COLLECTING);
         SessionRecord expired = transition(prior, ConversationState.EXPIRED);
         sessions.put(sessionId, expired);
