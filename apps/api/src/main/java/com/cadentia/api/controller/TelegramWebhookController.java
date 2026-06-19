@@ -20,6 +20,8 @@ import java.util.Optional;
 import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -39,12 +41,15 @@ public class TelegramWebhookController implements TelegramApi {
     private final TelegramWebhookIdempotencyStore idempotencyStore;
     private final TelegramWebhookProblemFactory problemFactory;
     private final Clock clock;
+    private final ObjectProvider<NativeWebRequest> nativeWebRequestProvider;
 
+    @Autowired
     public TelegramWebhookController(
             TelegramWebhookProperties properties,
             TelegramWebhookIdempotencyStore idempotencyStore,
-            TelegramWebhookProblemFactory problemFactory) {
-        this(properties, idempotencyStore, problemFactory, Clock.systemUTC());
+            TelegramWebhookProblemFactory problemFactory,
+            ObjectProvider<NativeWebRequest> nativeWebRequestProvider) {
+        this(properties, idempotencyStore, problemFactory, Clock.systemUTC(), nativeWebRequestProvider);
     }
 
     TelegramWebhookController(
@@ -52,15 +57,28 @@ public class TelegramWebhookController implements TelegramApi {
             TelegramWebhookIdempotencyStore idempotencyStore,
             TelegramWebhookProblemFactory problemFactory,
             Clock clock) {
+        this(properties, idempotencyStore, problemFactory, clock, null);
+    }
+
+    TelegramWebhookController(
+            TelegramWebhookProperties properties,
+            TelegramWebhookIdempotencyStore idempotencyStore,
+            TelegramWebhookProblemFactory problemFactory,
+            Clock clock,
+            ObjectProvider<NativeWebRequest> nativeWebRequestProvider) {
         this.properties = properties;
         this.idempotencyStore = idempotencyStore;
         this.problemFactory = problemFactory;
         this.clock = clock;
+        this.nativeWebRequestProvider = nativeWebRequestProvider;
     }
 
     @Override
     public Optional<NativeWebRequest> getRequest() {
-        return Optional.empty();
+        if (nativeWebRequestProvider == null) {
+            return Optional.empty();
+        }
+        return Optional.ofNullable(nativeWebRequestProvider.getIfAvailable());
     }
 
     @Override
