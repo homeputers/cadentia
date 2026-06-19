@@ -1,9 +1,15 @@
 package com.cadentia.bot.telegram;
 
 import com.cadentia.api.controller.ConversationSessionFacade;
+import com.cadentia.generated.model.ConversationConfirmRequest;
+import com.cadentia.generated.model.ConversationSessionStateResponse;
 import com.cadentia.generated.model.ConversationSlotUpdateRequest;
+import com.cadentia.generated.model.ConversationSlotUpdateRequestSlotPatch;
+import com.cadentia.generated.model.SetlistProposalResponse;
 import com.cadentia.generated.model.SlotValueSource;
+import com.cadentia.reng.SetlistService;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -12,16 +18,22 @@ import org.springframework.stereotype.Service;
 public class DefaultTelegramConversationGateway implements TelegramConversationGateway {
     private final ConversationSessionFacade facade;
     private final TelegramAuthorizationService authorizationService;
+    private final SetlistService setlistService;
 
     @Autowired
-    public DefaultTelegramConversationGateway(ConversationSessionFacade facade, TelegramAuthorizationService authorizationService) {
+    public DefaultTelegramConversationGateway(
+            ConversationSessionFacade facade,
+            TelegramAuthorizationService authorizationService,
+            SetlistService setlistService) {
         this.facade = facade;
         this.authorizationService = authorizationService;
+        this.setlistService = setlistService;
     }
 
     DefaultTelegramConversationGateway(ConversationSessionFacade facade) {
         this.facade = facade;
         this.authorizationService = null;
+        this.setlistService = null;
     }
 
     @Override
@@ -89,9 +101,9 @@ public class DefaultTelegramConversationGateway implements TelegramConversationG
         if (!decision.permitted()) {
             return denied(event, decision);
         }
-        facade.update(sessionId(event), new ConversationSlotUpdateRequest().source(SlotValueSource.FREE_TEXT));
-        touch(decision, event, TelegramSessionState.PENDING_CONFIRMATION);
-        return new TelegramAdapterResponse(TelegramAdapterResponseStatus.CONTINUED, "Input recorded.", event, null);
+        ConversationSessionStateResponse state = facade.ingestFreeText(sessionId(event), event.text());
+        touch(decision, event, toTelegramState(state));
+        return new TelegramAdapterResponse(TelegramAdapterResponseStatus.CONTINUED, String.join(" ", state.getAuditMessages()), event, null);
     }
 
     @Override
@@ -100,13 +112,52 @@ public class DefaultTelegramConversationGateway implements TelegramConversationG
         if (!decision.permitted()) {
             return denied(event, decision);
         }
-        facade.update(sessionId(event), new ConversationSlotUpdateRequest().source(SlotValueSource.MENU));
-        touch(decision, event, TelegramSessionState.PENDING_CONFIRMATION);
+        if (event.callbackAction() == TelegramCallbackAction.CONFIRM) {
+            ConversationSessionStateResponse state = facade.confirm(sessionId(event), new ConversationConfirmRequest().accepted(true));
+            SetlistProposalResponse proposal = setlistService == null ? null : setlistService.generate(state.getSlots());
+            touch(decision, event, TelegramSessionState.COMPLETED);
+            return new TelegramAdapterResponse(
+                    TelegramAdapterResponseStatus.COMPLETED,
+                    proposal == null ? "Setlist confirmed." : recommendationSummary(proposal),
+                    event,
+                    event.callbackAction().guidedField());
+        }
+        if (event.callbackAction() == TelegramCallbackAction.CANCEL) {
+            return cancel(event);
+        }
+        if (event.callbackAction() == TelegramCallbackAction.REVISE) {
+            ConversationSessionStateResponse state = facade.update(sessionId(event), new ConversationSlotUpdateRequest().source(SlotValueSource.USER_EDIT));
+            touch(decision, event, TelegramSessionState.NEW_SETLIST_ACTIVE);
+            return new TelegramAdapterResponse(TelegramAdapterResponseStatus.CONTINUED, String.join(" ", state.getAuditMessages()), event, event.callbackAction().guidedField());
+        }
+        ConversationSessionStateResponse state = facade.update(sessionId(event), menuPatch(event));
+        touch(decision, event, toTelegramState(state));
         return new TelegramAdapterResponse(
                 TelegramAdapterResponseStatus.CONTINUED,
-                "Menu selection recorded.",
+                String.join(" ", state.getAuditMessages()),
                 event,
                 event.callbackAction().guidedField());
+    }
+
+    private ConversationSlotUpdateRequest menuPatch(TelegramChannelEvent event) {
+        ConversationSlotUpdateRequestSlotPatch patch = new ConversationSlotUpdateRequestSlotPatch();
+        if (event.callbackAction() == TelegramCallbackAction.LANGUAGE) {
+            patch.language(event.callbackValue());
+        }
+        return new ConversationSlotUpdateRequest().source(SlotValueSource.MENU).slotPatch(patch);
+    }
+
+    private TelegramSessionState toTelegramState(ConversationSessionStateResponse state) {
+        return switch (state.getState()) {
+            case READY_TO_CONFIRM, CONFIRMED -> TelegramSessionState.PENDING_CONFIRMATION;
+            case CANCELLED -> TelegramSessionState.CANCELLED;
+            default -> TelegramSessionState.NEW_SETLIST_ACTIVE;
+        };
+    }
+
+    private String recommendationSummary(SetlistProposalResponse proposal) {
+        List<String> auditMessages = proposal.getAuditMessages() == null ? List.of() : proposal.getAuditMessages();
+        return "Deterministic setlist proposal generated. " + String.join(" ", auditMessages);
     }
 
     private TelegramSessionState currentState(TelegramAuthorizationService.TelegramAuthorizationDecision decision) {
