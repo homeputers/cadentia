@@ -1,8 +1,12 @@
 package com.cadentia.api.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.cadentia.bot.telegram.TelegramSecretResolver;
+import com.cadentia.bot.telegram.TelegramWebhookAuthenticationFilter;
 import com.cadentia.bot.telegram.TelegramWebhookIdempotencyStore;
 import com.cadentia.bot.telegram.TelegramWebhookProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -10,29 +14,32 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
-import java.util.Map;
 import org.junit.jupiter.api.Test;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.MediaType;
 import org.springframework.mock.env.MockEnvironment;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 class TelegramWebhookControllerTest {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
-    private static final Clock CLOCK = Clock.fixed(Instant.parse("2026-06-18T12:00:00Z"), ZoneOffset.UTC);
+    private static final Clock CLOCK = Clock.fixed(Instant.parse("2026-06-19T12:00:00Z"), ZoneOffset.UTC);
 
     @Test
     void rejectsMissingSecretBeforeIdempotencyOrDomainProcessing() throws Exception {
         // Arrange
         CapturingIdempotencyStore store = new CapturingIdempotencyStore();
-        TelegramWebhookController controller = controller(store);
+        MockMvc mockMvc = mockMvc(store);
 
-        // Act
-        ResponseEntity<Map<String, Object>> response = controller.acceptTelegramWebhookUpdate(
-                "bot-a", null, "req-1", "corr-1", validPayload(100, Instant.now(CLOCK)));
-
-        // Assert
-        assertThat(response.getStatusCode().value()).isEqualTo(401);
-        assertThat(response.getBody()).containsEntry("correlationId", "corr-1");
+        // Act / Assert
+        mockMvc.perform(post("/telegram/webhooks/bot-a")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .header("X-Request-ID", "req-1")
+                        .header("X-Correlation-ID", "corr-1")
+                        .content(validPayload(100, Instant.now(CLOCK))))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.correlationId").value("corr-1"))
+                .andExpect(jsonPath("$.detail").value("Missing Telegram secret-token header."));
         assertThat(store.invocations).isZero();
     }
 
@@ -40,35 +47,31 @@ class TelegramWebhookControllerTest {
     void acceptsCurrentAndPreviousSecretsForRotationOverlap() throws Exception {
         // Arrange
         CapturingIdempotencyStore store = new CapturingIdempotencyStore();
-        TelegramWebhookController controller = controller(store);
+        MockMvc mockMvc = mockMvc(store);
 
-        // Act
-        ResponseEntity<Map<String, Object>> current = controller.acceptTelegramWebhookUpdate(
-                "bot-a", "current-secret", "req-1", "corr-1", validPayload(101, Instant.now(CLOCK)));
-        ResponseEntity<Map<String, Object>> previous = controller.acceptTelegramWebhookUpdate(
-                "bot-a", "previous-secret", "req-2", "corr-2", validPayload(102, Instant.now(CLOCK)));
-
-        // Assert
-        assertThat(current.getStatusCode().value()).isEqualTo(202);
-        assertThat(previous.getStatusCode().value()).isEqualTo(202);
+        // Act / Assert
+        mockMvc.perform(validRequest(101, "current-secret"))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.status").value("ACCEPTED"));
+        mockMvc.perform(validRequest(102, "previous-secret"))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.status").value("ACCEPTED"));
         assertThat(store.invocations).isEqualTo(2);
     }
 
     @Test
-    void rejectsInvalidAndBlankSecrets() throws Exception {
+    void rejectsInvalidAndBlankSecretsBeforeBodyProcessing() throws Exception {
         // Arrange
         CapturingIdempotencyStore store = new CapturingIdempotencyStore();
-        TelegramWebhookController controller = controller(store);
+        MockMvc mockMvc = mockMvc(store);
 
-        // Act
-        ResponseEntity<Map<String, Object>> invalid = controller.acceptTelegramWebhookUpdate(
-                "bot-a", "wrong", "req-1", "corr-1", validPayload(103, Instant.now(CLOCK)));
-        ResponseEntity<Map<String, Object>> blank = controller.acceptTelegramWebhookUpdate(
-                "bot-a", " ", "req-2", "corr-2", validPayload(104, Instant.now(CLOCK)));
-
-        // Assert
-        assertThat(invalid.getStatusCode().value()).isEqualTo(403);
-        assertThat(blank.getStatusCode().value()).isEqualTo(401);
+        // Act / Assert
+        mockMvc.perform(validRequest(103, "wrong"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.detail").value("Invalid Telegram secret-token header."));
+        mockMvc.perform(validRequest(104, " "))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.detail").value("Missing Telegram secret-token header."));
         assertThat(store.invocations).isZero();
     }
 
@@ -76,17 +79,15 @@ class TelegramWebhookControllerTest {
     void duplicateUpdateReturnsDuplicateAcceptedWithoutRerunningSideEffects() throws Exception {
         // Arrange
         CapturingIdempotencyStore store = new CapturingIdempotencyStore();
-        TelegramWebhookController controller = controller(store);
+        MockMvc mockMvc = mockMvc(store);
 
-        // Act
-        ResponseEntity<Map<String, Object>> first = controller.acceptTelegramWebhookUpdate(
-                "bot-a", "current-secret", "req-1", "corr-1", validPayload(105, Instant.now(CLOCK)));
-        ResponseEntity<Map<String, Object>> duplicate = controller.acceptTelegramWebhookUpdate(
-                "bot-a", "current-secret", "req-2", "corr-2", validPayload(105, Instant.now(CLOCK)));
-
-        // Assert
-        assertThat(first.getBody()).containsEntry("status", "ACCEPTED");
-        assertThat(duplicate.getBody()).containsEntry("status", "DUPLICATE_ACCEPTED");
+        // Act / Assert
+        mockMvc.perform(validRequest(105, "current-secret"))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.status").value("ACCEPTED"));
+        mockMvc.perform(validRequest(105, "current-secret"))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.status").value("DUPLICATE_ACCEPTED"));
         assertThat(store.sideEffectInvocations).isEqualTo(1);
     }
 
@@ -94,36 +95,82 @@ class TelegramWebhookControllerTest {
     void malformedUnsupportedAndStalePayloadsReturnStructuredValidationResponses() throws Exception {
         // Arrange
         CapturingIdempotencyStore store = new CapturingIdempotencyStore();
-        TelegramWebhookController controller = controller(store);
+        MockMvc mockMvc = mockMvc(store);
 
-        // Act
-        ResponseEntity<Map<String, Object>> malformed = controller.acceptTelegramWebhookUpdate(
-                "bot-a", "current-secret", "req-1", "corr-1", "{}");
-        ResponseEntity<Map<String, Object>> unsupported = controller.acceptTelegramWebhookUpdate(
-                "bot-a", "current-secret", "req-2", "corr-2", "{\"update_id\":106,\"poll\":{}}");
-        ResponseEntity<Map<String, Object>> stale = controller.acceptTelegramWebhookUpdate(
-                "bot-a", "current-secret", "req-3", "corr-3", validPayload(107, Instant.parse("2026-06-16T11:59:00Z")));
-
-        // Assert
-        assertThat(malformed.getStatusCode().value()).isEqualTo(400);
-        assertThat(malformed.getBody()).containsKey("errors");
-        assertThat(unsupported.getStatusCode().value()).isEqualTo(400);
-        assertThat(stale.getStatusCode().value()).isEqualTo(400);
-        assertThat(stale.getBody()).containsEntry("type", "https://cadentia.local/problems/telegram/stale-telegram-update");
+        // Act / Assert
+        mockMvc.perform(authorizedRequest().content("{}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors[0].code").value("REQUIRED_INT64"));
+        mockMvc.perform(authorizedRequest().content("{\"update_id\":106,\"poll\":{}}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors[0].code").value("ONE_SUPPORTED_UPDATE_KIND"));
+        mockMvc.perform(authorizedRequest().content(validPayload(107, Instant.parse("2026-06-17T11:59:00Z"))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.type").value("https://cadentia.local/problems/telegram/stale-telegram-update"));
         assertThat(store.invocations).isZero();
     }
 
-    private TelegramWebhookController controller(CapturingIdempotencyStore store) {
+    @Test
+    void unavailableBotTokenReturnsRetryableProblemWithoutProcessingPayload() throws Exception {
+        // Arrange
+        CapturingIdempotencyStore store = new CapturingIdempotencyStore();
+        MockMvc mockMvc = mockMvc(store, false);
+
+        // Act / Assert
+        mockMvc.perform(validRequest(108, "current-secret"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.type").value("https://cadentia.local/problems/telegram/telegram-secret-unavailable"));
+        assertThat(store.invocations).isZero();
+    }
+
+    private MockMvc mockMvc(CapturingIdempotencyStore store) {
+        return mockMvc(store, true);
+    }
+
+    private MockMvc mockMvc(CapturingIdempotencyStore store, boolean includeBotToken) {
+        TelegramWebhookProperties properties = properties();
+        MockEnvironment environment = new MockEnvironment()
+                .withProperty("CURRENT_TELEGRAM_SECRET", "current-secret")
+                .withProperty("PREVIOUS_TELEGRAM_SECRET", "previous-secret");
+        if (includeBotToken) {
+            environment.withProperty("TELEGRAM_BOT_TOKEN", "123456:bot-token");
+        }
+        TelegramWebhookProblemFactory problemFactory = new TelegramWebhookProblemFactory();
+        TelegramSecretResolver secretResolver = new TelegramSecretResolver(environment);
+        TelegramWebhookController controller = new TelegramWebhookController(properties, store, problemFactory, CLOCK);
+        TelegramWebhookAuthenticationFilter filter = new TelegramWebhookAuthenticationFilter(
+                properties, secretResolver, problemFactory, OBJECT_MAPPER);
+        return MockMvcBuilders.standaloneSetup(controller)
+                .setControllerAdvice(new TelegramWebhookExceptionHandler())
+                .addFilters(filter)
+                .build();
+    }
+
+    private TelegramWebhookProperties properties() {
         TelegramWebhookProperties properties = new TelegramWebhookProperties();
         properties.setBotTokenRef("env:TELEGRAM_BOT_TOKEN");
         properties.setSecretTokenRef("env:CURRENT_TELEGRAM_SECRET");
         properties.setPreviousSecretTokenRef("env:PREVIOUS_TELEGRAM_SECRET");
         properties.setMaxUpdateAge(Duration.ofHours(24));
-        MockEnvironment environment = new MockEnvironment()
-                .withProperty("TELEGRAM_BOT_TOKEN", "123456:bot-token")
-                .withProperty("CURRENT_TELEGRAM_SECRET", "current-secret")
-                .withProperty("PREVIOUS_TELEGRAM_SECRET", "previous-secret");
-        return new TelegramWebhookController(properties, new TelegramSecretResolver(environment), store, OBJECT_MAPPER, CLOCK);
+        return properties;
+    }
+
+    private org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder validRequest(
+            long updateId,
+            String secret) {
+        return authorizedRequest(secret).content(validPayload(updateId, Instant.now(CLOCK)));
+    }
+
+    private org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder authorizedRequest() {
+        return authorizedRequest("current-secret");
+    }
+
+    private org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder authorizedRequest(String secret) {
+        return post("/telegram/webhooks/bot-a")
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("X-Telegram-Bot-Api-Secret-Token", secret)
+                .header("X-Request-ID", "req-1")
+                .header("X-Correlation-ID", "corr-1");
     }
 
     private String validPayload(long updateId, Instant date) {

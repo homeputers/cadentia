@@ -1,226 +1,220 @@
 package com.cadentia.api.controller;
 
-import com.cadentia.bot.telegram.TelegramSecretResolver;
 import com.cadentia.bot.telegram.TelegramWebhookIdempotencyStore;
 import com.cadentia.bot.telegram.TelegramWebhookIdempotencyStore.IdempotencyResult;
 import com.cadentia.bot.telegram.TelegramWebhookProperties;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
+import com.cadentia.generated.api.TelegramApi;
+import com.cadentia.generated.model.TelegramCallbackQuery;
+import com.cadentia.generated.model.TelegramChat;
+import com.cadentia.generated.model.TelegramMessage;
+import com.cadentia.generated.model.TelegramUpdate;
+import com.cadentia.generated.model.TelegramValidationError;
+import com.cadentia.generated.model.TelegramWebhookAcceptedResponse;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
+import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.StringUtils;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.context.request.NativeWebRequest;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 @RestController
 @EnableConfigurationProperties(TelegramWebhookProperties.class)
-public class TelegramWebhookController {
+public class TelegramWebhookController implements TelegramApi {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(TelegramWebhookController.class);
-    private static final String SECRET_HEADER = "X-Telegram-Bot-Api-Secret-Token";
 
     private final TelegramWebhookProperties properties;
-    private final TelegramSecretResolver secretResolver;
     private final TelegramWebhookIdempotencyStore idempotencyStore;
-    private final ObjectMapper objectMapper;
+    private final TelegramWebhookProblemFactory problemFactory;
     private final Clock clock;
 
     public TelegramWebhookController(
             TelegramWebhookProperties properties,
-            TelegramSecretResolver secretResolver,
-            TelegramWebhookIdempotencyStore idempotencyStore) {
-        this(properties, secretResolver, idempotencyStore, new ObjectMapper(), Clock.systemUTC());
+            TelegramWebhookIdempotencyStore idempotencyStore,
+            TelegramWebhookProblemFactory problemFactory) {
+        this(properties, idempotencyStore, problemFactory, Clock.systemUTC());
     }
 
     TelegramWebhookController(
             TelegramWebhookProperties properties,
-            TelegramSecretResolver secretResolver,
             TelegramWebhookIdempotencyStore idempotencyStore,
-            ObjectMapper objectMapper,
+            TelegramWebhookProblemFactory problemFactory,
             Clock clock) {
         this.properties = properties;
-        this.secretResolver = secretResolver;
         this.idempotencyStore = idempotencyStore;
-        this.objectMapper = objectMapper;
+        this.problemFactory = problemFactory;
         this.clock = clock;
     }
 
-    @PostMapping("/telegram/webhooks/{botId}")
-    public ResponseEntity<Map<String, Object>> acceptTelegramWebhookUpdate(
-            @PathVariable String botId,
-            @RequestHeader(value = SECRET_HEADER, required = false) String secretToken,
-            @RequestHeader(value = "X-Request-ID", required = false) String requestId,
-            @RequestHeader(value = "X-Correlation-ID", required = false) String correlationId,
-            @RequestBody(required = false) String rawPayload) {
-        String safeRequestId = StringUtils.hasText(requestId) ? requestId : UUID.randomUUID().toString();
-        String safeCorrelationId = StringUtils.hasText(correlationId) ? correlationId : safeRequestId;
+    @Override
+    public Optional<NativeWebRequest> getRequest() {
+        return Optional.empty();
+    }
 
-        if (!StringUtils.hasText(secretToken)) {
-            logFailure("REJECTED", null, safeRequestId, safeCorrelationId, botId, "MISSING_SECRET");
-            return problem(HttpStatus.UNAUTHORIZED, "missing-secret-token", "Missing Telegram secret-token header.", safeCorrelationId);
-        }
-        if (!secretMatches(secretToken)) {
-            logFailure("REJECTED", null, safeRequestId, safeCorrelationId, botId, "INVALID_SECRET");
-            return problem(HttpStatus.FORBIDDEN, "invalid-secret-token", "Invalid Telegram secret-token header.", safeCorrelationId);
-        }
-        if (secretResolver.resolve(properties.getBotTokenRef()).isEmpty()) {
-            logFailure("RETRYABLE_FAILURE", null, safeRequestId, safeCorrelationId, botId, "BOT_TOKEN_UNAVAILABLE");
-            return problem(HttpStatus.INTERNAL_SERVER_ERROR, "telegram-secret-unavailable", "Telegram bot credential is unavailable.", safeCorrelationId);
-        }
-
-        if (rawPayload == null || rawPayload.getBytes(StandardCharsets.UTF_8).length > properties.getMaxPayloadBytes()) {
-            logFailure("REJECTED", null, safeRequestId, safeCorrelationId, botId, "PAYLOAD_SIZE");
-            return problem(HttpStatus.BAD_REQUEST, "oversized-telegram-update", "Telegram update payload size is invalid.", safeCorrelationId);
-        }
-
-        JsonNode payload;
-        try {
-            payload = objectMapper.readTree(rawPayload);
-        } catch (JsonProcessingException ex) {
-            logFailure("REJECTED", null, safeRequestId, safeCorrelationId, botId, "MALFORMED_JSON");
-            return problem(HttpStatus.BAD_REQUEST, "malformed-telegram-update", "Telegram update payload is malformed JSON.", safeCorrelationId);
-        }
-
-        List<Map<String, String>> errors = validate(payload);
-        Long updateId = payload.path("update_id").canConvertToLong() ? payload.path("update_id").asLong() : null;
-        String channelId = extractChannelId(payload).orElse("unknown");
+    @Override
+    public ResponseEntity<TelegramWebhookAcceptedResponse> acceptTelegramWebhookUpdate(
+            String botId,
+            String xTelegramBotApiSecretToken,
+            TelegramUpdate telegramUpdate) {
+        RequestMetadata metadata = requestMetadata();
+        List<TelegramValidationError> errors = validate(telegramUpdate);
+        Long updateId = telegramUpdate == null ? null : telegramUpdate.getUpdateId();
+        String channelId = extractChannelId(telegramUpdate).orElse("unknown");
         if (!errors.isEmpty()) {
-            logFailure("REJECTED", updateId, safeRequestId, safeCorrelationId, botId, "VALIDATION_FAILED");
-            return problem(HttpStatus.BAD_REQUEST, "invalid-telegram-update", "Telegram update failed validation.", safeCorrelationId, errors);
+            logFailure("REJECTED", updateId, metadata, botId, channelId, "VALIDATION_FAILED");
+            throw problem(HttpStatus.BAD_REQUEST, "invalid-telegram-update", "Telegram update failed validation.", metadata, errors);
         }
-        if (isStale(payload)) {
-            logFailure("REJECTED", updateId, safeRequestId, safeCorrelationId, botId, "STALE_UPDATE");
-            return problem(HttpStatus.BAD_REQUEST, "stale-telegram-update", "Telegram update is outside the accepted replay window.", safeCorrelationId);
+        if (isStale(telegramUpdate)) {
+            logFailure("REJECTED", updateId, metadata, botId, channelId, "STALE_UPDATE");
+            throw problem(HttpStatus.BAD_REQUEST, "stale-telegram-update", "Telegram update is outside the accepted replay window.", metadata, List.of());
         }
 
         IdempotencyResult result = idempotencyStore.record(botId, channelId, updateId);
         LOGGER.info(
                 "telegram_webhook outcome={} updateId={} requestId={} correlationId={} botId={} channelId={} failureCategory={}",
-                result.name(), updateId, safeRequestId, safeCorrelationId, botId, channelId, "NONE");
+                result.name(), updateId, metadata.requestId(), metadata.correlationId(), botId, channelId, "NONE");
         return ResponseEntity.accepted().body(accepted(result, updateId, botId, channelId));
     }
 
-    private boolean secretMatches(String presented) {
-        List<String> candidates = new ArrayList<>();
-        secretResolver.resolve(properties.getSecretTokenRef()).ifPresent(candidates::add);
-        secretResolver.resolve(properties.getPreviousSecretTokenRef()).ifPresent(candidates::add);
-        return candidates.stream().anyMatch(candidate -> constantTimeEquals(candidate, presented));
-    }
-
-    private boolean constantTimeEquals(String expected, String actual) {
-        return MessageDigest.isEqual(expected.getBytes(StandardCharsets.UTF_8), actual.getBytes(StandardCharsets.UTF_8));
-    }
-
-    private List<Map<String, String>> validate(JsonNode payload) {
-        List<Map<String, String>> errors = new ArrayList<>();
-        if (payload == null || !payload.isObject()) {
+    private List<TelegramValidationError> validate(TelegramUpdate update) {
+        List<TelegramValidationError> errors = new ArrayList<>();
+        if (update == null) {
             errors.add(error("/", "REQUIRED_OBJECT", "Payload must be a JSON object."));
             return errors;
         }
-        if (!payload.has("update_id") || !payload.path("update_id").canConvertToLong()) {
+        if (update.getUpdateId() == null) {
             errors.add(error("/update_id", "REQUIRED_INT64", "update_id is required."));
         }
-        long supported = List.of("message", "edited_message", "channel_post", "callback_query").stream().filter(payload::has).count();
+        long supported = Stream.of(
+                        update.getMessage(),
+                        update.getEditedMessage(),
+                        update.getChannelPost(),
+                        update.getCallbackQuery())
+                .filter(value -> value != null)
+                .count();
         if (supported != 1) {
             errors.add(error("/", "ONE_SUPPORTED_UPDATE_KIND", "Exactly one supported update kind is required."));
         }
-        extractMessage(payload).ifPresent(message -> {
-            if (!message.path("message_id").canConvertToLong()) {
-                errors.add(error("/message/message_id", "REQUIRED_INT64", "message_id is required."));
-            }
-            JsonNode chat = message.path("chat");
-            if (!chat.isObject() || !chat.path("id").canConvertToLong() || !StringUtils.hasText(chat.path("type").asText(null))) {
-                errors.add(error("/message/chat", "REQUIRED_CHAT", "chat.id and chat.type are required."));
-            }
-            if (message.path("text").isTextual() && message.path("text").asText().length() > 4096) {
-                errors.add(error("/message/text", "MAX_LENGTH", "message text exceeds Telegram limit."));
-            }
-        });
+        extractMessage(update).ifPresent(message -> validateMessage(message, errors));
         return errors;
     }
 
-    private boolean isStale(JsonNode payload) {
-        Optional<JsonNode> message = extractMessage(payload);
-        if (message.isEmpty() || !message.get().path("date").canConvertToLong()) {
+    private void validateMessage(TelegramMessage message, List<TelegramValidationError> errors) {
+        if (message.getMessageId() == null) {
+            errors.add(error("/message/message_id", "REQUIRED_INT64", "message_id is required."));
+        }
+        TelegramChat chat = message.getChat();
+        if (chat == null || chat.getId() == null || chat.getType() == null || !StringUtils.hasText(chat.getType().getValue())) {
+            errors.add(error("/message/chat", "REQUIRED_CHAT", "chat.id and chat.type are required."));
+        }
+        if (message.getText() != null && message.getText().length() > 4096) {
+            errors.add(error("/message/text", "MAX_LENGTH", "message text exceeds Telegram limit."));
+        }
+    }
+
+    private boolean isStale(TelegramUpdate update) {
+        Optional<TelegramMessage> message = extractMessage(update);
+        if (message.isEmpty() || message.get().getDate() == null) {
             return false;
         }
-        Instant updateTime = Instant.ofEpochSecond(message.get().path("date").asLong());
+        Instant updateTime = Instant.ofEpochSecond(message.get().getDate());
         return updateTime.isBefore(clock.instant().minus(properties.getMaxUpdateAge()));
     }
 
-    private Optional<JsonNode> extractMessage(JsonNode payload) {
-        if (payload == null) {
+    private Optional<TelegramMessage> extractMessage(TelegramUpdate update) {
+        if (update == null) {
             return Optional.empty();
         }
-        for (String field : List.of("message", "edited_message", "channel_post")) {
-            if (payload.path(field).isObject()) {
-                return Optional.of(payload.path(field));
-            }
+        if (update.getMessage() != null) {
+            return Optional.of(update.getMessage());
         }
-        if (payload.path("callback_query").path("message").isObject()) {
-            return Optional.of(payload.path("callback_query").path("message"));
+        if (update.getEditedMessage() != null) {
+            return Optional.of(update.getEditedMessage());
+        }
+        if (update.getChannelPost() != null) {
+            return Optional.of(update.getChannelPost());
+        }
+        TelegramCallbackQuery callbackQuery = update.getCallbackQuery();
+        if (callbackQuery != null && callbackQuery.getMessage() != null) {
+            return Optional.of(callbackQuery.getMessage());
         }
         return Optional.empty();
     }
 
-    private Optional<String> extractChannelId(JsonNode payload) {
-        return extractMessage(payload)
-                .filter(message -> message.path("chat").path("id").canConvertToLong())
-                .map(message -> Long.toString(message.path("chat").path("id").asLong()));
+    private Optional<String> extractChannelId(TelegramUpdate update) {
+        return extractMessage(update)
+                .map(TelegramMessage::getChat)
+                .filter(chat -> chat.getId() != null)
+                .map(chat -> Long.toString(chat.getId()));
     }
 
-    private Map<String, Object> accepted(IdempotencyResult result, long updateId, String botId, String channelId) {
-        Map<String, Object> response = new LinkedHashMap<>();
-        response.put("accepted", true);
-        response.put("updateId", updateId);
-        response.put("idempotencyKey", botId + ":" + channelId + ":" + updateId);
-        response.put("status", result.name());
-        response.put("queuedAt", clock.instant().toString());
-        return response;
+    private TelegramWebhookAcceptedResponse accepted(IdempotencyResult result, long updateId, String botId, String channelId) {
+        TelegramWebhookAcceptedResponse.StatusEnum status = result == IdempotencyResult.ACCEPTED
+                ? TelegramWebhookAcceptedResponse.StatusEnum.ACCEPTED
+                : TelegramWebhookAcceptedResponse.StatusEnum.DUPLICATE_ACCEPTED;
+        return new TelegramWebhookAcceptedResponse()
+                .accepted(true)
+                .updateId(updateId)
+                .idempotencyKey(botId + ":" + channelId + ":" + updateId)
+                .status(status)
+                .queuedAt(OffsetDateTime.ofInstant(clock.instant(), ZoneOffset.UTC));
     }
 
-    private ResponseEntity<Map<String, Object>> problem(HttpStatus status, String type, String detail, String correlationId) {
-        return problem(status, type, detail, correlationId, List.of());
+    private TelegramValidationError error(String field, String code, String message) {
+        return new TelegramValidationError().field(field).code(code).message(message);
     }
 
-    private ResponseEntity<Map<String, Object>> problem(
-            HttpStatus status, String type, String detail, String correlationId, List<Map<String, String>> errors) {
-        Map<String, Object> body = new LinkedHashMap<>();
-        body.put("type", "https://cadentia.local/problems/telegram/" + type);
-        body.put("title", status.getReasonPhrase());
-        body.put("status", status.value());
-        body.put("detail", detail);
-        body.put("correlationId", correlationId);
-        if (!errors.isEmpty()) {
-            body.put("errors", errors);
+    private TelegramWebhookProblemException problem(
+            HttpStatus status,
+            String type,
+            String detail,
+            RequestMetadata metadata,
+            List<TelegramValidationError> errors) {
+        return new TelegramWebhookProblemException(
+                status,
+                problemFactory.problem(status, type, detail, metadata.correlationId(), errors));
+    }
+
+    private RequestMetadata requestMetadata() {
+        if (RequestContextHolder.getRequestAttributes() instanceof ServletRequestAttributes attributes) {
+            String requestId = attributes.getRequest().getHeader("X-Request-ID");
+            if (!StringUtils.hasText(requestId)) {
+                requestId = java.util.UUID.randomUUID().toString();
+            }
+            String correlationId = attributes.getRequest().getHeader("X-Correlation-ID");
+            if (!StringUtils.hasText(correlationId)) {
+                correlationId = requestId;
+            }
+            return new RequestMetadata(requestId, correlationId);
         }
-        return ResponseEntity.status(status).body(body);
+        String generated = java.util.UUID.randomUUID().toString();
+        return new RequestMetadata(generated, generated);
     }
 
-    private Map<String, String> error(String field, String code, String message) {
-        return Map.of("field", field, "code", code, "message", message);
-    }
-
-    private void logFailure(String outcome, Long updateId, String requestId, String correlationId, String botId, String failureCategory) {
+    private void logFailure(
+            String outcome,
+            Long updateId,
+            RequestMetadata metadata,
+            String botId,
+            String channelId,
+            String failureCategory) {
         LOGGER.warn(
                 "telegram_webhook outcome={} updateId={} requestId={} correlationId={} botId={} channelId={} failureCategory={}",
-                outcome, updateId, requestId, correlationId, botId, "unknown", failureCategory);
+                outcome, updateId, metadata.requestId(), metadata.correlationId(), botId, channelId, failureCategory);
+    }
+
+    private record RequestMetadata(String requestId, String correlationId) {
     }
 }

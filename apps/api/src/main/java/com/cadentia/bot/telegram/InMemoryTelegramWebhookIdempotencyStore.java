@@ -2,9 +2,6 @@ package com.cadentia.bot.telegram;
 
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import org.springframework.stereotype.Component;
-
-@Component
 public class InMemoryTelegramWebhookIdempotencyStore implements TelegramWebhookIdempotencyStore {
 
     private final Set<String> acceptedKeys = ConcurrentHashMap.newKeySet();
