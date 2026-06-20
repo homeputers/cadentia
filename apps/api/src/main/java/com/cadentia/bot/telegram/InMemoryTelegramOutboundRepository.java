@@ -11,9 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-import org.springframework.stereotype.Repository;
 
-@Repository
 public class InMemoryTelegramOutboundRepository implements TelegramOutboundRepository {
     private final Map<String, TelegramOutboundSendRecord> records = new LinkedHashMap<>();
     private final List<TelegramDeadLetterRecord> deadLetters = new ArrayList<>();
@@ -29,30 +27,67 @@ public class InMemoryTelegramOutboundRepository implements TelegramOutboundRepos
     }
 
     @Override
-    public synchronized TelegramOutboundSendRecord markSent(String idempotencyKey, String telegramMessageId, Instant now) {
+    public synchronized TelegramOutboundSendRecord markSent(
+            String idempotencyKey, String telegramMessageId, Instant now) {
         TelegramOutboundSendRecord current = records.get(idempotencyKey);
-        TelegramOutboundSendRecord updated = copy(current, OutboundStatus.SENT, current.attempts() + 1, null,
-                telegramMessageId, null, null, now);
+        TelegramOutboundSendRecord updated = copy(
+                current,
+                OutboundStatus.SENT,
+                current.attempts() + 1,
+                null,
+                telegramMessageId,
+                null,
+                null,
+                now);
         records.put(idempotencyKey, updated);
         return updated;
     }
 
     @Override
-    public synchronized TelegramOutboundSendRecord markRetry(TelegramOutboundSendRecord record, String category, String sanitizedDetail, Instant retryAt, Instant now) {
-        TelegramOutboundSendRecord updated = copy(record, OutboundStatus.RETRY_SCHEDULED, record.attempts() + 1, retryAt,
-                null, FailureCategory.valueOf(category), sanitizedDetail, now);
+    public synchronized TelegramOutboundSendRecord markRetry(
+            TelegramOutboundSendRecord record,
+            String category,
+            String sanitizedDetail,
+            Instant retryAt,
+            Instant now) {
+        TelegramOutboundSendRecord updated = copy(
+                record,
+                OutboundStatus.RETRY_SCHEDULED,
+                record.attempts() + 1,
+                retryAt,
+                null,
+                FailureCategory.valueOf(category),
+                sanitizedDetail,
+                now);
         records.put(record.idempotencyKey(), updated);
         return updated;
     }
 
     @Override
-    public synchronized TelegramDeadLetterRecord deadLetter(TelegramOutboundSendRecord record, String category, String sanitizedDetail, Instant now) {
-        TelegramOutboundSendRecord updated = copy(record, OutboundStatus.DEAD_LETTERED, record.attempts() + 1, null,
-                null, FailureCategory.valueOf(category), sanitizedDetail, now);
+    public synchronized TelegramDeadLetterRecord deadLetter(
+            TelegramOutboundSendRecord record, String category, String sanitizedDetail, Instant now) {
+        TelegramOutboundSendRecord updated = copy(
+                record,
+                OutboundStatus.DEAD_LETTERED,
+                record.attempts() + 1,
+                null,
+                null,
+                FailureCategory.valueOf(category),
+                sanitizedDetail,
+                now);
         records.put(record.idempotencyKey(), updated);
-        TelegramDeadLetterRecord dead = new TelegramDeadLetterRecord(UUID.randomUUID(), record.id(), record.idempotencyKey(),
-                record.correlationId(), record.chatHash(), record.operation(), FailureCategory.valueOf(category), sanitizedDetail,
-                record.sanitizedPreview(), updated.attempts(), now);
+        TelegramDeadLetterRecord dead = new TelegramDeadLetterRecord(
+                UUID.randomUUID(),
+                record.id(),
+                record.idempotencyKey(),
+                record.correlationId(),
+                record.chatHash(),
+                record.operation(),
+                FailureCategory.valueOf(category),
+                sanitizedDetail,
+                record.sanitizedPreview(),
+                updated.attempts(),
+                now);
         deadLetters.add(dead);
         return dead;
     }

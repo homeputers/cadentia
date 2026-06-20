@@ -10,8 +10,8 @@ import com.cadentia.generated.model.RecommendationExplanationScope;
 import com.cadentia.generated.model.RecommendationExplanationSubject;
 import com.cadentia.generated.model.SetlistProposalResponse;
 import java.util.List;
-import java.util.Map;
 import java.util.Locale;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 class TelegramResponseRendererTest {
@@ -19,14 +19,17 @@ class TelegramResponseRendererTest {
 
     @Test
     void rendersSupportedCommandOutcomesWithSafeEscapingAndGuidance() {
+        // Arrange
         TelegramAdapterResponse response = new TelegramAdapterResponse(
                 TelegramAdapterResponseStatus.STARTED,
                 "Welcome <leader> token=123 secret=abc",
                 event(TelegramEventKind.MESSAGE),
                 null);
 
+        // Act
         List<TelegramRenderedMessage> rendered = renderer.render(response);
 
+        // Assert
         assertThat(rendered).hasSize(1);
         assertThat(rendered.get(0).text())
                 .contains("&lt;leader&gt;")
@@ -38,6 +41,7 @@ class TelegramResponseRendererTest {
 
     @Test
     void rendersClarificationValidationCancellationAndOperationalFailures() {
+        // Arrange / Act / Assert
         assertThat(renderer.render(new TelegramAdapterResponse(TelegramAdapterResponseStatus.CONTINUED,
                 "Please clarify scripture.", event(TelegramEventKind.MESSAGE), "verseText")).get(0).text())
                 .contains("Cadentia update")
@@ -57,12 +61,15 @@ class TelegramResponseRendererTest {
 
     @Test
     void callbackResponsesIncludeAcknowledgementBeforeMessage() {
+        // Arrange
         TelegramChannelEvent event = event(TelegramEventKind.CALLBACK_QUERY);
         TelegramAdapterResponse response = new TelegramAdapterResponse(TelegramAdapterResponseStatus.COMPLETED,
                 "Proposal generated.", event, "confirmation");
 
+        // Act
         List<TelegramRenderedMessage> rendered = renderer.render(response);
 
+        // Assert
         assertThat(rendered).hasSize(2);
         assertThat(rendered.get(0).callbackQueryId()).isEqualTo("cb-1");
         assertThat(rendered.get(0).callbackAcknowledgement()).isEqualTo("Proposal generated.");
@@ -71,6 +78,7 @@ class TelegramResponseRendererTest {
 
     @Test
     void setlistProposalRendersApprovedSongReferencesWithoutUnapprovedDetails() {
+        // Arrange
         RecommendationExplanationEntry selected = new RecommendationExplanationEntry(
                 RecommendationExplanationCode.APPROVAL_ELIGIBLE,
                 RecommendationExplanationEntry.SeverityEnum.INFO,
@@ -90,8 +98,10 @@ class TelegramResponseRendererTest {
                 .auditMessages(List.of("Approved-only policy applied.", "unapproved candidate Foo excluded."))
                 .explanation(new RecommendationExplanation().selectedSongs(List.of(selected)));
 
+        // Act
         List<TelegramRenderedMessage> rendered = renderer.renderProposal("42", proposal);
 
+        // Assert
         assertThat(rendered).hasSize(1);
         assertThat(rendered.get(0).text())
                 .contains("Setlist proposal")
@@ -104,10 +114,13 @@ class TelegramResponseRendererTest {
 
     @Test
     void splitsLongMessagesDeterministicallyWithinTelegramLimit() {
+        // Arrange
         String longMessage = "Line\n".repeat(1000);
 
+        // Act
         List<String> chunks = renderer.split(longMessage);
 
+        // Assert
         assertThat(chunks).hasSizeGreaterThan(1);
         assertThat(chunks).allMatch(chunk -> chunk.length() <= TelegramResponseRenderer.SAFE_MESSAGE_LIMIT);
         assertThat(String.join("\n", chunks)).contains("Line");

@@ -11,6 +11,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.HexFormat;
 import java.util.UUID;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -22,11 +23,20 @@ public class TelegramOutboundSendService {
     private final TelegramIdentifierHasher hasher;
     private final Clock clock;
 
-    public TelegramOutboundSendService(TelegramOutboundRepository repository, TelegramOutboundClient client, TelegramIdentifierHasher hasher) {
+    public TelegramOutboundSendService(
+            TelegramOutboundRepository repository,
+            ObjectProvider<TelegramOutboundClient> clientProvider,
+            TelegramIdentifierHasher hasher) {
+        this(repository, configuredClient(clientProvider), hasher, Clock.systemUTC());
+    }
+
+    public TelegramOutboundSendService(
+            TelegramOutboundRepository repository, TelegramOutboundClient client, TelegramIdentifierHasher hasher) {
         this(repository, client, hasher, Clock.systemUTC());
     }
 
-    TelegramOutboundSendService(TelegramOutboundRepository repository, TelegramOutboundClient client, TelegramIdentifierHasher hasher, Clock clock) {
+    TelegramOutboundSendService(
+            TelegramOutboundRepository repository, TelegramOutboundClient client, TelegramIdentifierHasher hasher, Clock clock) {
         this.repository = repository;
         this.client = client;
         this.hasher = hasher;
@@ -37,8 +47,9 @@ public class TelegramOutboundSendService {
         Instant now = clock.instant();
         String idempotencyKey = idempotencyKey(message, correlationId, operation);
         String chatHash = message.chatId() == null ? "callback-only" : hasher.hash("telegram", message.chatId());
-        TelegramOutboundSendRecord initial = new TelegramOutboundSendRecord(UUID.randomUUID(), idempotencyKey, safe(correlationId), chatHash,
-                safe(operation), preview(message), OutboundStatus.PENDING, 0, DEFAULT_MAX_ATTEMPTS, now, null, null, null, now, now);
+        TelegramOutboundSendRecord initial = new TelegramOutboundSendRecord(
+                UUID.randomUUID(), idempotencyKey, safe(correlationId), chatHash, safe(operation), preview(message),
+                OutboundStatus.PENDING, 0, DEFAULT_MAX_ATTEMPTS, now, null, null, null, now, now);
         TelegramOutboundSendRecord record = repository.createIfAbsent(initial);
         if (record.status() == OutboundStatus.SENT || record.status() == OutboundStatus.DEAD_LETTERED) {
             return record;
@@ -46,6 +57,8 @@ public class TelegramOutboundSendService {
         try {
             TelegramSendResult result = client.send(message);
             return repository.markSent(idempotencyKey, result.telegramMessageId(), now);
+        } catch (TelegramOutboundClientNotConfiguredException ex) {
+            throw ex;
         } catch (TelegramClientException ex) {
             return handleFailure(record, categorize(ex), sanitize(ex.getMessage()), ex.retryAfter(), now);
         } catch (RuntimeException ex) {
@@ -68,7 +81,9 @@ public class TelegramOutboundSendService {
     }
 
     private boolean retryable(FailureCategory category) {
-        return category == FailureCategory.NETWORK || category == FailureCategory.TELEGRAM_5XX || category == FailureCategory.RATE_LIMIT;
+        return category == FailureCategory.NETWORK
+                || category == FailureCategory.TELEGRAM_5XX
+                || category == FailureCategory.RATE_LIMIT;
     }
 
     private Duration backoff(int attempt) {
@@ -103,10 +118,26 @@ public class TelegramOutboundSendService {
         return FailureCategory.UNKNOWN;
     }
 
+    private static TelegramOutboundClient configuredClient(ObjectProvider<TelegramOutboundClient> clientProvider) {
+        return clientProvider.getIfAvailable(() -> message -> {
+            throw new TelegramOutboundClientNotConfiguredException(
+                    "Telegram outbound client is not configured; provide a TelegramOutboundClient transport before enabling outbound sends.");
+        });
+    }
+
     private String idempotencyKey(TelegramRenderedMessage message, String correlationId, String operation) {
-        String basis = safe(correlationId) + ":" + safe(operation) + ":" + safe(message.chatId()) + ":" + safe(message.callbackQueryId()) + ":" + safe(message.text());
+        String basis = safe(correlationId)
+                + ":"
+                + safe(operation)
+                + ":"
+                + safe(message.chatId())
+                + ":"
+                + safe(message.callbackQueryId())
+                + ":"
+                + safe(message.text());
         try {
-            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(basis.getBytes(StandardCharsets.UTF_8)));
+            return HexFormat.of()
+                    .formatHex(MessageDigest.getInstance("SHA-256").digest(basis.getBytes(StandardCharsets.UTF_8)));
         } catch (Exception ex) {
             throw new IllegalStateException("Unable to derive Telegram outbound idempotency key.", ex);
         }
@@ -126,5 +157,11 @@ public class TelegramOutboundSendService {
 
     private String safe(String value) {
         return value == null ? "" : value;
+    }
+
+    private static final class TelegramOutboundClientNotConfiguredException extends IllegalStateException {
+        private TelegramOutboundClientNotConfiguredException(String message) {
+            super(message);
+        }
     }
 }

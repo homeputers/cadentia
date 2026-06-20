@@ -19,6 +19,7 @@ class TelegramOutboundSendServiceTest {
 
     @Test
     void retrySuccessUsesIdempotencyToPreventDuplicateSendAfterDelivered() {
+        // Arrange
         InMemoryTelegramOutboundRepository repository = new InMemoryTelegramOutboundRepository();
         ScriptedClient client = new ScriptedClient();
         client.results.add(new TelegramClientException(502, "Telegram server error token=secret"));
@@ -26,10 +27,12 @@ class TelegramOutboundSendServiceTest {
         TelegramOutboundSendService service = service(repository, client);
         TelegramRenderedMessage message = TelegramRenderedMessage.message("42", "Proposal ready", null);
 
+        // Act
         TelegramOutboundSendRecord first = service.send(message, "corr", "proposal");
         TelegramOutboundSendRecord second = service.send(message, "corr", "proposal");
         TelegramOutboundSendRecord third = service.send(message, "corr", "proposal");
 
+        // Assert
         assertThat(first.status()).isEqualTo(OutboundStatus.RETRY_SCHEDULED);
         assertThat(first.failureCategory()).isEqualTo(FailureCategory.TELEGRAM_5XX);
         assertThat(first.sanitizedFailureDetail()).contains("token=[redacted]");
@@ -40,13 +43,16 @@ class TelegramOutboundSendServiceTest {
 
     @Test
     void rateLimitSchedulesRetryUsingTelegramRetryAfter() {
+        // Arrange
         InMemoryTelegramOutboundRepository repository = new InMemoryTelegramOutboundRepository();
         ScriptedClient client = new ScriptedClient();
         client.results.add(new TelegramClientException(429, "Too many requests", Duration.ofSeconds(17)));
         TelegramOutboundSendService service = service(repository, client);
 
+        // Act
         TelegramOutboundSendRecord record = service.send(TelegramRenderedMessage.message("42", "Status", null), "corr", "status");
 
+        // Assert
         assertThat(record.status()).isEqualTo(OutboundStatus.RETRY_SCHEDULED);
         assertThat(record.failureCategory()).isEqualTo(FailureCategory.RATE_LIMIT);
         assertThat(record.nextAttemptAt()).isEqualTo(Instant.parse("2026-06-19T00:00:17Z"));
@@ -54,13 +60,16 @@ class TelegramOutboundSendServiceTest {
 
     @Test
     void permanentFailureIsDeadLetteredWithOperatorSafeMetadata() {
+        // Arrange
         InMemoryTelegramOutboundRepository repository = new InMemoryTelegramOutboundRepository();
         ScriptedClient client = new ScriptedClient();
         client.results.add(new TelegramClientException(403, "bot was blocked by the user webhook=secret raw prompt text: private"));
         TelegramOutboundSendService service = service(repository, client);
 
+        // Act
         TelegramOutboundSendRecord record = service.send(TelegramRenderedMessage.message("42", "token=secret proposal", null), "corr", "proposal");
 
+        // Assert
         assertThat(record.status()).isEqualTo(OutboundStatus.DEAD_LETTERED);
         assertThat(record.failureCategory()).isEqualTo(FailureCategory.CHAT_BLOCKED);
         assertThat(repository.deadLetters()).hasSize(1);

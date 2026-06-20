@@ -4,11 +4,28 @@ import java.time.Instant;
 import java.util.UUID;
 
 public final class TelegramOutboundModels {
-    private TelegramOutboundModels() {}
+    private TelegramOutboundModels() {
+    }
 
-    public enum OutboundStatus { PENDING, SENT, RETRY_SCHEDULED, DEAD_LETTERED, DUPLICATE_SUPPRESSED }
+    public enum OutboundStatus {
+        PENDING,
+        SENT,
+        RETRY_SCHEDULED,
+        DEAD_LETTERED,
+        DUPLICATE_SUPPRESSED
+    }
 
-    public enum FailureCategory { NETWORK, TELEGRAM_5XX, RATE_LIMIT, CHAT_BLOCKED, INVALID_CHAT, MALFORMED_REQUEST, UNAUTHORIZED_BOT, DISABLED_CHANNEL, UNKNOWN }
+    public enum FailureCategory {
+        NETWORK,
+        TELEGRAM_5XX,
+        RATE_LIMIT,
+        CHAT_BLOCKED,
+        INVALID_CHAT,
+        MALFORMED_REQUEST,
+        UNAUTHORIZED_BOT,
+        DISABLED_CHANNEL,
+        UNKNOWN
+    }
 
     public record TelegramOutboundSendRecord(
             UUID id,
@@ -25,7 +42,8 @@ public final class TelegramOutboundModels {
             FailureCategory failureCategory,
             String sanitizedFailureDetail,
             Instant createdAt,
-            Instant updatedAt) {}
+            Instant updatedAt) {
+    }
 
     public record TelegramDeadLetterRecord(
             UUID id,
@@ -38,7 +56,8 @@ public final class TelegramOutboundModels {
             String sanitizedFailureDetail,
             String sanitizedPreview,
             int attempts,
-            Instant createdAt) {}
+            Instant createdAt) {
+    }
 
     public record TelegramSendResult(boolean delivered, String telegramMessageId) {
         public static TelegramSendResult delivered(String telegramMessageId) {
