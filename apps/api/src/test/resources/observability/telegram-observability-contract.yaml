@@ -1,0 +1,40 @@
+metrics:
+  - cadentia_telegram_events_total
+  - cadentia_telegram_operation_latency_seconds
+  - cadentia_telegram_audit_events_total
+safeDimensions:
+  - channel
+  - operation
+  - outcome
+  - retry_count
+  - session_state
+  - error_category
+  - instance_ref
+  - actor_ref
+auditActions:
+  - telegram_bot_settings_changed
+  - telegram_account_linked
+  - telegram_account_unlinked
+  - telegram_channel_enabled
+  - telegram_channel_disabled
+  - telegram_outbound_paused
+  - telegram_secret_rotated
+  - telegram_webhook_registration_changed
+  - telegram_dead_letter_retried
+  - telegram_dead_letter_discarded
+alerts:
+  webhook_verification_spike: cadentia_telegram_events_total{operation="webhook_verification",outcome="failure"} > 5m_baseline_x3
+  sustained_send_failures: cadentia_telegram_events_total{operation="outbound_send_attempt",outcome="failure"} > 10_for_10m
+  rate_limit_saturation: cadentia_telegram_events_total{operation="rate_limit_response"} > 0_for_15m
+  dead_letter_growth: cadentia_telegram_events_total{operation="dead_letter_creation"} > 0_for_10m
+  session_transition_failures: cadentia_telegram_events_total{operation="session_transition",outcome="failure"} > 0_for_10m
+  api_facade_failures: cadentia_telegram_events_total{operation="downstream_api_call",outcome="failure"} > 0_for_10m
+  disabled_channel_mismatch: cadentia_telegram_events_total{operation="channel_disablement",outcome="mismatch"} > 0
+redactionMustNotContain:
+  - raw Telegram payloads
+  - message text
+  - bot credentials
+  - webhook secrets
+  - access tokens
+  - raw chat identifiers
+  - raw user identifiers
