@@ -13,6 +13,7 @@ import java.util.Map;
 import java.util.Objects;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -30,6 +31,7 @@ public class TelegramObservabilityRecorder {
         this(meterRegistry, ObservationRegistry.NOOP);
     }
 
+    @Autowired
     public TelegramObservabilityRecorder(MeterRegistry meterRegistry, ObservationRegistry observationRegistry) {
         this.meterRegistry = meterRegistry;
         this.observationRegistry = observationRegistry == null ? ObservationRegistry.NOOP : observationRegistry;
