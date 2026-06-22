@@ -23,30 +23,46 @@ public class TelegramOutboundSendService {
     private final TelegramOutboundClient client;
     private final TelegramIdentifierHasher hasher;
     private final Clock clock;
+    private final TelegramObservabilityRecorder observabilityRecorder;
+    private final TelegramOperationalControlService controlService;
 
     @Autowired
     public TelegramOutboundSendService(
             TelegramOutboundRepository repository,
             ObjectProvider<TelegramOutboundClient> clientProvider,
-            TelegramIdentifierHasher hasher) {
-        this(repository, configuredClient(clientProvider), hasher, Clock.systemUTC());
+            TelegramIdentifierHasher hasher,
+            TelegramObservabilityRecorder observabilityRecorder,
+            TelegramOperationalControlService controlService) {
+        this(repository, configuredClient(clientProvider), hasher, Clock.systemUTC(), observabilityRecorder, controlService);
     }
 
     public TelegramOutboundSendService(
             TelegramOutboundRepository repository, TelegramOutboundClient client, TelegramIdentifierHasher hasher) {
-        this(repository, client, hasher, Clock.systemUTC());
+        this(repository, client, hasher, Clock.systemUTC(), null, null);
     }
 
     TelegramOutboundSendService(
             TelegramOutboundRepository repository, TelegramOutboundClient client, TelegramIdentifierHasher hasher, Clock clock) {
+        this(repository, client, hasher, clock, null, null);
+    }
+
+    TelegramOutboundSendService(
+            TelegramOutboundRepository repository, TelegramOutboundClient client, TelegramIdentifierHasher hasher, Clock clock,
+            TelegramObservabilityRecorder observabilityRecorder, TelegramOperationalControlService controlService) {
         this.repository = repository;
         this.client = client;
         this.hasher = hasher;
         this.clock = clock;
+        this.observabilityRecorder = observabilityRecorder;
+        this.controlService = controlService;
     }
 
     public TelegramOutboundSendRecord send(TelegramRenderedMessage message, String correlationId, String operation) {
         Instant now = clock.instant();
+        if (controlService != null && controlService.outboundPaused(null)) {
+            record("outbound_send_attempt", "paused", 0, "none", "outbound_paused", now, null, null);
+            throw new IllegalStateException("Telegram outbound sends are paused for this channel.");
+        }
         String idempotencyKey = idempotencyKey(message, correlationId, operation);
         String chatHash = message.chatId() == null ? "callback-only" : hasher.hash("telegram", message.chatId());
         TelegramOutboundSendRecord initial = new TelegramOutboundSendRecord(
@@ -57,13 +73,20 @@ public class TelegramOutboundSendService {
             return record;
         }
         try {
+            record("outbound_send_attempt", "attempted", record.attempts(), "none", "none", now, null, chatHash);
             TelegramSendResult result = client.send(message);
-            return repository.markSent(idempotencyKey, result.telegramMessageId(), now);
+            TelegramOutboundSendRecord sent = repository.markSent(idempotencyKey, result.telegramMessageId(), now);
+            record("outbound_send_attempt", "sent", sent.attempts(), "none", "none", now, null, chatHash);
+            return sent;
         } catch (TelegramOutboundClientNotConfiguredException ex) {
             throw ex;
         } catch (TelegramClientException ex) {
-            return handleFailure(record, categorize(ex), sanitize(ex.getMessage()), ex.retryAfter(), now);
+            FailureCategory category = categorize(ex);
+            record(category == FailureCategory.RATE_LIMIT ? "rate_limit_response" : "outbound_send_attempt",
+                    "failure", record.attempts() + 1, "none", category.name(), now, null, chatHash);
+            return handleFailure(record, category, sanitize(ex.getMessage()), ex.retryAfter(), now);
         } catch (RuntimeException ex) {
+            record("outbound_send_attempt", "failure", record.attempts() + 1, "none", FailureCategory.NETWORK.name(), now, null, chatHash);
             return handleFailure(record, FailureCategory.NETWORK, sanitize(ex.getMessage()), null, now);
         }
     }
@@ -76,10 +99,21 @@ public class TelegramOutboundSendService {
             Instant now) {
         if (!retryable(category) || record.attempts() + 1 >= record.maxAttempts()) {
             repository.deadLetter(record, category.name(), detail, now);
+            record("dead_letter_creation", "created", record.attempts() + 1, "none", category.name(), now, null, record.chatHash());
             return repository.findByIdempotencyKey(record.idempotencyKey()).orElse(record);
         }
         Instant retryAt = retryAfter == null ? now.plus(backoff(record.attempts() + 1)) : now.plus(retryAfter);
-        return repository.markRetry(record, category.name(), detail, retryAt, now);
+        TelegramOutboundSendRecord retry = repository.markRetry(record, category.name(), detail, retryAt, now);
+        record("outbound_retry", "scheduled", retry.attempts(), "none", category.name(), now, null, record.chatHash());
+        return retry;
+    }
+
+    private void record(String operation, String outcome, int retryCount, String sessionState, String errorCategory,
+            Instant startedAt, String instanceRef, String actorRef) {
+        if (observabilityRecorder != null) {
+            observabilityRecorder.record(operation, outcome, Duration.between(startedAt, clock.instant()), retryCount,
+                    sessionState, errorCategory, instanceRef, actorRef);
+        }
     }
 
     private boolean retryable(FailureCategory category) {

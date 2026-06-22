@@ -207,6 +207,13 @@ TelegramBotStatusResponse:
     pendingUpdateCount:
       type: integer
       minimum: 0
+    outboundPaused:
+      type: boolean
+    deadLetterCount:
+      type: integer
+      minimum: 0
+    webhookRegistration:
+      $ref: '#/TelegramWebhookRegistrationStatus' 
 TelegramChannelSettingsRequest:
   type: object
   required:
@@ -214,6 +221,9 @@ TelegramChannelSettingsRequest:
   properties:
     enabled:
       type: boolean
+    outboundPaused:
+      type: boolean
+      default: false
     disabledReason:
       type: string
       maxLength: 280
@@ -331,3 +341,60 @@ TelegramSessionCancellationRequest:
     reason:
       type: string
       maxLength: 280
+
+TelegramWebhookRegistrationStatus:
+  type: object
+  required:
+  - registered
+  - matchesExpectedUrl
+  - checkedAt
+  properties:
+    registered:
+      type: boolean
+    matchesExpectedUrl:
+      type: boolean
+    pendingUpdateCount:
+      type: integer
+      minimum: 0
+    lastErrorCategory:
+      type: string
+      enum:
+      - NONE
+      - TELEGRAM_5XX
+      - UNAUTHORIZED_BOT
+      - RATE_LIMIT
+      - NETWORK
+      - UNKNOWN
+    checkedAt:
+      type: string
+      format: date-time
+TelegramDeadLetterActionRequest:
+  type: object
+  required:
+  - action
+  properties:
+    action:
+      type: string
+      enum:
+      - RETRY
+      - DISCARD
+    reason:
+      type: string
+      maxLength: 280
+TelegramDeadLetterActionResponse:
+  type: object
+  required:
+  - deadLetterId
+  - action
+  - status
+  properties:
+    deadLetterId:
+      type: string
+      format: uuid
+    action:
+      type: string
+    status:
+      type: string
+      enum:
+      - QUEUED
+      - DISCARDED

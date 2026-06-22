@@ -271,3 +271,72 @@
         description: Session was not found for this church instance.
       '409':
         description: Session cannot be cancelled from its current state.
+
+"/admin/telegram/bots/{botId}/webhook-registration":
+  get:
+    tags:
+    - Telegram
+    operationId: verifyTelegramWebhookRegistration
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - ADMIN
+    summary: Verify the current Telegram webhook registration without exposing secrets
+    parameters:
+    - in: path
+      name: botId
+      required: true
+      schema:
+        type: string
+    - in: query
+      name: churchInstanceId
+      required: true
+      schema:
+        type: string
+    responses:
+      '200':
+        description: Safe webhook registration status.
+        content:
+          application/json:
+            schema:
+              $ref: ../components/schemas/telegram.yaml#/TelegramWebhookRegistrationStatus
+      '401':
+        description: Authentication is required.
+      '403':
+        description: Caller is not authorized for the requested church instance.
+"/admin/telegram/dead-letters/{deadLetterId}:action":
+  post:
+    tags:
+    - Telegram
+    operationId: actOnTelegramDeadLetter
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - ADMIN
+    summary: Retry or discard an operator-safe Telegram outbound dead letter
+    parameters:
+    - in: path
+      name: deadLetterId
+      required: true
+      schema:
+        type: string
+        format: uuid
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/telegram.yaml#/TelegramDeadLetterActionRequest
+    responses:
+      '200':
+        description: Dead-letter action result.
+        content:
+          application/json:
+            schema:
+              $ref: ../components/schemas/telegram.yaml#/TelegramDeadLetterActionResponse
+      '401':
+        description: Authentication is required.
+      '403':
+        description: Caller is not authorized.
+      '404':
+        description: Dead letter was not found.
