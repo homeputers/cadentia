@@ -15,6 +15,11 @@ Do **not** mark Telegram production-ready until all of the following are complet
 
 ## Required Deployment Inputs
 
+Before enabling production traffic, create the Telegram bot through BotFather,
+store all secrets by reference, deploy Cadentia with Telegram disabled, validate
+startup, register the webhook, run smoke tests, and only then enable inbound
+processing for the target church instance.
+
 ### Secret references
 
 Store values in the deployment secret manager; do not put literal credentials in manifests, logs, fixtures, or support tickets.
@@ -38,6 +43,24 @@ Store values in the deployment secret manager; do not put literal credentials in
 | `cadentia.telegram.webhook.max-payload-bytes` | Keep at or below the documented Telegram payload and service limit. |
 | `cadentia.telegram.webhook.max-update-age` | Replay/staleness window for message dates. |
 
+Example production-style configuration, using placeholder secret references:
+
+```yaml
+cadentia:
+  telegram:
+    enabled: false
+    settings-enabled: false
+    callback-ttl: PT30M
+    session-inactivity-ttl: PT30M
+    session-absolute-ttl: PT4H
+    webhook:
+      bot-token-ref: secret://cadentia/prod/telegram/bot-token
+      secret-token-ref: secret://cadentia/prod/telegram/webhook-secret
+      previous-secret-token-ref: ""
+      max-payload-bytes: 1048576
+      max-update-age: PT10M
+```
+
 ### Webhook URL format
 
 Use the HTTPS URL for the deployed API instance:
@@ -47,6 +70,68 @@ https://<public-api-host>/telegram/webhooks/<botId>
 ```
 
 `<botId>` must be an opaque deployment identifier, not the bot token and not a human user's chat ID.
+
+## Production Setup Procedure
+
+Use this procedure for a new production Telegram integration. Replace all
+angle-bracket placeholders with environment-specific values. Do not paste real
+tokens into tickets, shell history shared with other operators, or runbook
+updates.
+
+1. **Create or identify the Telegram bot.**
+   - Use BotFather to create the bot or retrieve the existing bot token.
+   - Record the bot username for operator reference only.
+   - Store the bot token in the secret manager path referenced by
+     `cadentia.telegram.webhook.bot-token-ref`.
+2. **Create the webhook secret token.**
+   - Generate a high-entropy token distinct from the bot token.
+   - Store it at `cadentia.telegram.webhook.secret-token-ref`.
+   - Leave `previous-secret-token-ref` empty for first-time setup.
+3. **Create the identifier hash secret.**
+   - Store the hash key in the deployment secret manager.
+   - Confirm identity-linking jobs and support tooling use the same reference.
+4. **Deploy Cadentia with Telegram disabled.**
+   - Set `cadentia.telegram.enabled=false`.
+   - Confirm application startup succeeds, database migrations are complete, and
+     the API health endpoint is healthy.
+5. **Validate secret resolution before public traffic.**
+   - Confirm the runtime can resolve bot-token, webhook-secret, and identifier
+     hash references.
+   - Expected failure if a required reference is missing: webhook requests are
+     rejected or return a retryable server failure; do not enable the channel.
+6. **Register the Telegram webhook.**
+   - Use a secure operator terminal with the bot token loaded from the secret
+     manager into a local environment variable.
+   - Register the webhook with the target URL and secret token:
+
+```bash
+curl -sS -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
+  -d "url=https://<public-api-host>/telegram/webhooks/<botId>" \
+  -d "secret_token=${TELEGRAM_WEBHOOK_SECRET}" \
+  -d "drop_pending_updates=false"
+```
+
+7. **Verify Telegram registration.**
+
+```bash
+curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getWebhookInfo"
+```
+
+   Confirm `url` matches the Cadentia webhook URL and investigate any
+   `last_error_message` or unexpected pending updates before proceeding.
+8. **Enable Cadentia Telegram inbound.**
+   - Set `cadentia.telegram.enabled=true` or enable the instance-level Telegram
+     channel after successful registration.
+   - Keep `/settings` disabled unless separately approved.
+9. **Run smoke tests and observe telemetry.**
+   - Complete the smoke checklist below with an authorized test account.
+   - Confirm logs and metrics include correlation IDs and do not include raw
+     tokens, webhook secrets, or unnecessary Telegram profile data.
+10. **Record rollout evidence.**
+    - Capture the deployment version, bot ID, webhook URL, smoke-test timestamp,
+      and operator names in the deployment record.
+    - Do not record bot token values, webhook secret values, chat IDs, or raw
+      Telegram messages.
 
 ## Local Development Mode
 
@@ -145,6 +230,20 @@ Expected startup or request-time validation failures:
 4. Redeploy/reload and re-register the webhook.
 5. Run smoke tests for `/start`, `/newsetlist`, confirmation, outbound send, and dead-letter absence.
 6. Re-enable the channel when successful.
+
+## Deregister the Webhook
+
+Use this when rolling back the channel, changing public hosts, or stopping
+Telegram delivery during an incident:
+
+```bash
+curl -sS -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/deleteWebhook" \
+  -d "drop_pending_updates=false"
+```
+
+Set `drop_pending_updates=true` only when incident command explicitly accepts
+losing queued Telegram updates. Preserve Cadentia retry/dead-letter records
+according to retention policy.
 
 ## Rollback and Channel Disablement
 
