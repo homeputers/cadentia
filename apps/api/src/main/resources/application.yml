@@ -31,6 +31,9 @@ cadentia:
   instance:
     id: ${CADENTIA_INSTANCE_ID:local-development}
   telegram:
+    outbound:
+      bot-token-ref: ${CADENTIA_TELEGRAM_OUTBOUND_BOT_TOKEN_REF:${CADENTIA_TELEGRAM_BOT_TOKEN_REF:env:CADENTIA_TELEGRAM_BOT_TOKEN}}
+      bot-api-base-url: ${CADENTIA_TELEGRAM_BOT_API_BASE_URL:https://api.telegram.org}
     webhook:
       bot-token-ref: ${CADENTIA_TELEGRAM_BOT_TOKEN_REF:env:CADENTIA_TELEGRAM_BOT_TOKEN}
       secret-token-ref: ${CADENTIA_TELEGRAM_WEBHOOK_SECRET_REF:env:CADENTIA_TELEGRAM_WEBHOOK_SECRET}
