@@ -16,7 +16,7 @@ backend API, RBAC, provenance rules, and audit trail authoritative.
 
 Overall status: Planned.
 
-- Subtask 1: Planned - admin web application architecture, framework decision,
+- Subtask 1: Complete - admin web application architecture, framework decision,
   package scaffolding, and deployment contract.
 - Subtask 2: Planned - OpenAPI-first API gap closure and generated typed client
   workflow.
