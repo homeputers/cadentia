@@ -1,0 +1,10 @@
+{
+  "update_id": 9002,
+  "message": {
+    "message_id": 102,
+    "date": 1781870410,
+    "chat": {"id": 42001, "type": "private"},
+    "from": {"id": 99001, "is_bot": false, "language_code": "en"},
+    "text": "Psalm 100 thanksgiving and joy"
+  }
+}

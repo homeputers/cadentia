@@ -1,0 +1,10 @@
+{
+  "update_id": 9001,
+  "message": {
+    "message_id": 101,
+    "date": 1781870400,
+    "chat": {"id": 42001, "type": "private"},
+    "from": {"id": 99001, "is_bot": false, "language_code": "en"},
+    "text": "/newsetlist"
+  }
+}

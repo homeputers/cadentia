@@ -1,0 +1,14 @@
+{
+  "update_id": 9003,
+  "callback_query": {
+    "id": "callback-confirm-9003",
+    "from": {"id": 99001, "is_bot": false, "language_code": "en"},
+    "message": {
+      "message_id": 103,
+      "date": 1781870420,
+      "chat": {"id": 42001, "type": "private"},
+      "text": "Confirm generated setlist"
+    },
+    "data": "cad:v1:confirm"
+  }
+}

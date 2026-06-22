@@ -1,0 +1,14 @@
+{
+  "update_id": 9005,
+  "callback_query": {
+    "id": "callback-stale-9005",
+    "from": {"id": 99001, "is_bot": false, "language_code": "en"},
+    "message": {
+      "message_id": 105,
+      "date": 1781860000,
+      "chat": {"id": 42001, "type": "private"},
+      "text": "Expired menu"
+    },
+    "data": "cad:v1:confirm"
+  }
+}

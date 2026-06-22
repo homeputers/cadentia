@@ -1,0 +1,14 @@
+{
+  "update_id": 9004,
+  "callback_query": {
+    "id": "callback-cancel-9004",
+    "from": {"id": 99001, "is_bot": false, "language_code": "en"},
+    "message": {
+      "message_id": 104,
+      "date": 1781870430,
+      "chat": {"id": 42001, "type": "private"},
+      "text": "Cancel generated setlist"
+    },
+    "data": "cad:v1:cancel"
+  }
+}
