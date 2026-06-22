@@ -1,4 +1,4 @@
-"/api/admin/session":
+"/admin/session":
   get:
     tags:
     - AdminOperations
@@ -22,7 +22,7 @@
         "$ref": "../components/shared/responses.yaml#/Unauthorized"
       '403':
         "$ref": "../components/shared/responses.yaml#/Forbidden"
-"/api/admin/api-gap-matrix":
+"/admin/api-gap-matrix":
   get:
     tags:
     - AdminOperations
@@ -41,7 +41,7 @@
           application/json:
             schema:
               "$ref": "../components/schemas/admin-operations.yaml#/AdminApiGapMatrixResponse"
-"/api/admin/diagnostics":
+"/admin/diagnostics":
   get:
     tags:
     - AdminOperations
@@ -60,7 +60,7 @@
           application/json:
             schema:
               "$ref": "../components/schemas/admin-operations.yaml#/AdminDiagnosticsResponse"
-"/api/admin/instance-configuration":
+"/admin/instance-configuration":
   get:
     tags:
     - AdminOperations
@@ -105,7 +105,7 @@
               "$ref": "../components/schemas/admin-operations.yaml#/AdminInstanceConfigurationResponse"
       '409':
         "$ref": "../components/shared/responses.yaml#/Conflict"
-"/api/admin/feature-flags":
+"/admin/feature-flags":
   get:
     tags:
     - AdminOperations
@@ -124,7 +124,7 @@
           application/json:
             schema:
               "$ref": "../components/schemas/admin-operations.yaml#/AdminFeatureFlagListResponse"
-"/api/admin/feature-flags/{flagKey}:preview":
+"/admin/feature-flags/{flagKey}:preview":
   post:
     tags:
     - AdminOperations
@@ -154,7 +154,7 @@
           application/json:
             schema:
               "$ref": "../components/schemas/admin-operations.yaml#/AdminFeatureFlagChangePreviewResponse"
-"/api/admin/feature-flags/{flagKey}:confirm":
+"/admin/feature-flags/{flagKey}:confirm":
   post:
     tags:
     - AdminOperations

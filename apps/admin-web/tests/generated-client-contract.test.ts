@@ -11,9 +11,9 @@ describe('generated Cadentia API route contract', () => {
     });
 
     it('keeps high-risk admin workflows behind preview and confirmation shapes', () => {
-        expect(cadentiaApiRoutes).toContain('/api/admin/rollback-previews');
-        expect(cadentiaApiRoutes).toContain('/api/admin/rollbacks');
-        expect(cadentiaApiRoutes).toContain('/api/admin/feature-flags/{flagKey}:preview');
-        expect(cadentiaApiRoutes).toContain('/api/admin/feature-flags/{flagKey}:confirm');
+        expect(cadentiaApiRoutes).toContain('/admin/rollback-previews');
+        expect(cadentiaApiRoutes).toContain('/admin/rollbacks');
+        expect(cadentiaApiRoutes).toContain('/admin/feature-flags/{flagKey}:preview');
+        expect(cadentiaApiRoutes).toContain('/admin/feature-flags/{flagKey}:confirm');
     });
 });

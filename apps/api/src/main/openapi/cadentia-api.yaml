@@ -81,40 +81,40 @@ paths:
     "$ref": "./paths/feedback-tuning.yaml#/~1feedback~1scopes~1{scopeLayer}~1{scopeId}~1state"
   "/feedback/scopes/{scopeLayer}/{scopeId}/reset":
     "$ref": "./paths/feedback-tuning.yaml#/~1feedback~1scopes~1{scopeLayer}~1{scopeId}~1reset"
-  "/api/admin/session":
-    "$ref": "./paths/admin-operations.yaml#/~1api~1admin~1session"
-  "/api/admin/api-gap-matrix":
-    "$ref": "./paths/admin-operations.yaml#/~1api~1admin~1api-gap-matrix"
-  "/api/admin/diagnostics":
-    "$ref": "./paths/admin-operations.yaml#/~1api~1admin~1diagnostics"
-  "/api/admin/instance-configuration":
-    "$ref": "./paths/admin-operations.yaml#/~1api~1admin~1instance-configuration"
-  "/api/admin/feature-flags":
-    "$ref": "./paths/admin-operations.yaml#/~1api~1admin~1feature-flags"
-  "/api/admin/feature-flags/{flagKey}:preview":
-    "$ref": "./paths/admin-operations.yaml#/~1api~1admin~1feature-flags~1{flagKey}:preview"
-  "/api/admin/feature-flags/{flagKey}:confirm":
-    "$ref": "./paths/admin-operations.yaml#/~1api~1admin~1feature-flags~1{flagKey}:confirm"
-  "/api/admin/import-candidates":
-    "$ref": "./paths/admin-review.yaml#/~1api~1admin~1import-candidates"
-  "/api/admin/import-candidates/{candidateId}":
-    "$ref": "./paths/admin-review.yaml#/~1api~1admin~1import-candidates~1{candidateId}"
-  "/api/admin/import-candidates/{candidateId}/duplicates":
-    "$ref": "./paths/admin-review.yaml#/~1api~1admin~1import-candidates~1{candidateId}~1duplicates"
-  "/api/admin/import-candidates/{candidateId}/audit-history":
-    "$ref": "./paths/admin-review.yaml#/~1api~1admin~1import-candidates~1{candidateId}~1audit-history"
-  "/api/admin/import-candidates/{candidateId}/moderation-flags":
-    "$ref": "./paths/admin-review.yaml#/~1api~1admin~1import-candidates~1{candidateId}~1moderation-flags"
-  "/api/admin/moderation-flags/{flagId}/assign":
-    "$ref": "./paths/admin-review.yaml#/~1api~1admin~1moderation-flags~1{flagId}~1assign"
-  "/api/admin/moderation-flags/{flagId}/resolve":
-    "$ref": "./paths/admin-review.yaml#/~1api~1admin~1moderation-flags~1{flagId}~1resolve"
-  "/api/admin/moderation-flags/{flagId}/escalate":
-    "$ref": "./paths/admin-review.yaml#/~1api~1admin~1moderation-flags~1{flagId}~1escalate"
-  "/api/admin/rollback-previews":
-    "$ref": "./paths/admin-review.yaml#/~1api~1admin~1rollback-previews"
-  "/api/admin/rollbacks":
-    "$ref": "./paths/admin-review.yaml#/~1api~1admin~1rollbacks"
+  "/admin/session":
+    "$ref": "./paths/admin-operations.yaml#/~1admin~1session"
+  "/admin/api-gap-matrix":
+    "$ref": "./paths/admin-operations.yaml#/~1admin~1api-gap-matrix"
+  "/admin/diagnostics":
+    "$ref": "./paths/admin-operations.yaml#/~1admin~1diagnostics"
+  "/admin/instance-configuration":
+    "$ref": "./paths/admin-operations.yaml#/~1admin~1instance-configuration"
+  "/admin/feature-flags":
+    "$ref": "./paths/admin-operations.yaml#/~1admin~1feature-flags"
+  "/admin/feature-flags/{flagKey}:preview":
+    "$ref": "./paths/admin-operations.yaml#/~1admin~1feature-flags~1{flagKey}:preview"
+  "/admin/feature-flags/{flagKey}:confirm":
+    "$ref": "./paths/admin-operations.yaml#/~1admin~1feature-flags~1{flagKey}:confirm"
+  "/admin/import-candidates":
+    "$ref": "./paths/admin-review.yaml#/~1admin~1import-candidates"
+  "/admin/import-candidates/{candidateId}":
+    "$ref": "./paths/admin-review.yaml#/~1admin~1import-candidates~1{candidateId}"
+  "/admin/import-candidates/{candidateId}/duplicates":
+    "$ref": "./paths/admin-review.yaml#/~1admin~1import-candidates~1{candidateId}~1duplicates"
+  "/admin/import-candidates/{candidateId}/audit-history":
+    "$ref": "./paths/admin-review.yaml#/~1admin~1import-candidates~1{candidateId}~1audit-history"
+  "/admin/import-candidates/{candidateId}/moderation-flags":
+    "$ref": "./paths/admin-review.yaml#/~1admin~1import-candidates~1{candidateId}~1moderation-flags"
+  "/admin/moderation-flags/{flagId}/assign":
+    "$ref": "./paths/admin-review.yaml#/~1admin~1moderation-flags~1{flagId}~1assign"
+  "/admin/moderation-flags/{flagId}/resolve":
+    "$ref": "./paths/admin-review.yaml#/~1admin~1moderation-flags~1{flagId}~1resolve"
+  "/admin/moderation-flags/{flagId}/escalate":
+    "$ref": "./paths/admin-review.yaml#/~1admin~1moderation-flags~1{flagId}~1escalate"
+  "/admin/rollback-previews":
+    "$ref": "./paths/admin-review.yaml#/~1admin~1rollback-previews"
+  "/admin/rollbacks":
+    "$ref": "./paths/admin-review.yaml#/~1admin~1rollbacks"
   "/conversation-sessions/{sessionId}":
     "$ref": "./paths/conversation-sessions.yaml#/~1conversation-sessions~1{sessionId}"
   "/conversation-sessions/{sessionId}/slots":

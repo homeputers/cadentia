@@ -2,31 +2,31 @@
 // Do not edit by hand.
 
 export type CadentiaApiRoute =
+    | '/admin/api-gap-matrix'
+    | '/admin/diagnostics'
+    | '/admin/feature-flags'
+    | '/admin/feature-flags/{flagKey}:confirm'
+    | '/admin/feature-flags/{flagKey}:preview'
+    | '/admin/import-candidates'
+    | '/admin/import-candidates/{candidateId}'
+    | '/admin/import-candidates/{candidateId}/audit-history'
+    | '/admin/import-candidates/{candidateId}/duplicates'
+    | '/admin/import-candidates/{candidateId}/moderation-flags'
+    | '/admin/instance-configuration'
+    | '/admin/moderation-flags/{flagId}/assign'
+    | '/admin/moderation-flags/{flagId}/escalate'
+    | '/admin/moderation-flags/{flagId}/resolve'
     | '/admin/plugin-enablements/{enablementId}:disable'
     | '/admin/plugins'
     | '/admin/plugins/{pluginVersionId}:revoke'
     | '/admin/plugins/{pluginVersionId}/configuration-snapshots'
     | '/admin/plugins/{pluginVersionId}/enablements'
     | '/admin/plugins/{pluginVersionId}/history'
+    | '/admin/rollback-previews'
+    | '/admin/rollbacks'
+    | '/admin/session'
     | '/admin/telegram/bots/{botId}/status'
     | '/admin/telegram/channels/{channelId}/settings'
-    | '/api/admin/api-gap-matrix'
-    | '/api/admin/diagnostics'
-    | '/api/admin/feature-flags'
-    | '/api/admin/feature-flags/{flagKey}:confirm'
-    | '/api/admin/feature-flags/{flagKey}:preview'
-    | '/api/admin/import-candidates'
-    | '/api/admin/import-candidates/{candidateId}'
-    | '/api/admin/import-candidates/{candidateId}/audit-history'
-    | '/api/admin/import-candidates/{candidateId}/duplicates'
-    | '/api/admin/import-candidates/{candidateId}/moderation-flags'
-    | '/api/admin/instance-configuration'
-    | '/api/admin/moderation-flags/{flagId}/assign'
-    | '/api/admin/moderation-flags/{flagId}/escalate'
-    | '/api/admin/moderation-flags/{flagId}/resolve'
-    | '/api/admin/rollback-previews'
-    | '/api/admin/rollbacks'
-    | '/api/admin/session'
     | '/asset-attachments'
     | '/asset-attachments/{attachmentId}'
     | '/assets'
@@ -87,31 +87,31 @@ export type CadentiaApiRoute =
     | '/telegram/webhooks/{botId}';
 
 export const cadentiaApiRoutes = [
+    '/admin/api-gap-matrix',
+    '/admin/diagnostics',
+    '/admin/feature-flags',
+    '/admin/feature-flags/{flagKey}:confirm',
+    '/admin/feature-flags/{flagKey}:preview',
+    '/admin/import-candidates',
+    '/admin/import-candidates/{candidateId}',
+    '/admin/import-candidates/{candidateId}/audit-history',
+    '/admin/import-candidates/{candidateId}/duplicates',
+    '/admin/import-candidates/{candidateId}/moderation-flags',
+    '/admin/instance-configuration',
+    '/admin/moderation-flags/{flagId}/assign',
+    '/admin/moderation-flags/{flagId}/escalate',
+    '/admin/moderation-flags/{flagId}/resolve',
     '/admin/plugin-enablements/{enablementId}:disable',
     '/admin/plugins',
     '/admin/plugins/{pluginVersionId}:revoke',
     '/admin/plugins/{pluginVersionId}/configuration-snapshots',
     '/admin/plugins/{pluginVersionId}/enablements',
     '/admin/plugins/{pluginVersionId}/history',
+    '/admin/rollback-previews',
+    '/admin/rollbacks',
+    '/admin/session',
     '/admin/telegram/bots/{botId}/status',
     '/admin/telegram/channels/{channelId}/settings',
-    '/api/admin/api-gap-matrix',
-    '/api/admin/diagnostics',
-    '/api/admin/feature-flags',
-    '/api/admin/feature-flags/{flagKey}:confirm',
-    '/api/admin/feature-flags/{flagKey}:preview',
-    '/api/admin/import-candidates',
-    '/api/admin/import-candidates/{candidateId}',
-    '/api/admin/import-candidates/{candidateId}/audit-history',
-    '/api/admin/import-candidates/{candidateId}/duplicates',
-    '/api/admin/import-candidates/{candidateId}/moderation-flags',
-    '/api/admin/instance-configuration',
-    '/api/admin/moderation-flags/{flagId}/assign',
-    '/api/admin/moderation-flags/{flagId}/escalate',
-    '/api/admin/moderation-flags/{flagId}/resolve',
-    '/api/admin/rollback-previews',
-    '/api/admin/rollbacks',
-    '/api/admin/session',
     '/asset-attachments',
     '/asset-attachments/{attachmentId}',
     '/assets',
@@ -173,31 +173,31 @@ export const cadentiaApiRoutes = [
 ] as const satisfies readonly CadentiaApiRoute[];
 
 export const cadentiaApiRouteRefs: Record<CadentiaApiRoute, string> = {
+    '/admin/api-gap-matrix': './paths/admin-operations.yaml#/~1admin~1api-gap-matrix',
+    '/admin/diagnostics': './paths/admin-operations.yaml#/~1admin~1diagnostics',
+    '/admin/feature-flags': './paths/admin-operations.yaml#/~1admin~1feature-flags',
+    '/admin/feature-flags/{flagKey}:confirm': './paths/admin-operations.yaml#/~1admin~1feature-flags~1{flagKey}:confirm',
+    '/admin/feature-flags/{flagKey}:preview': './paths/admin-operations.yaml#/~1admin~1feature-flags~1{flagKey}:preview',
+    '/admin/import-candidates': './paths/admin-review.yaml#/~1admin~1import-candidates',
+    '/admin/import-candidates/{candidateId}': './paths/admin-review.yaml#/~1admin~1import-candidates~1{candidateId}',
+    '/admin/import-candidates/{candidateId}/audit-history': './paths/admin-review.yaml#/~1admin~1import-candidates~1{candidateId}~1audit-history',
+    '/admin/import-candidates/{candidateId}/duplicates': './paths/admin-review.yaml#/~1admin~1import-candidates~1{candidateId}~1duplicates',
+    '/admin/import-candidates/{candidateId}/moderation-flags': './paths/admin-review.yaml#/~1admin~1import-candidates~1{candidateId}~1moderation-flags',
+    '/admin/instance-configuration': './paths/admin-operations.yaml#/~1admin~1instance-configuration',
+    '/admin/moderation-flags/{flagId}/assign': './paths/admin-review.yaml#/~1admin~1moderation-flags~1{flagId}~1assign',
+    '/admin/moderation-flags/{flagId}/escalate': './paths/admin-review.yaml#/~1admin~1moderation-flags~1{flagId}~1escalate',
+    '/admin/moderation-flags/{flagId}/resolve': './paths/admin-review.yaml#/~1admin~1moderation-flags~1{flagId}~1resolve',
     '/admin/plugin-enablements/{enablementId}:disable': './paths/plugins.yaml#/~1admin~1plugin-enablements~1{enablementId}:disable',
     '/admin/plugins': './paths/plugins.yaml#/~1admin~1plugins',
     '/admin/plugins/{pluginVersionId}:revoke': './paths/plugins.yaml#/~1admin~1plugins~1{pluginVersionId}:revoke',
     '/admin/plugins/{pluginVersionId}/configuration-snapshots': './paths/plugins.yaml#/~1admin~1plugins~1{pluginVersionId}~1configuration-snapshots',
     '/admin/plugins/{pluginVersionId}/enablements': './paths/plugins.yaml#/~1admin~1plugins~1{pluginVersionId}~1enablements',
     '/admin/plugins/{pluginVersionId}/history': './paths/plugins.yaml#/~1admin~1plugins~1{pluginVersionId}~1history',
+    '/admin/rollback-previews': './paths/admin-review.yaml#/~1admin~1rollback-previews',
+    '/admin/rollbacks': './paths/admin-review.yaml#/~1admin~1rollbacks',
+    '/admin/session': './paths/admin-operations.yaml#/~1admin~1session',
     '/admin/telegram/bots/{botId}/status': './paths/telegram.yaml#/~1admin~1telegram~1bots~1{botId}~1status',
     '/admin/telegram/channels/{channelId}/settings': './paths/telegram.yaml#/~1admin~1telegram~1channels~1{channelId}~1settings',
-    '/api/admin/api-gap-matrix': './paths/admin-operations.yaml#/~1api~1admin~1api-gap-matrix',
-    '/api/admin/diagnostics': './paths/admin-operations.yaml#/~1api~1admin~1diagnostics',
-    '/api/admin/feature-flags': './paths/admin-operations.yaml#/~1api~1admin~1feature-flags',
-    '/api/admin/feature-flags/{flagKey}:confirm': './paths/admin-operations.yaml#/~1api~1admin~1feature-flags~1{flagKey}:confirm',
-    '/api/admin/feature-flags/{flagKey}:preview': './paths/admin-operations.yaml#/~1api~1admin~1feature-flags~1{flagKey}:preview',
-    '/api/admin/import-candidates': './paths/admin-review.yaml#/~1api~1admin~1import-candidates',
-    '/api/admin/import-candidates/{candidateId}': './paths/admin-review.yaml#/~1api~1admin~1import-candidates~1{candidateId}',
-    '/api/admin/import-candidates/{candidateId}/audit-history': './paths/admin-review.yaml#/~1api~1admin~1import-candidates~1{candidateId}~1audit-history',
-    '/api/admin/import-candidates/{candidateId}/duplicates': './paths/admin-review.yaml#/~1api~1admin~1import-candidates~1{candidateId}~1duplicates',
-    '/api/admin/import-candidates/{candidateId}/moderation-flags': './paths/admin-review.yaml#/~1api~1admin~1import-candidates~1{candidateId}~1moderation-flags',
-    '/api/admin/instance-configuration': './paths/admin-operations.yaml#/~1api~1admin~1instance-configuration',
-    '/api/admin/moderation-flags/{flagId}/assign': './paths/admin-review.yaml#/~1api~1admin~1moderation-flags~1{flagId}~1assign',
-    '/api/admin/moderation-flags/{flagId}/escalate': './paths/admin-review.yaml#/~1api~1admin~1moderation-flags~1{flagId}~1escalate',
-    '/api/admin/moderation-flags/{flagId}/resolve': './paths/admin-review.yaml#/~1api~1admin~1moderation-flags~1{flagId}~1resolve',
-    '/api/admin/rollback-previews': './paths/admin-review.yaml#/~1api~1admin~1rollback-previews',
-    '/api/admin/rollbacks': './paths/admin-review.yaml#/~1api~1admin~1rollbacks',
-    '/api/admin/session': './paths/admin-operations.yaml#/~1api~1admin~1session',
     '/asset-attachments': './paths/assets.yaml#/~1asset-attachments',
     '/asset-attachments/{attachmentId}': './paths/assets.yaml#/~1asset-attachments~1{attachmentId}',
     '/assets': './paths/assets.yaml#/~1assets',
