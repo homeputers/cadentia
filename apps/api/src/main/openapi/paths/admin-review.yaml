@@ -1,4 +1,4 @@
-"/api/admin/import-candidates":
+"/admin/import-candidates":
   get:
     tags:
     - AdminReview
@@ -29,7 +29,7 @@
               type: array
               items:
                 "$ref": "../components/schemas/admin-review.yaml#/AdminImportCandidateQueueItem"
-"/api/admin/import-candidates/{candidateId}":
+"/admin/import-candidates/{candidateId}":
   get:
     tags:
     - AdminReview
@@ -56,7 +56,7 @@
               "$ref": "../components/schemas/admin-review.yaml#/AdminImportCandidateDetailResponse"
       '404':
         description: Candidate not found.
-"/api/admin/import-candidates/{candidateId}/duplicates":
+"/admin/import-candidates/{candidateId}/duplicates":
   get:
     tags:
     - AdminReview
@@ -83,7 +83,7 @@
               type: array
               items:
                 "$ref": "../components/schemas/admin-review.yaml#/AdminDuplicateMatch"
-"/api/admin/import-candidates/{candidateId}/audit-history":
+"/admin/import-candidates/{candidateId}/audit-history":
   get:
     tags:
     - AdminReview
@@ -110,7 +110,7 @@
               type: array
               items:
                 "$ref": "../components/schemas/admin-review.yaml#/AdminAuditHistoryItem"
-"/api/admin/import-candidates/{candidateId}/moderation-flags":
+"/admin/import-candidates/{candidateId}/moderation-flags":
   post:
     tags:
     - AdminReview
@@ -141,7 +141,7 @@
           application/json:
             schema:
               "$ref": "../components/schemas/admin-review.yaml#/ModerationFlagResponse"
-"/api/admin/moderation-flags/{flagId}/assign":
+"/admin/moderation-flags/{flagId}/assign":
   post:
     tags:
     - AdminReview
@@ -172,7 +172,7 @@
           application/json:
             schema:
               "$ref": "../components/schemas/admin-review.yaml#/ModerationFlagResponse"
-"/api/admin/moderation-flags/{flagId}/resolve":
+"/admin/moderation-flags/{flagId}/resolve":
   post:
     tags:
     - AdminReview
@@ -203,7 +203,7 @@
           application/json:
             schema:
               "$ref": "../components/schemas/admin-review.yaml#/ModerationFlagResponse"
-"/api/admin/moderation-flags/{flagId}/escalate":
+"/admin/moderation-flags/{flagId}/escalate":
   post:
     tags:
     - AdminReview
@@ -234,7 +234,7 @@
           application/json:
             schema:
               "$ref": "../components/schemas/admin-review.yaml#/ModerationFlagResponse"
-"/api/admin/rollback-previews":
+"/admin/rollback-previews":
   post:
     tags:
     - AdminReview
@@ -257,7 +257,7 @@
           application/json:
             schema:
               "$ref": "../components/schemas/admin-review.yaml#/RollbackPreviewResponse"
-"/api/admin/rollbacks":
+"/admin/rollbacks":
   post:
     tags:
     - AdminReview

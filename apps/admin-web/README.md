@@ -11,6 +11,8 @@ The admin web package is a separate React + Vite single-page application for ADR
 - `npm run typecheck -w @cadentia/admin-web` - explicit TypeScript check.
 - `npm run preview -w @cadentia/admin-web` - preview the built static artifact.
 - `npm run smoke -w @cadentia/admin-web` - verify `dist/index.html`, `dist/admin-build.json`, and `dist/admin-health.json`.
+- `npm run generate:client -w @cadentia/admin-web` - regenerate documented route artifacts from the aggregate OpenAPI entrypoint.
+- `npm run generate:client:check -w @cadentia/admin-web` - fail CI when generated client artifacts drift from the OpenAPI entrypoint.
 
 ## Environment
 

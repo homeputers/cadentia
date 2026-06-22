@@ -13,7 +13,8 @@
     "lint": "tsc --noEmit",
     "typecheck": "tsc --noEmit",
     "smoke": "node scripts/smoke-admin-bundle.mjs",
-    "generate:client": "node scripts/generate-client-placeholder.mjs"
+    "generate:client": "node scripts/generate-client.mjs",
+    "generate:client:check": "node scripts/generate-client.mjs --check"
   },
   "dependencies": {
     "@vitejs/plugin-react": "4.3.4",

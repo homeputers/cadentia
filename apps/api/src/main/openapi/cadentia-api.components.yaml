@@ -207,6 +207,32 @@ schemas:
     "$ref": "./components/schemas/conversation-sessions.yaml#/ConversationConfirmRequest"
   ConversationRecoveryResponse:
     "$ref": "./components/schemas/conversation-sessions.yaml#/ConversationRecoveryResponse"
+  AdminCapability:
+    "$ref": "./components/schemas/admin-operations.yaml#/AdminCapability"
+  AdminAllowedAction:
+    "$ref": "./components/schemas/admin-operations.yaml#/AdminAllowedAction"
+  AdminAuditReference:
+    "$ref": "./components/schemas/admin-operations.yaml#/AdminAuditReference"
+  AdminOptimisticConcurrency:
+    "$ref": "./components/schemas/admin-operations.yaml#/AdminOptimisticConcurrency"
+  AdminSessionResponse:
+    "$ref": "./components/schemas/admin-operations.yaml#/AdminSessionResponse"
+  AdminDiagnosticsResponse:
+    "$ref": "./components/schemas/admin-operations.yaml#/AdminDiagnosticsResponse"
+  AdminInstanceConfigurationResponse:
+    "$ref": "./components/schemas/admin-operations.yaml#/AdminInstanceConfigurationResponse"
+  UpdateAdminInstanceConfigurationRequest:
+    "$ref": "./components/schemas/admin-operations.yaml#/UpdateAdminInstanceConfigurationRequest"
+  AdminFeatureFlagResponse:
+    "$ref": "./components/schemas/admin-operations.yaml#/AdminFeatureFlagResponse"
+  AdminFeatureFlagListResponse:
+    "$ref": "./components/schemas/admin-operations.yaml#/AdminFeatureFlagListResponse"
+  PreviewAdminFeatureFlagChangeRequest:
+    "$ref": "./components/schemas/admin-operations.yaml#/PreviewAdminFeatureFlagChangeRequest"
+  AdminFeatureFlagChangePreviewResponse:
+    "$ref": "./components/schemas/admin-operations.yaml#/AdminFeatureFlagChangePreviewResponse"
+  ConfirmAdminFeatureFlagChangeRequest:
+    "$ref": "./components/schemas/admin-operations.yaml#/ConfirmAdminFeatureFlagChangeRequest"
   ImportCandidateStatus:
     "$ref": "./components/schemas/admin-review.yaml#/ImportCandidateStatus"
   AdminImportCandidateQueueItem:

@@ -1,5 +1,7 @@
 # Generated Cadentia API client
 
-Subtask 2 will wire the OpenAPI generator to emit the typed admin client here
-from `apps/api/src/main/openapi/cadentia-api.yaml`. Do not hand-author runtime
-client calls against undocumented endpoints in this directory.
+This directory is generated from `apps/api/src/main/openapi/cadentia-api.yaml`.
+
+Run `npm run generate:client -w @cadentia/admin-web` after OpenAPI changes.
+CI should run `npm run generate:client:check -w @cadentia/admin-web` to fail when artifacts drift.
+Do not hand-author runtime calls against undocumented endpoints in this directory.

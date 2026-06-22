@@ -40,3 +40,10 @@ ArrangementOverrideId:
   schema:
     type: string
     format: uuid
+ChurchInstanceIdHeader:
+  in: header
+  name: X-Church-Instance-Id
+  required: true
+  description: Stable church-instance scope for non-cross-instance admin operations.
+  schema:
+    type: string
