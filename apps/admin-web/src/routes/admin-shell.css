@@ -1,0 +1,6 @@
+.admin-shell { font-family: Inter, system-ui, sans-serif; margin: 0 auto; max-width: 64rem; padding: 2rem; color: #172033; }
+.admin-shell__header { border-bottom: 1px solid #d9e2ef; margin-bottom: 1.5rem; padding-bottom: 1rem; }
+.admin-shell__eyebrow { color: #375a7f; font-size: 0.875rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+.admin-shell__panel { border: 1px solid #d9e2ef; border-radius: 0.75rem; margin-top: 1rem; padding: 1rem; }
+.admin-shell__warning { background: #fff8e6; border-left: 0.25rem solid #c47f00; padding: 0.75rem; }
+a { color: #174ea6; }

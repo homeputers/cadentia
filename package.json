@@ -5,7 +5,8 @@
   "description": "AI-assisted worship setlist recommendation platform.",
   "type": "module",
   "workspaces": [
-    "packages/*"
+    "packages/*",
+    "apps/*"
   ],
   "scripts": {
     "build": "npm run build --workspaces",
@@ -13,7 +14,8 @@
     "typecheck": "npm run typecheck --workspaces",
     "check:adr-governance": "node scripts/check-adr-governance.mjs",
     "check:adr-022-runtime-guardrails": "node scripts/check-adr-022-runtime-guardrails.mjs",
-    "check:adr-022-operator-admin-guardrails": "node scripts/check-adr-022-operator-admin-guardrails.mjs"
+    "check:adr-022-operator-admin-guardrails": "node scripts/check-adr-022-operator-admin-guardrails.mjs",
+    "lint": "npm run lint --workspaces --if-present"
   },
   "engines": {
     "node": ">=20.11.0",
