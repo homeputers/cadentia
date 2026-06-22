@@ -1,0 +1,312 @@
+AdminCapability:
+  type: string
+  enum:
+  - VIEW_IMPORT_QUEUE
+  - REVIEW_CATALOG
+  - MANAGE_MODERATION
+  - PREVIEW_ROLLBACK
+  - EXECUTE_ROLLBACK
+  - VIEW_AUDIT
+  - VIEW_DIAGNOSTICS
+  - MANAGE_INSTANCE_CONFIGURATION
+  - MANAGE_FEATURE_FLAGS
+  - MANAGE_BOT_CHANNELS
+AdminAllowedAction:
+  type: string
+  enum:
+  - VIEW
+  - CREATE
+  - UPDATE
+  - PREVIEW
+  - CONFIRM
+  - ASSIGN
+  - RESOLVE
+  - ESCALATE
+  - ROLLBACK
+AdminAuditReference:
+  type: object
+  required:
+  - auditEventId
+  - occurredAt
+  properties:
+    auditEventId:
+      type: string
+      format: uuid
+    occurredAt:
+      type: string
+      format: date-time
+    actorId:
+      type: string
+    reason:
+      type: string
+      nullable: true
+AdminOptimisticConcurrency:
+  type: object
+  required:
+  - version
+  - etag
+  properties:
+    version:
+      type: integer
+      format: int64
+    etag:
+      type: string
+AdminSessionResponse:
+  type: object
+  required:
+  - actorId
+  - displayName
+  - churchInstanceId
+  - roles
+  - capabilities
+  properties:
+    actorId:
+      type: string
+    displayName:
+      type: string
+    churchInstanceId:
+      type: string
+    roles:
+      type: array
+      items:
+        type: string
+    capabilities:
+      type: array
+      items:
+        "$ref": "#/AdminCapability"
+AdminApiGapStatus:
+  type: string
+  enum:
+  - EXISTING_ENDPOINT
+  - NEW_ENDPOINT
+  - DEFERRED_ENDPOINT
+  - UNSUPPORTED_V1
+AdminApiGapMatrixItem:
+  type: object
+  required:
+  - workflow
+  - status
+  - rationale
+  properties:
+    workflow:
+      type: string
+    screenArea:
+      type: string
+    status:
+      "$ref": "#/AdminApiGapStatus"
+    endpoints:
+      type: array
+      items:
+        type: string
+    requiredCapabilities:
+      type: array
+      items:
+        "$ref": "#/AdminCapability"
+    rationale:
+      type: string
+AdminApiGapMatrixResponse:
+  type: object
+  required:
+  - adr
+  - generatedFromOpenApiVersion
+  - items
+  properties:
+    adr:
+      type: string
+      example: ADR-036
+    generatedFromOpenApiVersion:
+      type: string
+    items:
+      type: array
+      items:
+        "$ref": "#/AdminApiGapMatrixItem"
+AdminDiagnosticStatus:
+  type: string
+  enum:
+  - OK
+  - DEGRADED
+  - UNAVAILABLE
+  - UNKNOWN
+AdminDiagnosticsComponent:
+  type: object
+  required:
+  - name
+  - status
+  - redactionApplied
+  properties:
+    name:
+      type: string
+    status:
+      "$ref": "#/AdminDiagnosticStatus"
+    summary:
+      type: string
+    redactionApplied:
+      type: boolean
+    lastCheckedAt:
+      type: string
+      format: date-time
+AdminDiagnosticsResponse:
+  type: object
+  required:
+  - churchInstanceId
+  - generatedAt
+  - components
+  properties:
+    churchInstanceId:
+      type: string
+    generatedAt:
+      type: string
+      format: date-time
+    components:
+      type: array
+      items:
+        "$ref": "#/AdminDiagnosticsComponent"
+AdminInstanceConfigurationResponse:
+  type: object
+  required:
+  - churchInstanceId
+  - displayName
+  - defaultLocale
+  - timeZone
+  - allowedActions
+  - concurrency
+  properties:
+    churchInstanceId:
+      type: string
+    displayName:
+      type: string
+    defaultLocale:
+      type: string
+    timeZone:
+      type: string
+    diagnosticsEnabled:
+      type: boolean
+    botChannelsEnabled:
+      type: boolean
+    allowedActions:
+      type: array
+      items:
+        "$ref": "#/AdminAllowedAction"
+    concurrency:
+      "$ref": "#/AdminOptimisticConcurrency"
+    lastAuditReference:
+      "$ref": "#/AdminAuditReference"
+UpdateAdminInstanceConfigurationRequest:
+  type: object
+  additionalProperties: false
+  required:
+  - displayName
+  - defaultLocale
+  - timeZone
+  - expectedVersion
+  - actorId
+  - reason
+  properties:
+    displayName:
+      type: string
+    defaultLocale:
+      type: string
+    timeZone:
+      type: string
+    diagnosticsEnabled:
+      type: boolean
+    botChannelsEnabled:
+      type: boolean
+    expectedVersion:
+      type: integer
+      format: int64
+    actorId:
+      type: string
+    reason:
+      type: string
+AdminFeatureFlagResponse:
+  type: object
+  required:
+  - flagKey
+  - enabled
+  - allowedActions
+  - concurrency
+  properties:
+    flagKey:
+      type: string
+    description:
+      type: string
+    enabled:
+      type: boolean
+    allowedActions:
+      type: array
+      items:
+        "$ref": "#/AdminAllowedAction"
+    concurrency:
+      "$ref": "#/AdminOptimisticConcurrency"
+    lastAuditReference:
+      "$ref": "#/AdminAuditReference"
+AdminFeatureFlagListResponse:
+  type: object
+  required:
+  - churchInstanceId
+  - flags
+  properties:
+    churchInstanceId:
+      type: string
+    flags:
+      type: array
+      items:
+        "$ref": "#/AdminFeatureFlagResponse"
+PreviewAdminFeatureFlagChangeRequest:
+  type: object
+  additionalProperties: false
+  required:
+  - enabled
+  - expectedVersion
+  - actorId
+  - reason
+  properties:
+    enabled:
+      type: boolean
+    expectedVersion:
+      type: integer
+      format: int64
+    actorId:
+      type: string
+    reason:
+      type: string
+AdminFeatureFlagChangePreviewResponse:
+  type: object
+  required:
+  - previewId
+  - flagKey
+  - requestedEnabled
+  - confirmationRequired
+  - blockers
+  properties:
+    previewId:
+      type: string
+      format: uuid
+    flagKey:
+      type: string
+    requestedEnabled:
+      type: boolean
+    confirmationRequired:
+      type: boolean
+    impactSummary:
+      type: string
+    blockers:
+      type: array
+      items:
+        type: string
+ConfirmAdminFeatureFlagChangeRequest:
+  type: object
+  additionalProperties: false
+  required:
+  - previewId
+  - actorId
+  - confirmationText
+  properties:
+    previewId:
+      type: string
+      format: uuid
+    actorId:
+      type: string
+    confirmationText:
+      type: string

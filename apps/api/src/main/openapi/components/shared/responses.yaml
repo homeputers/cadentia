@@ -19,3 +19,11 @@ WorkflowVersionConflict:
     application/json:
       schema:
         "$ref": "../schemas/rehearsal-workflow.yaml#/WorkflowProblemResponse"
+Unauthorized:
+  description: Authentication is required; response does not reveal resource existence.
+Forbidden:
+  description: Actor lacks required capability or church-instance access; response does not reveal resource existence.
+Conflict:
+  description: Optimistic concurrency check failed or preview token is stale.
+ValidationError:
+  description: Request validation failed.

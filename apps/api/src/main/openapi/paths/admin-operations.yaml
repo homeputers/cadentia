@@ -1,0 +1,186 @@
+"/api/admin/session":
+  get:
+    tags:
+    - AdminOperations
+    operationId: getAdminSession
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - CATALOG_EDITOR
+    - DOCTRINAL_REVIEWER
+    - MUSICAL_REVIEWER
+    - ADMIN
+    summary: Resolve authenticated admin identity, instance scope, and capabilities
+    responses:
+      '200':
+        description: Admin session context scoped to the selected church instance.
+        content:
+          application/json:
+            schema:
+              "$ref": "../components/schemas/admin-operations.yaml#/AdminSessionResponse"
+      '401':
+        "$ref": "../components/shared/responses.yaml#/Unauthorized"
+      '403':
+        "$ref": "../components/shared/responses.yaml#/Forbidden"
+"/api/admin/api-gap-matrix":
+  get:
+    tags:
+    - AdminOperations
+    operationId: getAdminApiGapMatrix
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - ADMIN
+    summary: List ADR-036 workflow-to-API coverage for operator planning
+    parameters:
+    - "$ref": "../components/shared/parameters.yaml#/ChurchInstanceIdHeader"
+    responses:
+      '200':
+        description: API gap matrix for ADR-036 workflows.
+        content:
+          application/json:
+            schema:
+              "$ref": "../components/schemas/admin-operations.yaml#/AdminApiGapMatrixResponse"
+"/api/admin/diagnostics":
+  get:
+    tags:
+    - AdminOperations
+    operationId: getAdminDiagnostics
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - ADMIN
+    summary: Fetch redacted operational diagnostics for the current church instance
+    parameters:
+    - "$ref": "../components/shared/parameters.yaml#/ChurchInstanceIdHeader"
+    responses:
+      '200':
+        description: Redacted diagnostics without secrets, raw connector payloads, lyrics, or cross-instance data.
+        content:
+          application/json:
+            schema:
+              "$ref": "../components/schemas/admin-operations.yaml#/AdminDiagnosticsResponse"
+"/api/admin/instance-configuration":
+  get:
+    tags:
+    - AdminOperations
+    operationId: getAdminInstanceConfiguration
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - ADMIN
+    summary: Fetch editable instance configuration summary
+    parameters:
+    - "$ref": "../components/shared/parameters.yaml#/ChurchInstanceIdHeader"
+    responses:
+      '200':
+        description: Instance configuration with optimistic concurrency metadata and allowed actions.
+        content:
+          application/json:
+            schema:
+              "$ref": "../components/schemas/admin-operations.yaml#/AdminInstanceConfigurationResponse"
+  put:
+    tags:
+    - AdminOperations
+    operationId: updateAdminInstanceConfiguration
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - ADMIN
+    summary: Update editable instance configuration with optimistic concurrency
+    parameters:
+    - "$ref": "../components/shared/parameters.yaml#/ChurchInstanceIdHeader"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            "$ref": "../components/schemas/admin-operations.yaml#/UpdateAdminInstanceConfigurationRequest"
+    responses:
+      '200':
+        description: Updated configuration and audit reference.
+        content:
+          application/json:
+            schema:
+              "$ref": "../components/schemas/admin-operations.yaml#/AdminInstanceConfigurationResponse"
+      '409':
+        "$ref": "../components/shared/responses.yaml#/Conflict"
+"/api/admin/feature-flags":
+  get:
+    tags:
+    - AdminOperations
+    operationId: listAdminFeatureFlags
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - ADMIN
+    summary: List feature flags available to the current church instance
+    parameters:
+    - "$ref": "../components/shared/parameters.yaml#/ChurchInstanceIdHeader"
+    responses:
+      '200':
+        description: Feature flags and allowed actions.
+        content:
+          application/json:
+            schema:
+              "$ref": "../components/schemas/admin-operations.yaml#/AdminFeatureFlagListResponse"
+"/api/admin/feature-flags/{flagKey}:preview":
+  post:
+    tags:
+    - AdminOperations
+    operationId: previewAdminFeatureFlagChange
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - ADMIN
+    summary: Preview the impact of a feature-flag change before confirmation
+    parameters:
+    - "$ref": "../components/shared/parameters.yaml#/ChurchInstanceIdHeader"
+    - in: path
+      name: flagKey
+      required: true
+      schema:
+        type: string
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            "$ref": "../components/schemas/admin-operations.yaml#/PreviewAdminFeatureFlagChangeRequest"
+    responses:
+      '200':
+        description: Preview token, impact summary, blockers, and confirmation requirements.
+        content:
+          application/json:
+            schema:
+              "$ref": "../components/schemas/admin-operations.yaml#/AdminFeatureFlagChangePreviewResponse"
+"/api/admin/feature-flags/{flagKey}:confirm":
+  post:
+    tags:
+    - AdminOperations
+    operationId: confirmAdminFeatureFlagChange
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - ADMIN
+    summary: Confirm a previously previewed feature-flag change
+    parameters:
+    - "$ref": "../components/shared/parameters.yaml#/ChurchInstanceIdHeader"
+    - in: path
+      name: flagKey
+      required: true
+      schema:
+        type: string
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            "$ref": "../components/schemas/admin-operations.yaml#/ConfirmAdminFeatureFlagChangeRequest"
+    responses:
+      '200':
+        description: Confirmed feature-flag state and audit reference.
+        content:
+          application/json:
+            schema:
+              "$ref": "../components/schemas/admin-operations.yaml#/AdminFeatureFlagResponse"

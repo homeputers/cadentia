@@ -11,6 +11,8 @@ tags:
   description: Deterministic setlist proposal operations
 - name: AdminReview
   description: Admin import-governance review operations
+- name: AdminOperations
+  description: Admin session, diagnostics, configuration, feature-flag, and API-gap operations
 - name: FeedbackTuning
   description: Recommendation feedback ingestion, inspection, and reset operations
 - name: ServicePlans
@@ -79,6 +81,20 @@ paths:
     "$ref": "./paths/feedback-tuning.yaml#/~1feedback~1scopes~1{scopeLayer}~1{scopeId}~1state"
   "/feedback/scopes/{scopeLayer}/{scopeId}/reset":
     "$ref": "./paths/feedback-tuning.yaml#/~1feedback~1scopes~1{scopeLayer}~1{scopeId}~1reset"
+  "/api/admin/session":
+    "$ref": "./paths/admin-operations.yaml#/~1api~1admin~1session"
+  "/api/admin/api-gap-matrix":
+    "$ref": "./paths/admin-operations.yaml#/~1api~1admin~1api-gap-matrix"
+  "/api/admin/diagnostics":
+    "$ref": "./paths/admin-operations.yaml#/~1api~1admin~1diagnostics"
+  "/api/admin/instance-configuration":
+    "$ref": "./paths/admin-operations.yaml#/~1api~1admin~1instance-configuration"
+  "/api/admin/feature-flags":
+    "$ref": "./paths/admin-operations.yaml#/~1api~1admin~1feature-flags"
+  "/api/admin/feature-flags/{flagKey}:preview":
+    "$ref": "./paths/admin-operations.yaml#/~1api~1admin~1feature-flags~1{flagKey}:preview"
+  "/api/admin/feature-flags/{flagKey}:confirm":
+    "$ref": "./paths/admin-operations.yaml#/~1api~1admin~1feature-flags~1{flagKey}:confirm"
   "/api/admin/import-candidates":
     "$ref": "./paths/admin-review.yaml#/~1api~1admin~1import-candidates"
   "/api/admin/import-candidates/{candidateId}":
@@ -193,6 +209,8 @@ components:
       "$ref": "./components/shared/parameters.yaml#/ActionId"
     ArrangementOverrideId:
       "$ref": "./components/shared/parameters.yaml#/ArrangementOverrideId"
+    ChurchInstanceIdHeader:
+      "$ref": "./components/shared/parameters.yaml#/ChurchInstanceIdHeader"
   securitySchemes:
     bearerAuth:
       type: http
@@ -329,6 +347,42 @@ components:
       "$ref": "./components/schemas/conversation-sessions.yaml#/ConversationConfirmRequest"
     ConversationRecoveryResponse:
       "$ref": "./components/schemas/conversation-sessions.yaml#/ConversationRecoveryResponse"
+    AdminCapability:
+      "$ref": "./components/schemas/admin-operations.yaml#/AdminCapability"
+    AdminAllowedAction:
+      "$ref": "./components/schemas/admin-operations.yaml#/AdminAllowedAction"
+    AdminAuditReference:
+      "$ref": "./components/schemas/admin-operations.yaml#/AdminAuditReference"
+    AdminOptimisticConcurrency:
+      "$ref": "./components/schemas/admin-operations.yaml#/AdminOptimisticConcurrency"
+    AdminSessionResponse:
+      "$ref": "./components/schemas/admin-operations.yaml#/AdminSessionResponse"
+    AdminApiGapStatus:
+      "$ref": "./components/schemas/admin-operations.yaml#/AdminApiGapStatus"
+    AdminApiGapMatrixItem:
+      "$ref": "./components/schemas/admin-operations.yaml#/AdminApiGapMatrixItem"
+    AdminApiGapMatrixResponse:
+      "$ref": "./components/schemas/admin-operations.yaml#/AdminApiGapMatrixResponse"
+    AdminDiagnosticStatus:
+      "$ref": "./components/schemas/admin-operations.yaml#/AdminDiagnosticStatus"
+    AdminDiagnosticsComponent:
+      "$ref": "./components/schemas/admin-operations.yaml#/AdminDiagnosticsComponent"
+    AdminDiagnosticsResponse:
+      "$ref": "./components/schemas/admin-operations.yaml#/AdminDiagnosticsResponse"
+    AdminInstanceConfigurationResponse:
+      "$ref": "./components/schemas/admin-operations.yaml#/AdminInstanceConfigurationResponse"
+    UpdateAdminInstanceConfigurationRequest:
+      "$ref": "./components/schemas/admin-operations.yaml#/UpdateAdminInstanceConfigurationRequest"
+    AdminFeatureFlagResponse:
+      "$ref": "./components/schemas/admin-operations.yaml#/AdminFeatureFlagResponse"
+    AdminFeatureFlagListResponse:
+      "$ref": "./components/schemas/admin-operations.yaml#/AdminFeatureFlagListResponse"
+    PreviewAdminFeatureFlagChangeRequest:
+      "$ref": "./components/schemas/admin-operations.yaml#/PreviewAdminFeatureFlagChangeRequest"
+    AdminFeatureFlagChangePreviewResponse:
+      "$ref": "./components/schemas/admin-operations.yaml#/AdminFeatureFlagChangePreviewResponse"
+    ConfirmAdminFeatureFlagChangeRequest:
+      "$ref": "./components/schemas/admin-operations.yaml#/ConfirmAdminFeatureFlagChangeRequest"
     ImportCandidateStatus:
       "$ref": "./components/schemas/admin-review.yaml#/ImportCandidateStatus"
     AdminImportCandidateQueueItem:
@@ -476,3 +530,11 @@ components:
       "$ref": "./components/shared/responses.yaml#/BlockedWorkflowTransition"
     WorkflowVersionConflict:
       "$ref": "./components/shared/responses.yaml#/WorkflowVersionConflict"
+    Unauthorized:
+      "$ref": "./components/shared/responses.yaml#/Unauthorized"
+    Forbidden:
+      "$ref": "./components/shared/responses.yaml#/Forbidden"
+    Conflict:
+      "$ref": "./components/shared/responses.yaml#/Conflict"
+    ValidationError:
+      "$ref": "./components/shared/responses.yaml#/ValidationError"

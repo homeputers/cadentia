@@ -30,6 +30,20 @@
   "$ref": "./paths/feedback-tuning.yaml#/~1feedback~1scopes~1{scopeLayer}~1{scopeId}~1state"
 "/feedback/scopes/{scopeLayer}/{scopeId}/reset":
   "$ref": "./paths/feedback-tuning.yaml#/~1feedback~1scopes~1{scopeLayer}~1{scopeId}~1reset"
+"/api/admin/session":
+  "$ref": "./paths/admin-operations.yaml#/~1api~1admin~1session"
+"/api/admin/api-gap-matrix":
+  "$ref": "./paths/admin-operations.yaml#/~1api~1admin~1api-gap-matrix"
+"/api/admin/diagnostics":
+  "$ref": "./paths/admin-operations.yaml#/~1api~1admin~1diagnostics"
+"/api/admin/instance-configuration":
+  "$ref": "./paths/admin-operations.yaml#/~1api~1admin~1instance-configuration"
+"/api/admin/feature-flags":
+  "$ref": "./paths/admin-operations.yaml#/~1api~1admin~1feature-flags"
+"/api/admin/feature-flags/{flagKey}:preview":
+  "$ref": "./paths/admin-operations.yaml#/~1api~1admin~1feature-flags~1{flagKey}:preview"
+"/api/admin/feature-flags/{flagKey}:confirm":
+  "$ref": "./paths/admin-operations.yaml#/~1api~1admin~1feature-flags~1{flagKey}:confirm"
 "/api/admin/import-candidates":
   "$ref": "./paths/admin-review.yaml#/~1api~1admin~1import-candidates"
 "/api/admin/import-candidates/{candidateId}":
