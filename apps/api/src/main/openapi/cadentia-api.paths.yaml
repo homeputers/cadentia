@@ -32,8 +32,6 @@
   "$ref": "./paths/feedback-tuning.yaml#/~1feedback~1scopes~1{scopeLayer}~1{scopeId}~1reset"
 "/admin/session":
   "$ref": "./paths/admin-operations.yaml#/~1admin~1session"
-"/admin/api-gap-matrix":
-  "$ref": "./paths/admin-operations.yaml#/~1admin~1api-gap-matrix"
 "/admin/diagnostics":
   "$ref": "./paths/admin-operations.yaml#/~1admin~1diagnostics"
 "/admin/instance-configuration":

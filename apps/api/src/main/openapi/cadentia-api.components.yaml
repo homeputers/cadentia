@@ -217,10 +217,6 @@ schemas:
     "$ref": "./components/schemas/admin-operations.yaml#/AdminOptimisticConcurrency"
   AdminSessionResponse:
     "$ref": "./components/schemas/admin-operations.yaml#/AdminSessionResponse"
-  AdminApiGapStatus:
-    "$ref": "./components/schemas/admin-operations.yaml#/AdminApiGapStatus"
-  AdminApiGapMatrixResponse:
-    "$ref": "./components/schemas/admin-operations.yaml#/AdminApiGapMatrixResponse"
   AdminDiagnosticsResponse:
     "$ref": "./components/schemas/admin-operations.yaml#/AdminDiagnosticsResponse"
   AdminInstanceConfigurationResponse:

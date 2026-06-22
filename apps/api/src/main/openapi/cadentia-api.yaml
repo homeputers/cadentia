@@ -83,8 +83,6 @@ paths:
     "$ref": "./paths/feedback-tuning.yaml#/~1feedback~1scopes~1{scopeLayer}~1{scopeId}~1reset"
   "/admin/session":
     "$ref": "./paths/admin-operations.yaml#/~1admin~1session"
-  "/admin/api-gap-matrix":
-    "$ref": "./paths/admin-operations.yaml#/~1admin~1api-gap-matrix"
   "/admin/diagnostics":
     "$ref": "./paths/admin-operations.yaml#/~1admin~1diagnostics"
   "/admin/instance-configuration":
@@ -357,12 +355,6 @@ components:
       "$ref": "./components/schemas/admin-operations.yaml#/AdminOptimisticConcurrency"
     AdminSessionResponse:
       "$ref": "./components/schemas/admin-operations.yaml#/AdminSessionResponse"
-    AdminApiGapStatus:
-      "$ref": "./components/schemas/admin-operations.yaml#/AdminApiGapStatus"
-    AdminApiGapMatrixItem:
-      "$ref": "./components/schemas/admin-operations.yaml#/AdminApiGapMatrixItem"
-    AdminApiGapMatrixResponse:
-      "$ref": "./components/schemas/admin-operations.yaml#/AdminApiGapMatrixResponse"
     AdminDiagnosticStatus:
       "$ref": "./components/schemas/admin-operations.yaml#/AdminDiagnosticStatus"
     AdminDiagnosticsComponent:

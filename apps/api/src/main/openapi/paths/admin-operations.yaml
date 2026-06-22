@@ -22,25 +22,6 @@
         "$ref": "../components/shared/responses.yaml#/Unauthorized"
       '403':
         "$ref": "../components/shared/responses.yaml#/Forbidden"
-"/admin/api-gap-matrix":
-  get:
-    tags:
-    - AdminOperations
-    operationId: getAdminApiGapMatrix
-    security:
-    - bearerAuth: []
-    x-required-roles:
-    - ADMIN
-    summary: List ADR-036 workflow-to-API coverage for operator planning
-    parameters:
-    - "$ref": "../components/shared/parameters.yaml#/ChurchInstanceIdHeader"
-    responses:
-      '200':
-        description: API gap matrix for ADR-036 workflows.
-        content:
-          application/json:
-            schema:
-              "$ref": "../components/schemas/admin-operations.yaml#/AdminApiGapMatrixResponse"
 "/admin/diagnostics":
   get:
     tags:

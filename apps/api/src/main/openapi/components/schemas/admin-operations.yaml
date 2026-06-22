@@ -74,52 +74,6 @@ AdminSessionResponse:
       type: array
       items:
         "$ref": "#/AdminCapability"
-AdminApiGapStatus:
-  type: string
-  enum:
-  - EXISTING_ENDPOINT
-  - NEW_ENDPOINT
-  - DEFERRED_ENDPOINT
-  - UNSUPPORTED_V1
-AdminApiGapMatrixItem:
-  type: object
-  required:
-  - workflow
-  - status
-  - rationale
-  properties:
-    workflow:
-      type: string
-    screenArea:
-      type: string
-    status:
-      "$ref": "#/AdminApiGapStatus"
-    endpoints:
-      type: array
-      items:
-        type: string
-    requiredCapabilities:
-      type: array
-      items:
-        "$ref": "#/AdminCapability"
-    rationale:
-      type: string
-AdminApiGapMatrixResponse:
-  type: object
-  required:
-  - adr
-  - generatedFromOpenApiVersion
-  - items
-  properties:
-    adr:
-      type: string
-      example: ADR-036
-    generatedFromOpenApiVersion:
-      type: string
-    items:
-      type: array
-      items:
-        "$ref": "#/AdminApiGapMatrixItem"
 AdminDiagnosticStatus:
   type: string
   enum:
