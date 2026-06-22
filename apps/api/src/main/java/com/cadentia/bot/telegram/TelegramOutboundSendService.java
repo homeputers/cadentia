@@ -11,6 +11,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.HexFormat;
 import java.util.UUID;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 
@@ -23,6 +24,7 @@ public class TelegramOutboundSendService {
     private final TelegramIdentifierHasher hasher;
     private final Clock clock;
 
+    @Autowired
     public TelegramOutboundSendService(
             TelegramOutboundRepository repository,
             ObjectProvider<TelegramOutboundClient> clientProvider,
