@@ -231,6 +231,12 @@
       schema:
         type: string
         format: uuid
+    - in: header
+      name: If-Match
+      required: true
+      schema:
+        type: string
+      description: Candidate version or ETag required for optimistic concurrency.
     requestBody:
       required: true
       content:
@@ -264,6 +270,12 @@
       schema:
         type: string
         format: uuid
+    - in: header
+      name: If-Match
+      required: true
+      schema:
+        type: string
+      description: Candidate version or ETag required for optimistic concurrency.
     requestBody:
       required: true
       content:
@@ -297,6 +309,12 @@
       schema:
         type: string
         format: uuid
+    - in: header
+      name: If-Match
+      required: true
+      schema:
+        type: string
+      description: Candidate version or ETag required for optimistic concurrency.
     requestBody:
       required: true
       content:

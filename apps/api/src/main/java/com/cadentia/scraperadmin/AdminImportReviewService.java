@@ -114,8 +114,63 @@ public class AdminImportReviewService {
                 reviews);
     }
 
+    @Transactional(readOnly = true)
+    public List<ModerationFlag> listModerationFlagsForCandidate(UUID importCandidateId) {
+        requireCandidate(importCandidateId);
+        return moderationFlagsById.values().stream()
+                .filter(flag -> flag.importCandidateId().equals(importCandidateId))
+                .sorted(java.util.Comparator.comparing(ModerationFlag::updatedAt).reversed())
+                .toList();
+    }
 
-    
+    @Transactional(readOnly = true)
+    public List<ApprovalRecord> findApprovalRecordsForSong(UUID songId) {
+        if (songId == null) {
+            return List.of();
+        }
+        requireSong(songId);
+        return songRepository.findApprovalRecordsForSong(songId);
+    }
+
+    @Transactional
+    public ImportCandidateReview submitMergeDecision(
+            UUID importCandidateId,
+            String actor,
+            String decision,
+            UUID duplicateMatchId,
+            String rationale) {
+        ImportCandidate candidate = requireCandidate(importCandidateId);
+        ImportCandidateReviewDecision reviewDecision = reviewDecisionForMergeDecision(decision);
+        UUID reviewedDuplicateMatchId = duplicateMatchId;
+        if (reviewDecision == ImportCandidateReviewDecision.CONFIRM_MATCH) {
+            if (duplicateMatchId == null) {
+                throw new IllegalArgumentException("duplicateMatchId is required for MERGE_EXISTING");
+            }
+            requireProposedMatch(duplicateMatchId, candidate.id());
+        } else if (duplicateMatchId != null) {
+            requireProposedMatch(duplicateMatchId, candidate.id());
+        }
+        ImportCandidateReview review = recordReview(new CreateImportCandidateReviewCommand(
+                candidate.id(),
+                reviewedDuplicateMatchId,
+                reviewDecision,
+                actor,
+                toJson(Map.of("decision", decision, "rationale", rationale == null ? "" : rationale))));
+        addAuditEvent(candidate.id(), "IMPORT_CANDIDATE", "MERGE_DECISION_SUBMITTED", actor, rationale,
+                Map.of("status", candidate.status().name()),
+                Map.of("decision", decision, "reviewDecision", reviewDecision.name()));
+        return review;
+    }
+
+    private static ImportCandidateReviewDecision reviewDecisionForMergeDecision(String decision) {
+        return switch (decision) {
+            case "CREATE_NEW" -> ImportCandidateReviewDecision.CREATE_NEW_SONG;
+            case "MERGE_EXISTING" -> ImportCandidateReviewDecision.CONFIRM_MATCH;
+            case "REJECT_DUPLICATE", "REJECT_NOT_PERMITTED" -> ImportCandidateReviewDecision.REJECT_CANDIDATE;
+            case "DEFER" -> ImportCandidateReviewDecision.NEEDS_MORE_INFO;
+            default -> throw new IllegalArgumentException("Unsupported merge decision: " + decision);
+        };
+    }
 
     @Transactional(readOnly = true)
     public RollbackPreview previewRollback(RollbackTargetType targetType, UUID targetId, String actor, UUID importBatchId) {
