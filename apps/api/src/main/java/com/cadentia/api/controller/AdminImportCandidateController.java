@@ -9,19 +9,27 @@ import com.cadentia.generated.model.AdminAuditHistoryItem;
 import com.cadentia.generated.model.AdminDuplicateMatch;
 import com.cadentia.generated.model.AdminImportCandidateDetailResponse;
 import com.cadentia.generated.model.AdminImportCandidateQueueItem;
+import com.cadentia.generated.model.AdminImportCandidateQueueResponse;
 import com.cadentia.generated.model.AdminReviewHistoryItem;
+import com.cadentia.generated.model.AllowedImportCandidateAction;
+import com.cadentia.generated.model.ApprovalReadiness;
 import com.cadentia.generated.model.AssignModerationFlagRequest;
 import com.cadentia.generated.model.CreateRollbackPreviewRequest;
-import com.cadentia.generated.model.ExecuteRollbackRequest;
-import com.cadentia.generated.model.RollbackExecutionResponse;
-import com.cadentia.generated.model.RollbackImpactedRecord;
-import com.cadentia.generated.model.RollbackPreviewResponse;
+import com.cadentia.generated.model.DuplicateConfidence;
 import com.cadentia.generated.model.EscalateModerationFlagRequest;
+import com.cadentia.generated.model.ExecuteRollbackRequest;
 import com.cadentia.generated.model.ImportCandidateStatus;
 import com.cadentia.generated.model.ModerationFlagResponse;
 import com.cadentia.generated.model.ModerationFlagStatus;
+import com.cadentia.generated.model.ModerationState;
 import com.cadentia.generated.model.OpenModerationFlagRequest;
+import com.cadentia.generated.model.ParserSeverity;
+import com.cadentia.generated.model.ProvenanceStatus;
 import com.cadentia.generated.model.ResolveModerationFlagRequest;
+import com.cadentia.generated.model.ReviewPriority;
+import com.cadentia.generated.model.RollbackExecutionResponse;
+import com.cadentia.generated.model.RollbackImpactedRecord;
+import com.cadentia.generated.model.RollbackPreviewResponse;
 import com.cadentia.scraperadmin.AdminAuditEvent;
 import com.cadentia.scraperadmin.AdminImportCandidateDetail;
 import com.cadentia.scraperadmin.AdminImportReviewService;
@@ -31,6 +39,7 @@ import com.cadentia.scraperadmin.ModerationFlagType;
 import com.cadentia.scraperadmin.RollbackExecutionResult;
 import com.cadentia.scraperadmin.RollbackPreview;
 import com.cadentia.scraperadmin.RollbackTargetType;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
@@ -53,22 +62,56 @@ public class AdminImportCandidateController implements AdminReviewApi {
 
     @Override
     @PreAuthorize("hasAnyAuthority(T(com.cadentia.api.security.RbacAuthorities).ROLE_CATALOG_EDITOR, T(com.cadentia.api.security.RbacAuthorities).ROLE_DOCTRINAL_REVIEWER, T(com.cadentia.api.security.RbacAuthorities).ROLE_MUSICAL_REVIEWER, T(com.cadentia.api.security.RbacAuthorities).ROLE_ADMIN)")
-    public ResponseEntity<List<AdminImportCandidateQueueItem>> listAdminImportCandidates(
-            @RequestParam UUID batchId,
-            @RequestParam(required = false) ImportCandidateStatus status) {
-        List<AdminImportCandidateQueueItem> response = reviewService.findCandidatesForBatch(
+    public ResponseEntity<AdminImportCandidateQueueResponse> listAdminImportCandidates(
+            @RequestParam(required = false) ImportCandidateStatus status,
+            @RequestParam(required = false) String connectorKey,
+            @RequestParam(required = false) UUID batchId,
+            @RequestParam(required = false) LocalDate submittedFrom,
+            @RequestParam(required = false) LocalDate submittedTo,
+            @RequestParam(required = false) String assignedReviewerId,
+            @RequestParam(required = false) ParserSeverity parserSeverity,
+            @RequestParam(required = false) ProvenanceStatus provenanceStatus,
+            @RequestParam(required = false) DuplicateConfidence duplicateConfidence,
+            @RequestParam(required = false) ModerationState moderationState,
+            @RequestParam(required = false) ReviewPriority reviewPriority,
+            @RequestParam(required = false) String sort,
+            @RequestParam(required = false, defaultValue = "1") Integer page,
+            @RequestParam(required = false, defaultValue = "25") Integer pageSize) {
+        List<AdminImportCandidateQueueItem> items = batchId == null
+                ? List.of()
+                : reviewService.findCandidatesForBatch(
                         batchId,
                         status == null ? null : com.cadentia.catalog.model.ImportCandidateStatus.valueOf(status.getValue()))
                 .stream()
                 .map(candidate -> new AdminImportCandidateQueueItem()
                         .candidateId(candidate.id())
                         .importBatchId(candidate.importBatchId())
+                        .connectorKey("import")
                         .rawTitle(candidate.rawTitle())
                         .normalizedTitle(candidate.normalizedTitle())
                         .sourceArtistName(candidate.sourceArtistName())
                         .status(ImportCandidateStatus.fromValue(candidate.status().name()))
-                        .updatedAt(OffsetDateTime.ofInstant(candidate.updatedAt(), ZoneOffset.UTC)))
+                        .submittedAt(OffsetDateTime.ofInstant(candidate.createdAt(), ZoneOffset.UTC))
+                        .updatedAt(OffsetDateTime.ofInstant(candidate.updatedAt(), ZoneOffset.UTC))
+                        .parserSeverity(ParserSeverity.NONE)
+                        .parserWarningCount(0)
+                        .provenanceStatus(ProvenanceStatus.NEEDS_REVIEW)
+                        .duplicateConfidence(DuplicateConfidence.NONE)
+                        .duplicateMatchCount(0)
+                        .moderationState(ModerationState.CLEAR)
+                        .reviewPriority(ReviewPriority.NORMAL)
+                        .approvalReadiness(ApprovalReadiness.NEEDS_REVIEW)
+                        .allowedActions(List.of(AllowedImportCandidateAction.VIEW_DETAIL)))
                 .toList();
+        int safePage = page == null || page < 1 ? 1 : page;
+        int safePageSize = pageSize == null || pageSize < 1 ? 25 : pageSize;
+        AdminImportCandidateQueueResponse response = new AdminImportCandidateQueueResponse()
+                .items(items)
+                .page(safePage)
+                .pageSize(safePageSize)
+                .totalItems(items.size())
+                .totalPages(items.isEmpty() ? 0 : 1)
+                .sort(sort == null || sort.isBlank() ? "updatedAt:desc" : sort);
         return ResponseEntity.ok(response);
     }
 

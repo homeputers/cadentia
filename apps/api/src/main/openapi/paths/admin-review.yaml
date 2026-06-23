@@ -7,28 +7,89 @@
     - bearerAuth: []
     x-required-roles:
     - CATALOG_EDITOR
+    - DOCTRINAL_REVIEWER
+    - MUSICAL_REVIEWER
     - ADMIN
     summary: List import candidates for admin triage queue
     parameters:
     - in: query
+      name: status
+      schema:
+        "$ref": "../components/schemas/admin-review.yaml#/ImportCandidateStatus"
+    - in: query
+      name: connectorKey
+      schema:
+        type: string
+    - in: query
       name: batchId
-      required: true
       schema:
         type: string
         format: uuid
     - in: query
-      name: status
+      name: submittedFrom
       schema:
-        "$ref": "../components/schemas/admin-review.yaml#/ImportCandidateStatus"
+        type: string
+        format: date
+    - in: query
+      name: submittedTo
+      schema:
+        type: string
+        format: date
+    - in: query
+      name: assignedReviewerId
+      schema:
+        type: string
+    - in: query
+      name: parserSeverity
+      schema:
+        "$ref": "../components/schemas/admin-review.yaml#/ParserSeverity"
+    - in: query
+      name: provenanceStatus
+      schema:
+        "$ref": "../components/schemas/admin-review.yaml#/ProvenanceStatus"
+    - in: query
+      name: duplicateConfidence
+      schema:
+        "$ref": "../components/schemas/admin-review.yaml#/DuplicateConfidence"
+    - in: query
+      name: moderationState
+      schema:
+        "$ref": "../components/schemas/admin-review.yaml#/ModerationState"
+    - in: query
+      name: reviewPriority
+      schema:
+        "$ref": "../components/schemas/admin-review.yaml#/ReviewPriority"
+    - in: query
+      name: sort
+      schema:
+        type: string
+        enum:
+        - submittedAt:desc
+        - submittedAt:asc
+        - updatedAt:desc
+        - reviewPriority:desc
+        - duplicateConfidence:desc
+        - parserSeverity:desc
+    - in: query
+      name: page
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    - in: query
+      name: pageSize
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 25
     responses:
       '200':
         description: Candidate queue page.
         content:
           application/json:
             schema:
-              type: array
-              items:
-                "$ref": "../components/schemas/admin-review.yaml#/AdminImportCandidateQueueItem"
+              "$ref": "../components/schemas/admin-review.yaml#/AdminImportCandidateQueueResponse"
 "/admin/import-candidates/{candidateId}":
   get:
     tags:
