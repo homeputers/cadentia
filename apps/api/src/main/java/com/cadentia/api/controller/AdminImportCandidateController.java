@@ -7,13 +7,18 @@ import com.cadentia.catalog.entity.ProposedDuplicateMatch;
 import com.cadentia.generated.api.AdminReviewApi;
 import com.cadentia.generated.model.AdminAuditHistoryItem;
 import com.cadentia.generated.model.AdminDuplicateMatch;
+import com.cadentia.generated.model.AdminDuplicateSummary;
 import com.cadentia.generated.model.AdminImportCandidateDetailResponse;
 import com.cadentia.generated.model.AdminImportCandidateQueueItem;
 import com.cadentia.generated.model.AdminImportCandidateQueueResponse;
+import com.cadentia.generated.model.AdminParserEvidence;
+import com.cadentia.generated.model.AdminProvenanceReference;
 import com.cadentia.generated.model.AdminReviewHistoryItem;
+import com.cadentia.generated.model.AdminReviewNote;
 import com.cadentia.generated.model.AllowedImportCandidateAction;
 import com.cadentia.generated.model.ApprovalReadiness;
 import com.cadentia.generated.model.AssignModerationFlagRequest;
+import com.cadentia.generated.model.CreateAdminReviewNoteRequest;
 import com.cadentia.generated.model.CreateRollbackPreviewRequest;
 import com.cadentia.generated.model.DuplicateConfidence;
 import com.cadentia.generated.model.EscalateModerationFlagRequest;
@@ -39,22 +44,30 @@ import com.cadentia.scraperadmin.ModerationFlagType;
 import com.cadentia.scraperadmin.RollbackExecutionResult;
 import com.cadentia.scraperadmin.RollbackPreview;
 import com.cadentia.scraperadmin.RollbackTargetType;
+import com.cadentia.scraperadmin.StructuredReviewNote;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 public class AdminImportCandidateController implements AdminReviewApi {
 
     private final AdminImportReviewService reviewService;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     public AdminImportCandidateController(AdminImportReviewService reviewService) {
         this.reviewService = reviewService;
@@ -120,6 +133,27 @@ public class AdminImportCandidateController implements AdminReviewApi {
     public ResponseEntity<AdminImportCandidateDetailResponse> getAdminImportCandidateDetail(@PathVariable UUID candidateId) {
         AdminImportCandidateDetail detail = reviewService.getCandidateDetail(candidateId);
         return ResponseEntity.ok(toDetail(detail));
+    }
+
+    @Override
+    @PreAuthorize("hasAnyAuthority(T(com.cadentia.api.security.RbacAuthorities).ROLE_CATALOG_EDITOR, T(com.cadentia.api.security.RbacAuthorities).ROLE_DOCTRINAL_REVIEWER, T(com.cadentia.api.security.RbacAuthorities).ROLE_MUSICAL_REVIEWER, T(com.cadentia.api.security.RbacAuthorities).ROLE_ADMIN)")
+    public ResponseEntity<AdminReviewNote> createAdminImportCandidateReviewNote(
+            @PathVariable UUID candidateId,
+            @RequestHeader("If-Match") String ifMatch,
+            @RequestBody CreateAdminReviewNoteRequest request) {
+        AdminImportCandidateDetail detail = reviewService.getCandidateDetail(candidateId);
+        String expectedEtag = etagFor(detail);
+        if (!expectedEtag.equals(ifMatch)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Candidate version is stale");
+        }
+        ImportCandidateReview review = reviewService.addStructuredNote(
+                candidateId,
+                request.getActor(),
+                new StructuredReviewNote(
+                        request.getCategory() == null ? "GENERAL" : request.getCategory(),
+                        request.getBody(),
+                        null));
+        return ResponseEntity.ok(toReviewNote(review));
     }
 
     @Override
@@ -213,22 +247,100 @@ public class AdminImportCandidateController implements AdminReviewApi {
                 .auditEventId(result.auditEventId()));
     }
 
-    private static AdminImportCandidateDetailResponse toDetail(AdminImportCandidateDetail detail) {
+    private AdminImportCandidateDetailResponse toDetail(AdminImportCandidateDetail detail) {
+        List<AdminReviewNote> reviewNotes = detail.reviewHistory().stream()
+                .filter(review -> review.decision() == com.cadentia.catalog.model.ImportCandidateReviewDecision.NEEDS_MORE_INFO)
+                .map(this::toReviewNote)
+                .toList();
+        double topDuplicateScore = detail.duplicateMatches().stream()
+                .map(ProposedDuplicateMatch::matchScore)
+                .filter(score -> score != null)
+                .mapToDouble(score -> score.doubleValue())
+                .max()
+                .orElse(0.0);
+        DuplicateConfidence duplicateConfidence = topDuplicateScore >= 0.9
+                ? DuplicateConfidence.HIGH
+                : topDuplicateScore >= 0.75 ? DuplicateConfidence.MEDIUM : DuplicateConfidence.NONE;
         return new AdminImportCandidateDetailResponse()
                 .candidateId(detail.candidate().id())
                 .importBatchId(detail.candidate().importBatchId())
+                .connectorKey("import")
                 .rawTitle(detail.candidate().rawTitle())
                 .normalizedTitle(detail.candidate().normalizedTitle())
                 .sourceArtistName(detail.candidate().sourceArtistName())
-                .sourcePayloadJson(detail.candidate().sourcePayloadJson())
+                .sourcePayloadRedacted(true)
+                .sourcePayloadJson(null)
                 .rawSourceReference(detail.rawSourceReference())
                 .parserName(detail.parserName())
                 .parserVersion(detail.parserVersion())
                 .parserConfidence(detail.parserConfidence())
                 .parserWarnings(detail.parserWarnings())
                 .status(ImportCandidateStatus.fromValue(detail.candidate().status().name()))
+                .allowedActions(List.of(AllowedImportCandidateAction.VIEW_DETAIL, AllowedImportCandidateAction.ADD_REVIEW_NOTE))
+                .version(versionFor(detail))
+                .etag(etagFor(detail))
+                .eligibilityBlockers(eligibilityBlockers(detail))
+                .duplicateSummary(new AdminDuplicateSummary()
+                        .confidence(duplicateConfidence)
+                        .matchCount(detail.duplicateMatches().size())
+                        .topScore(topDuplicateScore == 0.0 ? null : topDuplicateScore)
+                        .summary(detail.duplicateMatches().isEmpty() ? "No duplicate detected" : "Backend duplicate signals require review"))
+                .provenanceReferences(List.of(new AdminProvenanceReference()
+                        .label("import")
+                        .sourceReference(sourceReferenceFor(detail))
+                        .fingerprint(detail.candidate().lyricsHash())
+                        .status(ProvenanceStatus.NEEDS_REVIEW)))
+                .parserEvidence(new AdminParserEvidence()
+                        .parserName(detail.parserName())
+                        .parserVersion(detail.parserVersion())
+                        .confidence(parseDouble(detail.parserConfidence()))
+                        .severity(detail.parserWarnings().isEmpty() ? ParserSeverity.NONE : ParserSeverity.WARNING)
+                        .warnings(detail.parserWarnings())
+                        .evidenceReferences(List.of()))
+                .reviewNotes(reviewNotes)
+                .relatedAuditReferences(List.of())
                 .duplicateMatches(detail.duplicateMatches().stream().map(AdminImportCandidateController::toDuplicate).toList())
                 .reviewHistory(detail.reviewHistory().stream().map(AdminImportCandidateController::toHistory).toList());
+    }
+
+    private static String sourceReferenceFor(AdminImportCandidateDetail detail) {
+        if (detail.rawSourceReference() != null && !detail.rawSourceReference().isBlank()) {
+            return detail.rawSourceReference();
+        }
+        if (detail.candidate().externalCandidateId() != null && !detail.candidate().externalCandidateId().isBlank()) {
+            return detail.candidate().externalCandidateId();
+        }
+        return detail.candidate().id().toString();
+    }
+
+    private List<String> eligibilityBlockers(AdminImportCandidateDetail detail) {
+        if (detail.candidate().status() == com.cadentia.catalog.model.ImportCandidateStatus.REJECTED
+                || detail.candidate().status() == com.cadentia.catalog.model.ImportCandidateStatus.FAILED) {
+            return List.of("Candidate status is " + detail.candidate().status().name());
+        }
+        if (!detail.parserWarnings().isEmpty()) {
+            return List.of("Parser warnings require reviewer acknowledgement");
+        }
+        return List.of();
+    }
+
+    private static long versionFor(AdminImportCandidateDetail detail) {
+        return detail.candidate().updatedAt().toEpochMilli();
+    }
+
+    private static String etagFor(AdminImportCandidateDetail detail) {
+        return "\"candidate-" + detail.candidate().id() + "-v" + versionFor(detail) + "\"";
+    }
+
+    private static Double parseDouble(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            return Double.parseDouble(value);
+        } catch (NumberFormatException ignored) {
+            return null;
+        }
     }
 
     private static AdminDuplicateMatch toDuplicate(ProposedDuplicateMatch match) {
@@ -248,6 +360,25 @@ public class AdminImportCandidateController implements AdminReviewApi {
                 .reviewer(review.reviewer())
                 .reviewNotes(review.reviewNotes())
                 .reviewedAt(OffsetDateTime.ofInstant(review.reviewedAt(), ZoneOffset.UTC));
+    }
+
+    private AdminReviewNote toReviewNote(ImportCandidateReview review) {
+        Map<String, Object> note = parseNote(review.reviewNotes());
+        return new AdminReviewNote()
+                .noteId(review.id())
+                .authorId(review.reviewer())
+                .authorDisplayName(review.reviewer())
+                .category(String.valueOf(note.getOrDefault("category", review.decision().name())))
+                .body(String.valueOf(note.getOrDefault("body", review.reviewNotes())))
+                .createdAt(OffsetDateTime.ofInstant(review.reviewedAt(), ZoneOffset.UTC));
+    }
+
+    private Map<String, Object> parseNote(String reviewNotes) {
+        try {
+            return objectMapper.readValue(reviewNotes == null ? "{}" : reviewNotes, new TypeReference<>() {});
+        } catch (Exception ignored) {
+            return Map.of();
+        }
     }
 
     private static AdminAuditHistoryItem toAuditHistoryItem(AdminAuditEvent event) {

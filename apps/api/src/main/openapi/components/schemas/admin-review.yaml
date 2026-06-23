@@ -55,6 +55,7 @@ AllowedImportCandidateAction:
   - ASSIGN_REVIEWER
   - OPEN_MODERATION_FLAG
   - REQUEST_PROVENANCE
+  - ADD_REVIEW_NOTE
 AdminImportCandidateQueueResponse:
   type: object
   required:
