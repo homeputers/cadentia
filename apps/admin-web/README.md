@@ -33,3 +33,27 @@ All values are supplied per church instance by deployment tooling. Do not commit
 The v1 artifact is a static SPA in `dist/`. The preferred ADR-036/ADR-022-compatible hosting model is separately hosted static assets behind the same identity provider and church-instance deployment boundary as the API. Operators may reverse-proxy the assets under the API origin later, but the UI must continue to consume only documented OpenAPI routes through `VITE_CADENTIA_API_BASE_URL`.
 
 Smoke tests verify `admin-build.json` for bundle version and API-base-url configuration status, `admin-health.json` for static availability, and `index.html` for SPA availability.
+
+## Shared admin UI foundations
+
+The ADR-036 shell exposes reusable React components under `src/routes/admin-ui.tsx` for page headers, breadcrumbs, filter forms, semantic data tables, status/role/action badges, audit links, diff previews, loading/empty/error state panels, high-risk confirmations, and support/debug metadata. Shared components are intentionally policy-neutral: screens must pass backend-provided allowed actions, preview facts, audit attribution, and optimistic concurrency/version context rather than deriving workflow eligibility in the visual layer.
+
+### Accessibility conventions
+
+- Use native links, buttons, forms, selects, tables, and `details` disclosure controls before introducing custom widgets.
+- Each page has one `h1`, each reusable region is labelled by a heading, breadcrumbs use `nav aria-label="Breadcrumb"`, and tables include captions plus scoped column headers.
+- Dialogs use `role="dialog"`, `aria-modal="true"`, labelled headings, and move focus to the dialog heading when opened. Feature screens that launch dialogs must return focus to the triggering control when closed.
+- Form fields must expose programmatic labels, `aria-invalid`, and `aria-describedby` for validation errors. Error text should be actionable without relying on color alone.
+- Severity, eligibility, approval, and destructive-action warnings must include text or screen-reader text, not only badge color.
+
+### Data state conventions
+
+Data-fetching screens should route backend responses through the shared state language: loading skeletons, empty states, partial failure warnings, stale-data notices, retryable errors, unauthenticated states, and non-leaky forbidden states. Forbidden and unauthorized states must not render protected resource names, raw payload snippets, review notes, diagnostics, or lyrics.
+
+### Redaction rules
+
+Generic UI, client logs, and telemetry must redact or omit secrets, tokens, passwords, raw connector payloads, copyrighted full lyrics, sensitive diagnostics, and personally identifying contact details unless a feature-specific ADR explicitly allows a limited authorized display. Generic errors should show a stable, supportable message and audit/request references rather than backend stack traces or payload excerpts. The `redactSensitiveError` helper is a last line of defense; feature screens should avoid passing sensitive strings into visual components in the first place.
+
+### Support/debug panel
+
+The support/debug panel may show build version, commit, timestamp, diagnostics enabled/disabled, and whether the API base URL is configured. It must not show access tokens, identity-provider secrets, tenant secrets, raw environment dumps, request bodies, connector payloads, or sensitive diagnostics.
