@@ -1,6 +1,34 @@
-.admin-shell { font-family: Inter, system-ui, sans-serif; margin: 0 auto; max-width: 64rem; padding: 2rem; color: #172033; }
-.admin-shell__header { border-bottom: 1px solid #d9e2ef; margin-bottom: 1.5rem; padding-bottom: 1rem; }
+:root { color-scheme: light; --border: #c9d6e4; --text: #172033; --muted: #4f647d; --focus: #7c3aed; --link: #174ea6; --danger: #9f1239; --warning-bg: #fff8e6; --success-bg: #e9f8ef; }
+.admin-shell { font-family: Inter, system-ui, sans-serif; margin: 0 auto; max-width: 72rem; padding: 2rem; color: var(--text); }
+.admin-shell__header, .admin-page-header { border-bottom: 1px solid var(--border); margin-bottom: 1.5rem; padding-bottom: 1rem; }
 .admin-shell__eyebrow { color: #375a7f; font-size: 0.875rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
-.admin-shell__panel { border: 1px solid #d9e2ef; border-radius: 0.75rem; margin-top: 1rem; padding: 1rem; }
-.admin-shell__warning { background: #fff8e6; border-left: 0.25rem solid #c47f00; padding: 0.75rem; }
-a { color: #174ea6; }
+.admin-shell__panel, .admin-state, .admin-filter-panel, .admin-debug { border: 1px solid var(--border); border-radius: 0.75rem; margin-top: 1rem; padding: 1rem; }
+.admin-shell__warning, .admin-state--warning, .admin-state--partial-failure, .admin-state--stale { background: var(--warning-bg); border-left: 0.25rem solid #946200; padding: 0.75rem; }
+.admin-state--forbidden, .admin-state--error { background: #fff1f2; border-left: 0.25rem solid var(--danger); }
+.admin-state--loading { background: #f8fafc; }
+a { color: var(--link); }
+a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-visible, h2:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+button, .admin-shell__button { border: 1px solid #174ea6; border-radius: 0.5rem; background: #174ea6; color: white; display: inline-block; font-weight: 700; padding: 0.55rem 0.8rem; text-decoration: none; }
+button.danger { background: var(--danger); border-color: var(--danger); }
+.admin-breadcrumbs ol { display: flex; flex-wrap: wrap; gap: 0.5rem; list-style: none; padding: 0; }
+.admin-breadcrumbs li + li::before { content: '/'; color: var(--muted); margin-right: 0.5rem; }
+.admin-page-header { display: flex; align-items: start; justify-content: space-between; gap: 1rem; }
+.admin-filter-panel__fields { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); }
+.admin-field { display: grid; gap: 0.35rem; }
+.admin-field__error { color: var(--danger); font-weight: 700; }
+.admin-table-wrap { overflow-x: auto; }
+.admin-table { border-collapse: collapse; width: 100%; }
+.admin-table caption { font-weight: 700; margin: 0.75rem 0; text-align: left; }
+.admin-table th, .admin-table td { border: 1px solid var(--border); padding: 0.6rem; text-align: left; vertical-align: top; }
+.admin-badge { border: 1px solid var(--border); border-radius: 999px; display: inline-block; font-size: 0.85rem; font-weight: 700; margin: 0.2rem; padding: 0.2rem 0.55rem; }
+.admin-badge--success { background: var(--success-bg); border-color: #047857; }
+.admin-badge--warning { background: var(--warning-bg); border-color: #946200; }
+.admin-badge--danger { background: #fff1f2; border-color: var(--danger); }
+.admin-skeleton { animation: pulse 1.2s ease-in-out infinite; background: linear-gradient(90deg, #e2e8f0, #f8fafc, #e2e8f0); border-radius: 0.5rem; height: 2.5rem; }
+.admin-dialog-backdrop { align-items: center; background: rgb(15 23 42 / 0.55); display: flex; inset: 0; justify-content: center; position: fixed; z-index: 10; }
+.admin-dialog { background: white; border-radius: 1rem; box-shadow: 0 20px 60px rgb(15 23 42 / 0.3); max-width: 36rem; padding: 1.5rem; }
+.admin-dialog__actions { display: flex; gap: 0.75rem; justify-content: end; }
+.admin-diff { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); }
+.admin-diff h2 { grid-column: 1 / -1; }
+.sr-only { clip: rect(0 0 0 0); clip-path: inset(50%); height: 1px; overflow: hidden; position: absolute; white-space: nowrap; width: 1px; }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
