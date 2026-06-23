@@ -7,14 +7,99 @@ ImportCandidateStatus:
   - MERGED
   - REJECTED
   - FAILED
+ParserSeverity:
+  type: string
+  enum:
+  - NONE
+  - INFO
+  - WARNING
+  - ERROR
+ProvenanceStatus:
+  type: string
+  enum:
+  - VERIFIED
+  - NEEDS_REVIEW
+  - MISSING
+  - BLOCKED
+DuplicateConfidence:
+  type: string
+  enum:
+  - NONE
+  - LOW
+  - MEDIUM
+  - HIGH
+ModerationState:
+  type: string
+  enum:
+  - CLEAR
+  - FLAGGED
+  - ESCALATED
+  - BLOCKED
+ReviewPriority:
+  type: string
+  enum:
+  - LOW
+  - NORMAL
+  - HIGH
+  - URGENT
+ApprovalReadiness:
+  type: string
+  enum:
+  - BLOCKED
+  - NEEDS_REVIEW
+  - READY
+AllowedImportCandidateAction:
+  type: string
+  enum:
+  - VIEW_DETAIL
+  - ASSIGN_REVIEWER
+  - OPEN_MODERATION_FLAG
+  - REQUEST_PROVENANCE
+AdminImportCandidateQueueResponse:
+  type: object
+  required:
+  - items
+  - page
+  - pageSize
+  - totalItems
+  - totalPages
+  - sort
+  properties:
+    items:
+      type: array
+      items:
+        "$ref": "#/AdminImportCandidateQueueItem"
+    page:
+      type: integer
+      minimum: 1
+    pageSize:
+      type: integer
+      minimum: 1
+    totalItems:
+      type: integer
+      minimum: 0
+    totalPages:
+      type: integer
+      minimum: 0
+    sort:
+      type: string
 AdminImportCandidateQueueItem:
   type: object
   required:
   - candidateId
   - importBatchId
+  - connectorKey
   - rawTitle
   - status
+  - submittedAt
   - updatedAt
+  - parserSeverity
+  - provenanceStatus
+  - duplicateConfidence
+  - moderationState
+  - reviewPriority
+  - approvalReadiness
+  - allowedActions
   properties:
     candidateId:
       type: string
@@ -22,8 +107,11 @@ AdminImportCandidateQueueItem:
     importBatchId:
       type: string
       format: uuid
+    connectorKey:
+      type: string
     rawTitle:
       type: string
+      description: Title metadata only; never full lyrics or raw connector payload.
     normalizedTitle:
       type: string
       nullable: true
@@ -32,9 +120,59 @@ AdminImportCandidateQueueItem:
       nullable: true
     status:
       "$ref": "#/ImportCandidateStatus"
+    submittedAt:
+      type: string
+      format: date-time
     updatedAt:
       type: string
       format: date-time
+    assignedReviewerId:
+      type: string
+      nullable: true
+    assignedReviewerName:
+      type: string
+      nullable: true
+    parserSeverity:
+      "$ref": "#/ParserSeverity"
+    parserConfidence:
+      type: number
+      format: double
+      nullable: true
+    parserWarningCount:
+      type: integer
+      minimum: 0
+      default: 0
+    provenanceStatus:
+      "$ref": "#/ProvenanceStatus"
+    provenanceSummary:
+      type: string
+      nullable: true
+    duplicateConfidence:
+      "$ref": "#/DuplicateConfidence"
+    duplicateMatchCount:
+      type: integer
+      minimum: 0
+      default: 0
+    duplicateTopScore:
+      type: number
+      format: double
+      nullable: true
+    moderationState:
+      "$ref": "#/ModerationState"
+    reviewPriority:
+      "$ref": "#/ReviewPriority"
+    approvalReadiness:
+      "$ref": "#/ApprovalReadiness"
+    readinessSummary:
+      type: string
+      nullable: true
+    allowedActions:
+      type: array
+      items:
+        "$ref": "#/AllowedImportCandidateAction"
+    auditReferenceId:
+      type: string
+      nullable: true
 AdminDuplicateMatch:
   type: object
   required:
