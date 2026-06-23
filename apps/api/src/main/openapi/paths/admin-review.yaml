@@ -117,6 +117,47 @@
               "$ref": "../components/schemas/admin-review.yaml#/AdminImportCandidateDetailResponse"
       '404':
         description: Candidate not found.
+"/admin/import-candidates/{candidateId}/notes":
+  post:
+    tags:
+    - AdminReview
+    operationId: createAdminImportCandidateReviewNote
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - CATALOG_EDITOR
+    - DOCTRINAL_REVIEWER
+    - MUSICAL_REVIEWER
+    - ADMIN
+    summary: Add an attributed reviewer note without mutating imported evidence
+    parameters:
+    - in: path
+      name: candidateId
+      required: true
+      schema:
+        type: string
+        format: uuid
+    - in: header
+      name: If-Match
+      required: true
+      schema:
+        type: string
+      description: Candidate version or ETag required for optimistic concurrency.
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            "$ref": "../components/schemas/admin-review.yaml#/CreateAdminReviewNoteRequest"
+    responses:
+      '200':
+        description: Created reviewer note and refreshed candidate version context.
+        content:
+          application/json:
+            schema:
+              "$ref": "../components/schemas/admin-review.yaml#/AdminReviewNote"
+      '409':
+        description: Candidate version is stale; reload before adding notes.
 "/admin/import-candidates/{candidateId}/duplicates":
   get:
     tags:

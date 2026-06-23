@@ -11,6 +11,7 @@ export type CadentiaApiRoute =
     | '/admin/import-candidates/{candidateId}/audit-history'
     | '/admin/import-candidates/{candidateId}/duplicates'
     | '/admin/import-candidates/{candidateId}/moderation-flags'
+    | '/admin/import-candidates/{candidateId}/notes'
     | '/admin/instance-configuration'
     | '/admin/moderation-flags/{flagId}/assign'
     | '/admin/moderation-flags/{flagId}/escalate'
@@ -95,6 +96,7 @@ export const cadentiaApiRoutes = [
     '/admin/import-candidates/{candidateId}/audit-history',
     '/admin/import-candidates/{candidateId}/duplicates',
     '/admin/import-candidates/{candidateId}/moderation-flags',
+    '/admin/import-candidates/{candidateId}/notes',
     '/admin/instance-configuration',
     '/admin/moderation-flags/{flagId}/assign',
     '/admin/moderation-flags/{flagId}/escalate',
@@ -180,6 +182,7 @@ export const cadentiaApiRouteRefs: Record<CadentiaApiRoute, string> = {
     '/admin/import-candidates/{candidateId}/audit-history': './paths/admin-review.yaml#/~1admin~1import-candidates~1{candidateId}~1audit-history',
     '/admin/import-candidates/{candidateId}/duplicates': './paths/admin-review.yaml#/~1admin~1import-candidates~1{candidateId}~1duplicates',
     '/admin/import-candidates/{candidateId}/moderation-flags': './paths/admin-review.yaml#/~1admin~1import-candidates~1{candidateId}~1moderation-flags',
+    '/admin/import-candidates/{candidateId}/notes': './paths/admin-review.yaml#/~1admin~1import-candidates~1{candidateId}~1notes',
     '/admin/instance-configuration': './paths/admin-operations.yaml#/~1admin~1instance-configuration',
     '/admin/moderation-flags/{flagId}/assign': './paths/admin-review.yaml#/~1admin~1moderation-flags~1{flagId}~1assign',
     '/admin/moderation-flags/{flagId}/escalate': './paths/admin-review.yaml#/~1admin~1moderation-flags~1{flagId}~1escalate',

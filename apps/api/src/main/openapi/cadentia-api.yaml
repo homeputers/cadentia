@@ -97,6 +97,8 @@ paths:
     "$ref": "./paths/admin-review.yaml#/~1admin~1import-candidates"
   "/admin/import-candidates/{candidateId}":
     "$ref": "./paths/admin-review.yaml#/~1admin~1import-candidates~1{candidateId}"
+  "/admin/import-candidates/{candidateId}/notes":
+    "$ref": "./paths/admin-review.yaml#/~1admin~1import-candidates~1{candidateId}~1notes"
   "/admin/import-candidates/{candidateId}/duplicates":
     "$ref": "./paths/admin-review.yaml#/~1admin~1import-candidates~1{candidateId}~1duplicates"
   "/admin/import-candidates/{candidateId}/audit-history":

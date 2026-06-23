@@ -3,6 +3,7 @@ import { adminEnvironment, missingRequiredEnvironment } from '../config/environm
 import { bootstrapAdminSession, type PermissionState } from '../auth/session';
 import { canRenderAction, visibleRoutes } from '../auth/permissions';
 import { ImportCandidateQueue } from './ImportCandidateQueue';
+import { ImportCandidateDetail } from './ImportCandidateDetail';
 import { ActionBadge, AuditReferenceLink, Badge, Breadcrumbs, DataTable, DiffPanel, Field, FilterPanel, PageHeader, RoleBadge, StatePanel, SupportDebugPanel } from './admin-ui';
 import './admin-shell.css';
 
@@ -42,6 +43,10 @@ export const AdminShell = () => {
     const session = permissionState.kind === 'authenticated' ? permissionState.session : null;
     if (session && window.location.pathname === '/admin/imports') {
         return <ImportCandidateQueue session={session} />;
+    }
+    const detailMatch = window.location.pathname.match(/^\/admin\/imports\/([^/]+)$/);
+    if (session && detailMatch) {
+        return <ImportCandidateDetail session={session} candidateId={decodeURIComponent(detailMatch[1])} />;
     }
     const routes = useMemo(() => (session ? visibleRoutes(session, adminEnvironment.featureFlags) : []), [session]);
 
