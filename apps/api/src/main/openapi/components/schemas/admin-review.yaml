@@ -202,6 +202,15 @@ AdminImportCandidateDetailResponse:
   - importBatchId
   - rawTitle
   - status
+  - connectorKey
+  - allowedActions
+  - version
+  - etag
+  - eligibilityBlockers
+  - duplicateSummary
+  - provenanceReferences
+  - parserEvidence
+  - reviewNotes
   - duplicateMatches
   - reviewHistory
   properties:
@@ -211,6 +220,8 @@ AdminImportCandidateDetailResponse:
     importBatchId:
       type: string
       format: uuid
+    connectorKey:
+      type: string
     rawTitle:
       type: string
     normalizedTitle:
@@ -219,9 +230,14 @@ AdminImportCandidateDetailResponse:
     sourceArtistName:
       type: string
       nullable: true
+    sourcePayloadRedacted:
+      type: boolean
+      default: true
     sourcePayloadJson:
       type: string
       nullable: true
+      deprecated: true
+      description: Legacy field; admin UI must not render unless a separate safe endpoint authorizes it.
     rawSourceReference:
       type: string
       nullable: true
@@ -240,6 +256,35 @@ AdminImportCandidateDetailResponse:
         type: string
     status:
       "$ref": "#/ImportCandidateStatus"
+    allowedActions:
+      type: array
+      items:
+        "$ref": "#/AllowedImportCandidateAction"
+    version:
+      type: integer
+      format: int64
+    etag:
+      type: string
+    eligibilityBlockers:
+      type: array
+      items:
+        type: string
+    duplicateSummary:
+      "$ref": "#/AdminDuplicateSummary"
+    provenanceReferences:
+      type: array
+      items:
+        "$ref": "#/AdminProvenanceReference"
+    parserEvidence:
+      "$ref": "#/AdminParserEvidence"
+    reviewNotes:
+      type: array
+      items:
+        "$ref": "#/AdminReviewNote"
+    relatedAuditReferences:
+      type: array
+      items:
+        type: string
     duplicateMatches:
       type: array
       items:
@@ -248,6 +293,104 @@ AdminImportCandidateDetailResponse:
       type: array
       items:
         "$ref": "#/AdminReviewHistoryItem"
+
+AdminDuplicateSummary:
+  type: object
+  properties:
+    confidence:
+      "$ref": "#/DuplicateConfidence"
+    matchCount:
+      type: integer
+      minimum: 0
+    topScore:
+      type: number
+      format: double
+      nullable: true
+    summary:
+      type: string
+      nullable: true
+AdminProvenanceReference:
+  type: object
+  required:
+  - label
+  - sourceReference
+  properties:
+    label:
+      type: string
+    sourceReference:
+      type: string
+    fingerprint:
+      type: string
+      nullable: true
+    status:
+      "$ref": "#/ProvenanceStatus"
+AdminParserEvidence:
+  type: object
+  properties:
+    parserName:
+      type: string
+      nullable: true
+    parserVersion:
+      type: string
+      nullable: true
+    confidence:
+      type: number
+      format: double
+      nullable: true
+    severity:
+      "$ref": "#/ParserSeverity"
+    warnings:
+      type: array
+      items:
+        type: string
+    evidenceReferences:
+      type: array
+      items:
+        type: string
+AdminReviewNote:
+  type: object
+  required:
+  - noteId
+  - authorId
+  - body
+  - createdAt
+  properties:
+    noteId:
+      type: string
+      format: uuid
+    authorId:
+      type: string
+    authorDisplayName:
+      type: string
+      nullable: true
+    category:
+      type: string
+      nullable: true
+    body:
+      type: string
+      maxLength: 2000
+    createdAt:
+      type: string
+      format: date-time
+    auditReferenceId:
+      type: string
+      nullable: true
+CreateAdminReviewNoteRequest:
+  type: object
+  additionalProperties: false
+  required:
+  - actor
+  - body
+  properties:
+    actor:
+      type: string
+    category:
+      type: string
+      nullable: true
+    body:
+      type: string
+      minLength: 1
+      maxLength: 2000
 AdminReviewHistoryItem:
   type: object
   required:
