@@ -1,10 +1,12 @@
 package com.cadentia.api.controller;
 
-import com.cadentia.api.security.RbacAuthorities;
-
+import com.cadentia.catalog.entity.ApprovalRecord;
 import com.cadentia.catalog.entity.ImportCandidateReview;
 import com.cadentia.catalog.entity.ProposedDuplicateMatch;
+import com.cadentia.catalog.model.ApprovalType;
 import com.cadentia.generated.api.AdminReviewApi;
+import com.cadentia.generated.model.AdminApprovalState;
+import com.cadentia.generated.model.AdminApprovalStateStatusesInner;
 import com.cadentia.generated.model.AdminAuditHistoryItem;
 import com.cadentia.generated.model.AdminDuplicateMatch;
 import com.cadentia.generated.model.AdminDuplicateSummary;
@@ -16,6 +18,7 @@ import com.cadentia.generated.model.AdminProvenanceReference;
 import com.cadentia.generated.model.AdminReviewHistoryItem;
 import com.cadentia.generated.model.AdminReviewNote;
 import com.cadentia.generated.model.AllowedImportCandidateAction;
+import com.cadentia.generated.model.ApprovalActionRequest;
 import com.cadentia.generated.model.ApprovalReadiness;
 import com.cadentia.generated.model.AssignModerationFlagRequest;
 import com.cadentia.generated.model.CreateAdminReviewNoteRequest;
@@ -27,6 +30,7 @@ import com.cadentia.generated.model.ImportCandidateStatus;
 import com.cadentia.generated.model.ModerationFlagResponse;
 import com.cadentia.generated.model.ModerationFlagStatus;
 import com.cadentia.generated.model.ModerationState;
+import com.cadentia.generated.model.MergeDecisionRequest;
 import com.cadentia.generated.model.OpenModerationFlagRequest;
 import com.cadentia.generated.model.ParserSeverity;
 import com.cadentia.generated.model.ProvenanceStatus;
@@ -38,6 +42,8 @@ import com.cadentia.generated.model.RollbackPreviewResponse;
 import com.cadentia.scraperadmin.AdminAuditEvent;
 import com.cadentia.scraperadmin.AdminImportCandidateDetail;
 import com.cadentia.scraperadmin.AdminImportReviewService;
+import com.cadentia.scraperadmin.ApplyApprovalActionCommand;
+import com.cadentia.scraperadmin.ApprovalReviewAction;
 import com.cadentia.scraperadmin.ModerationFlag;
 import com.cadentia.scraperadmin.ModerationFlagSeverity;
 import com.cadentia.scraperadmin.ModerationFlagType;
@@ -173,9 +179,48 @@ public class AdminImportCandidateController implements AdminReviewApi {
 
     @Override
     @PreAuthorize("hasAnyAuthority(T(com.cadentia.api.security.RbacAuthorities).ROLE_CATALOG_EDITOR, T(com.cadentia.api.security.RbacAuthorities).ROLE_ADMIN, 'catalog.admin.review', 'catalog.admin.approve')")
+    public ResponseEntity<AdminImportCandidateDetailResponse> submitAdminImportCandidateMergeDecision(
+            @PathVariable UUID candidateId,
+            @RequestHeader("If-Match") String ifMatch,
+            @RequestBody MergeDecisionRequest request) {
+        requireFreshCandidate(candidateId, ifMatch);
+        reviewService.submitMergeDecision(
+                candidateId,
+                request.getActor(),
+                request.getDecision().getValue(),
+                request.getDuplicateMatchId(),
+                request.getRationale());
+        return ResponseEntity.ok(toDetail(reviewService.getCandidateDetail(candidateId)));
+    }
+
+    @Override
+    @PreAuthorize("hasAnyAuthority(T(com.cadentia.api.security.RbacAuthorities).ROLE_CATALOG_EDITOR, T(com.cadentia.api.security.RbacAuthorities).ROLE_ADMIN, 'catalog.admin.review', 'catalog.admin.approve')")
+    public ResponseEntity<AdminImportCandidateDetailResponse> submitAdminImportCandidateApprovalAction(
+            @PathVariable UUID candidateId,
+            @RequestHeader("If-Match") String ifMatch,
+            @RequestBody ApprovalActionRequest request) {
+        AdminImportCandidateDetail detail = requireFreshCandidate(candidateId, ifMatch);
+        if (detail.candidate().mergedSongId() == null) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Candidate must be merged before approval actions");
+        }
+        reviewService.applyApprovalAction(new ApplyApprovalActionCommand(
+                detail.candidate().mergedSongId(),
+                null,
+                null,
+                ApprovalType.valueOf(request.getApprovalType()),
+                approvalActionFor(request.getAction()),
+                request.getActor(),
+                request.getRationale()));
+        return ResponseEntity.ok(toDetail(reviewService.getCandidateDetail(candidateId)));
+    }
+
+    @Override
+    @PreAuthorize("hasAnyAuthority(T(com.cadentia.api.security.RbacAuthorities).ROLE_CATALOG_EDITOR, T(com.cadentia.api.security.RbacAuthorities).ROLE_ADMIN, 'catalog.admin.review', 'catalog.admin.approve')")
     public ResponseEntity<ModerationFlagResponse> openAdminModerationFlag(
             @PathVariable UUID candidateId,
+            @RequestHeader("If-Match") String ifMatch,
             @RequestBody OpenModerationFlagRequest request) {
+        requireFreshCandidate(candidateId, ifMatch);
         ModerationFlag flag = reviewService.openModerationFlag(
                 candidateId,
                 ModerationFlagType.valueOf(request.getType().getValue()),
@@ -211,7 +256,6 @@ public class AdminImportCandidateController implements AdminReviewApi {
         return ResponseEntity.ok(toModerationFlagResponse(
                 reviewService.escalateModerationFlag(flagId, request.getActor(), request.getReason())));
     }
-
 
     @Override
     @PreAuthorize("hasAuthority(T(com.cadentia.api.security.RbacAuthorities).ROLE_ADMIN)")
@@ -276,7 +320,7 @@ public class AdminImportCandidateController implements AdminReviewApi {
                 .parserConfidence(detail.parserConfidence())
                 .parserWarnings(detail.parserWarnings())
                 .status(ImportCandidateStatus.fromValue(detail.candidate().status().name()))
-                .allowedActions(List.of(AllowedImportCandidateAction.VIEW_DETAIL, AllowedImportCandidateAction.ADD_REVIEW_NOTE))
+                .allowedActions(allowedActions(detail))
                 .version(versionFor(detail))
                 .etag(etagFor(detail))
                 .eligibilityBlockers(eligibilityBlockers(detail))
@@ -300,7 +344,72 @@ public class AdminImportCandidateController implements AdminReviewApi {
                 .reviewNotes(reviewNotes)
                 .relatedAuditReferences(List.of())
                 .duplicateMatches(detail.duplicateMatches().stream().map(AdminImportCandidateController::toDuplicate).toList())
-                .reviewHistory(detail.reviewHistory().stream().map(AdminImportCandidateController::toHistory).toList());
+                .reviewHistory(detail.reviewHistory().stream().map(AdminImportCandidateController::toHistory).toList())
+                .approvalState(approvalState(detail))
+                .moderationFlags(reviewService.listModerationFlagsForCandidate(detail.candidate().id()).stream()
+                        .map(AdminImportCandidateController::toModerationFlagResponse)
+                        .toList());
+    }
+
+    private AdminImportCandidateDetail requireFreshCandidate(UUID candidateId, String ifMatch) {
+        AdminImportCandidateDetail detail = reviewService.getCandidateDetail(candidateId);
+        String expectedEtag = etagFor(detail);
+        if (!expectedEtag.equals(ifMatch)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Candidate version is stale");
+        }
+        return detail;
+    }
+
+    private static List<AllowedImportCandidateAction> allowedActions(AdminImportCandidateDetail detail) {
+        List<AllowedImportCandidateAction> actions = new java.util.ArrayList<>();
+        actions.add(AllowedImportCandidateAction.VIEW_DETAIL);
+        actions.add(AllowedImportCandidateAction.ADD_REVIEW_NOTE);
+        actions.add(AllowedImportCandidateAction.OPEN_MODERATION_FLAG);
+        actions.add(AllowedImportCandidateAction.MERGE_DECISION_DEFER);
+        actions.add(AllowedImportCandidateAction.MERGE_DECISION_CREATE_NEW);
+        if (!detail.duplicateMatches().isEmpty()) {
+            actions.add(AllowedImportCandidateAction.MERGE_DECISION_MERGE_EXISTING);
+            actions.add(AllowedImportCandidateAction.MERGE_DECISION_REJECT_DUPLICATE);
+        }
+        actions.add(AllowedImportCandidateAction.MERGE_DECISION_REJECT_NOT_PERMITTED);
+        if (detail.candidate().mergedSongId() != null) {
+            actions.add(AllowedImportCandidateAction.SUBMIT_APPROVAL_ACTION);
+            actions.add(AllowedImportCandidateAction.REVERSE_APPROVAL);
+        }
+        return actions;
+    }
+
+    private AdminApprovalState approvalState(AdminImportCandidateDetail detail) {
+        List<ApprovalRecord> approvals = detail.candidate().mergedSongId() == null
+                ? List.of()
+                : reviewService.findApprovalRecordsForSong(detail.candidate().mergedSongId());
+        List<AdminApprovalStateStatusesInner> statuses = approvals.stream()
+                .map(record -> new AdminApprovalStateStatusesInner()
+                        .type(record.approvalType().name())
+                        .status(record.status().name())
+                        .actor(record.reviewer()))
+                .toList();
+        List<String> blockers = detail.candidate().mergedSongId() == null
+                ? List.of("Candidate must be merged before approval actions")
+                : approvals.stream().anyMatch(record -> record.status() == com.cadentia.catalog.model.ApprovalStatus.APPROVED)
+                        ? List.of()
+                        : List.of("At least one approved approval record is required for recommendation eligibility");
+        return new AdminApprovalState()
+                .requiredTypes(List.of(ApprovalType.EDITORIAL.name(), ApprovalType.DOCTRINAL.name()))
+                .statuses(statuses)
+                .blockers(blockers)
+                .allowedTransitions(List.of("APPROVE", "REJECT_APPROVAL", "REVERSE_APPROVAL"))
+                .eligibilityImpact(blockers.isEmpty()
+                        ? "Backend approval gates may permit recommendation eligibility when provenance and moderation also pass."
+                        : "Backend approval gates currently block recommendation eligibility.");
+    }
+
+    private static ApprovalReviewAction approvalActionFor(ApprovalActionRequest.ActionEnum action) {
+        return switch (action) {
+            case APPROVE -> ApprovalReviewAction.APPROVE;
+            case REJECT_APPROVAL -> ApprovalReviewAction.REJECT;
+            case REVERSE_APPROVAL -> ApprovalReviewAction.REVOKE;
+        };
     }
 
     private static String sourceReferenceFor(AdminImportCandidateDetail detail) {
@@ -403,9 +512,13 @@ public class AdminImportCandidateController implements AdminReviewApi {
                 .openedBy(flag.openedBy())
                 .assignedTo(flag.assignedTo())
                 .resolutionNotes(flag.resolutionNotes())
+                .scope("IMPORT_CANDIDATE")
+                .reason(flag.resolutionNotes())
+                .eligibilityImpactPolicy(flag.excludeFromRecommendation()
+                        ? "BLOCK_UNTIL_RESOLVED"
+                        : "REVIEW_ONLY")
                 .excludeFromRecommendation(flag.excludeFromRecommendation())
                 .openedAt(OffsetDateTime.ofInstant(flag.openedAt(), ZoneOffset.UTC))
                 .updatedAt(OffsetDateTime.ofInstant(flag.updatedAt(), ZoneOffset.UTC));
     }
-
 }

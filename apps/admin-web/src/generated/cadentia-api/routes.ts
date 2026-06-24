@@ -8,8 +8,10 @@ export type CadentiaApiRoute =
     | '/admin/feature-flags/{flagKey}:preview'
     | '/admin/import-candidates'
     | '/admin/import-candidates/{candidateId}'
+    | '/admin/import-candidates/{candidateId}/approval-actions'
     | '/admin/import-candidates/{candidateId}/audit-history'
     | '/admin/import-candidates/{candidateId}/duplicates'
+    | '/admin/import-candidates/{candidateId}/merge-decisions'
     | '/admin/import-candidates/{candidateId}/moderation-flags'
     | '/admin/import-candidates/{candidateId}/notes'
     | '/admin/instance-configuration'
@@ -93,8 +95,10 @@ export const cadentiaApiRoutes = [
     '/admin/feature-flags/{flagKey}:preview',
     '/admin/import-candidates',
     '/admin/import-candidates/{candidateId}',
+    '/admin/import-candidates/{candidateId}/approval-actions',
     '/admin/import-candidates/{candidateId}/audit-history',
     '/admin/import-candidates/{candidateId}/duplicates',
+    '/admin/import-candidates/{candidateId}/merge-decisions',
     '/admin/import-candidates/{candidateId}/moderation-flags',
     '/admin/import-candidates/{candidateId}/notes',
     '/admin/instance-configuration',
@@ -179,8 +183,10 @@ export const cadentiaApiRouteRefs: Record<CadentiaApiRoute, string> = {
     '/admin/feature-flags/{flagKey}:preview': './paths/admin-operations.yaml#/~1admin~1feature-flags~1{flagKey}:preview',
     '/admin/import-candidates': './paths/admin-review.yaml#/~1admin~1import-candidates',
     '/admin/import-candidates/{candidateId}': './paths/admin-review.yaml#/~1admin~1import-candidates~1{candidateId}',
+    '/admin/import-candidates/{candidateId}/approval-actions': './paths/admin-review.yaml#/~1admin~1import-candidates~1{candidateId}~1approval-actions',
     '/admin/import-candidates/{candidateId}/audit-history': './paths/admin-review.yaml#/~1admin~1import-candidates~1{candidateId}~1audit-history',
     '/admin/import-candidates/{candidateId}/duplicates': './paths/admin-review.yaml#/~1admin~1import-candidates~1{candidateId}~1duplicates',
+    '/admin/import-candidates/{candidateId}/merge-decisions': './paths/admin-review.yaml#/~1admin~1import-candidates~1{candidateId}~1merge-decisions',
     '/admin/import-candidates/{candidateId}/moderation-flags': './paths/admin-review.yaml#/~1admin~1import-candidates~1{candidateId}~1moderation-flags',
     '/admin/import-candidates/{candidateId}/notes': './paths/admin-review.yaml#/~1admin~1import-candidates~1{candidateId}~1notes',
     '/admin/instance-configuration': './paths/admin-operations.yaml#/~1admin~1instance-configuration',

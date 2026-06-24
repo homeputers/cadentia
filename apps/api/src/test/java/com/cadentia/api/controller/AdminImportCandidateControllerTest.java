@@ -4,14 +4,21 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.cadentia.catalog.entity.ImportCandidate;
+import com.cadentia.catalog.entity.ApprovalRecord;
 import com.cadentia.catalog.entity.ImportCandidateReview;
+import com.cadentia.catalog.model.ApprovalStatus;
+import com.cadentia.catalog.model.ApprovalType;
 import com.cadentia.catalog.model.ImportCandidateReviewDecision;
 import com.cadentia.catalog.model.ImportCandidateStatus;
 import com.cadentia.generated.model.AdminImportCandidateDetailResponse;
 import com.cadentia.generated.model.AdminReviewNote;
+import com.cadentia.generated.model.ApprovalActionRequest;
 import com.cadentia.generated.model.CreateAdminReviewNoteRequest;
+import com.cadentia.generated.model.MergeDecisionRequest;
 import com.cadentia.scraperadmin.AdminImportCandidateDetail;
 import com.cadentia.scraperadmin.AdminImportReviewService;
+import com.cadentia.scraperadmin.ApplyApprovalActionCommand;
+import com.cadentia.scraperadmin.ModerationFlag;
 import com.cadentia.scraperadmin.StructuredReviewNote;
 import java.time.Instant;
 import java.util.List;
@@ -115,6 +122,108 @@ class AdminImportCandidateControllerTest {
                 .hasMessageContaining("Candidate version is stale");
     }
 
+    @Test
+    void submitMergeDecisionRequiresFreshEtagAndPersistsBackendDecision() {
+        // Arrange
+        UUID candidateId = UUID.randomUUID();
+        UUID duplicateMatchId = UUID.randomUUID();
+        ImportCandidate candidate = candidate(candidateId, ImportCandidateStatus.DEDUPLICATION_REVIEW);
+        FakeReviewService reviewService = new FakeReviewService(new AdminImportCandidateDetail(
+                candidate,
+                "fixture://source/1",
+                "fixture-parser",
+                "1.2.3",
+                "0.91",
+                List.of(),
+                List.of(),
+                List.of()),
+                review(candidateId));
+        AdminImportCandidateController controller = new AdminImportCandidateController(reviewService);
+        MergeDecisionRequest request = new MergeDecisionRequest()
+                .actor("reviewer-1")
+                .decision(MergeDecisionRequest.DecisionEnum.MERGE_EXISTING)
+                .duplicateMatchId(duplicateMatchId)
+                .rationale("Same title and source fingerprint.");
+
+        // Act
+        AdminImportCandidateDetailResponse response = controller.submitAdminImportCandidateMergeDecision(
+                candidateId,
+                "\"candidate-" + candidateId + "-v0\"",
+                request).getBody();
+
+        // Assert
+        assertThat(response).isNotNull();
+        assertThat(reviewService.mergeCandidateId).isEqualTo(candidateId);
+        assertThat(reviewService.mergeActor).isEqualTo("reviewer-1");
+        assertThat(reviewService.mergeDecision).isEqualTo("MERGE_EXISTING");
+        assertThat(reviewService.mergeDuplicateMatchId).isEqualTo(duplicateMatchId);
+        assertThat(reviewService.mergeRationale).isEqualTo("Same title and source fingerprint.");
+    }
+
+    @Test
+    void submitMergeDecisionRejectsStaleCandidateEtagBeforeMutation() {
+        // Arrange
+        UUID candidateId = UUID.randomUUID();
+        FakeReviewService reviewService = new FakeReviewService(new AdminImportCandidateDetail(
+                candidate(candidateId, ImportCandidateStatus.DEDUPLICATION_REVIEW),
+                "fixture://source/1",
+                "fixture-parser",
+                "1.2.3",
+                "0.91",
+                List.of(),
+                List.of(),
+                List.of()),
+                null);
+        AdminImportCandidateController controller = new AdminImportCandidateController(reviewService);
+        MergeDecisionRequest request = new MergeDecisionRequest()
+                .actor("reviewer-1")
+                .decision(MergeDecisionRequest.DecisionEnum.DEFER)
+                .rationale("Needs another reviewer.");
+
+        // Act / Assert
+        assertThatThrownBy(() -> controller.submitAdminImportCandidateMergeDecision(candidateId, "\"stale\"", request))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("Candidate version is stale");
+        assertThat(reviewService.mergeCandidateId).isNull();
+    }
+
+    @Test
+    void submitApprovalActionRequiresMergedCandidateAndPassesActorVersionContext() {
+        // Arrange
+        UUID candidateId = UUID.randomUUID();
+        UUID mergedSongId = UUID.randomUUID();
+        ImportCandidate candidate = candidate(candidateId, ImportCandidateStatus.MERGED, mergedSongId);
+        FakeReviewService reviewService = new FakeReviewService(new AdminImportCandidateDetail(
+                candidate,
+                "fixture://source/1",
+                "fixture-parser",
+                "1.2.3",
+                "0.98",
+                List.of(),
+                List.of(),
+                List.of()),
+                null);
+        AdminImportCandidateController controller = new AdminImportCandidateController(reviewService);
+        ApprovalActionRequest request = new ApprovalActionRequest()
+                .actor("doctrine-reviewer")
+                .approvalType("DOCTRINAL")
+                .action(ApprovalActionRequest.ActionEnum.REVERSE_APPROVAL)
+                .rationale("Approval was entered for the wrong candidate.");
+
+        // Act
+        AdminImportCandidateDetailResponse response = controller.submitAdminImportCandidateApprovalAction(
+                candidateId,
+                "\"candidate-" + candidateId + "-v0\"",
+                request).getBody();
+
+        // Assert
+        assertThat(response).isNotNull();
+        assertThat(reviewService.approvalCommand.songId()).isEqualTo(mergedSongId);
+        assertThat(reviewService.approvalCommand.approvalType()).isEqualTo(ApprovalType.DOCTRINAL);
+        assertThat(reviewService.approvalCommand.reviewer()).isEqualTo("doctrine-reviewer");
+        assertThat(reviewService.approvalCommand.reviewNotes()).isEqualTo("Approval was entered for the wrong candidate.");
+    }
+
     private static final class FakeReviewService extends AdminImportReviewService {
 
         private final AdminImportCandidateDetail detail;
@@ -122,6 +231,12 @@ class AdminImportCandidateControllerTest {
         private UUID addedCandidateId;
         private String addedActor;
         private StructuredReviewNote addedNote;
+        private UUID mergeCandidateId;
+        private String mergeActor;
+        private String mergeDecision;
+        private UUID mergeDuplicateMatchId;
+        private String mergeRationale;
+        private ApplyApprovalActionCommand approvalCommand;
 
         private FakeReviewService(AdminImportCandidateDetail detail, ImportCandidateReview savedReview) {
             super(null);
@@ -141,9 +256,54 @@ class AdminImportCandidateControllerTest {
             addedNote = note;
             return savedReview;
         }
+
+        @Override
+        public ImportCandidateReview submitMergeDecision(
+                UUID importCandidateId,
+                String actor,
+                String decision,
+                UUID duplicateMatchId,
+                String rationale) {
+            mergeCandidateId = importCandidateId;
+            mergeActor = actor;
+            mergeDecision = decision;
+            mergeDuplicateMatchId = duplicateMatchId;
+            mergeRationale = rationale;
+            return savedReview;
+        }
+
+        @Override
+        public ApprovalRecord applyApprovalAction(ApplyApprovalActionCommand command) {
+            approvalCommand = command;
+            return new ApprovalRecord(
+                    UUID.randomUUID(),
+                    command.songId(),
+                    command.arrangementId(),
+                    command.lyricsDocumentId(),
+                    command.approvalType(),
+                    ApprovalStatus.APPROVED,
+                    command.reviewer(),
+                    command.reviewNotes(),
+                    Instant.EPOCH,
+                    Instant.EPOCH);
+        }
+
+        @Override
+        public List<ModerationFlag> listModerationFlagsForCandidate(UUID importCandidateId) {
+            return List.of();
+        }
+
+        @Override
+        public List<ApprovalRecord> findApprovalRecordsForSong(UUID songId) {
+            return List.of();
+        }
     }
 
     private static ImportCandidate candidate(UUID id, ImportCandidateStatus status) {
+        return candidate(id, status, null);
+    }
+
+    private static ImportCandidate candidate(UUID id, ImportCandidateStatus status, UUID mergedSongId) {
         return new ImportCandidate(
                 id,
                 UUID.randomUUID(),
@@ -156,7 +316,7 @@ class AdminImportCandidateControllerTest {
                 "sha256:lyrics",
                 "{\"rawPayload\":\"must-not-render\"}",
                 status,
-                null,
+                mergedSongId,
                 Instant.EPOCH,
                 Instant.EPOCH);
     }

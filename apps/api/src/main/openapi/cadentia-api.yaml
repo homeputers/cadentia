@@ -103,6 +103,10 @@ paths:
     "$ref": "./paths/admin-review.yaml#/~1admin~1import-candidates~1{candidateId}~1duplicates"
   "/admin/import-candidates/{candidateId}/audit-history":
     "$ref": "./paths/admin-review.yaml#/~1admin~1import-candidates~1{candidateId}~1audit-history"
+  "/admin/import-candidates/{candidateId}/merge-decisions":
+    "$ref": "./paths/admin-review.yaml#/~1admin~1import-candidates~1{candidateId}~1merge-decisions"
+  "/admin/import-candidates/{candidateId}/approval-actions":
+    "$ref": "./paths/admin-review.yaml#/~1admin~1import-candidates~1{candidateId}~1approval-actions"
   "/admin/import-candidates/{candidateId}/moderation-flags":
     "$ref": "./paths/admin-review.yaml#/~1admin~1import-candidates~1{candidateId}~1moderation-flags"
   "/admin/moderation-flags/{flagId}/assign":

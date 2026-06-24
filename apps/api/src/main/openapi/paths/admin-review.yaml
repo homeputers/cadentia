@@ -212,6 +212,85 @@
               type: array
               items:
                 "$ref": "../components/schemas/admin-review.yaml#/AdminAuditHistoryItem"
+
+"/admin/import-candidates/{candidateId}/merge-decisions":
+  post:
+    tags:
+    - AdminReview
+    operationId: submitAdminImportCandidateMergeDecision
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - CATALOG_EDITOR
+    - ADMIN
+    summary: Submit a backend-validated duplicate merge decision
+    parameters:
+    - in: path
+      name: candidateId
+      required: true
+      schema:
+        type: string
+        format: uuid
+    - in: header
+      name: If-Match
+      required: true
+      schema:
+        type: string
+      description: Candidate version or ETag required for optimistic concurrency.
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            "$ref": "../components/schemas/admin-review.yaml#/MergeDecisionRequest"
+    responses:
+      '200':
+        description: Refreshed candidate detail after merge decision validation and audit recording.
+        content:
+          application/json:
+            schema:
+              "$ref": "../components/schemas/admin-review.yaml#/AdminImportCandidateDetailResponse"
+      '409':
+        description: Candidate version is stale or backend blockers changed.
+"/admin/import-candidates/{candidateId}/approval-actions":
+  post:
+    tags:
+    - AdminReview
+    operationId: submitAdminImportCandidateApprovalAction
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - CATALOG_EDITOR
+    - ADMIN
+    summary: Submit a backend-validated approval or reversal action
+    parameters:
+    - in: path
+      name: candidateId
+      required: true
+      schema:
+        type: string
+        format: uuid
+    - in: header
+      name: If-Match
+      required: true
+      schema:
+        type: string
+      description: Candidate version or ETag required for optimistic concurrency.
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            "$ref": "../components/schemas/admin-review.yaml#/ApprovalActionRequest"
+    responses:
+      '200':
+        description: Refreshed candidate detail with updated approvals and eligibility impact.
+        content:
+          application/json:
+            schema:
+              "$ref": "../components/schemas/admin-review.yaml#/AdminImportCandidateDetailResponse"
+      '409':
+        description: Candidate version is stale or transition is no longer allowed.
 "/admin/import-candidates/{candidateId}/moderation-flags":
   post:
     tags:
@@ -230,6 +309,12 @@
       schema:
         type: string
         format: uuid
+    - in: header
+      name: If-Match
+      required: true
+      schema:
+        type: string
+      description: Candidate version or ETag required for optimistic concurrency.
     requestBody:
       required: true
       content:

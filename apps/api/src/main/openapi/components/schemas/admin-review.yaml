@@ -56,6 +56,13 @@ AllowedImportCandidateAction:
   - OPEN_MODERATION_FLAG
   - REQUEST_PROVENANCE
   - ADD_REVIEW_NOTE
+  - MERGE_DECISION_CREATE_NEW
+  - MERGE_DECISION_MERGE_EXISTING
+  - MERGE_DECISION_REJECT_DUPLICATE
+  - MERGE_DECISION_REJECT_NOT_PERMITTED
+  - MERGE_DECISION_DEFER
+  - SUBMIT_APPROVAL_ACTION
+  - REVERSE_APPROVAL
 AdminImportCandidateQueueResponse:
   type: object
   required:
@@ -294,6 +301,14 @@ AdminImportCandidateDetailResponse:
       type: array
       items:
         "$ref": "#/AdminReviewHistoryItem"
+    duplicateComparison:
+      "$ref": "#/AdminDuplicateComparison"
+    approvalState:
+      "$ref": "#/AdminApprovalState"
+    moderationFlags:
+      type: array
+      items:
+        "$ref": "#/ModerationFlagResponse"
 
 AdminDuplicateSummary:
   type: object
@@ -463,6 +478,18 @@ ModerationFlagResponse:
     resolutionNotes:
       type: string
       nullable: true
+    scope:
+      type: string
+      nullable: true
+    reason:
+      type: string
+      nullable: true
+    eligibilityImpactPolicy:
+      type: string
+      nullable: true
+    auditReferenceId:
+      type: string
+      nullable: true
     excludeFromRecommendation:
       type: boolean
     openedAt:
@@ -602,6 +629,12 @@ OpenModerationFlagRequest:
       type: string
     reason:
       type: string
+    scope:
+      type: string
+      nullable: true
+    eligibilityImpactPolicy:
+      type: string
+      nullable: true
     excludeFromRecommendation:
       type: boolean
 AssignModerationFlagRequest:
@@ -640,3 +673,142 @@ EscalateModerationFlagRequest:
       type: string
     reason:
       type: string
+
+AdminDuplicateComparison:
+  type: object
+  required:
+  - candidate
+  - existing
+  - matchingFeatures
+  - conflicts
+  - confidenceFeatures
+  - eligibilityEffects
+  properties:
+    candidate:
+      type: object
+      additionalProperties: true
+      description: Safe candidate field values; excludes full copyrighted lyrics and sensitive notes.
+    existing:
+      type: object
+      additionalProperties: true
+      description: Safe approved-catalog field values; excludes full copyrighted lyrics and sensitive notes.
+    matchingFeatures:
+      type: array
+      items:
+        type: string
+    conflicts:
+      type: array
+      items:
+        type: string
+    confidenceFeatures:
+      type: array
+      items:
+        type: string
+    currentApprovedCatalogState:
+      type: string
+      nullable: true
+    eligibilityEffects:
+      type: array
+      items:
+        type: string
+    auditReferenceId:
+      type: string
+      nullable: true
+AdminApprovalState:
+  type: object
+  required:
+  - requiredTypes
+  - statuses
+  - blockers
+  - allowedTransitions
+  - eligibilityImpact
+  properties:
+    requiredTypes:
+      type: array
+      items:
+        type: string
+    statuses:
+      type: array
+      items:
+        type: object
+        required:
+        - type
+        - status
+        properties:
+          type:
+            type: string
+          status:
+            type: string
+          actor:
+            type: string
+            nullable: true
+          auditReferenceId:
+            type: string
+            nullable: true
+    blockers:
+      type: array
+      items:
+        type: string
+    allowedTransitions:
+      type: array
+      items:
+        type: string
+    eligibilityImpact:
+      type: string
+    auditReferenceId:
+      type: string
+      nullable: true
+MergeDecisionRequest:
+  type: object
+  additionalProperties: false
+  required:
+  - actor
+  - decision
+  - rationale
+  properties:
+    actor:
+      type: string
+    decision:
+      type: string
+      enum:
+      - CREATE_NEW
+      - MERGE_EXISTING
+      - REJECT_DUPLICATE
+      - REJECT_NOT_PERMITTED
+      - DEFER
+    duplicateMatchId:
+      type: string
+      format: uuid
+      nullable: true
+    fieldSelections:
+      type: object
+      additionalProperties:
+        type: string
+        enum:
+        - CANDIDATE
+        - EXISTING
+    rationale:
+      type: string
+      minLength: 1
+ApprovalActionRequest:
+  type: object
+  additionalProperties: false
+  required:
+  - actor
+  - approvalType
+  - action
+  - rationale
+  properties:
+    actor:
+      type: string
+    approvalType:
+      type: string
+    action:
+      type: string
+      enum:
+      - APPROVE
+      - REVERSE_APPROVAL
+      - REJECT_APPROVAL
+    rationale:
+      type: string
+      minLength: 1

@@ -61,7 +61,7 @@ class AdminImportCandidateControllerSecurityTest {
                 .reason("Needs review")
                 .excludeFromRecommendation(false);
 
-        assertThatThrownBy(() -> controller.openAdminModerationFlag(UUID.randomUUID(), request))
+        assertThatThrownBy(() -> controller.openAdminModerationFlag(UUID.randomUUID(), "\"candidate-version\"", request))
                 .isInstanceOf(AccessDeniedException.class);
     }
 
@@ -77,7 +77,7 @@ class AdminImportCandidateControllerSecurityTest {
                 .reason("Needs review")
                 .excludeFromRecommendation(false);
 
-        assertThatThrownBy(() -> controller.openAdminModerationFlag(UUID.randomUUID(), request))
+        assertThatThrownBy(() -> controller.openAdminModerationFlag(UUID.randomUUID(), "\"candidate-version\"", request))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Unknown import candidate");
     }
