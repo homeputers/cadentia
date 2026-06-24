@@ -5,6 +5,8 @@ import { canRenderAction, visibleRoutes } from '../auth/permissions';
 import { ImportCandidateQueue } from './ImportCandidateQueue';
 import { ImportCandidateDetail } from './ImportCandidateDetail';
 import { AuditRollback } from './AuditRollback';
+import { Diagnostics } from './Diagnostics';
+import { InstanceSettings } from './InstanceSettings';
 import { ActionBadge, AuditReferenceLink, Badge, Breadcrumbs, DataTable, DiffPanel, Field, FilterPanel, PageHeader, RoleBadge, StatePanel, SupportDebugPanel } from './admin-ui';
 import './admin-shell.css';
 
@@ -47,6 +49,12 @@ export const AdminShell = () => {
     }
     if (session && window.location.pathname === '/admin/audit') {
         return <AuditRollback session={session} />;
+    }
+    if (session && window.location.pathname === '/admin/diagnostics') {
+        return <Diagnostics session={session} />;
+    }
+    if (session && window.location.pathname === '/admin/settings') {
+        return <InstanceSettings session={session} />;
     }
     const detailMatch = window.location.pathname.match(/^\/admin\/imports\/([^/]+)$/);
     if (session && detailMatch) {
