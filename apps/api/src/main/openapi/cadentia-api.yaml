@@ -93,6 +93,8 @@ paths:
     "$ref": "./paths/admin-operations.yaml#/~1admin~1feature-flags~1{flagKey}:preview"
   "/admin/feature-flags/{flagKey}:confirm":
     "$ref": "./paths/admin-operations.yaml#/~1admin~1feature-flags~1{flagKey}:confirm"
+  "/admin/audit-events":
+    "$ref": "./paths/admin-review.yaml#/~1admin~1audit-events"
   "/admin/import-candidates":
     "$ref": "./paths/admin-review.yaml#/~1admin~1import-candidates"
   "/admin/import-candidates/{candidateId}":

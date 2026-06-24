@@ -4,6 +4,7 @@ import { bootstrapAdminSession, type PermissionState } from '../auth/session';
 import { canRenderAction, visibleRoutes } from '../auth/permissions';
 import { ImportCandidateQueue } from './ImportCandidateQueue';
 import { ImportCandidateDetail } from './ImportCandidateDetail';
+import { AuditRollback } from './AuditRollback';
 import { ActionBadge, AuditReferenceLink, Badge, Breadcrumbs, DataTable, DiffPanel, Field, FilterPanel, PageHeader, RoleBadge, StatePanel, SupportDebugPanel } from './admin-ui';
 import './admin-shell.css';
 
@@ -43,6 +44,9 @@ export const AdminShell = () => {
     const session = permissionState.kind === 'authenticated' ? permissionState.session : null;
     if (session && window.location.pathname === '/admin/imports') {
         return <ImportCandidateQueue session={session} />;
+    }
+    if (session && window.location.pathname === '/admin/audit') {
+        return <AuditRollback session={session} />;
     }
     const detailMatch = window.location.pathname.match(/^\/admin\/imports\/([^/]+)$/);
     if (session && detailMatch) {
