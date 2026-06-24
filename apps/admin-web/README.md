@@ -6,7 +6,8 @@ The admin web package is a separate React + Vite single-page application for ADR
 
 - `npm run dev -w @cadentia/admin-web` - local development server.
 - `npm run build -w @cadentia/admin-web` - writes build metadata, typechecks, and creates the static bundle.
-- `npm run test -w @cadentia/admin-web` - Vitest unit tests.
+- `npm run test -w @cadentia/admin-web` - Vitest unit, component, workflow integration, and contract tests.
+- `npm run test:a11y -w @cadentia/admin-web` - focused accessibility checks for headings, labels, tables, badges, keyboard focus, dialogs, and high-risk confirmations.
 - `npm run lint -w @cadentia/admin-web` - TypeScript lint gate for the scaffold.
 - `npm run typecheck -w @cadentia/admin-web` - explicit TypeScript check.
 - `npm run preview -w @cadentia/admin-web` - preview the built static artifact.
@@ -32,7 +33,7 @@ All values are supplied per church instance by deployment tooling. Do not commit
 
 The v1 artifact is a static SPA in `dist/`. The preferred ADR-036/ADR-022-compatible hosting model is separately hosted static assets behind the same identity provider and church-instance deployment boundary as the API. Operators may reverse-proxy the assets under the API origin later, but the UI must continue to consume only documented OpenAPI routes through `VITE_CADENTIA_API_BASE_URL`.
 
-Smoke tests verify `admin-build.json` for bundle version and API-base-url configuration status, `admin-health.json` for static availability, and `index.html` for SPA availability.
+Smoke tests verify `admin-build.json` for bundle version and API-base-url configuration status, `admin-health.json` for static availability, and `index.html` for SPA availability. CI also runs the generated-client drift check against the aggregate OpenAPI entrypoint and `mvn -pl apps/api -DskipTests generate-sources` after API/OpenAPI changes.
 
 ## Shared admin UI foundations
 
