@@ -40,6 +40,7 @@ This directory contains the Architecture Decision Records for Cadentia.
 - [ADR-034: Congregational Familiarity Model](./ADR-034-congregational-familiarity-model.md)
 - [ADR-035: Telegram Bot E2E Integration and Operations](./ADR-035-telegram-bot-e2e-integration-and-operations.md)
 - [ADR-036: Administrative Web Interface](./ADR-036-administrative-web-interface.md)
+- [ADR-037: Ollama LLM Integration](./ADR-037-ollama-llm-integration.md)
 
 ## Implemented schema artifacts
 
@@ -91,6 +92,7 @@ Recommended reading order:
 34. ADR-034 — congregational familiarity model
 35. ADR-035 — Telegram bot E2E integration and operations
 36. ADR-036 — administrative web interface
+37. ADR-037 — Ollama LLM integration
 
 ## Phase 2 implementation order plan
 
@@ -148,7 +150,7 @@ flowchart TD
 
 ## Phase 4 ADR direction
 
-ADR-021 through ADR-036 extend the existing safety and recommendation foundation into operational maturity. They preserve Cadentia's core boundaries: the LLM interprets intent only, the deterministic Recommendation Engine selects and orders songs, recommendations use only curated and approved catalog data, and all eligibility remains approval-gated.
+ADR-021 through ADR-037 extend the existing safety and recommendation foundation into operational maturity. They preserve Cadentia's core boundaries: the LLM interprets intent only, the deterministic Recommendation Engine selects and orders songs, recommendations use only curated and approved catalog data, and all eligibility remains approval-gated.
 
 Phase 4 themes:
 
