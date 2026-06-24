@@ -14,7 +14,8 @@
     "typecheck": "tsc --noEmit",
     "smoke": "node scripts/smoke-admin-bundle.mjs",
     "generate:client": "node scripts/generate-client.mjs",
-    "generate:client:check": "node scripts/generate-client.mjs --check"
+    "generate:client:check": "node scripts/generate-client.mjs --check",
+    "test:a11y": "vitest run tests/accessibility.test.tsx"
   },
   "dependencies": {
     "@vitejs/plugin-react": "4.3.4",

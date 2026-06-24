@@ -16,6 +16,7 @@ jobs:
       typescript: ${{ steps.filter.outputs.typescript }}
       docs: ${{ steps.filter.outputs.docs }}
       admin_web: ${{ steps.filter.outputs.admin_web }}
+      openapi: ${{ steps.filter.outputs.openapi }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -27,6 +28,14 @@ jobs:
             backend:
               - 'apps/api/**'
               - 'pom.xml'
+              - '.github/workflows/build.yml'
+            openapi:
+              - 'apps/api/src/main/openapi/**'
+              - 'apps/admin-web/src/generated/cadentia-api/**'
+              - 'apps/admin-web/scripts/generate-client.mjs'
+              - 'pom.xml'
+              - 'package.json'
+              - 'package-lock.json'
               - '.github/workflows/build.yml'
             typescript:
               - 'packages/**'
@@ -101,10 +110,40 @@ jobs:
         run: npm run typecheck -w @cadentia/admin-web
       - name: Test admin web
         run: npm run test -w @cadentia/admin-web
+      - name: Accessibility checks
+        run: npm run test:a11y -w @cadentia/admin-web
+      - name: Generated client drift check
+        run: npm run generate:client:check -w @cadentia/admin-web
       - name: Build admin web
         run: npm run build -w @cadentia/admin-web
       - name: Smoke admin web artifact
         run: npm run smoke -w @cadentia/admin-web
+
+  openapi_contract:
+    name: OpenAPI contract and generated clients
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.openapi == 'true' || needs.changes.outputs.backend == 'true' || needs.changes.outputs.admin_web == 'true'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Generate OpenAPI sources
+        run: mvn -pl apps/api -DskipTests generate-sources
+      - name: Verify generated admin client drift
+        run: npm run generate:client:check -w @cadentia/admin-web
 
   adr_governance:
     name: ADR Governance
