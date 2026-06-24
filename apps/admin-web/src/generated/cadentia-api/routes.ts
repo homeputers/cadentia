@@ -2,6 +2,7 @@
 // Do not edit by hand.
 
 export type CadentiaApiRoute =
+    | '/admin/audit-events'
     | '/admin/diagnostics'
     | '/admin/feature-flags'
     | '/admin/feature-flags/{flagKey}:confirm'
@@ -89,6 +90,7 @@ export type CadentiaApiRoute =
     | '/telegram/webhooks/{botId}';
 
 export const cadentiaApiRoutes = [
+    '/admin/audit-events',
     '/admin/diagnostics',
     '/admin/feature-flags',
     '/admin/feature-flags/{flagKey}:confirm',
@@ -177,6 +179,7 @@ export const cadentiaApiRoutes = [
 ] as const satisfies readonly CadentiaApiRoute[];
 
 export const cadentiaApiRouteRefs: Record<CadentiaApiRoute, string> = {
+    '/admin/audit-events': './paths/admin-review.yaml#/~1admin~1audit-events',
     '/admin/diagnostics': './paths/admin-operations.yaml#/~1admin~1diagnostics',
     '/admin/feature-flags': './paths/admin-operations.yaml#/~1admin~1feature-flags',
     '/admin/feature-flags/{flagKey}:confirm': './paths/admin-operations.yaml#/~1admin~1feature-flags~1{flagKey}:confirm',

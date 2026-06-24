@@ -7,6 +7,7 @@ import com.cadentia.catalog.model.ApprovalType;
 import com.cadentia.generated.api.AdminReviewApi;
 import com.cadentia.generated.model.AdminApprovalState;
 import com.cadentia.generated.model.AdminApprovalStateStatusesInner;
+import com.cadentia.generated.model.AdminAuditEventSearchResponse;
 import com.cadentia.generated.model.AdminAuditHistoryItem;
 import com.cadentia.generated.model.AdminDuplicateMatch;
 import com.cadentia.generated.model.AdminDuplicateSummary;
@@ -77,6 +78,46 @@ public class AdminImportCandidateController implements AdminReviewApi {
 
     public AdminImportCandidateController(AdminImportReviewService reviewService) {
         this.reviewService = reviewService;
+    }
+
+    @Override
+    @PreAuthorize("hasAnyAuthority(T(com.cadentia.api.security.RbacAuthorities).ROLE_CATALOG_EDITOR, T(com.cadentia.api.security.RbacAuthorities).ROLE_ADMIN)")
+    public ResponseEntity<AdminAuditEventSearchResponse> searchAdminAuditEvents(
+            @RequestParam(required = false) String event,
+            @RequestParam(required = false) String entityType,
+            @RequestParam(required = false) String entityId,
+            @RequestParam(required = false) String actor,
+            @RequestParam(required = false) String action,
+            @RequestParam(required = false) OffsetDateTime from,
+            @RequestParam(required = false) OffsetDateTime to,
+            @RequestParam(required = false) String importBatchId,
+            @RequestParam(required = false) String candidateId,
+            @RequestParam(required = false) String songId,
+            @RequestParam(required = false) String arrangementId,
+            @RequestParam(required = false) String moderationFlagId,
+            @RequestParam(required = false) String rollbackRequestId) {
+        List<AdminAuditHistoryItem> items = reviewService.searchAuditEvents(
+                        parseUuid(event),
+                        blankToNull(entityType),
+                        parseUuid(entityId),
+                        blankToNull(actor),
+                        blankToNull(action),
+                        from == null ? null : from.toInstant(),
+                        to == null ? null : to.toInstant(),
+                        parseUuid(importBatchId),
+                        parseUuid(candidateId),
+                        parseUuid(songId),
+                        parseUuid(arrangementId),
+                        parseUuid(moderationFlagId),
+                        parseUuid(rollbackRequestId))
+                .stream()
+                .map(AdminImportCandidateController::toRedactedAuditHistoryItem)
+                .toList();
+        return ResponseEntity.ok(new AdminAuditEventSearchResponse()
+                .items(items)
+                .page(1)
+                .totalItems(items.size())
+                .totalPages(items.isEmpty() ? 0 : 1));
     }
 
     @Override
@@ -487,6 +528,34 @@ public class AdminImportCandidateController implements AdminReviewApi {
             return objectMapper.readValue(reviewNotes == null ? "{}" : reviewNotes, new TypeReference<>() {});
         } catch (Exception ignored) {
             return Map.of();
+        }
+    }
+
+    private static AdminAuditHistoryItem toRedactedAuditHistoryItem(AdminAuditEvent event) {
+        return new AdminAuditHistoryItem()
+                .id(event.id())
+                .entityId(event.entityId())
+                .entityType(event.entityType())
+                .action(event.action())
+                .actor(event.actor())
+                .occurredAt(OffsetDateTime.ofInstant(event.occurredAt(), ZoneOffset.UTC))
+                .reason(event.reason() == null || event.reason().isBlank() ? null : "Redacted reason retained by audit store")
+                .beforeState(null)
+                .afterState(Map.of("summary", "Redacted audit payload available to authorized backend processes only"));
+    }
+
+    private static String blankToNull(String value) {
+        return value == null || value.isBlank() ? null : value;
+    }
+
+    private static UUID parseUuid(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            return UUID.fromString(value);
+        } catch (IllegalArgumentException ignored) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid UUID filter");
         }
     }
 

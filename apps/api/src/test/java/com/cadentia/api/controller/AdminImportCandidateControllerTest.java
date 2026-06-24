@@ -10,11 +10,13 @@ import com.cadentia.catalog.model.ApprovalStatus;
 import com.cadentia.catalog.model.ApprovalType;
 import com.cadentia.catalog.model.ImportCandidateReviewDecision;
 import com.cadentia.catalog.model.ImportCandidateStatus;
+import com.cadentia.generated.model.AdminAuditEventSearchResponse;
 import com.cadentia.generated.model.AdminImportCandidateDetailResponse;
 import com.cadentia.generated.model.AdminReviewNote;
 import com.cadentia.generated.model.ApprovalActionRequest;
 import com.cadentia.generated.model.CreateAdminReviewNoteRequest;
 import com.cadentia.generated.model.MergeDecisionRequest;
+import com.cadentia.scraperadmin.AdminAuditEvent;
 import com.cadentia.scraperadmin.AdminImportCandidateDetail;
 import com.cadentia.scraperadmin.AdminImportReviewService;
 import com.cadentia.scraperadmin.ApplyApprovalActionCommand;
@@ -22,6 +24,7 @@ import com.cadentia.scraperadmin.ModerationFlag;
 import com.cadentia.scraperadmin.StructuredReviewNote;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.server.ResponseStatusException;
@@ -224,6 +227,60 @@ class AdminImportCandidateControllerTest {
         assertThat(reviewService.approvalCommand.reviewNotes()).isEqualTo("Approval was entered for the wrong candidate.");
     }
 
+    @Test
+    void searchAuditEventsUsesBackendFiltersAndRedactsPayloadSummaries() {
+        // Arrange
+        UUID eventId = UUID.randomUUID();
+        UUID candidateId = UUID.randomUUID();
+        UUID rollbackRequestId = UUID.randomUUID();
+        FakeReviewService reviewService = new FakeReviewService(new AdminImportCandidateDetail(
+                candidate(candidateId, ImportCandidateStatus.DEDUPLICATION_REVIEW),
+                "fixture://source/1",
+                "fixture-parser",
+                "1.2.3",
+                "0.91",
+                List.of(),
+                List.of(),
+                List.of()),
+                null);
+        reviewService.auditEvents = List.of(new AdminAuditEvent(
+                eventId,
+                candidateId,
+                "IMPORT_CANDIDATE",
+                "ROLLBACK_IMPORT_CANDIDATE_STATUS",
+                "rollback-admin",
+                Instant.EPOCH,
+                "contains token=secret",
+                Map.of("rawPayload", "secret"),
+                Map.of("rollbackRequestId", rollbackRequestId.toString(), "connectorPayload", "secret")));
+        AdminImportCandidateController controller = new AdminImportCandidateController(reviewService);
+
+        // Act
+        AdminAuditEventSearchResponse response = controller.searchAdminAuditEvents(
+                eventId.toString(),
+                "IMPORT_CANDIDATE",
+                candidateId.toString(),
+                "rollback-admin",
+                "ROLLBACK_IMPORT_CANDIDATE_STATUS",
+                null,
+                null,
+                null,
+                candidateId.toString(),
+                null,
+                null,
+                null,
+                rollbackRequestId.toString()).getBody();
+
+        // Assert
+        assertThat(reviewService.auditRollbackRequestId).isEqualTo(rollbackRequestId);
+        assertThat(response).isNotNull();
+        assertThat(response.getItems()).hasSize(1);
+        assertThat(response.getItems().get(0).getId()).isEqualTo(eventId);
+        assertThat(response.getItems().get(0).getBeforeState()).isNull();
+        assertThat(response.getItems().get(0).getAfterState()).containsEntry("summary", "Redacted audit payload available to authorized backend processes only");
+        assertThat(response.getItems().get(0).getReason()).doesNotContain("secret");
+    }
+
     private static final class FakeReviewService extends AdminImportReviewService {
 
         private final AdminImportCandidateDetail detail;
@@ -237,11 +294,32 @@ class AdminImportCandidateControllerTest {
         private UUID mergeDuplicateMatchId;
         private String mergeRationale;
         private ApplyApprovalActionCommand approvalCommand;
+        private List<AdminAuditEvent> auditEvents = List.of();
+        private UUID auditRollbackRequestId;
 
         private FakeReviewService(AdminImportCandidateDetail detail, ImportCandidateReview savedReview) {
             super(null);
             this.detail = detail;
             this.savedReview = savedReview;
+        }
+
+        @Override
+        public List<AdminAuditEvent> searchAuditEvents(
+                UUID eventId,
+                String entityType,
+                UUID entityId,
+                String actor,
+                String action,
+                Instant from,
+                Instant to,
+                UUID importBatchId,
+                UUID candidateId,
+                UUID songId,
+                UUID arrangementId,
+                UUID moderationFlagId,
+                UUID rollbackRequestId) {
+            auditRollbackRequestId = rollbackRequestId;
+            return auditEvents;
         }
 
         @Override

@@ -812,3 +812,21 @@ ApprovalActionRequest:
     rationale:
       type: string
       minLength: 1
+AdminAuditEventSearchResponse:
+  type: object
+  required:
+  - items
+  - totalItems
+  - page
+  - totalPages
+  properties:
+    items:
+      type: array
+      items:
+        "$ref": "#/AdminAuditHistoryItem"
+    totalItems:
+      type: integer
+    page:
+      type: integer
+    totalPages:
+      type: integer

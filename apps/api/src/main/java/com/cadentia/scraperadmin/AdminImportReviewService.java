@@ -33,6 +33,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -267,6 +268,43 @@ public class AdminImportReviewService {
     }
 
     @Transactional(readOnly = true)
+    public List<AdminAuditEvent> searchAuditEvents(
+            UUID eventId,
+            String entityType,
+            UUID entityId,
+            String actor,
+            String action,
+            Instant from,
+            Instant to,
+            UUID importBatchId,
+            UUID candidateId,
+            UUID songId,
+            UUID arrangementId,
+            UUID moderationFlagId,
+            UUID rollbackRequestId) {
+        return auditEventsByEntityId.values().stream()
+                .flatMap(List::stream)
+                .filter(event -> eventId == null || event.id().equals(eventId))
+                .filter(event -> entityType == null || event.entityType().equalsIgnoreCase(entityType))
+                .filter(event -> entityId == null || event.entityId().equals(entityId))
+                .filter(event -> actor == null || event.actor().equalsIgnoreCase(actor))
+                .filter(event -> action == null || event.action().equalsIgnoreCase(action))
+                .filter(event -> from == null || !event.occurredAt().isBefore(from))
+                .filter(event -> to == null || !event.occurredAt().isAfter(to))
+                .filter(event -> matchesAuditValue(event, "importBatchId", importBatchId))
+                .filter(event -> candidateId == null
+                        || event.entityId().equals(candidateId)
+                        || matchesAuditValue(event, "candidateId", candidateId))
+                .filter(event -> matchesAuditValue(event, "songId", songId))
+                .filter(event -> matchesAuditValue(event, "arrangementId", arrangementId))
+                .filter(event -> matchesAuditValue(event, "moderationFlagId", moderationFlagId)
+                        || matchesAuditValue(event, "flagId", moderationFlagId))
+                .filter(event -> matchesAuditValue(event, "rollbackRequestId", rollbackRequestId))
+                .sorted(Comparator.comparing(AdminAuditEvent::occurredAt).reversed())
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
     public List<AdminAuditEvent> getAuditHistory(UUID entityId) {
         List<AdminAuditEvent> persisted = songRepository.findPrivilegedActionAuditEventsByEntityId(entityId);
         if (!persisted.isEmpty()) {
@@ -442,6 +480,14 @@ public class AdminImportReviewService {
         songRepository.markImportCandidateMerged(candidate.id(), targetSong.id())
                 .orElseThrow(() -> new IllegalStateException("Import candidate disappeared during merge"));
         return new AdminMergeResult(mergedSong, null, List.of(provenanceRecord), List.of(), false);
+    }
+
+    private static boolean matchesAuditValue(AdminAuditEvent event, String key, UUID expected) {
+        if (expected == null) {
+            return true;
+        }
+        return expected.toString().equals(String.valueOf(event.beforeState().get(key)))
+                || expected.toString().equals(String.valueOf(event.afterState().get(key)));
     }
 
     private Song mergeSelectedCandidateFields(ImportCandidate candidate, Song targetSong, MergeIntoExistingSongCommand command) {
@@ -692,7 +738,6 @@ public class AdminImportReviewService {
         }
         return proposedMatch;
     }
-
 
     private static ApprovalStatus statusFor(ApprovalReviewAction action) {
         return switch (action) {

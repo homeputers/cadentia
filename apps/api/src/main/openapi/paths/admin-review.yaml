@@ -467,3 +467,76 @@
           application/json:
             schema:
               "$ref": "../components/schemas/admin-review.yaml#/RollbackExecutionResponse"
+"/admin/audit-events":
+  get:
+    tags:
+    - AdminReview
+    operationId: searchAdminAuditEvents
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - ADMIN
+    - CATALOG_EDITOR
+    summary: Search redacted append-only administrative audit events
+    parameters:
+    - in: query
+      name: event
+      schema:
+        type: string
+    - in: query
+      name: entityType
+      schema:
+        type: string
+    - in: query
+      name: entityId
+      schema:
+        type: string
+    - in: query
+      name: actor
+      schema:
+        type: string
+    - in: query
+      name: action
+      schema:
+        type: string
+    - in: query
+      name: from
+      schema:
+        type: string
+        format: date-time
+    - in: query
+      name: to
+      schema:
+        type: string
+        format: date-time
+    - in: query
+      name: importBatchId
+      schema:
+        type: string
+    - in: query
+      name: candidateId
+      schema:
+        type: string
+    - in: query
+      name: songId
+      schema:
+        type: string
+    - in: query
+      name: arrangementId
+      schema:
+        type: string
+    - in: query
+      name: moderationFlagId
+      schema:
+        type: string
+    - in: query
+      name: rollbackRequestId
+      schema:
+        type: string
+    responses:
+      '200':
+        description: Redacted audit events visible to the current church instance and actor.
+        content:
+          application/json:
+            schema:
+              "$ref": "../components/schemas/admin-review.yaml#/AdminAuditEventSearchResponse"
