@@ -8,7 +8,6 @@ import com.cadentia.generated.api.AdminReviewApi;
 import com.cadentia.generated.model.AdminApprovalState;
 import com.cadentia.generated.model.AdminApprovalStateStatusesInner;
 import com.cadentia.generated.model.AdminAuditHistoryItem;
-import com.cadentia.generated.model.ApprovalActionRequest;
 import com.cadentia.generated.model.AdminDuplicateMatch;
 import com.cadentia.generated.model.AdminDuplicateSummary;
 import com.cadentia.generated.model.AdminImportCandidateDetailResponse;
@@ -19,6 +18,7 @@ import com.cadentia.generated.model.AdminProvenanceReference;
 import com.cadentia.generated.model.AdminReviewHistoryItem;
 import com.cadentia.generated.model.AdminReviewNote;
 import com.cadentia.generated.model.AllowedImportCandidateAction;
+import com.cadentia.generated.model.ApprovalActionRequest;
 import com.cadentia.generated.model.ApprovalReadiness;
 import com.cadentia.generated.model.AssignModerationFlagRequest;
 import com.cadentia.generated.model.CreateAdminReviewNoteRequest;
@@ -40,10 +40,10 @@ import com.cadentia.generated.model.RollbackExecutionResponse;
 import com.cadentia.generated.model.RollbackImpactedRecord;
 import com.cadentia.generated.model.RollbackPreviewResponse;
 import com.cadentia.scraperadmin.AdminAuditEvent;
-import com.cadentia.scraperadmin.ApplyApprovalActionCommand;
-import com.cadentia.scraperadmin.ApprovalReviewAction;
 import com.cadentia.scraperadmin.AdminImportCandidateDetail;
 import com.cadentia.scraperadmin.AdminImportReviewService;
+import com.cadentia.scraperadmin.ApplyApprovalActionCommand;
+import com.cadentia.scraperadmin.ApprovalReviewAction;
 import com.cadentia.scraperadmin.ModerationFlag;
 import com.cadentia.scraperadmin.ModerationFlagSeverity;
 import com.cadentia.scraperadmin.ModerationFlagType;
@@ -177,7 +177,6 @@ public class AdminImportCandidateController implements AdminReviewApi {
                 .toList());
     }
 
-
     @Override
     @PreAuthorize("hasAnyAuthority(T(com.cadentia.api.security.RbacAuthorities).ROLE_CATALOG_EDITOR, T(com.cadentia.api.security.RbacAuthorities).ROLE_ADMIN, 'catalog.admin.review', 'catalog.admin.approve')")
     public ResponseEntity<AdminImportCandidateDetailResponse> submitAdminImportCandidateMergeDecision(
@@ -257,7 +256,6 @@ public class AdminImportCandidateController implements AdminReviewApi {
         return ResponseEntity.ok(toModerationFlagResponse(
                 reviewService.escalateModerationFlag(flagId, request.getActor(), request.getReason())));
     }
-
 
     @Override
     @PreAuthorize("hasAuthority(T(com.cadentia.api.security.RbacAuthorities).ROLE_ADMIN)")
@@ -352,7 +350,6 @@ public class AdminImportCandidateController implements AdminReviewApi {
                         .map(AdminImportCandidateController::toModerationFlagResponse)
                         .toList());
     }
-
 
     private AdminImportCandidateDetail requireFreshCandidate(UUID candidateId, String ifMatch) {
         AdminImportCandidateDetail detail = reviewService.getCandidateDetail(candidateId);
@@ -524,5 +521,4 @@ public class AdminImportCandidateController implements AdminReviewApi {
                 .openedAt(OffsetDateTime.ofInstant(flag.openedAt(), ZoneOffset.UTC))
                 .updatedAt(OffsetDateTime.ofInstant(flag.updatedAt(), ZoneOffset.UTC));
     }
-
 }
