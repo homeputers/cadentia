@@ -1,0 +1,37 @@
+import { useEffect, useState, type FormEvent } from 'react';
+import { hasCapability } from '../auth/permissions';
+import type { AdminSession } from '../auth/session';
+import { adminEnvironment } from '../config/environment';
+import { createAdminApiClient, type AdminApiClient, type AdminApiError } from '../generated/cadentia-api/client';
+import { getInstanceConfiguration, listFeatureFlags, updateInstanceConfiguration, type FeatureFlagList, type InstanceConfiguration } from '../operational-surfaces';
+import { AuditReferenceLink, Badge, Breadcrumbs, DataTable, Field, PageHeader, StatePanel, redactSensitiveError } from './admin-ui';
+
+const canUpdate = (config: InstanceConfiguration) => config.allowedActions.includes('UPDATE');
+const deferred = (title: string) => <section className="admin-shell__panel"><h2>{title}</h2><p>This capability is not yet available for the current instance or release. This does not imply missing permissions or hidden data.</p></section>;
+
+export const InstanceSettings = ({ session, apiClient = createAdminApiClient({ environment: adminEnvironment, getAccessToken: async () => null }) }: { session: AdminSession; apiClient?: AdminApiClient }) => {
+    const [config, setConfig] = useState<InstanceConfiguration | null>(null);
+    const [flags, setFlags] = useState<FeatureFlagList | null>(null);
+    const [state, setState] = useState<'loading' | 'ready' | 'forbidden' | 'unauthorized' | 'error'>('loading');
+    const [message, setMessage] = useState('');
+    const allowed = hasCapability(session, 'MANAGE_INSTANCE_CONFIGURATION');
+
+    useEffect(() => {
+        if (!allowed) { setState('forbidden'); return; }
+        Promise.all([getInstanceConfiguration(apiClient), hasCapability(session, 'MANAGE_FEATURE_FLAGS') ? listFeatureFlags(apiClient) : Promise.resolve(null)])
+            .then(([loadedConfig, loadedFlags]) => { setConfig(loadedConfig); setFlags(loadedFlags); setState('ready'); })
+            .catch((caught) => { const apiError = caught as AdminApiError; setMessage(redactSensitiveError(apiError.message)); setState(apiError.status === 401 ? 'unauthorized' : apiError.status === 403 ? 'forbidden' : 'error'); });
+    }, [allowed, apiClient, session]);
+
+    const submit = async (event: FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        if (!config || !canUpdate(config)) return;
+        const form = new FormData(event.currentTarget);
+        try {
+            const updated = await updateInstanceConfiguration(apiClient, { displayName: String(form.get('displayName')), defaultLocale: String(form.get('defaultLocale')), timeZone: String(form.get('timeZone')), diagnosticsEnabled: form.get('diagnosticsEnabled') === 'on', botChannelsEnabled: form.get('botChannelsEnabled') === 'on', expectedVersion: config.concurrency.version, actorId: session.actorId, reason: String(form.get('reason') || 'Admin settings update') }, config.concurrency.etag);
+            setConfig(updated); setMessage('Settings updated with backend validation and audit attribution.');
+        } catch (caught) { setMessage(redactSensitiveError((caught as Error).message)); }
+    };
+
+    return <main className="admin-shell" aria-labelledby="settings-title"><Breadcrumbs items={[{ label: 'Admin', href: '/admin' }, { label: 'Instance settings' }]} /><PageHeader eyebrow="Operational configuration" title="Instance settings" titleId="settings-title" description="Configuration surfaces render only documented API data. Edits are enabled only when validated mutation endpoints and allowed actions are present." /><StatePanel state={state} title="Instance settings">{message && <p>{message}</p>}</StatePanel>{config && state === 'ready' && <><form className="admin-shell__panel" onSubmit={submit}><h2>General instance configuration</h2><Field label="Display name">{({ inputId }) => <input id={inputId} name="displayName" defaultValue={config.displayName} readOnly={!canUpdate(config)} />}</Field><Field label="Default locale">{({ inputId }) => <input id={inputId} name="defaultLocale" defaultValue={config.defaultLocale} readOnly={!canUpdate(config)} />}</Field><Field label="Time zone">{({ inputId }) => <input id={inputId} name="timeZone" defaultValue={config.timeZone} readOnly={!canUpdate(config)} />}</Field><label><input type="checkbox" name="diagnosticsEnabled" defaultChecked={Boolean(config.diagnosticsEnabled)} disabled={!canUpdate(config)} /> Diagnostics enabled</label><label><input type="checkbox" name="botChannelsEnabled" defaultChecked={Boolean(config.botChannelsEnabled)} disabled={!canUpdate(config)} /> Bot channels enabled</label><Field label="Audit reason">{({ inputId }) => <input id={inputId} name="reason" defaultValue="Operational configuration update" disabled={!canUpdate(config)} />}</Field><p>Version {config.concurrency.version}; If-Match {config.concurrency.etag}</p>{config.lastAuditReference && <AuditReferenceLink auditId={config.lastAuditReference.auditEventId} />}<button type="submit" disabled={!canUpdate(config)}>Save with backend validation</button>{!canUpdate(config) && <p>Read-only: update endpoint or authorization is not available for this instance.</p>}</form>{config.connectors?.length ? <DataTable caption="Enabled connectors" columns={['Connector', 'State', 'Credentials']} rows={config.connectors.map((c) => [c.label, <Badge severity={c.enabled ? 'success' : 'neutral'}>{c.status}</Badge>, c.credentialState ?? 'Redacted'])} /> : deferred('Connectors')}{config.botChannels?.length ? <DataTable caption="Bot channels" columns={['Channel', 'State', 'Status']} rows={config.botChannels.map((c) => [c.label, c.enabled ? 'Enabled' : 'Disabled', c.status])} /> : deferred('Bot channels')}{config.scoringProfiles?.length ? <DataTable caption="Scoring profiles" columns={['Profile', 'Active', 'Policy version']} rows={config.scoringProfiles.map((p) => [p.label, p.active ? 'Active' : 'Inactive', p.policyVersion])} /> : deferred('Scoring profiles')}{config.operationalSettings?.length ? <DataTable caption="Operational settings" columns={['Setting', 'Value', 'Editable']} rows={config.operationalSettings.map((s) => [s.label, s.value, s.editable ? 'Yes' : 'No'])} /> : deferred('Operational settings')}{flags ? <DataTable caption="Feature flags" columns={['Flag', 'State', 'Actions']} rows={flags.flags.map((f) => [f.description ?? f.flagKey, f.enabled ? 'Enabled' : 'Disabled', f.allowedActions.join(', ')])} /> : deferred('Feature flags')}</>}</main>;
+};
