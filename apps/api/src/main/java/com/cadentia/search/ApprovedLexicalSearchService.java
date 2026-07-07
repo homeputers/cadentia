@@ -2,12 +2,15 @@ package com.cadentia.search;
 
 import com.cadentia.search.ApprovedSearchModels.ApprovedSearchDocument;
 import com.cadentia.search.ApprovedSearchModels.AutocompleteSuggestion;
+import com.cadentia.search.ApprovedSearchModels.SearchActor;
+import com.cadentia.search.ApprovedSearchModels.SearchExplanation;
 import com.cadentia.search.ApprovedSearchModels.SearchQuery;
 import com.cadentia.search.ApprovedSearchModels.SearchResult;
 import com.cadentia.search.ApprovedSearchModels.SuggestionType;
 import com.cadentia.search.ApprovedSearchModels.TagFacet;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Stream;
 
@@ -15,13 +18,23 @@ public class ApprovedLexicalSearchService {
 
     private static final int MAX_DISTANCE = 2;
     private final List<ApprovedSearchDocument> documents;
+    private final SearchEligibilityPolicy eligibilityPolicy;
 
     public ApprovedLexicalSearchService(List<ApprovedSearchDocument> documents) {
+        this(documents, new SearchEligibilityPolicy());
+    }
+
+    public ApprovedLexicalSearchService(List<ApprovedSearchDocument> documents, SearchEligibilityPolicy eligibilityPolicy) {
         this.documents = documents == null ? List.of() : List.copyOf(documents);
+        this.eligibilityPolicy = eligibilityPolicy == null ? new SearchEligibilityPolicy() : eligibilityPolicy;
     }
 
     public List<SearchResult> search(SearchQuery query) {
-        return visible(query.instanceId())
+        return search(defaultActor(query.instanceId()), query);
+    }
+
+    public List<SearchResult> search(SearchActor actor, SearchQuery query) {
+        return eligible(actor)
                 .map(document -> scored(document, query))
                 .filter(result -> result.score() > 0)
                 .sorted(Comparator.comparingDouble(SearchResult::score).reversed().thenComparing(SearchResult::title))
@@ -29,11 +42,15 @@ public class ApprovedLexicalSearchService {
     }
 
     public List<AutocompleteSuggestion> autocomplete(UUID instanceId, String prefix, int limit) {
+        return autocomplete(defaultActor(instanceId), prefix, limit);
+    }
+
+    public List<AutocompleteSuggestion> autocomplete(SearchActor actor, String prefix, int limit) {
         String normalizedPrefix = SearchNormalizer.normalizeText(prefix);
         if (normalizedPrefix.length() < 2 || limit <= 0) {
             return List.of();
         }
-        return visible(instanceId)
+        return eligible(actor)
                 .flatMap(document -> suggestions(document, normalizedPrefix))
                 .distinct()
                 .sorted(Comparator.comparing(AutocompleteSuggestion::type).thenComparing(AutocompleteSuggestion::value))
@@ -156,8 +173,59 @@ public class ApprovedLexicalSearchService {
                 .anyMatch(value -> SearchNormalizer.normalizeText(value).contains(normalized)) ? 4 : 0;
     }
 
-    private Stream<ApprovedSearchDocument> visible(UUID instanceId) {
-        return documents.stream().filter(document -> document.safeFor(instanceId));
+    public Map<TagFacet, Long> facets(SearchActor actor, SearchQuery query) {
+        return eligible(actor)
+                .map(document -> scored(document, query))
+                .filter(result -> result.score() > 0)
+                .flatMap(result -> documents.stream()
+                        .filter(document -> document.songId().equals(result.songId()))
+                        .filter(document -> eligibilityPolicy.canReturn(actor, document))
+                        .flatMap(document -> document.tags().stream()))
+                .collect(java.util.stream.Collectors.groupingBy(tag -> tag, java.util.stream.Collectors.counting()));
+    }
+
+    public List<SearchResult> semanticNeighbors(SearchActor actor, List<UUID> candidateSongIds, int limit) {
+        if (candidateSongIds == null || limit <= 0) {
+            return List.of();
+        }
+        return documents.stream()
+                .filter(document -> candidateSongIds.contains(document.songId()))
+                .filter(document -> eligibilityPolicy.canReturn(actor, document))
+                .limit(limit)
+                .map(document -> new SearchResult(document.songId(), document.arrangementId(), document.title(), document.arrangementLabel(), 1.0d))
+                .toList();
+    }
+
+    public List<SearchResult> hydrate(SearchActor actor, List<SearchResult> candidates) {
+        if (candidates == null) {
+            return List.of();
+        }
+        return candidates.stream()
+                .filter(candidate -> documents.stream()
+                        .filter(document -> document.songId().equals(candidate.songId()))
+                        .anyMatch(document -> eligibilityPolicy.canReturn(actor, document)))
+                .toList();
+    }
+
+    public List<SearchExplanation> explanations(SearchActor actor, List<SearchResult> results) {
+        return hydrate(actor, results).stream()
+                .map(result -> new SearchExplanation(result.songId(), result.arrangementId(), List.of("eligibleApprovedCatalogMatch")))
+                .toList();
+    }
+
+    public List<String> spellingCorrections(SearchActor actor, String prefix, int limit) {
+        return autocomplete(actor, prefix, limit).stream()
+                .map(AutocompleteSuggestion::value)
+                .distinct()
+                .toList();
+    }
+
+    private Stream<ApprovedSearchDocument> eligible(SearchActor actor) {
+        return documents.stream().filter(document -> eligibilityPolicy.canReturn(actor, document));
+    }
+
+    private SearchActor defaultActor(UUID instanceId) {
+        return new SearchActor("system-search", instanceId, java.util.Set.of("role.worship_leader"), java.util.Set.of(), true);
     }
 
     static int levenshtein(String left, String right) {
