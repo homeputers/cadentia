@@ -2,6 +2,7 @@ package com.cadentia.search;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -65,7 +66,12 @@ public final class ApprovedSearchModels {
             boolean packageVisible,
             SearchVisibilityPolicy visibilityPolicy,
             Set<String> authorizedRoles,
-            Set<String> governanceRestrictionCodes) {
+            Set<String> governanceRestrictionCodes,
+            Double semanticSimilarity,
+            Double familiaritySignal,
+            Double popularitySignal,
+            Instant catalogUpdatedAt,
+            boolean starterPackagePreferred) {
         public ApprovedSearchDocument {
             alternateTitles = alternateTitles == null ? List.of() : List.copyOf(alternateTitles);
             scriptureReferences = scriptureReferences == null ? List.of() : List.copyOf(scriptureReferences);
@@ -77,6 +83,36 @@ public final class ApprovedSearchModels {
             visibilityPolicy = visibilityPolicy == null ? SearchVisibilityPolicy.PUBLIC : visibilityPolicy;
             authorizedRoles = authorizedRoles == null ? Set.of() : Set.copyOf(authorizedRoles);
             governanceRestrictionCodes = governanceRestrictionCodes == null ? Set.of() : Set.copyOf(governanceRestrictionCodes);
+            semanticSimilarity = clampNullable(semanticSimilarity);
+            familiaritySignal = clampNullable(familiaritySignal);
+            popularitySignal = clampNullable(popularitySignal);
+        }
+
+        public ApprovedSearchDocument(
+                UUID songId,
+                UUID arrangementId,
+                UUID instanceId,
+                String title,
+                List<String> alternateTitles,
+                List<NormalizedScriptureReference> scriptureReferences,
+                List<TagFacet> tags,
+                List<String> contributors,
+                String musicalKey,
+                Integer bpm,
+                String arrangementLabel,
+                List<String> arrangementMetadata,
+                List<String> lyricsMetadata,
+                boolean active,
+                boolean approved,
+                boolean visible,
+                boolean licensed,
+                boolean packageVisible,
+                SearchVisibilityPolicy visibilityPolicy,
+                Set<String> authorizedRoles,
+                Set<String> governanceRestrictionCodes) {
+            this(songId, arrangementId, instanceId, title, alternateTitles, scriptureReferences, tags, contributors, musicalKey, bpm,
+                    arrangementLabel, arrangementMetadata, lyricsMetadata, active, approved, visible, licensed, packageVisible,
+                    visibilityPolicy, authorizedRoles, governanceRestrictionCodes, null, null, null, null, false);
         }
 
         public ApprovedSearchDocument(
@@ -99,7 +135,14 @@ public final class ApprovedSearchModels {
                 boolean licensed) {
             this(songId, arrangementId, instanceId, title, alternateTitles, scriptureReferences, tags, contributors, musicalKey, bpm,
                     arrangementLabel, arrangementMetadata, lyricsMetadata, active, approved, visible, licensed, true,
-                    SearchVisibilityPolicy.PUBLIC, Set.of(), Set.of());
+                    SearchVisibilityPolicy.PUBLIC, Set.of(), Set.of(), null, null, null, null, false);
+        }
+
+        private static Double clampNullable(Double value) {
+            if (value == null || value.isNaN()) {
+                return null;
+            }
+            return Math.max(0.0d, Math.min(1.0d, value));
         }
 
         boolean instanceVisible() {
@@ -123,10 +166,47 @@ public final class ApprovedSearchModels {
             String arrangement) {
     }
 
-    public record SearchResult(UUID songId, UUID arrangementId, String title, String arrangementLabel, double score) {
+    public record SearchRankingProfile(
+            String version,
+            boolean familiarityEnabled,
+            boolean recencyPreferenceEnabled,
+            boolean packagePreferenceEnabled,
+            Map<String, Double> weights) {
+        public SearchRankingProfile {
+            version = version == null || version.isBlank() ? "search-ranking-v1" : version;
+            weights = weights == null ? Map.of() : Map.copyOf(weights);
+        }
+    }
+
+    public record RankingFactor(String code, double contribution, String visibility) {
+    }
+
+    public record SearchResult(
+            UUID songId,
+            UUID arrangementId,
+            String title,
+            String arrangementLabel,
+            double score,
+            List<RankingFactor> rankingFactors,
+            String rankingVersion) {
+        public SearchResult(UUID songId, UUID arrangementId, String title, String arrangementLabel, double score) {
+            this(songId, arrangementId, title, arrangementLabel, score, List.of(), "legacy");
+        }
+
+        public SearchResult {
+            rankingFactors = rankingFactors == null ? List.of() : List.copyOf(rankingFactors);
+        }
     }
 
     public record SearchExplanation(UUID songId, UUID arrangementId, List<String> factors) {
+    }
+
+    public record SearchDiagnostics(
+            String rankingVersion,
+            int eligibleCandidateCount,
+            int returnedResultCount,
+            Map<String, Long> factorCounts,
+            boolean queryTextRedacted) {
     }
 
     public record AutocompleteSuggestion(SuggestionType type, String value, String matchedText, UUID songId, UUID arrangementId) {

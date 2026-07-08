@@ -3,7 +3,10 @@ package com.cadentia.search;
 import com.cadentia.search.ApprovedSearchModels.ApprovedSearchDocument;
 import com.cadentia.search.ApprovedSearchModels.AutocompleteSuggestion;
 import com.cadentia.search.ApprovedSearchModels.SearchActor;
+import com.cadentia.search.ApprovedSearchModels.RankingFactor;
+import com.cadentia.search.ApprovedSearchModels.SearchDiagnostics;
 import com.cadentia.search.ApprovedSearchModels.SearchExplanation;
+import com.cadentia.search.ApprovedSearchModels.SearchRankingProfile;
 import com.cadentia.search.ApprovedSearchModels.SearchQuery;
 import com.cadentia.search.ApprovedSearchModels.SearchResult;
 import com.cadentia.search.ApprovedSearchModels.SuggestionType;
@@ -12,21 +15,45 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class ApprovedLexicalSearchService {
 
     private static final int MAX_DISTANCE = 2;
+    public static final SearchRankingProfile DEFAULT_RANKING_PROFILE = new SearchRankingProfile(
+            "search-ranking-v1", false, false, false, Map.ofEntries(
+            Map.entry("exactTitleMatch", 30.0d),
+            Map.entry("approvedAlternateTitleMatch", 27.0d),
+            Map.entry("prefixTitleMatch", 20.0d),
+            Map.entry("fuzzyTitleMatch", 10.0d),
+            Map.entry("scriptureProximity", 24.0d),
+            Map.entry("curatedTagMatch", 22.0d),
+            Map.entry("contributorMatch", 9.0d),
+            Map.entry("musicalFeatureMatch", 8.0d),
+            Map.entry("arrangementMatch", 8.0d),
+            Map.entry("semanticSimilarity", 7.0d),
+            Map.entry("familiaritySignal", 5.0d),
+            Map.entry("recencyPreference", 1.5d),
+            Map.entry("packagePreference", 2.0d)));
     private final List<ApprovedSearchDocument> documents;
     private final SearchEligibilityPolicy eligibilityPolicy;
+    private final SearchRankingProfile rankingProfile;
 
     public ApprovedLexicalSearchService(List<ApprovedSearchDocument> documents) {
         this(documents, new SearchEligibilityPolicy());
     }
 
     public ApprovedLexicalSearchService(List<ApprovedSearchDocument> documents, SearchEligibilityPolicy eligibilityPolicy) {
+        this(documents, eligibilityPolicy, DEFAULT_RANKING_PROFILE);
+    }
+
+    public ApprovedLexicalSearchService(
+            List<ApprovedSearchDocument> documents, SearchEligibilityPolicy eligibilityPolicy, SearchRankingProfile rankingProfile) {
         this.documents = documents == null ? List.of() : List.copyOf(documents);
         this.eligibilityPolicy = eligibilityPolicy == null ? new SearchEligibilityPolicy() : eligibilityPolicy;
+        this.rankingProfile = rankingProfile == null ? DEFAULT_RANKING_PROFILE : rankingProfile;
     }
 
     public List<SearchResult> search(SearchQuery query) {
@@ -37,7 +64,10 @@ public class ApprovedLexicalSearchService {
         return eligible(actor)
                 .map(document -> scored(document, query))
                 .filter(result -> result.score() > 0)
-                .sorted(Comparator.comparingDouble(SearchResult::score).reversed().thenComparing(SearchResult::title))
+                .sorted(Comparator.comparingDouble(SearchResult::score).reversed()
+                        .thenComparing(SearchResult::title)
+                        .thenComparing(result -> result.songId().toString())
+                        .thenComparing(result -> result.arrangementId().toString()))
                 .toList();
     }
 
@@ -88,35 +118,98 @@ public class ApprovedLexicalSearchService {
     }
 
     private SearchResult scored(ApprovedSearchDocument document, SearchQuery query) {
-        double score = scoreText(document, query.text(), 1.0d)
-                + scoreText(document, query.title(), 4.0d)
-                + scoreScripture(document, query.scripture())
-                + scoreTag(document, query.tag())
-                + scoreContributor(document, query.contributor())
-                + scoreKey(document, query.musicalKey())
-                + scoreBpm(document, query.minBpm(), query.maxBpm())
-                + scoreArrangement(document, query.arrangement());
-        return new SearchResult(document.songId(), document.arrangementId(), document.title(), document.arrangementLabel(), score);
+        List<RankingFactor> factors = Stream.of(
+                        titleFactor("exactTitleMatch", document.title(), query.text(), query.title(), score -> score == 10),
+                        bestAlternateTitleFactor(document, query),
+                        titleFactor("prefixTitleMatch", document.title(), query.text(), query.title(), score -> score >= 5 && score < 10),
+                        titleFactor("fuzzyTitleMatch", document.title(), query.text(), query.title(), score -> score > 0 && score < 5),
+                        scriptureFactor(document, query.scripture()),
+                        tagFactor(document, query.tag()),
+                        contributorFactor(document, query.contributor()),
+                        musicalFeatureFactor(document, query),
+                        arrangementFactor(document, query.arrangement()),
+                        semanticFactor(document),
+                        familiarityFactor(document),
+                        recencyFactor(document),
+                        packagePreferenceFactor(document))
+                .filter(factor -> factor != null && factor.contribution() > 0)
+                .toList();
+        double score = factors.stream().mapToDouble(RankingFactor::contribution).sum();
+        return new SearchResult(
+                document.songId(), document.arrangementId(), document.title(), document.arrangementLabel(), score, factors, rankingProfile.version());
     }
 
-    private double scoreText(ApprovedSearchDocument document, String text, double weight) {
-        String normalized = SearchNormalizer.normalizeText(text);
-        if (normalized.isBlank()) {
-            return 0;
+    private RankingFactor titleFactor(
+            String code, String value, String text, String title, Predicate<Double> matcher) {
+        double rawScore = Math.max(matchScore(SearchNormalizer.normalizeText(text), value), matchScore(SearchNormalizer.normalizeText(title), value));
+        return matcher.test(rawScore) ? factor(code, rawScore / 10.0d) : null;
+    }
+
+    private RankingFactor bestAlternateTitleFactor(ApprovedSearchDocument document, SearchQuery query) {
+        boolean match = Stream.of(query.text(), query.title())
+                .map(SearchNormalizer::normalizeText)
+                .filter(value -> !value.isBlank())
+                .anyMatch(value -> document.alternateTitles().stream()
+                        .map(SearchNormalizer::normalizeText)
+                        .anyMatch(value::equals));
+        return match ? factor("approvedAlternateTitleMatch", 1.0d) : null;
+    }
+
+    private RankingFactor scriptureFactor(ApprovedSearchDocument document, String scripture) {
+        return scoreScripture(document, scripture) > 0 ? factor("scriptureProximity", 1.0d) : null;
+    }
+
+    private RankingFactor tagFactor(ApprovedSearchDocument document, String tag) {
+        return scoreTag(document, tag) > 0 ? factor("curatedTagMatch", 1.0d) : null;
+    }
+
+    private RankingFactor contributorFactor(ApprovedSearchDocument document, String contributor) {
+        return scoreContributor(document, contributor) > 0 ? factor("contributorMatch", 1.0d) : null;
+    }
+
+    private RankingFactor musicalFeatureFactor(ApprovedSearchDocument document, SearchQuery query) {
+        boolean keyMatch = scoreKey(document, query.musicalKey()) > 0;
+        boolean bpmMatch = scoreBpm(document, query.minBpm(), query.maxBpm()) > 0;
+        return keyMatch || bpmMatch ? factor("musicalFeatureMatch", keyMatch && bpmMatch ? 1.0d : 0.5d) : null;
+    }
+
+    private RankingFactor arrangementFactor(ApprovedSearchDocument document, String arrangement) {
+        return scoreArrangement(document, arrangement) > 0 ? factor("arrangementMatch", 1.0d) : null;
+    }
+
+    private RankingFactor semanticFactor(ApprovedSearchDocument document) {
+        return document.semanticSimilarity() == null ? null : factor("semanticSimilarity", document.semanticSimilarity());
+    }
+
+    private RankingFactor familiarityFactor(ApprovedSearchDocument document) {
+        if (!rankingProfile.familiarityEnabled()) {
+            return null;
         }
-        double score = matchScore(normalized, document.title()) * weight;
-        for (String alternateTitle : document.alternateTitles()) {
-            score = Math.max(score, matchScore(normalized, alternateTitle) * (weight - 0.5d));
-        }
-        String haystack = SearchNormalizer.normalizeText(String.join(" ", document.lyricsMetadata()) + " "
-                + String.join(" ", document.arrangementMetadata()));
-        if (haystack.contains(normalized)) {
-            score = Math.max(score, weight);
-        }
-        return score;
+        double aggregate = Math.max(document.familiaritySignal() == null ? 0 : document.familiaritySignal(),
+                document.popularitySignal() == null ? 0 : document.popularitySignal());
+        return aggregate > 0 ? factor("familiaritySignal", aggregate) : null;
+    }
+
+    private RankingFactor recencyFactor(ApprovedSearchDocument document) {
+        return rankingProfile.recencyPreferenceEnabled() && document.catalogUpdatedAt() != null ? factor("recencyPreference", 1.0d) : null;
+    }
+
+    private RankingFactor packagePreferenceFactor(ApprovedSearchDocument document) {
+        return rankingProfile.packagePreferenceEnabled() && document.starterPackagePreferred() ? factor("packagePreference", 1.0d) : null;
+    }
+
+    private RankingFactor factor(String code, double boundedValue) {
+        return new RankingFactor(code, weight(code) * Math.max(0.0d, Math.min(1.0d, boundedValue)), "publicSafe");
+    }
+
+    private double weight(String code) {
+        return rankingProfile.weights().getOrDefault(code, DEFAULT_RANKING_PROFILE.weights().getOrDefault(code, 0.0d));
     }
 
     private double matchScore(String normalizedNeedle, String value) {
+        if (normalizedNeedle == null || normalizedNeedle.isBlank()) {
+            return 0;
+        }
         String normalizedValue = SearchNormalizer.normalizeText(value);
         if (normalizedValue.equals(normalizedNeedle)) {
             return 10;
@@ -209,8 +302,22 @@ public class ApprovedLexicalSearchService {
 
     public List<SearchExplanation> explanations(SearchActor actor, List<SearchResult> results) {
         return hydrate(actor, results).stream()
-                .map(result -> new SearchExplanation(result.songId(), result.arrangementId(), List.of("eligibleApprovedCatalogMatch")))
+                .map(result -> new SearchExplanation(result.songId(), result.arrangementId(),
+                        result.rankingFactors().stream().map(RankingFactor::code).toList()))
                 .toList();
+    }
+
+
+    public SearchDiagnostics diagnostics(SearchActor actor, SearchQuery query) {
+        if (actor == null || actor.roles().stream().noneMatch(role -> role.equals("ROLE_ADMIN") || role.equals("ROLE_SUPPORT")
+                || role.equals("role.admin") || role.equals("role.support"))) {
+            throw new SecurityException("searchDiagnosticsRequiresSupportRole");
+        }
+        List<SearchResult> results = search(actor, query);
+        Map<String, Long> factorCounts = results.stream()
+                .flatMap(result -> result.rankingFactors().stream())
+                .collect(Collectors.groupingBy(RankingFactor::code, Collectors.counting()));
+        return new SearchDiagnostics(rankingProfile.version(), (int) eligible(actor).count(), results.size(), factorCounts, true);
     }
 
     public List<String> spellingCorrections(SearchActor actor, String prefix, int limit) {
