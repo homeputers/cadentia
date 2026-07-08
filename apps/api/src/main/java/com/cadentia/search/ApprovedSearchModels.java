@@ -22,6 +22,7 @@ public final class ApprovedSearchModels {
         PACKAGE_VISIBILITY_CHANGED,
         INSTANCE_VISIBILITY_CHANGED,
         CATALOG_GOVERNANCE_CHANGED,
+        SOURCE_METADATA_CHANGED,
         REBUILD_REQUESTED
     }
 
@@ -195,6 +196,50 @@ public final class ApprovedSearchModels {
 
         public SearchResult {
             rankingFactors = rankingFactors == null ? List.of() : List.copyOf(rankingFactors);
+        }
+    }
+
+    public enum SemanticDiscoveryMode { ENABLED, DISABLED }
+
+    public record SemanticIndexDocument(
+            UUID songId,
+            UUID arrangementId,
+            UUID instanceId,
+            boolean packageVisible,
+            boolean approved,
+            boolean active,
+            boolean visible,
+            boolean licensed,
+            List<String> allowedFields,
+            String sourceHash) {
+        public SemanticIndexDocument {
+            allowedFields = allowedFields == null ? List.of() : List.copyOf(allowedFields);
+        }
+    }
+
+    public record SemanticEmbeddingRecord(
+            UUID embeddingId,
+            UUID songId,
+            UUID arrangementId,
+            UUID instanceId,
+            boolean packageVisible,
+            String providerIdentifier,
+            String modelVersion,
+            String sourceHash,
+            Instant generatedAt,
+            int projectionVersion,
+            boolean approved,
+            boolean active,
+            boolean visible,
+            boolean licensed,
+            double[] vector) {
+        public SemanticEmbeddingRecord {
+            vector = vector == null ? new double[0] : vector.clone();
+        }
+
+        @Override
+        public double[] vector() {
+            return vector.clone();
         }
     }
 
