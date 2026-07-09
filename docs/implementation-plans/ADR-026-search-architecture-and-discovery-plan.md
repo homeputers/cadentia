@@ -21,7 +21,7 @@ Overall status: In progress.
   rebuild jobs.
 - Subtask 3: Planned - visibility, approval, licensing, and tenant-safety gates.
 - Subtask 4: Planned - ranking strategy and explanation metadata.
-- Subtask 5: Planned - semantic discovery pipeline using approved metadata only.
+- Subtask 5: Completed / Implemented - semantic discovery pipeline using approved metadata only.
 - Subtask 6: Planned - query API contracts, validation, and client-facing result
   models.
 - Subtask 7: Planned - catalog event integration, traceable refresh, and rebuild

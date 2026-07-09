@@ -40,6 +40,7 @@ public class ApprovedLexicalSearchService {
     private final List<ApprovedSearchDocument> documents;
     private final SearchEligibilityPolicy eligibilityPolicy;
     private final SearchRankingProfile rankingProfile;
+    private final boolean semanticRankingEnabled;
 
     public ApprovedLexicalSearchService(List<ApprovedSearchDocument> documents) {
         this(documents, new SearchEligibilityPolicy());
@@ -51,9 +52,18 @@ public class ApprovedLexicalSearchService {
 
     public ApprovedLexicalSearchService(
             List<ApprovedSearchDocument> documents, SearchEligibilityPolicy eligibilityPolicy, SearchRankingProfile rankingProfile) {
+        this(documents, eligibilityPolicy, rankingProfile, true);
+    }
+
+    public ApprovedLexicalSearchService(
+            List<ApprovedSearchDocument> documents,
+            SearchEligibilityPolicy eligibilityPolicy,
+            SearchRankingProfile rankingProfile,
+            boolean semanticRankingEnabled) {
         this.documents = documents == null ? List.of() : List.copyOf(documents);
         this.eligibilityPolicy = eligibilityPolicy == null ? new SearchEligibilityPolicy() : eligibilityPolicy;
         this.rankingProfile = rankingProfile == null ? DEFAULT_RANKING_PROFILE : rankingProfile;
+        this.semanticRankingEnabled = semanticRankingEnabled;
     }
 
     public List<SearchResult> search(SearchQuery query) {
@@ -178,7 +188,7 @@ public class ApprovedLexicalSearchService {
     }
 
     private RankingFactor semanticFactor(ApprovedSearchDocument document) {
-        return document.semanticSimilarity() == null ? null : factor("semanticSimilarity", document.semanticSimilarity());
+        return !semanticRankingEnabled || document.semanticSimilarity() == null ? null : factor("semanticSimilarity", document.semanticSimilarity());
     }
 
     private RankingFactor familiarityFactor(ApprovedSearchDocument document) {
