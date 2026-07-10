@@ -28,7 +28,13 @@ tags:
   description: ADR-030 plugin registry, configuration, and lifecycle administration
 - name: Telegram
   description: Telegram webhook intake, channel-session, account-linking, and bot management operations
+- name: CatalogSearch
+  description: Versioned approved-catalog discovery search and autocomplete operations
 paths:
+  "/v1/catalog/search":
+    "$ref": "./paths/search.yaml#/~1v1~1catalog~1search"
+  "/v1/catalog/autocomplete":
+    "$ref": "./paths/search.yaml#/~1v1~1catalog~1autocomplete"
   "/telegram/webhooks/{botId}":
     "$ref": "./paths/telegram.yaml#/~1telegram~1webhooks~1{botId}"
   "/admin/telegram/bots/{botId}/status":

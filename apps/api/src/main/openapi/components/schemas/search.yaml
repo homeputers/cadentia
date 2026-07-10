@@ -1,0 +1,295 @@
+CatalogSearchRequest:
+  type: object
+  description: Catalog discovery search request. Does not request generated setlists.
+  properties:
+    query:
+      type: string
+      maxLength: 200
+    filters:
+      $ref: '#/CatalogSearchFilters'
+    semanticMode:
+      $ref: '#/SearchSemanticMode'
+    pagination:
+      $ref: '#/SearchPaginationRequest'
+    sort:
+      $ref: '#/SearchSort'
+    includeFacets:
+      type: boolean
+      default: false
+    includeExplanations:
+      type: boolean
+      default: false
+    includeDiagnostics:
+      type: boolean
+      default: false
+CatalogSearchFilters:
+  type: object
+  properties:
+    scriptureReferences:
+      type: array
+      maxItems: 10
+      items:
+        type: string
+        pattern: '^[1-3]?\s?[A-Za-z][A-Za-z ]+\s+\d{1,3}(:\d{1,3}(-\d{1,3})?)?$'
+    tags:
+      type: array
+      maxItems: 20
+      items:
+        type: string
+        minLength: 1
+        maxLength: 64
+    contributors:
+      type: array
+      maxItems: 20
+      items:
+        type: string
+        minLength: 1
+        maxLength: 100
+    keys:
+      type: array
+      maxItems: 12
+      items:
+        type: string
+        pattern: '^[A-G](#|b)?(m|min|minor| major|maj)?$'
+    bpm:
+      $ref: '#/BpmRangeFilter'
+    arrangements:
+      type: array
+      maxItems: 20
+      items:
+        type: string
+        minLength: 1
+        maxLength: 100
+BpmRangeFilter:
+  type: object
+  properties:
+    min:
+      type: integer
+      minimum: 30
+      maximum: 260
+    max:
+      type: integer
+      minimum: 30
+      maximum: 260
+SearchSemanticMode:
+  type: string
+  enum:
+  - DISABLED
+  - ENABLED
+  - HYBRID
+  default: HYBRID
+SearchPaginationRequest:
+  type: object
+  properties:
+    pageSize:
+      type: integer
+      minimum: 1
+      maximum: 50
+      default: 20
+    cursor:
+      type: string
+      maxLength: 200
+SearchSort:
+  type: string
+  enum:
+  - RELEVANCE
+  - TITLE
+  - UPDATED_AT
+  default: RELEVANCE
+CatalogSearchResponse:
+  type: object
+  required:
+  - results
+  - pagination
+  - emptyState
+  properties:
+    results:
+      type: array
+      items:
+        $ref: '#/CatalogSearchResultSummary'
+    facets:
+      type: array
+      items:
+        $ref: '#/SearchFacetGroup'
+    pagination:
+      $ref: '#/SearchPaginationResponse'
+    emptyState:
+      $ref: '#/SearchEmptyState'
+    diagnostics:
+      $ref: '#/SearchDiagnosticsSummary'
+CatalogSearchResultSummary:
+  type: object
+  required:
+  - id
+  - resultType
+  - title
+  - score
+  properties:
+    id:
+      type: string
+      format: uuid
+    songId:
+      type: string
+      format: uuid
+    arrangementId:
+      type: string
+      format: uuid
+    resultType:
+      $ref: '#/SearchResultType'
+    title:
+      type: string
+    subtitle:
+      type: string
+    matchedFields:
+      type: array
+      items:
+        $ref: '#/SearchMatchedField'
+    rankingFactors:
+      type: array
+      items:
+        $ref: '#/SearchRankingFactor'
+    score:
+      type: number
+      format: double
+    hydration:
+      $ref: '#/SearchResultHydration'
+SearchResultType:
+  type: string
+  enum:
+  - SONG
+  - ARRANGEMENT
+  - SCRIPTURE
+  - TAG
+  - CONTRIBUTOR
+  - COLLECTION
+SearchMatchedField:
+  type: object
+  properties:
+    field:
+      type: string
+      enum:
+      - TITLE
+      - ALTERNATE_TITLE
+      - SCRIPTURE
+      - TAG
+      - CONTRIBUTOR
+      - KEY
+      - BPM
+      - ARRANGEMENT
+      - SEMANTIC
+    value:
+      type: string
+SearchRankingFactor:
+  type: object
+  properties:
+    code:
+      type: string
+    contribution:
+      type: number
+      format: double
+    visibility:
+      type: string
+SearchResultHydration:
+  type: object
+  properties:
+    href:
+      type: string
+    available:
+      type: boolean
+SearchFacetGroup:
+  type: object
+  properties:
+    name:
+      type: string
+    buckets:
+      type: array
+      items:
+        $ref: '#/SearchFacetBucket'
+SearchFacetBucket:
+  type: object
+  properties:
+    value:
+      type: string
+    label:
+      type: string
+    count:
+      type: integer
+      format: int64
+SearchPaginationResponse:
+  type: object
+  properties:
+    pageSize:
+      type: integer
+    nextCursor:
+      type: string
+    hasMore:
+      type: boolean
+SearchEmptyState:
+  type: object
+  properties:
+    empty:
+      type: boolean
+    reason:
+      type: string
+    message:
+      type: string
+SearchDiagnosticsSummary:
+  type: object
+  properties:
+    rankingVersion:
+      type: string
+    eligibleCandidateCount:
+      type: integer
+    returnedResultCount:
+      type: integer
+    queryTextRedacted:
+      type: boolean
+CatalogAutocompleteRequest:
+  type: object
+  required:
+  - prefix
+  properties:
+    prefix:
+      type: string
+      minLength: 1
+      maxLength: 80
+    filters:
+      $ref: '#/CatalogSearchFilters'
+    limit:
+      type: integer
+      minimum: 1
+      maximum: 20
+      default: 10
+CatalogAutocompleteResponse:
+  type: object
+  required:
+  - suggestions
+  - emptyState
+  properties:
+    suggestions:
+      type: array
+      items:
+        $ref: '#/AutocompleteSuggestion'
+    emptyState:
+      $ref: '#/SearchEmptyState'
+AutocompleteSuggestion:
+  type: object
+  properties:
+    type:
+      type: string
+      enum:
+      - SONG
+      - ARRANGEMENT
+      - SCRIPTURE
+      - TAG
+      - CONTRIBUTOR
+    value:
+      type: string
+    matchedText:
+      type: string
+    songId:
+      type: string
+      format: uuid
+    arrangementId:
+      type: string
+      format: uuid

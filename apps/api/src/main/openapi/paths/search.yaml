@@ -1,0 +1,49 @@
+"/v1/catalog/search":
+  post:
+    tags:
+    - CatalogSearch
+    operationId: searchCatalog
+    summary: Search approved catalog discovery candidates
+    description: Returns discovery candidates only; responses are not generated setlists or recommendation results.
+    security:
+    - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/search.yaml#/CatalogSearchRequest
+    responses:
+      "200":
+        description: Search completed; empty result sets are represented safely.
+        content:
+          application/json:
+            schema:
+              $ref: ../components/schemas/search.yaml#/CatalogSearchResponse
+      "400":
+        $ref: ../components/shared/responses.yaml#/ValidationError
+      "403":
+        $ref: ../components/shared/responses.yaml#/Forbidden
+"/v1/catalog/autocomplete":
+  post:
+    tags:
+    - CatalogSearch
+    operationId: autocompleteCatalog
+    summary: Autocomplete approved catalog discovery fields
+    security:
+    - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/search.yaml#/CatalogAutocompleteRequest
+    responses:
+      "200":
+        description: Suggestions returned; empty result sets are represented safely.
+        content:
+          application/json:
+            schema:
+              $ref: ../components/schemas/search.yaml#/CatalogAutocompleteResponse
+      "400":
+        $ref: ../components/shared/responses.yaml#/ValidationError
