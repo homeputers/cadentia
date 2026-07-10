@@ -87,7 +87,9 @@ export type CadentiaApiRoute =
     | '/telegram/account-links:confirm'
     | '/telegram/sessions/{sessionId}'
     | '/telegram/sessions/{sessionId}:cancel'
-    | '/telegram/webhooks/{botId}';
+    | '/telegram/webhooks/{botId}'
+    | '/v1/catalog/autocomplete'
+    | '/v1/catalog/search';
 
 export const cadentiaApiRoutes = [
     '/admin/audit-events',
@@ -176,6 +178,8 @@ export const cadentiaApiRoutes = [
     '/telegram/sessions/{sessionId}',
     '/telegram/sessions/{sessionId}:cancel',
     '/telegram/webhooks/{botId}',
+    '/v1/catalog/autocomplete',
+    '/v1/catalog/search',
 ] as const satisfies readonly CadentiaApiRoute[];
 
 export const cadentiaApiRouteRefs: Record<CadentiaApiRoute, string> = {
@@ -265,4 +269,6 @@ export const cadentiaApiRouteRefs: Record<CadentiaApiRoute, string> = {
     '/telegram/sessions/{sessionId}': './paths/telegram.yaml#/~1telegram~1sessions~1{sessionId}',
     '/telegram/sessions/{sessionId}:cancel': './paths/telegram.yaml#/~1telegram~1sessions~1{sessionId}:cancel',
     '/telegram/webhooks/{botId}': './paths/telegram.yaml#/~1telegram~1webhooks~1{botId}',
+    '/v1/catalog/autocomplete': './paths/search.yaml#/~1v1~1catalog~1autocomplete',
+    '/v1/catalog/search': './paths/search.yaml#/~1v1~1catalog~1search',
 };
