@@ -124,7 +124,7 @@ public class CatalogSearchApplicationService {
                 .songId(result.songId())
                 .arrangementId(result.arrangementId())
                 .subtitle(result.arrangementLabel())
-                .hydration(new SearchResultHydration().available(true).href("/v1/catalog/arrangements/" + result.arrangementId()))
+                .hydration(new SearchResultHydration().available(true).href("/catalog/arrangements/" + result.arrangementId()))
                 .matchedFields(List.of(new SearchMatchedField().field(FieldEnum.TITLE).value(result.title())));
         if (includeExplanations) {
             summary.rankingFactors(result.rankingFactors().stream()

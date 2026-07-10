@@ -1,4 +1,4 @@
-"/v1/catalog/search":
+"/catalog/search":
   post:
     tags:
     - CatalogSearch
@@ -24,7 +24,7 @@
         $ref: ../components/shared/responses.yaml#/ValidationError
       "403":
         $ref: ../components/shared/responses.yaml#/Forbidden
-"/v1/catalog/autocomplete":
+"/catalog/autocomplete":
   post:
     tags:
     - CatalogSearch
