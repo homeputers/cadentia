@@ -30,6 +30,9 @@ cadentia:
 
   instance:
     id: ${CADENTIA_INSTANCE_ID:local-development}
+  local-admin:
+    username: ${CADENTIA_LOCAL_ADMIN_USERNAME:user}
+    password: ${CADENTIA_LOCAL_ADMIN_PASSWORD:cadentia}
   telegram:
     outbound:
       bot-token-ref: ${CADENTIA_TELEGRAM_OUTBOUND_BOT_TOKEN_REF:${CADENTIA_TELEGRAM_BOT_TOKEN_REF:env:CADENTIA_TELEGRAM_BOT_TOKEN}}

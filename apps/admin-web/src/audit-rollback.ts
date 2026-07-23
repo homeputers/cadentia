@@ -14,6 +14,9 @@ export type RollbackImpactedRecord = { entityType: string; entityId: string; sta
 export type RollbackPreviewResponse = { rollbackRequestId: string; previewId?: string; targetType: string; targetId: string; importBatchId?: string; eligibilityImpacted?: boolean; impactedRecords?: RollbackImpactedRecord[]; blockers?: string[]; conflicts?: string[]; irreversibleWarnings?: string[]; requiredPermissions?: string[]; expiresAt?: string; versionContext?: string; auditReferenceId?: string; actor?: string };
 export type RollbackExecutionResponse = { rollbackRequestId: string; action: string; auditEventId: string; status?: string };
 
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const uuidOrUndefined = (value: string | null): string | undefined => value && UUID_PATTERN.test(value) ? value : undefined;
+
 const params = (filters: Partial<AuditFilters>) => {
     const search = new URLSearchParams();
     Object.entries(filters).forEach(([key, value]) => { if (value !== undefined && value !== '') search.set(key, String(value)); });
@@ -22,7 +25,22 @@ const params = (filters: Partial<AuditFilters>) => {
 
 export const parseAuditFilters = (search: string): AuditFilters => {
     const p = new URLSearchParams(search);
-    return { event: p.get('event') ?? undefined, entityType: p.get('entityType') ?? undefined, entityId: p.get('entityId') ?? undefined, actor: p.get('actor') ?? undefined, action: p.get('action') ?? undefined, from: p.get('from') ?? undefined, to: p.get('to') ?? undefined, importBatchId: p.get('importBatchId') ?? undefined, candidateId: p.get('candidateId') ?? undefined, songId: p.get('songId') ?? undefined, arrangementId: p.get('arrangementId') ?? undefined, moderationFlagId: p.get('moderationFlagId') ?? undefined, rollbackRequestId: p.get('rollbackRequestId') ?? undefined, page: Number(p.get('page') ?? '1') };
+    return {
+        event: uuidOrUndefined(p.get('event')),
+        entityType: p.get('entityType') ?? undefined,
+        entityId: uuidOrUndefined(p.get('entityId')),
+        actor: p.get('actor') ?? undefined,
+        action: p.get('action') ?? undefined,
+        from: p.get('from') ?? undefined,
+        to: p.get('to') ?? undefined,
+        importBatchId: uuidOrUndefined(p.get('importBatchId')),
+        candidateId: uuidOrUndefined(p.get('candidateId')),
+        songId: uuidOrUndefined(p.get('songId')),
+        arrangementId: uuidOrUndefined(p.get('arrangementId')),
+        moderationFlagId: uuidOrUndefined(p.get('moderationFlagId')),
+        rollbackRequestId: uuidOrUndefined(p.get('rollbackRequestId')),
+        page: Number(p.get('page') ?? '1'),
+    };
 };
 export const serializeAuditFilters = (filters: AuditFilters) => params(filters);
 export const buildAuditHistoryPath = (filters: AuditFilters) => `/admin/audit-events?${serializeAuditFilters(filters)}`;
