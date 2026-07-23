@@ -10,7 +10,7 @@ import type { AdminSession } from '../src/auth/session';
 let container: HTMLDivElement;
 let root: Root;
 const session: AdminSession = { actorId: 'reviewer-1', displayName: 'Reviewer One', churchInstanceId: 'church-1', roles: ['CATALOG_EDITOR'], capabilities: ['VIEW_IMPORT_QUEUE', 'REVIEW_CATALOG'] };
-const auditReferenceId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+const auditReferenceId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 
 const queue: ImportCandidateQueueResponse = {
     items: [{

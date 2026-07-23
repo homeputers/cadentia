@@ -11,8 +11,8 @@ let container: HTMLDivElement;
 let root: Root;
 const session: AdminSession = { actorId: 'reviewer-1', displayName: 'Reviewer One', churchInstanceId: 'church-1', roles: ['CATALOG_EDITOR'], capabilities: ['VIEW_IMPORT_QUEUE', 'REVIEW_CATALOG'] };
 
-const relatedAuditReferenceId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
-const duplicateAuditReferenceId = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
+const relatedAuditReferenceId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+const duplicateAuditReferenceId = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 
 const baseDetail: CandidateDetail = {
     candidateId: '11111111-1111-1111-1111-111111111111', importBatchId: '22222222-2222-2222-2222-222222222222', connectorKey: 'songselect', rawTitle: 'Raw Safe Title', normalizedTitle: 'Safe Title', sourceArtistName: 'Artist', status: 'READY_TO_MERGE', allowedActions: ['VIEW_DETAIL', 'ADD_REVIEW_NOTE', 'MERGE_DECISION_DEFER', 'SUBMIT_APPROVAL_ACTION', 'OPEN_MODERATION_FLAG'], version: 7, etag: 'W/"candidate-7"', rawSourceReference: 'CCLI-123', sourcePayloadJson: '{"rawPayload":"do-not-render"}', sourcePayloadRedacted: true, parserEvidence: { parserName: 'cadentia-parser', parserVersion: '1.2.3', confidence: 0.91, severity: 'NONE', warnings: [], evidenceReferences: ['section-map:abc'] }, eligibilityBlockers: [], duplicateSummary: { confidence: 'NONE', matchCount: 0, topScore: null, summary: 'No duplicate detected' }, provenanceReferences: [{ label: 'CCLI', sourceReference: 'CCLI-123', fingerprint: 'sha256:abc', status: 'VERIFIED' }], duplicateMatches: [], reviewNotes: [{ noteId: '33333333-3333-3333-3333-333333333333', authorId: 'reviewer-2', authorDisplayName: 'Second Reviewer', category: 'GENERAL', body: 'Looks safe, but this is only a review note.', createdAt: '2026-06-22T02:00:00Z', auditReferenceId: 'audit-note-1' }], reviewHistory: [{ id: '44444444-4444-4444-4444-444444444444', decision: 'READY', reviewer: 'Reviewer One', reviewedAt: '2026-06-22T03:00:00Z', reviewNotes: 'Backend decision note' }], relatedAuditReferences: [relatedAuditReferenceId],
