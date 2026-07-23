@@ -23,6 +23,17 @@ const toApiError = async (response: Response): Promise<AdminApiError> => {
     return error;
 };
 
+const resolveApiUrl = (path: string, apiBaseUrl: string): string => {
+    const normalizedBase = apiBaseUrl.endsWith('/') ? apiBaseUrl.slice(0, -1) : apiBaseUrl;
+    const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+
+    if (normalizedBase.startsWith('/')) {
+        return `${normalizedBase}${normalizedPath}`;
+    }
+
+    return new URL(normalizedPath, normalizedBase).toString();
+};
+
 export const createAdminApiClient = ({
     environment,
     getAccessToken,
@@ -47,7 +58,7 @@ export const createAdminApiClient = ({
             headers.set('If-Match', mutation.etag);
         }
 
-        const response = await fetchImpl(new URL(path, environment.apiBaseUrl), {
+        const response = await fetchImpl(resolveApiUrl(path, environment.apiBaseUrl), {
             ...init,
             credentials: 'include',
             headers,

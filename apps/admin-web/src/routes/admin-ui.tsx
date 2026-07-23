@@ -138,7 +138,11 @@ export const DiffPanel = ({ before, after }: { before: string[]; after: string[]
     </section>
 );
 
-export const AuditReferenceLink = ({ auditId }: { auditId: string }) => <a href={`/admin/audit?event=${encodeURIComponent(auditId)}`}>Audit reference {auditId}</a>;
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+export const AuditReferenceLink = ({ auditId }: { auditId: string }) => UUID_PATTERN.test(auditId)
+    ? <a href={`/admin/audit?event=${encodeURIComponent(auditId)}`}>Audit reference {auditId}</a>
+    : <span>Audit reference <code>{auditId}</code></span>;
 
 export const SupportDebugPanel = ({ environment }: { environment: AdminEnvironment }) => (
     <details className="admin-debug">

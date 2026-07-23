@@ -39,4 +39,24 @@ describe('generated admin API client wrapper', () => {
         expect(capturedRequest.headers.get('If-Match')).toBe('"v7"');
         expect(capturedRequest.credentials).toBe('include');
     });
+
+    it('supports same-origin relative API base URLs for Vite proxy development', async () => {
+        const capturedInputs: Array<URL | RequestInfo> = [];
+        const fetchImpl = async (input: URL | RequestInfo) => {
+            capturedInputs.push(input);
+            return new Response(JSON.stringify({ ok: true }), {
+                status: 200,
+                headers: { 'Content-Type': 'application/json' },
+            });
+        };
+        const client = createAdminApiClient({
+            environment: { ...environment, apiBaseUrl: '/api' },
+            getAccessToken: async () => null,
+            fetchImpl: fetchImpl as typeof fetch,
+        });
+
+        await client.request('/admin/session');
+
+        expect(capturedInputs[0]).toBe('/api/admin/session');
+    });
 });

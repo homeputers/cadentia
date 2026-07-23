@@ -2,12 +2,14 @@ import { useEffect, useMemo, useState } from 'react';
 import { adminEnvironment, missingRequiredEnvironment } from '../config/environment';
 import { bootstrapAdminSession, type PermissionState } from '../auth/session';
 import { canRenderAction, visibleRoutes } from '../auth/permissions';
+import { defaultImportCandidateFilters, listImportCandidates, type ImportCandidateQueueResponse } from '../import-candidates';
 import { ImportCandidateQueue } from './ImportCandidateQueue';
 import { ImportCandidateDetail } from './ImportCandidateDetail';
 import { AuditRollback } from './AuditRollback';
 import { Diagnostics } from './Diagnostics';
 import { InstanceSettings } from './InstanceSettings';
-import { ActionBadge, AuditReferenceLink, Badge, Breadcrumbs, DataTable, DiffPanel, Field, FilterPanel, PageHeader, RoleBadge, StatePanel, SupportDebugPanel } from './admin-ui';
+import { ActionBadge, AuditReferenceLink, Badge, Breadcrumbs, DataTable, PageHeader, RoleBadge, StatePanel, SupportDebugPanel, redactSensitiveError } from './admin-ui';
+import { createAdminApiClient, type AdminApiClient, type AdminApiError } from '../generated/cadentia-api/client';
 import './admin-shell.css';
 
 const renderPermissionState = (state: PermissionState) => {
@@ -31,6 +33,50 @@ const renderPermissionState = (state: PermissionState) => {
     }
 };
 
+const label = (value?: string | null) => value ? value.replaceAll('_', ' ').toLowerCase().replace(/^./, (c) => c.toUpperCase()) : 'None';
+const severityFor = (value: string) => value === 'BLOCKED' || value === 'ERROR' || value === 'HIGH' || value === 'URGENT' ? 'danger' : value === 'READY' || value === 'VERIFIED' || value === 'CLEAR' ? 'success' : value === 'NONE' ? 'neutral' : 'warning';
+
+const ImportCandidateSummary = ({ apiClient = createAdminApiClient({ environment: adminEnvironment, getAccessToken: async () => null }) }: { apiClient?: AdminApiClient }) => {
+    const [queue, setQueue] = useState<ImportCandidateQueueResponse | null>(null);
+    const [state, setState] = useState<'loading' | 'empty' | 'ready' | 'unauthorized' | 'forbidden' | 'error'>('loading');
+    const [error, setError] = useState('');
+
+    const load = async () => {
+        setState('loading');
+        try {
+            const response = await listImportCandidates(apiClient, {
+                ...defaultImportCandidateFilters,
+                pageSize: 5,
+                sort: 'updatedAt:desc',
+            });
+            setQueue(response);
+            setState(response.items.length ? 'ready' : 'empty');
+        } catch (caught) {
+            const apiError = caught as AdminApiError;
+            setError(redactSensitiveError(apiError.message));
+            setState(apiError.status === 401 ? 'unauthorized' : apiError.status === 403 ? 'forbidden' : 'error');
+        }
+    };
+
+    useEffect(() => { void load(); }, []);
+
+    const rows = (queue?.items ?? []).map((candidate) => [
+        <><a href={`/admin/imports/${encodeURIComponent(candidate.candidateId)}`}>{candidate.normalizedTitle || candidate.rawTitle}</a><br /><small>{candidate.connectorKey} · batch {candidate.importBatchId}</small></>,
+        <Badge severity={severityFor(candidate.status)}>{label(candidate.status)}</Badge>,
+        candidate.assignedReviewerName ?? candidate.assignedReviewerId ?? 'Unassigned',
+        candidate.auditReferenceId ? <AuditReferenceLink auditId={candidate.auditReferenceId} /> : 'Pending audit event',
+    ]);
+
+    return (
+        <section aria-labelledby="import-summary-title" className="admin-shell__panel">
+            <h2 id="import-summary-title">Import review snapshot</h2>
+            <StatePanel state={state} title="Import candidates" onRetry={() => void load()}>{error && <p>{error}</p>}</StatePanel>
+            {queue && rows.length > 0 && <><p>{queue.totalItems} server-matched candidates. Showing up to 5.</p><DataTable caption="Latest import candidates" columns={['Candidate', 'Status', 'Reviewer', 'Audit']} rows={rows} /></>}
+            <p><a href="/admin/imports">Open full import review queue</a></p>
+        </section>
+    );
+};
+
 export const AdminShell = () => {
     const [permissionState, setPermissionState] = useState<PermissionState>({ kind: 'loading' });
     const missingEnvironment = missingRequiredEnvironment(adminEnvironment);
@@ -44,6 +90,8 @@ export const AdminShell = () => {
     }, []);
 
     const session = permissionState.kind === 'authenticated' ? permissionState.session : null;
+    const routes = useMemo(() => (session ? visibleRoutes(session, adminEnvironment.featureFlags) : []), [session]);
+
     if (session && window.location.pathname === '/admin/imports') {
         return <ImportCandidateQueue session={session} />;
     }
@@ -60,7 +108,6 @@ export const AdminShell = () => {
     if (session && detailMatch) {
         return <ImportCandidateDetail session={session} candidateId={decodeURIComponent(detailMatch[1])} />;
     }
-    const routes = useMemo(() => (session ? visibleRoutes(session, adminEnvironment.featureFlags) : []), [session]);
 
     return (
         <main className="admin-shell" aria-labelledby="admin-shell-title">
@@ -86,8 +133,9 @@ export const AdminShell = () => {
                         <p>{session!.roles.map((role) => <RoleBadge key={role} role={role} />)}</p>
                     </section>
 
-                    <section aria-labelledby="admin-actions-title" className="admin-shell__panel">
-                        <h2 id="admin-actions-title">Available actions</h2>
+                    <section aria-labelledby="admin-capabilities-title" className="admin-shell__panel">
+                        <h2 id="admin-capabilities-title">Granted capabilities</h2>
+                        <p>These badges show what the backend session allows. Action controls appear inside each admin section when the matching workflow is available.</p>
                         {canRenderAction(session!, 'REVIEW_CATALOG') && <ActionBadge capability="REVIEW_CATALOG" />}
                         {canRenderAction(session!, 'EXECUTE_ROLLBACK') && <ActionBadge capability="EXECUTE_ROLLBACK" />}
                         {!canRenderAction(session!, 'REVIEW_CATALOG') && !canRenderAction(session!, 'EXECUTE_ROLLBACK') && <p>Read-only access. Mutating action controls are hidden as a usability aid.</p>}
@@ -95,13 +143,7 @@ export const AdminShell = () => {
                 </>
             )}
 
-            <section aria-labelledby="foundation-title" className="admin-shell__panel">
-                <h2 id="foundation-title">Reusable component foundation preview</h2>
-                <FilterPanel title="Accessible filter form"><Field label="Status" error="Choose a backend-provided status before applying.">{({ inputId, errorId }) => <select id={inputId} aria-describedby={errorId} aria-invalid={Boolean(errorId)}><option value="">Select status</option><option>Needs review</option></select>}</Field></FilterPanel>
-                <DataTable caption="Import review state examples" columns={['Candidate', 'Status', 'Audit']} rows={[[ 'candidate-42', <Badge severity="warning">Needs review</Badge>, <AuditReferenceLink auditId="audit-100" /> ]]} />
-                <StatePanel state="partial-failure" title="Partial data failure" onRetry={() => undefined} />
-                <DiffPanel before={['Feature flag disabled']} after={['Feature flag enabled after backend preview']} />
-            </section>
+            {session && <ImportCandidateSummary />}
 
             <section aria-labelledby="admin-config-title" className="admin-shell__panel">
                 <h2 id="admin-config-title">Deployment smoke metadata</h2>
