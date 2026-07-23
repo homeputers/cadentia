@@ -40,6 +40,8 @@ export type CadentiaApiRoute =
     | '/assets/{assetId}/versions/{assetVersionId}/licensing'
     | '/assets/uploads'
     | '/assets/uploads/{uploadId}/finalize'
+    | '/catalog/autocomplete'
+    | '/catalog/search'
     | '/conversation-sessions/{sessionId}'
     | '/conversation-sessions/{sessionId}/cancel'
     | '/conversation-sessions/{sessionId}/clarify'
@@ -128,6 +130,8 @@ export const cadentiaApiRoutes = [
     '/assets/{assetId}/versions/{assetVersionId}/licensing',
     '/assets/uploads',
     '/assets/uploads/{uploadId}/finalize',
+    '/catalog/autocomplete',
+    '/catalog/search',
     '/conversation-sessions/{sessionId}',
     '/conversation-sessions/{sessionId}/cancel',
     '/conversation-sessions/{sessionId}/clarify',
@@ -217,6 +221,8 @@ export const cadentiaApiRouteRefs: Record<CadentiaApiRoute, string> = {
     '/assets/{assetId}/versions/{assetVersionId}/licensing': './paths/assets.yaml#/~1assets~1{assetId}~1versions~1{assetVersionId}~1licensing',
     '/assets/uploads': './paths/assets.yaml#/~1assets~1uploads',
     '/assets/uploads/{uploadId}/finalize': './paths/assets.yaml#/~1assets~1uploads~1{uploadId}~1finalize',
+    '/catalog/autocomplete': './paths/search.yaml#/~1catalog~1autocomplete',
+    '/catalog/search': './paths/search.yaml#/~1catalog~1search',
     '/conversation-sessions/{sessionId}': './paths/conversation-sessions.yaml#/~1conversation-sessions~1{sessionId}',
     '/conversation-sessions/{sessionId}/cancel': './paths/conversation-sessions.yaml#/~1conversation-sessions~1{sessionId}~1cancel',
     '/conversation-sessions/{sessionId}/clarify': './paths/conversation-sessions.yaml#/~1conversation-sessions~1{sessionId}~1clarify',

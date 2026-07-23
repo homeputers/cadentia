@@ -1,3 +1,7 @@
+"/catalog/search":
+  "$ref": "./paths/search.yaml#/~1catalog~1search"
+"/catalog/autocomplete":
+  "$ref": "./paths/search.yaml#/~1catalog~1autocomplete"
 "/telegram/webhooks/{botId}":
   "$ref": "./paths/telegram.yaml#/~1telegram~1webhooks~1{botId}"
 "/admin/telegram/bots/{botId}/status":
