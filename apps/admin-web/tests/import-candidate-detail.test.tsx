@@ -11,9 +11,12 @@ let container: HTMLDivElement;
 let root: Root;
 const session: AdminSession = { actorId: 'reviewer-1', displayName: 'Reviewer One', churchInstanceId: 'church-1', roles: ['CATALOG_EDITOR'], capabilities: ['VIEW_IMPORT_QUEUE', 'REVIEW_CATALOG'] };
 
+const relatedAuditReferenceId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+const duplicateAuditReferenceId = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
+
 const baseDetail: CandidateDetail = {
-    candidateId: '11111111-1111-1111-1111-111111111111', importBatchId: '22222222-2222-2222-2222-222222222222', connectorKey: 'songselect', rawTitle: 'Raw Safe Title', normalizedTitle: 'Safe Title', sourceArtistName: 'Artist', status: 'READY_TO_MERGE', allowedActions: ['VIEW_DETAIL', 'ADD_REVIEW_NOTE', 'MERGE_DECISION_DEFER', 'SUBMIT_APPROVAL_ACTION', 'OPEN_MODERATION_FLAG'], version: 7, etag: 'W/"candidate-7"', rawSourceReference: 'CCLI-123', sourcePayloadJson: '{"rawPayload":"do-not-render"}', sourcePayloadRedacted: true, parserEvidence: { parserName: 'cadentia-parser', parserVersion: '1.2.3', confidence: 0.91, severity: 'NONE', warnings: [], evidenceReferences: ['section-map:abc'] }, eligibilityBlockers: [], duplicateSummary: { confidence: 'NONE', matchCount: 0, topScore: null, summary: 'No duplicate detected' }, provenanceReferences: [{ label: 'CCLI', sourceReference: 'CCLI-123', fingerprint: 'sha256:abc', status: 'VERIFIED' }], duplicateMatches: [], reviewNotes: [{ noteId: '33333333-3333-3333-3333-333333333333', authorId: 'reviewer-2', authorDisplayName: 'Second Reviewer', category: 'GENERAL', body: 'Looks safe, but this is only a review note.', createdAt: '2026-06-22T02:00:00Z', auditReferenceId: 'audit-note-1' }], reviewHistory: [{ id: '44444444-4444-4444-4444-444444444444', decision: 'READY', reviewer: 'Reviewer One', reviewedAt: '2026-06-22T03:00:00Z', reviewNotes: 'Backend decision note' }], relatedAuditReferences: ['audit-123'],
-    duplicateComparison: { candidate: { title: 'Safe Title', key: 'G' }, existing: { title: 'Safe Title', key: 'A' }, matchingFeatures: ['normalized title'], conflicts: ['key differs'], confidenceFeatures: ['title exact'], currentApprovedCatalogState: 'APPROVED', eligibilityEffects: ['Merge may publish approved arrangement'], auditReferenceId: 'audit-dupe-1' },
+    candidateId: '11111111-1111-1111-1111-111111111111', importBatchId: '22222222-2222-2222-2222-222222222222', connectorKey: 'songselect', rawTitle: 'Raw Safe Title', normalizedTitle: 'Safe Title', sourceArtistName: 'Artist', status: 'READY_TO_MERGE', allowedActions: ['VIEW_DETAIL', 'ADD_REVIEW_NOTE', 'MERGE_DECISION_DEFER', 'SUBMIT_APPROVAL_ACTION', 'OPEN_MODERATION_FLAG'], version: 7, etag: 'W/"candidate-7"', rawSourceReference: 'CCLI-123', sourcePayloadJson: '{"rawPayload":"do-not-render"}', sourcePayloadRedacted: true, parserEvidence: { parserName: 'cadentia-parser', parserVersion: '1.2.3', confidence: 0.91, severity: 'NONE', warnings: [], evidenceReferences: ['section-map:abc'] }, eligibilityBlockers: [], duplicateSummary: { confidence: 'NONE', matchCount: 0, topScore: null, summary: 'No duplicate detected' }, provenanceReferences: [{ label: 'CCLI', sourceReference: 'CCLI-123', fingerprint: 'sha256:abc', status: 'VERIFIED' }], duplicateMatches: [], reviewNotes: [{ noteId: '33333333-3333-3333-3333-333333333333', authorId: 'reviewer-2', authorDisplayName: 'Second Reviewer', category: 'GENERAL', body: 'Looks safe, but this is only a review note.', createdAt: '2026-06-22T02:00:00Z', auditReferenceId: 'audit-note-1' }], reviewHistory: [{ id: '44444444-4444-4444-4444-444444444444', decision: 'READY', reviewer: 'Reviewer One', reviewedAt: '2026-06-22T03:00:00Z', reviewNotes: 'Backend decision note' }], relatedAuditReferences: [relatedAuditReferenceId],
+    duplicateComparison: { candidate: { title: 'Safe Title', key: 'G' }, existing: { title: 'Safe Title', key: 'A' }, matchingFeatures: ['normalized title'], conflicts: ['key differs'], confidenceFeatures: ['title exact'], currentApprovedCatalogState: 'APPROVED', eligibilityEffects: ['Merge may publish approved arrangement'], auditReferenceId: duplicateAuditReferenceId },
     approvalState: { requiredTypes: ['DOCTRINAL', 'PROVENANCE'], statuses: [{ type: 'PROVENANCE', status: 'APPROVED', actor: 'reviewer-2', auditReferenceId: 'audit-approval-1' }], blockers: ['Needs second reviewer'], allowedTransitions: ['APPROVE', 'REVERSE_APPROVAL'], eligibilityImpact: 'Eligible only after all required approvals pass', auditReferenceId: 'audit-approval-state' },
     moderationFlags: [{ id: '66666666-6666-6666-6666-666666666666', scope: 'IMPORT_CANDIDATE', type: 'METADATA_CONFLICT', reason: 'Conflicting author metadata', status: 'OPEN', eligibilityImpactPolicy: 'BLOCK_UNTIL_RESOLVED', openedBy: 'reviewer-2', auditReferenceId: 'audit-flag-1' }],
 };
@@ -37,7 +40,7 @@ describe('import candidate detail', () => {
         expect(node.textContent).toContain('sha256:abc');
         expect(node.textContent).toContain('91%');
         expect(node.textContent).toContain('Looks safe, but this is only a review note.');
-        expect(node.querySelector('a[href="/admin/audit?event=audit-123"]')).not.toBeNull();
+        expect(node.querySelector(`a[href="/admin/audit?event=${relatedAuditReferenceId}"]`)).not.toBeNull();
         expect(node.textContent).not.toContain('do-not-render');
         expect(node.textContent).not.toContain('full lyrics content');
     });
@@ -64,7 +67,7 @@ describe('import candidate detail', () => {
         expect(node.textContent).toContain('Required approval types');
         expect(node.textContent).toContain('Needs second reviewer');
         expect(node.textContent).toContain('Conflicting author metadata');
-        expect(node.querySelector('a[href="/admin/audit?event=audit-dupe-1"]')).not.toBeNull();
+        expect(node.querySelector(`a[href="/admin/audit?event=${duplicateAuditReferenceId}"]`)).not.toBeNull();
     });
 
     it('submits merge decisions, approval reversals, and moderation flags only after confirmation with actor and If-Match context', async () => {

@@ -10,10 +10,11 @@ import type { AdminSession } from '../src/auth/session';
 let container: HTMLDivElement;
 let root: Root;
 const session: AdminSession = { actorId: 'reviewer-1', displayName: 'Reviewer One', churchInstanceId: 'church-1', roles: ['CATALOG_EDITOR'], capabilities: ['VIEW_IMPORT_QUEUE', 'REVIEW_CATALOG'] };
+const auditReferenceId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 
 const queue: ImportCandidateQueueResponse = {
     items: [{
-        candidateId: '11111111-1111-1111-1111-111111111111', importBatchId: '22222222-2222-2222-2222-222222222222', connectorKey: 'songselect', rawTitle: 'Safe title only', normalizedTitle: 'Safe Title Only', sourceArtistName: 'Artist', status: 'DEDUPLICATION_REVIEW', submittedAt: '2026-06-22T00:00:00Z', updatedAt: '2026-06-22T01:00:00Z', assignedReviewerId: 'reviewer-1', assignedReviewerName: 'Reviewer One', parserSeverity: 'WARNING', parserConfidence: 0.82, parserWarningCount: 2, provenanceStatus: 'VERIFIED', provenanceSummary: 'CCLI source reference verified', duplicateConfidence: 'HIGH', duplicateMatchCount: 3, duplicateTopScore: 0.93, moderationState: 'FLAGGED', reviewPriority: 'URGENT', approvalReadiness: 'BLOCKED', readinessSummary: 'Needs duplicate adjudication', allowedActions: ['VIEW_DETAIL', 'OPEN_MODERATION_FLAG'], auditReferenceId: 'audit-123'
+        candidateId: '11111111-1111-1111-1111-111111111111', importBatchId: '22222222-2222-2222-2222-222222222222', connectorKey: 'songselect', rawTitle: 'Safe title only', normalizedTitle: 'Safe Title Only', sourceArtistName: 'Artist', status: 'DEDUPLICATION_REVIEW', submittedAt: '2026-06-22T00:00:00Z', updatedAt: '2026-06-22T01:00:00Z', assignedReviewerId: 'reviewer-1', assignedReviewerName: 'Reviewer One', parserSeverity: 'WARNING', parserConfidence: 0.82, parserWarningCount: 2, provenanceStatus: 'VERIFIED', provenanceSummary: 'CCLI source reference verified', duplicateConfidence: 'HIGH', duplicateMatchCount: 3, duplicateTopScore: 0.93, moderationState: 'FLAGGED', reviewPriority: 'URGENT', approvalReadiness: 'BLOCKED', readinessSummary: 'Needs duplicate adjudication', allowedActions: ['VIEW_DETAIL', 'OPEN_MODERATION_FLAG'], auditReferenceId
     }],
     page: 1,
     pageSize: 25,
@@ -48,7 +49,7 @@ describe('import candidate queue', () => {
         expect(node.textContent).toContain('Warning parser · 82% · 2 warnings');
         expect(node.textContent).toContain('High duplicate · 3 matches · top 93%');
         expect(node.textContent).toContain('Blocked from row-level approval');
-        expect(node.querySelector('a[href="/admin/audit?event=audit-123"]')).not.toBeNull();
+        expect(node.querySelector(`a[href="/admin/audit?event=${auditReferenceId}"]`)).not.toBeNull();
         expect(node.textContent).not.toContain('full lyrics');
         expect(node.textContent).not.toContain('rawPayload');
     });
