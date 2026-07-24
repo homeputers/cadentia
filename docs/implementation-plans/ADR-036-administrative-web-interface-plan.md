@@ -70,8 +70,9 @@ Implemented foundations:
 
 Known implementation gaps:
 
-- The frontend client wrapper is typed and OpenAPI-route-aware, but it is not a
-  fully generated operation-specific TypeScript client.
+- The frontend client wrapper is typed and generated from OpenAPI route and
+  operation metadata, but request/response model types remain manually declared
+  at the route-helper layer.
 - Several operational mutation endpoints still use local-development in-memory
   state, while operational read models now derive safe summaries from runtime
   instance configuration where available.

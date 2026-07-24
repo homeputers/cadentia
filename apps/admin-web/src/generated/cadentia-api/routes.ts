@@ -91,6 +91,120 @@ export type CadentiaApiRoute =
     | '/telegram/sessions/{sessionId}:cancel'
     | '/telegram/webhooks/{botId}';
 
+export type CadentiaApiOperationId =
+    | 'acceptTelegramWebhookUpdate'
+    | 'archiveArrangementOverride'
+    | 'archiveAsset'
+    | 'archiveAssetAttachment'
+    | 'archiveAssetVersion'
+    | 'archiveRehearsalSession'
+    | 'assignAdminModerationFlag'
+    | 'attachSetlistVersionToServicePlan'
+    | 'autocompleteCatalog'
+    | 'cancelConversationSession'
+    | 'cancelTelegramSession'
+    | 'commitSetlistEdits'
+    | 'confirmAdminFeatureFlagChange'
+    | 'confirmConversationSession'
+    | 'confirmTelegramAccountLink'
+    | 'createAdminImportCandidateReviewNote'
+    | 'createAdminRollbackPreview'
+    | 'createArrangementOverride'
+    | 'createAssetAttachment'
+    | 'createAssetUpload'
+    | 'createAssetVersionUpload'
+    | 'createPluginConfigurationSnapshot'
+    | 'createRehearsalIssue'
+    | 'createRehearsalIssueAction'
+    | 'createRehearsalNote'
+    | 'createRehearsalSession'
+    | 'createRehearsalTeamAssignment'
+    | 'createServicePlan'
+    | 'createServiceTeamAssignment'
+    | 'createSetlistBaselineVersion'
+    | 'createSongTeamAssignmentOverride'
+    | 'diffSetlistVersions'
+    | 'disablePluginEnablement'
+    | 'enablePluginForScope'
+    | 'escalateAdminModerationFlag'
+    | 'executeAdminRollback'
+    | 'finalizeAssetUpload'
+    | 'generateSetlistProposal'
+    | 'generateSetlistProposalFromNaturalLanguage'
+    | 'getAdminDiagnostics'
+    | 'getAdminImportCandidateAuditHistory'
+    | 'getAdminImportCandidateDetail'
+    | 'getAdminImportCandidateDuplicates'
+    | 'getAdminInstanceConfiguration'
+    | 'getAdminSession'
+    | 'getAsset'
+    | 'getAssetVersionLicensing'
+    | 'getConversationSessionState'
+    | 'getFeedbackScopeState'
+    | 'getServicePlan'
+    | 'getServiceTeamRoster'
+    | 'getServiceWorkflowStatus'
+    | 'getSetlistVersion'
+    | 'getTelegramBotStatus'
+    | 'getTelegramSessionStatus'
+    | 'initiateTelegramAccountLink'
+    | 'listAdminFeatureFlags'
+    | 'listAdminImportCandidates'
+    | 'listArrangementOverrides'
+    | 'listAssetAttachments'
+    | 'listAssets'
+    | 'listAssetVersions'
+    | 'listFeedbackEvents'
+    | 'listPluginPackages'
+    | 'listPluginVersionHistory'
+    | 'listRehearsalIssues'
+    | 'listRehearsalNotes'
+    | 'listRehearsalSessions'
+    | 'listServicePlans'
+    | 'listSetlistVersions'
+    | 'listTeamAssignmentHistory'
+    | 'listUpcomingTeamAssignmentsForMusician'
+    | 'openAdminModerationFlag'
+    | 'previewAdminFeatureFlagChange'
+    | 'publishServicePlan'
+    | 'recordFeedbackEvent'
+    | 'recoverConversationSession'
+    | 'registerPluginPackage'
+    | 'removeServiceTeamAssignment'
+    | 'renderEffectiveArrangement'
+    | 'reorderServicePlanBlocks'
+    | 'reorderServiceTeamAssignments'
+    | 'requestAssetAccess'
+    | 'requestConversationClarification'
+    | 'resetFeedbackScopeState'
+    | 'resolveAdminModerationFlag'
+    | 'revokePluginPackage'
+    | 'searchAdminAuditEvents'
+    | 'searchCatalog'
+    | 'submitAdminImportCandidateApprovalAction'
+    | 'submitAdminImportCandidateMergeDecision'
+    | 'substituteServiceTeamAssignment'
+    | 'transitionReadinessState'
+    | 'updateAdminInstanceConfiguration'
+    | 'updateArrangementOverride'
+    | 'updateConversationSessionSlots'
+    | 'updateRehearsalIssueActionOwner'
+    | 'updateRehearsalIssueActionStatus'
+    | 'updateRehearsalIssueStatus'
+    | 'updateRehearsalSession'
+    | 'updateServicePlan'
+    | 'updateServiceTeamAssignment'
+    | 'updateTelegramChannelSettings';
+
+export type CadentiaApiMethod = 'DELETE' | 'GET' | 'PATCH' | 'POST' | 'PUT';
+
+export type CadentiaApiOperation = {
+    operationId: CadentiaApiOperationId;
+    method: CadentiaApiMethod;
+    path: CadentiaApiRoute;
+    ref: string;
+};
+
 export const cadentiaApiRoutes = [
     '/admin/audit-events',
     '/admin/diagnostics',
@@ -272,3 +386,113 @@ export const cadentiaApiRouteRefs: Record<CadentiaApiRoute, string> = {
     '/telegram/sessions/{sessionId}:cancel': './paths/telegram.yaml#/~1telegram~1sessions~1{sessionId}:cancel',
     '/telegram/webhooks/{botId}': './paths/telegram.yaml#/~1telegram~1webhooks~1{botId}',
 };
+
+export const cadentiaApiOperations = [
+    { operationId: 'acceptTelegramWebhookUpdate', method: 'POST', path: '/telegram/webhooks/{botId}', ref: './paths/telegram.yaml#/~1telegram~1webhooks~1{botId}' },
+    { operationId: 'archiveArrangementOverride', method: 'DELETE', path: '/service-plans/{servicePlanId}/arrangement-overrides/{arrangementOverrideId}', ref: './paths/rehearsal-workflow.yaml#/~1service-plans~1{servicePlanId}~1arrangement-overrides~1{arrangementOverrideId}' },
+    { operationId: 'archiveAsset', method: 'DELETE', path: '/assets/{assetId}', ref: './paths/assets.yaml#/~1assets~1{assetId}' },
+    { operationId: 'archiveAssetAttachment', method: 'DELETE', path: '/asset-attachments/{attachmentId}', ref: './paths/assets.yaml#/~1asset-attachments~1{attachmentId}' },
+    { operationId: 'archiveAssetVersion', method: 'DELETE', path: '/assets/{assetId}/versions/{assetVersionId}', ref: './paths/assets.yaml#/~1assets~1{assetId}~1versions~1{assetVersionId}' },
+    { operationId: 'archiveRehearsalSession', method: 'DELETE', path: '/service-plans/{servicePlanId}/rehearsal-sessions/{rehearsalSessionId}', ref: './paths/rehearsal-workflow.yaml#/~1service-plans~1{servicePlanId}~1rehearsal-sessions~1{rehearsalSessionId}' },
+    { operationId: 'assignAdminModerationFlag', method: 'POST', path: '/admin/moderation-flags/{flagId}/assign', ref: './paths/admin-review.yaml#/~1admin~1moderation-flags~1{flagId}~1assign' },
+    { operationId: 'attachSetlistVersionToServicePlan', method: 'POST', path: '/service-plans/{servicePlanId}/setlist-attachments', ref: './paths/service-plans.yaml#/~1service-plans~1{servicePlanId}~1setlist-attachments' },
+    { operationId: 'autocompleteCatalog', method: 'POST', path: '/catalog/autocomplete', ref: './paths/search.yaml#/~1catalog~1autocomplete' },
+    { operationId: 'cancelConversationSession', method: 'POST', path: '/conversation-sessions/{sessionId}/cancel', ref: './paths/conversation-sessions.yaml#/~1conversation-sessions~1{sessionId}~1cancel' },
+    { operationId: 'cancelTelegramSession', method: 'POST', path: '/telegram/sessions/{sessionId}:cancel', ref: './paths/telegram.yaml#/~1telegram~1sessions~1{sessionId}:cancel' },
+    { operationId: 'commitSetlistEdits', method: 'POST', path: '/setlists/{setlistId}/edits', ref: './paths/setlists.yaml#/~1setlists~1{setlistId}~1edits' },
+    { operationId: 'confirmAdminFeatureFlagChange', method: 'POST', path: '/admin/feature-flags/{flagKey}:confirm', ref: './paths/admin-operations.yaml#/~1admin~1feature-flags~1{flagKey}:confirm' },
+    { operationId: 'confirmConversationSession', method: 'POST', path: '/conversation-sessions/{sessionId}/confirm', ref: './paths/conversation-sessions.yaml#/~1conversation-sessions~1{sessionId}~1confirm' },
+    { operationId: 'confirmTelegramAccountLink', method: 'POST', path: '/telegram/account-links:confirm', ref: './paths/telegram.yaml#/~1telegram~1account-links:confirm' },
+    { operationId: 'createAdminImportCandidateReviewNote', method: 'POST', path: '/admin/import-candidates/{candidateId}/notes', ref: './paths/admin-review.yaml#/~1admin~1import-candidates~1{candidateId}~1notes' },
+    { operationId: 'createAdminRollbackPreview', method: 'POST', path: '/admin/rollback-previews', ref: './paths/admin-review.yaml#/~1admin~1rollback-previews' },
+    { operationId: 'createArrangementOverride', method: 'POST', path: '/service-plans/{servicePlanId}/arrangement-overrides', ref: './paths/rehearsal-workflow.yaml#/~1service-plans~1{servicePlanId}~1arrangement-overrides' },
+    { operationId: 'createAssetAttachment', method: 'POST', path: '/asset-attachments', ref: './paths/assets.yaml#/~1asset-attachments' },
+    { operationId: 'createAssetUpload', method: 'POST', path: '/assets/uploads', ref: './paths/assets.yaml#/~1assets~1uploads' },
+    { operationId: 'createAssetVersionUpload', method: 'POST', path: '/assets/{assetId}/versions', ref: './paths/assets.yaml#/~1assets~1{assetId}~1versions' },
+    { operationId: 'createPluginConfigurationSnapshot', method: 'POST', path: '/admin/plugins/{pluginVersionId}/configuration-snapshots', ref: './paths/plugins.yaml#/~1admin~1plugins~1{pluginVersionId}~1configuration-snapshots' },
+    { operationId: 'createRehearsalIssue', method: 'POST', path: '/service-plans/{servicePlanId}/issues', ref: './paths/rehearsal-workflow.yaml#/~1service-plans~1{servicePlanId}~1issues' },
+    { operationId: 'createRehearsalIssueAction', method: 'POST', path: '/service-plans/{servicePlanId}/issues/{issueId}/actions', ref: './paths/rehearsal-workflow.yaml#/~1service-plans~1{servicePlanId}~1issues~1{issueId}~1actions' },
+    { operationId: 'createRehearsalNote', method: 'POST', path: '/service-plans/{servicePlanId}/notes', ref: './paths/rehearsal-workflow.yaml#/~1service-plans~1{servicePlanId}~1notes' },
+    { operationId: 'createRehearsalSession', method: 'POST', path: '/service-plans/{servicePlanId}/rehearsal-sessions', ref: './paths/rehearsal-workflow.yaml#/~1service-plans~1{servicePlanId}~1rehearsal-sessions' },
+    { operationId: 'createRehearsalTeamAssignment', method: 'POST', path: '/team-assignments/rehearsals/{rehearsalEventId}', ref: './paths/team-assignments.yaml#/~1team-assignments~1rehearsals~1{rehearsalEventId}' },
+    { operationId: 'createServicePlan', method: 'POST', path: '/service-plans', ref: './paths/service-plans.yaml#/~1service-plans' },
+    { operationId: 'createServiceTeamAssignment', method: 'POST', path: '/team-assignments/services/{servicePlanId}', ref: './paths/team-assignments.yaml#/~1team-assignments~1services~1{servicePlanId}' },
+    { operationId: 'createSetlistBaselineVersion', method: 'POST', path: '/setlists', ref: './paths/setlists.yaml#/~1setlists' },
+    { operationId: 'createSongTeamAssignmentOverride', method: 'POST', path: '/team-assignments/services/{servicePlanId}/song-overrides', ref: './paths/team-assignments.yaml#/~1team-assignments~1services~1{servicePlanId}~1song-overrides' },
+    { operationId: 'diffSetlistVersions', method: 'GET', path: '/setlists/{setlistId}/versions/{fromVersionId}/diff/{toVersionId}', ref: './paths/setlists.yaml#/~1setlists~1{setlistId}~1versions~1{fromVersionId}~1diff~1{toVersionId}' },
+    { operationId: 'disablePluginEnablement', method: 'POST', path: '/admin/plugin-enablements/{enablementId}:disable', ref: './paths/plugins.yaml#/~1admin~1plugin-enablements~1{enablementId}:disable' },
+    { operationId: 'enablePluginForScope', method: 'POST', path: '/admin/plugins/{pluginVersionId}/enablements', ref: './paths/plugins.yaml#/~1admin~1plugins~1{pluginVersionId}~1enablements' },
+    { operationId: 'escalateAdminModerationFlag', method: 'POST', path: '/admin/moderation-flags/{flagId}/escalate', ref: './paths/admin-review.yaml#/~1admin~1moderation-flags~1{flagId}~1escalate' },
+    { operationId: 'executeAdminRollback', method: 'POST', path: '/admin/rollbacks', ref: './paths/admin-review.yaml#/~1admin~1rollbacks' },
+    { operationId: 'finalizeAssetUpload', method: 'POST', path: '/assets/uploads/{uploadId}/finalize', ref: './paths/assets.yaml#/~1assets~1uploads~1{uploadId}~1finalize' },
+    { operationId: 'generateSetlistProposal', method: 'POST', path: '/setlists/proposals', ref: './paths/setlists.yaml#/~1setlists~1proposals' },
+    { operationId: 'generateSetlistProposalFromNaturalLanguage', method: 'POST', path: '/setlists/proposals/natural-language', ref: './paths/setlists.yaml#/~1setlists~1proposals~1natural-language' },
+    { operationId: 'getAdminDiagnostics', method: 'GET', path: '/admin/diagnostics', ref: './paths/admin-operations.yaml#/~1admin~1diagnostics' },
+    { operationId: 'getAdminImportCandidateAuditHistory', method: 'GET', path: '/admin/import-candidates/{candidateId}/audit-history', ref: './paths/admin-review.yaml#/~1admin~1import-candidates~1{candidateId}~1audit-history' },
+    { operationId: 'getAdminImportCandidateDetail', method: 'GET', path: '/admin/import-candidates/{candidateId}', ref: './paths/admin-review.yaml#/~1admin~1import-candidates~1{candidateId}' },
+    { operationId: 'getAdminImportCandidateDuplicates', method: 'GET', path: '/admin/import-candidates/{candidateId}/duplicates', ref: './paths/admin-review.yaml#/~1admin~1import-candidates~1{candidateId}~1duplicates' },
+    { operationId: 'getAdminInstanceConfiguration', method: 'GET', path: '/admin/instance-configuration', ref: './paths/admin-operations.yaml#/~1admin~1instance-configuration' },
+    { operationId: 'getAdminSession', method: 'GET', path: '/admin/session', ref: './paths/admin-operations.yaml#/~1admin~1session' },
+    { operationId: 'getAsset', method: 'GET', path: '/assets/{assetId}', ref: './paths/assets.yaml#/~1assets~1{assetId}' },
+    { operationId: 'getAssetVersionLicensing', method: 'GET', path: '/assets/{assetId}/versions/{assetVersionId}/licensing', ref: './paths/assets.yaml#/~1assets~1{assetId}~1versions~1{assetVersionId}~1licensing' },
+    { operationId: 'getConversationSessionState', method: 'GET', path: '/conversation-sessions/{sessionId}', ref: './paths/conversation-sessions.yaml#/~1conversation-sessions~1{sessionId}' },
+    { operationId: 'getFeedbackScopeState', method: 'GET', path: '/feedback/scopes/{scopeLayer}/{scopeId}/state', ref: './paths/feedback-tuning.yaml#/~1feedback~1scopes~1{scopeLayer}~1{scopeId}~1state' },
+    { operationId: 'getServicePlan', method: 'GET', path: '/service-plans/{servicePlanId}', ref: './paths/service-plans.yaml#/~1service-plans~1{servicePlanId}' },
+    { operationId: 'getServiceTeamRoster', method: 'GET', path: '/team-assignments/services/{servicePlanId}/roster', ref: './paths/team-assignments.yaml#/~1team-assignments~1services~1{servicePlanId}~1roster' },
+    { operationId: 'getServiceWorkflowStatus', method: 'GET', path: '/service-plans/{servicePlanId}/workflow-status', ref: './paths/rehearsal-workflow.yaml#/~1service-plans~1{servicePlanId}~1workflow-status' },
+    { operationId: 'getSetlistVersion', method: 'GET', path: '/setlists/{setlistId}/versions/{versionId}', ref: './paths/setlists.yaml#/~1setlists~1{setlistId}~1versions~1{versionId}' },
+    { operationId: 'getTelegramBotStatus', method: 'GET', path: '/admin/telegram/bots/{botId}/status', ref: './paths/telegram.yaml#/~1admin~1telegram~1bots~1{botId}~1status' },
+    { operationId: 'getTelegramSessionStatus', method: 'GET', path: '/telegram/sessions/{sessionId}', ref: './paths/telegram.yaml#/~1telegram~1sessions~1{sessionId}' },
+    { operationId: 'initiateTelegramAccountLink', method: 'POST', path: '/telegram/account-links', ref: './paths/telegram.yaml#/~1telegram~1account-links' },
+    { operationId: 'listAdminFeatureFlags', method: 'GET', path: '/admin/feature-flags', ref: './paths/admin-operations.yaml#/~1admin~1feature-flags' },
+    { operationId: 'listAdminImportCandidates', method: 'GET', path: '/admin/import-candidates', ref: './paths/admin-review.yaml#/~1admin~1import-candidates' },
+    { operationId: 'listArrangementOverrides', method: 'GET', path: '/service-plans/{servicePlanId}/arrangement-overrides', ref: './paths/rehearsal-workflow.yaml#/~1service-plans~1{servicePlanId}~1arrangement-overrides' },
+    { operationId: 'listAssetAttachments', method: 'GET', path: '/asset-attachments', ref: './paths/assets.yaml#/~1asset-attachments' },
+    { operationId: 'listAssets', method: 'GET', path: '/assets', ref: './paths/assets.yaml#/~1assets' },
+    { operationId: 'listAssetVersions', method: 'GET', path: '/assets/{assetId}/versions', ref: './paths/assets.yaml#/~1assets~1{assetId}~1versions' },
+    { operationId: 'listFeedbackEvents', method: 'GET', path: '/feedback/events', ref: './paths/feedback-tuning.yaml#/~1feedback~1events' },
+    { operationId: 'listPluginPackages', method: 'GET', path: '/admin/plugins', ref: './paths/plugins.yaml#/~1admin~1plugins' },
+    { operationId: 'listPluginVersionHistory', method: 'GET', path: '/admin/plugins/{pluginVersionId}/history', ref: './paths/plugins.yaml#/~1admin~1plugins~1{pluginVersionId}~1history' },
+    { operationId: 'listRehearsalIssues', method: 'GET', path: '/service-plans/{servicePlanId}/issues', ref: './paths/rehearsal-workflow.yaml#/~1service-plans~1{servicePlanId}~1issues' },
+    { operationId: 'listRehearsalNotes', method: 'GET', path: '/service-plans/{servicePlanId}/notes', ref: './paths/rehearsal-workflow.yaml#/~1service-plans~1{servicePlanId}~1notes' },
+    { operationId: 'listRehearsalSessions', method: 'GET', path: '/service-plans/{servicePlanId}/rehearsal-sessions', ref: './paths/rehearsal-workflow.yaml#/~1service-plans~1{servicePlanId}~1rehearsal-sessions' },
+    { operationId: 'listServicePlans', method: 'GET', path: '/service-plans', ref: './paths/service-plans.yaml#/~1service-plans' },
+    { operationId: 'listSetlistVersions', method: 'GET', path: '/setlists/{setlistId}/versions', ref: './paths/setlists.yaml#/~1setlists~1{setlistId}~1versions' },
+    { operationId: 'listTeamAssignmentHistory', method: 'GET', path: '/team-assignments/services/{servicePlanId}/history', ref: './paths/team-assignments.yaml#/~1team-assignments~1services~1{servicePlanId}~1history' },
+    { operationId: 'listUpcomingTeamAssignmentsForMusician', method: 'GET', path: '/team-assignments/musicians/{musicianId}/upcoming', ref: './paths/team-assignments.yaml#/~1team-assignments~1musicians~1{musicianId}~1upcoming' },
+    { operationId: 'openAdminModerationFlag', method: 'POST', path: '/admin/import-candidates/{candidateId}/moderation-flags', ref: './paths/admin-review.yaml#/~1admin~1import-candidates~1{candidateId}~1moderation-flags' },
+    { operationId: 'previewAdminFeatureFlagChange', method: 'POST', path: '/admin/feature-flags/{flagKey}:preview', ref: './paths/admin-operations.yaml#/~1admin~1feature-flags~1{flagKey}:preview' },
+    { operationId: 'publishServicePlan', method: 'POST', path: '/service-plans/{servicePlanId}/publish', ref: './paths/service-plans.yaml#/~1service-plans~1{servicePlanId}~1publish' },
+    { operationId: 'recordFeedbackEvent', method: 'POST', path: '/feedback/events', ref: './paths/feedback-tuning.yaml#/~1feedback~1events' },
+    { operationId: 'recoverConversationSession', method: 'POST', path: '/conversation-sessions/{sessionId}/recover', ref: './paths/conversation-sessions.yaml#/~1conversation-sessions~1{sessionId}~1recover' },
+    { operationId: 'registerPluginPackage', method: 'POST', path: '/admin/plugins', ref: './paths/plugins.yaml#/~1admin~1plugins' },
+    { operationId: 'removeServiceTeamAssignment', method: 'DELETE', path: '/team-assignments/services/{servicePlanId}/assignments/{assignmentId}', ref: './paths/team-assignments.yaml#/~1team-assignments~1services~1{servicePlanId}~1assignments~1{assignmentId}' },
+    { operationId: 'renderEffectiveArrangement', method: 'GET', path: '/service-plans/{servicePlanId}/effective-arrangements/{arrangementId}', ref: './paths/rehearsal-workflow.yaml#/~1service-plans~1{servicePlanId}~1effective-arrangements~1{arrangementId}' },
+    { operationId: 'reorderServicePlanBlocks', method: 'POST', path: '/service-plans/{servicePlanId}/blocks:order', ref: './paths/service-plans.yaml#/~1service-plans~1{servicePlanId}~1blocks:order' },
+    { operationId: 'reorderServiceTeamAssignments', method: 'POST', path: '/team-assignments/services/{servicePlanId}/reorder', ref: './paths/team-assignments.yaml#/~1team-assignments~1services~1{servicePlanId}~1reorder' },
+    { operationId: 'requestAssetAccess', method: 'POST', path: '/assets/{assetId}/versions/{assetVersionId}/access-requests', ref: './paths/assets.yaml#/~1assets~1{assetId}~1versions~1{assetVersionId}~1access-requests' },
+    { operationId: 'requestConversationClarification', method: 'POST', path: '/conversation-sessions/{sessionId}/clarify', ref: './paths/conversation-sessions.yaml#/~1conversation-sessions~1{sessionId}~1clarify' },
+    { operationId: 'resetFeedbackScopeState', method: 'POST', path: '/feedback/scopes/{scopeLayer}/{scopeId}/reset', ref: './paths/feedback-tuning.yaml#/~1feedback~1scopes~1{scopeLayer}~1{scopeId}~1reset' },
+    { operationId: 'resolveAdminModerationFlag', method: 'POST', path: '/admin/moderation-flags/{flagId}/resolve', ref: './paths/admin-review.yaml#/~1admin~1moderation-flags~1{flagId}~1resolve' },
+    { operationId: 'revokePluginPackage', method: 'POST', path: '/admin/plugins/{pluginVersionId}:revoke', ref: './paths/plugins.yaml#/~1admin~1plugins~1{pluginVersionId}:revoke' },
+    { operationId: 'searchAdminAuditEvents', method: 'GET', path: '/admin/audit-events', ref: './paths/admin-review.yaml#/~1admin~1audit-events' },
+    { operationId: 'searchCatalog', method: 'POST', path: '/catalog/search', ref: './paths/search.yaml#/~1catalog~1search' },
+    { operationId: 'submitAdminImportCandidateApprovalAction', method: 'POST', path: '/admin/import-candidates/{candidateId}/approval-actions', ref: './paths/admin-review.yaml#/~1admin~1import-candidates~1{candidateId}~1approval-actions' },
+    { operationId: 'submitAdminImportCandidateMergeDecision', method: 'POST', path: '/admin/import-candidates/{candidateId}/merge-decisions', ref: './paths/admin-review.yaml#/~1admin~1import-candidates~1{candidateId}~1merge-decisions' },
+    { operationId: 'substituteServiceTeamAssignment', method: 'POST', path: '/team-assignments/services/{servicePlanId}/assignments/{assignmentId}/substitute', ref: './paths/team-assignments.yaml#/~1team-assignments~1services~1{servicePlanId}~1assignments~1{assignmentId}~1substitute' },
+    { operationId: 'transitionReadinessState', method: 'POST', path: '/service-plans/{servicePlanId}/readiness-transitions', ref: './paths/rehearsal-workflow.yaml#/~1service-plans~1{servicePlanId}~1readiness-transitions' },
+    { operationId: 'updateAdminInstanceConfiguration', method: 'PUT', path: '/admin/instance-configuration', ref: './paths/admin-operations.yaml#/~1admin~1instance-configuration' },
+    { operationId: 'updateArrangementOverride', method: 'PATCH', path: '/service-plans/{servicePlanId}/arrangement-overrides/{arrangementOverrideId}', ref: './paths/rehearsal-workflow.yaml#/~1service-plans~1{servicePlanId}~1arrangement-overrides~1{arrangementOverrideId}' },
+    { operationId: 'updateConversationSessionSlots', method: 'PATCH', path: '/conversation-sessions/{sessionId}/slots', ref: './paths/conversation-sessions.yaml#/~1conversation-sessions~1{sessionId}~1slots' },
+    { operationId: 'updateRehearsalIssueActionOwner', method: 'PATCH', path: '/service-plans/{servicePlanId}/issue-actions/{actionId}/owner', ref: './paths/rehearsal-workflow.yaml#/~1service-plans~1{servicePlanId}~1issue-actions~1{actionId}~1owner' },
+    { operationId: 'updateRehearsalIssueActionStatus', method: 'PATCH', path: '/service-plans/{servicePlanId}/issue-actions/{actionId}/status', ref: './paths/rehearsal-workflow.yaml#/~1service-plans~1{servicePlanId}~1issue-actions~1{actionId}~1status' },
+    { operationId: 'updateRehearsalIssueStatus', method: 'PATCH', path: '/service-plans/{servicePlanId}/issues/{issueId}/status', ref: './paths/rehearsal-workflow.yaml#/~1service-plans~1{servicePlanId}~1issues~1{issueId}~1status' },
+    { operationId: 'updateRehearsalSession', method: 'PATCH', path: '/service-plans/{servicePlanId}/rehearsal-sessions/{rehearsalSessionId}', ref: './paths/rehearsal-workflow.yaml#/~1service-plans~1{servicePlanId}~1rehearsal-sessions~1{rehearsalSessionId}' },
+    { operationId: 'updateServicePlan', method: 'PATCH', path: '/service-plans/{servicePlanId}', ref: './paths/service-plans.yaml#/~1service-plans~1{servicePlanId}' },
+    { operationId: 'updateServiceTeamAssignment', method: 'PUT', path: '/team-assignments/services/{servicePlanId}/assignments/{assignmentId}', ref: './paths/team-assignments.yaml#/~1team-assignments~1services~1{servicePlanId}~1assignments~1{assignmentId}' },
+    { operationId: 'updateTelegramChannelSettings', method: 'PUT', path: '/admin/telegram/channels/{channelId}/settings', ref: './paths/telegram.yaml#/~1admin~1telegram~1channels~1{channelId}~1settings' },
+] as const satisfies readonly CadentiaApiOperation[];
+
+export const cadentiaApiOperationsById = Object.fromEntries(
+    cadentiaApiOperations.map((operation) => [operation.operationId, operation]),
+) as Record<CadentiaApiOperationId, CadentiaApiOperation>;
