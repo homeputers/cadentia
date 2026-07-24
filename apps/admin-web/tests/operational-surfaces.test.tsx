@@ -67,4 +67,33 @@ describe('operational diagnostics and settings screens', () => {
         expect(putMutation).toMatchObject({ actorId: 'admin-1', etag: 'cfg-3' });
         expect(node.textContent).toContain('Settings updated with backend validation');
     });
+
+    it('previews and confirms feature flag changes through documented endpoints', async () => {
+        const updatedFlag = { ...flags.flags[0], enabled: false, concurrency: { version: 2, etag: 'flag-2' } };
+        const request = vi.fn().mockImplementation((path: string, init?: RequestInit) => {
+            if (path === '/admin/feature-flags/admin-diagnostics:preview' && init?.method === 'POST') {
+                return Promise.resolve({ previewId: '11111111-1111-4111-8111-111111111111', flagKey: 'admin-diagnostics', requestedEnabled: false, confirmationRequired: true, impactSummary: 'Diagnostics route will be disabled.', blockers: [] });
+            }
+            if (path === '/admin/feature-flags/admin-diagnostics:confirm' && init?.method === 'POST') return Promise.resolve(updatedFlag);
+            if (path === '/admin/instance-configuration') return Promise.resolve(config);
+            return Promise.resolve(flags);
+        });
+        const node = await render(<InstanceSettings session={admin} apiClient={{ getAdminSession: vi.fn(), request }} />);
+        const flagForm = [...node.querySelectorAll('form')][1];
+
+        await act(async () => { flagForm.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); });
+        expect(node.textContent).toContain('Diagnostics route will be disabled.');
+        const previewCall = request.mock.calls.find((call) => call[0] === '/admin/feature-flags/admin-diagnostics:preview');
+        expect(JSON.parse(String(previewCall?.[1]?.body))).toMatchObject({ enabled: false, expectedVersion: 1, actorId: 'admin-1' });
+        expect(previewCall?.[2]).toMatchObject({ actorId: 'admin-1', etag: 'flag-1' });
+
+        const confirmation = [...node.querySelectorAll('input')].at(-1)!;
+        await act(async () => { confirmation.value = '11111111-1111-4111-8111-111111111111'; confirmation.dispatchEvent(new Event('input', { bubbles: true })); });
+        await act(async () => { [...node.querySelectorAll('button')].find((button) => button.textContent === 'Confirm backend feature-flag change')!.click(); });
+
+        const confirmCall = request.mock.calls.find((call) => call[0] === '/admin/feature-flags/admin-diagnostics:confirm');
+        expect(JSON.parse(String(confirmCall?.[1]?.body))).toMatchObject({ previewId: '11111111-1111-4111-8111-111111111111', actorId: 'admin-1', confirmationText: '11111111-1111-4111-8111-111111111111' });
+        expect(node.textContent).toContain('admin-diagnostics updated with backend confirmation');
+        expect(node.textContent).toContain('Disabled');
+    });
 });
