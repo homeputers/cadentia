@@ -43,8 +43,9 @@ Run these in CI and before promotion when the related surface changes:
 5. `npm run generate:client:check -w @cadentia/admin-web`
 6. `npm run build -w @cadentia/admin-web`
 7. `npm run smoke -w @cadentia/admin-web`
-8. `mvn -pl apps/api -DskipTests generate-sources`
-9. `mvn -pl apps/api test` or the narrower API test class set affected by admin endpoints.
+8. `CADENTIA_ADMIN_STRICT_SMOKE=true npm run smoke -w @cadentia/admin-web` before promotion, with CI-provided commit/timestamp and API-base-url metadata.
+9. `mvn -pl apps/api -DskipTests generate-sources`
+10. `mvn -pl apps/api test` or the narrower API test class set affected by admin endpoints.
 
 CI must run the admin package build/tests, generated-client drift check, OpenAPI generation, and artifact smoke test. API changes under `apps/api/src/main/openapi/` require OpenAPI generation before merge.
 
