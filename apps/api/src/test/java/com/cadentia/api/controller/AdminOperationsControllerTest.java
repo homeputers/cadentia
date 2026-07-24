@@ -80,6 +80,8 @@ class AdminOperationsControllerTest {
         assertThat(flags).isNotNull();
         assertThat(flags.getFlags()).extracting(flag -> flag.getFlagKey()).contains("admin-diagnostics", "admin-feature-flags");
         assertThat(diagnostics).isNotNull();
+        assertThat(diagnostics.getCapabilityEnabled()).isTrue();
+        assertThat(diagnostics.getRecommendations()).isEmpty();
         assertThat(diagnostics.getComponents()).allSatisfy(component -> assertThat(component.getRedactionApplied()).isTrue());
     }
 
@@ -154,6 +156,31 @@ class AdminOperationsControllerTest {
                         .reason("stale update")))
                 .isInstanceOf(ResponseStatusException.class)
                 .hasMessageContaining("409 CONFLICT");
+    }
+
+    @Test
+    void diagnosticsReflectLocalConfigurationCapabilityState() {
+        // Arrange
+        AdminOperationsController controller = controller("local-development");
+        controller.updateAdminInstanceConfiguration(
+                "local-development",
+                new UpdateAdminInstanceConfigurationRequest()
+                        .displayName("Local")
+                        .defaultLocale("en-US")
+                        .timeZone("America/Guatemala")
+                        .diagnosticsEnabled(false)
+                        .botChannelsEnabled(true)
+                        .expectedVersion(1L)
+                        .actorId("admin-1")
+                        .reason("disable diagnostics"));
+
+        // Act
+        var diagnostics = controller.getAdminDiagnostics("local-development").getBody();
+
+        // Assert
+        assertThat(diagnostics).isNotNull();
+        assertThat(diagnostics.getCapabilityEnabled()).isFalse();
+        assertThat(diagnostics.getRecommendations()).isEmpty();
     }
 
     @Test

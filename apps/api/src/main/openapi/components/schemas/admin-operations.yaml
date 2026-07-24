@@ -99,6 +99,80 @@ AdminDiagnosticsComponent:
     lastCheckedAt:
       type: string
       format: date-time
+AdminDiagnosticScoringInput:
+  type: object
+  additionalProperties: false
+  required:
+  - name
+  - value
+  properties:
+    name:
+      type: string
+    value:
+      oneOf:
+      - type: string
+      - type: number
+      - type: boolean
+AdminDiagnosticReadModelFreshness:
+  type: object
+  additionalProperties: false
+  required:
+  - readModel
+  - updatedAt
+  properties:
+    readModel:
+      type: string
+    updatedAt:
+      type: string
+      format: date-time
+    lagSeconds:
+      type: integer
+      format: int64
+AdminRecommendationDiagnostic:
+  type: object
+  additionalProperties: false
+  required:
+  - recommendationId
+  - generatedAt
+  - scoringInputs
+  - reasonCodes
+  - eligibilityBlockers
+  - policyVersion
+  - readModelFreshness
+  - cacheStatus
+  - correlationId
+  properties:
+    recommendationId:
+      type: string
+    generatedAt:
+      type: string
+      format: date-time
+    scoringInputs:
+      type: array
+      items:
+        "$ref": "#/AdminDiagnosticScoringInput"
+    reasonCodes:
+      type: array
+      items:
+        type: string
+    eligibilityBlockers:
+      type: array
+      items:
+        type: string
+    policyVersion:
+      type: string
+    readModelFreshness:
+      "$ref": "#/AdminDiagnosticReadModelFreshness"
+    cacheStatus:
+      type: string
+    correlationId:
+      type: string
+      description: Redacted or truncated correlation identifier safe for operator display.
+    traceId:
+      type: string
+      description: Redacted or truncated trace identifier safe for operator display.
+    auditReference:
+      "$ref": "#/AdminAuditReference"
 AdminDiagnosticsResponse:
   type: object
   required:
@@ -111,6 +185,13 @@ AdminDiagnosticsResponse:
     generatedAt:
       type: string
       format: date-time
+    capabilityEnabled:
+      type: boolean
+      description: Whether recommendation diagnostics are enabled for this instance.
+    recommendations:
+      type: array
+      items:
+        "$ref": "#/AdminRecommendationDiagnostic"
     components:
       type: array
       items:

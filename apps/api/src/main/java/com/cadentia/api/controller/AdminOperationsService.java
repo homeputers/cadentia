@@ -41,6 +41,7 @@ public class AdminOperationsService {
 
     public AdminDiagnosticsResponse diagnostics(String churchInstanceId) {
         OffsetDateTime generatedAt = OffsetDateTime.now();
+        boolean diagnosticsEnabled = diagnosticsEnabled();
         AdminDiagnosticsComponent operations = new AdminDiagnosticsComponent()
                 .name("admin-operations")
                 .status(AdminDiagnosticStatus.OK)
@@ -58,6 +59,8 @@ public class AdminOperationsService {
         return new AdminDiagnosticsResponse()
                 .churchInstanceId(churchInstanceId)
                 .generatedAt(generatedAt)
+                .capabilityEnabled(diagnosticsEnabled)
+                .recommendations(List.of())
                 .components(List.of(operations, featureFlags));
     }
 
@@ -155,6 +158,11 @@ public class AdminOperationsService {
 
     private boolean localDevelopment() {
         return LOCAL_DEVELOPMENT_INSTANCE.equals(configurationProvider.current().instanceId());
+    }
+
+    private boolean diagnosticsEnabled() {
+        LocalConfigurationOverride override = localConfigurationOverride;
+        return override == null || override.diagnosticsEnabled();
     }
 
     private void requireLocalDevelopment() {
