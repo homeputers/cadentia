@@ -41,6 +41,10 @@
           application/json:
             schema:
               "$ref": "../components/schemas/admin-operations.yaml#/AdminDiagnosticsResponse"
+      '401':
+        "$ref": "../components/shared/responses.yaml#/Unauthorized"
+      '403':
+        "$ref": "../components/shared/responses.yaml#/Forbidden"
 "/admin/instance-configuration":
   get:
     tags:
@@ -60,6 +64,10 @@
           application/json:
             schema:
               "$ref": "../components/schemas/admin-operations.yaml#/AdminInstanceConfigurationResponse"
+      '401':
+        "$ref": "../components/shared/responses.yaml#/Unauthorized"
+      '403':
+        "$ref": "../components/shared/responses.yaml#/Forbidden"
   put:
     tags:
     - AdminOperations
@@ -84,8 +92,18 @@
           application/json:
             schema:
               "$ref": "../components/schemas/admin-operations.yaml#/AdminInstanceConfigurationResponse"
+      '400':
+        "$ref": "../components/shared/responses.yaml#/ValidationError"
+      '401':
+        "$ref": "../components/shared/responses.yaml#/Unauthorized"
+      '403':
+        "$ref": "../components/shared/responses.yaml#/Forbidden"
       '409':
         "$ref": "../components/shared/responses.yaml#/Conflict"
+      '422':
+        "$ref": "../components/shared/responses.yaml#/ValidationError"
+      '501':
+        "$ref": "../components/shared/responses.yaml#/NotImplemented"
 "/admin/feature-flags":
   get:
     tags:
@@ -105,6 +123,10 @@
           application/json:
             schema:
               "$ref": "../components/schemas/admin-operations.yaml#/AdminFeatureFlagListResponse"
+      '401':
+        "$ref": "../components/shared/responses.yaml#/Unauthorized"
+      '403':
+        "$ref": "../components/shared/responses.yaml#/Forbidden"
 "/admin/feature-flags/{flagKey}:preview":
   post:
     tags:
@@ -135,6 +157,20 @@
           application/json:
             schema:
               "$ref": "../components/schemas/admin-operations.yaml#/AdminFeatureFlagChangePreviewResponse"
+      '400':
+        "$ref": "../components/shared/responses.yaml#/ValidationError"
+      '401':
+        "$ref": "../components/shared/responses.yaml#/Unauthorized"
+      '403':
+        "$ref": "../components/shared/responses.yaml#/Forbidden"
+      '404':
+        "$ref": "../components/shared/responses.yaml#/NotFound"
+      '409':
+        "$ref": "../components/shared/responses.yaml#/Conflict"
+      '422':
+        "$ref": "../components/shared/responses.yaml#/ValidationError"
+      '501':
+        "$ref": "../components/shared/responses.yaml#/NotImplemented"
 "/admin/feature-flags/{flagKey}:confirm":
   post:
     tags:
@@ -165,3 +201,17 @@
           application/json:
             schema:
               "$ref": "../components/schemas/admin-operations.yaml#/AdminFeatureFlagResponse"
+      '400':
+        "$ref": "../components/shared/responses.yaml#/ValidationError"
+      '401':
+        "$ref": "../components/shared/responses.yaml#/Unauthorized"
+      '403':
+        "$ref": "../components/shared/responses.yaml#/Forbidden"
+      '404':
+        "$ref": "../components/shared/responses.yaml#/NotFound"
+      '409':
+        "$ref": "../components/shared/responses.yaml#/Conflict"
+      '422':
+        "$ref": "../components/shared/responses.yaml#/ValidationError"
+      '501':
+        "$ref": "../components/shared/responses.yaml#/NotImplemented"

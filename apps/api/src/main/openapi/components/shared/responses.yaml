@@ -27,3 +27,7 @@ Conflict:
   description: Optimistic concurrency check failed or preview token is stale.
 ValidationError:
   description: Request validation failed.
+NotFound:
+  description: Requested administrative resource was not found or is not available to this actor.
+NotImplemented:
+  description: Capability is documented but persistent backend support is not configured for this instance.
