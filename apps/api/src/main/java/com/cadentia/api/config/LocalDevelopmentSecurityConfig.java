@@ -11,7 +11,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 
 @Configuration
-@ConditionalOnProperty(name = "cadentia.instance.id", havingValue = "local-development")
+@ConditionalOnProperty(name = "cadentia.auth.provider", havingValue = "local", matchIfMissing = true)
 public class LocalDevelopmentSecurityConfig {
 
     @Bean
