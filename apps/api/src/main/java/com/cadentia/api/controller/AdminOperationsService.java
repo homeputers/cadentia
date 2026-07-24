@@ -93,14 +93,15 @@ public class AdminOperationsService {
             String churchInstanceId,
             UpdateAdminInstanceConfigurationRequest request) {
         requireLocalDevelopment();
+        validateInstanceConfigurationRequest(request);
         long currentVersion = localConfigurationOverride == null ? 1L : localConfigurationOverride.version();
         if (!Long.valueOf(currentVersion).equals(request.getExpectedVersion())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Instance configuration version has changed.");
         }
         localConfigurationOverride = new LocalConfigurationOverride(
-                request.getDisplayName(),
-                request.getDefaultLocale(),
-                request.getTimeZone(),
+                request.getDisplayName().trim(),
+                request.getDefaultLocale().trim(),
+                request.getTimeZone().trim(),
                 Boolean.TRUE.equals(request.getDiagnosticsEnabled()),
                 Boolean.TRUE.equals(request.getBotChannelsEnabled()),
                 currentVersion + 1);
@@ -122,6 +123,7 @@ public class AdminOperationsService {
             String flagKey,
             PreviewAdminFeatureFlagChangeRequest request) {
         requireLocalDevelopment();
+        validatePreviewRequest(request);
         MutableFeatureFlag flag = featureFlag(flagKey);
         if (!flag.version().equals(request.getExpectedVersion())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Feature flag version has changed.");
@@ -142,6 +144,7 @@ public class AdminOperationsService {
             String flagKey,
             ConfirmAdminFeatureFlagChangeRequest request) {
         requireLocalDevelopment();
+        validateConfirmRequest(request);
         FeatureFlagPreview preview = localFeatureFlagPreviews.get(request.getPreviewId());
         if (preview == null || !preview.flagKey().equals(flagKey)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Feature flag preview is stale.");
@@ -154,6 +157,39 @@ public class AdminOperationsService {
         flag.setVersion(flag.version() + 1);
         localFeatureFlagPreviews.remove(request.getPreviewId());
         return toFeatureFlagResponse(flag);
+    }
+
+    private static void validateInstanceConfigurationRequest(UpdateAdminInstanceConfigurationRequest request) {
+        if (request == null
+                || blank(request.getDisplayName())
+                || blank(request.getDefaultLocale())
+                || blank(request.getTimeZone())
+                || request.getExpectedVersion() == null
+                || request.getExpectedVersion() < 1
+                || blank(request.getActorId())
+                || blank(request.getReason())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Instance configuration update is incomplete.");
+        }
+    }
+
+    private static void validatePreviewRequest(PreviewAdminFeatureFlagChangeRequest request) {
+        if (request == null
+                || request.getEnabled() == null
+                || request.getExpectedVersion() == null
+                || request.getExpectedVersion() < 1
+                || blank(request.getActorId())
+                || blank(request.getReason())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Feature flag preview request is incomplete.");
+        }
+    }
+
+    private static void validateConfirmRequest(ConfirmAdminFeatureFlagChangeRequest request) {
+        if (request == null
+                || request.getPreviewId() == null
+                || blank(request.getActorId())
+                || blank(request.getConfirmationText())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Feature flag confirmation request is incomplete.");
+        }
     }
 
     private boolean localDevelopment() {
@@ -179,6 +215,10 @@ public class AdminOperationsService {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Feature flag not found.");
         }
         return flag;
+    }
+
+    private static boolean blank(String value) {
+        return value == null || value.isBlank();
     }
 
     private static AdminFeatureFlagResponse toFeatureFlagResponse(MutableFeatureFlag flag) {

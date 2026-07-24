@@ -68,6 +68,19 @@ describe('operational diagnostics and settings screens', () => {
         expect(node.textContent).toContain('Settings updated with backend validation');
     });
 
+    it('reports stale configuration updates without leaking backend details', async () => {
+        const request = vi.fn().mockImplementation((path: string, init?: RequestInit) => {
+            if (path === '/admin/instance-configuration' && init?.method === 'PUT') return Promise.reject(Object.assign(new Error('rawPayload=secret stale config'), { status: 409 }));
+            if (path === '/admin/instance-configuration') return Promise.resolve(config);
+            return Promise.resolve(flags);
+        });
+        const node = await render(<InstanceSettings session={admin} apiClient={{ getAdminSession: vi.fn(), request }} />);
+        await act(async () => { node.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); });
+        expect(node.textContent).toContain('Operations state changed. Reload settings and request a fresh backend preview before retrying.');
+        expect(node.textContent).not.toContain('rawPayload=secret');
+        expect(node.textContent).not.toContain('stale config');
+    });
+
     it('previews and confirms feature flag changes through documented endpoints', async () => {
         const updatedFlag = { ...flags.flags[0], enabled: false, concurrency: { version: 2, etag: 'flag-2' } };
         const request = vi.fn().mockImplementation((path: string, init?: RequestInit) => {
@@ -95,5 +108,33 @@ describe('operational diagnostics and settings screens', () => {
         expect(JSON.parse(String(confirmCall?.[1]?.body))).toMatchObject({ previewId: '11111111-1111-4111-8111-111111111111', actorId: 'admin-1', confirmationText: '11111111-1111-4111-8111-111111111111' });
         expect(node.textContent).toContain('admin-diagnostics updated with backend confirmation');
         expect(node.textContent).toContain('Disabled');
+    });
+
+    it('reports feature flag preview and confirmation failures safely', async () => {
+        const previewFailure = vi.fn().mockImplementation((path: string, init?: RequestInit) => {
+            if (path === '/admin/feature-flags/admin-diagnostics:preview' && init?.method === 'POST') return Promise.reject(Object.assign(new Error('connectorPayload=secret no store'), { status: 501 }));
+            if (path === '/admin/instance-configuration') return Promise.resolve(config);
+            return Promise.resolve(flags);
+        });
+        const previewNode = await render(<InstanceSettings session={admin} apiClient={{ getAdminSession: vi.fn(), request: previewFailure }} />);
+        await act(async () => { [...previewNode.querySelectorAll('form')][1].dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); });
+        expect(previewNode.textContent).toContain('persistent backend support is not configured');
+        expect(previewNode.textContent).not.toContain('connectorPayload=secret');
+        expect(previewNode.textContent).not.toContain('no store');
+
+        act(() => { root.unmount(); }); container.remove();
+        const confirmFailure = vi.fn().mockImplementation((path: string, init?: RequestInit) => {
+            if (path === '/admin/feature-flags/admin-diagnostics:preview' && init?.method === 'POST') return Promise.resolve({ previewId: '11111111-1111-4111-8111-111111111111', flagKey: 'admin-diagnostics', requestedEnabled: false, confirmationRequired: true, impactSummary: 'Diagnostics route will be disabled.', blockers: [] });
+            if (path === '/admin/feature-flags/admin-diagnostics:confirm' && init?.method === 'POST') return Promise.reject(Object.assign(new Error('token=secret bad confirmation'), { status: 400 }));
+            if (path === '/admin/instance-configuration') return Promise.resolve(config);
+            return Promise.resolve(flags);
+        });
+        const confirmNode = await render(<InstanceSettings session={admin} apiClient={{ getAdminSession: vi.fn(), request: confirmFailure }} />);
+        await act(async () => { [...confirmNode.querySelectorAll('form')][1].dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); });
+        const confirmation = [...confirmNode.querySelectorAll('input')].at(-1)!;
+        await act(async () => { confirmation.value = '11111111-1111-4111-8111-111111111111'; confirmation.dispatchEvent(new Event('input', { bubbles: true })); });
+        await act(async () => { [...confirmNode.querySelectorAll('button')].find((button) => button.textContent === 'Confirm backend feature-flag change')!.click(); });
+        expect(confirmNode.textContent).toContain('Backend validation rejected this operations change');
+        expect(confirmNode.textContent).not.toContain('token=secret');
     });
 });

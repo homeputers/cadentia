@@ -159,6 +159,58 @@ class AdminOperationsControllerTest {
     }
 
     @Test
+    void rejectsIncompleteInstanceConfigurationUpdates() {
+        // Arrange
+        AdminOperationsController controller = controller("local-development");
+
+        // Act / Assert
+        assertThatThrownBy(() -> controller.updateAdminInstanceConfiguration(
+                "local-development",
+                new UpdateAdminInstanceConfigurationRequest()
+                        .displayName(" ")
+                        .defaultLocale("en-US")
+                        .timeZone("America/Guatemala")
+                        .diagnosticsEnabled(true)
+                        .botChannelsEnabled(true)
+                        .expectedVersion(1L)
+                        .actorId("admin-1")
+                        .reason("update")))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("400 BAD_REQUEST")
+                .hasMessageContaining("Instance configuration update is incomplete");
+    }
+
+    @Test
+    void rejectsIncompleteFeatureFlagPreviewAndConfirmationRequests() {
+        // Arrange
+        AdminOperationsController controller = controller("local-development");
+
+        // Act / Assert
+        assertThatThrownBy(() -> controller.previewAdminFeatureFlagChange(
+                "local-development",
+                "admin-diagnostics",
+                new PreviewAdminFeatureFlagChangeRequest()
+                        .enabled(false)
+                        .expectedVersion(1L)
+                        .actorId(" ")
+                        .reason("Disable diagnostics locally")))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("400 BAD_REQUEST")
+                .hasMessageContaining("Feature flag preview request is incomplete");
+
+        assertThatThrownBy(() -> controller.confirmAdminFeatureFlagChange(
+                "local-development",
+                "admin-diagnostics",
+                new ConfirmAdminFeatureFlagChangeRequest()
+                        .previewId(null)
+                        .actorId("admin-1")
+                        .confirmationText(" ")))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("400 BAD_REQUEST")
+                .hasMessageContaining("Feature flag confirmation request is incomplete");
+    }
+
+    @Test
     void diagnosticsReflectLocalConfigurationCapabilityState() {
         // Arrange
         AdminOperationsController controller = controller("local-development");

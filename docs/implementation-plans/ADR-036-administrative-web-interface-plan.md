@@ -90,34 +90,32 @@ Known implementation gaps:
 | Session bootstrap and capability discovery | Existing: `GET /admin/session` | Implemented in shell bootstrap | Expand production identity-provider integration beyond local Basic-auth development wiring. |
 | Role-aware navigation and permission states | Existing session capability schema | Implemented for route visibility and common permission states | Add more role-boundary tests as workflows mature. |
 | Import candidate queue | Existing: `GET /admin/import-candidates` with filters, sort, and pagination | Implemented with URL-addressable filters and safe summaries | Validate against real seeded data and add any missing server filters OpenAPI-first. |
-| Candidate detail | Existing: `GET /admin/import-candidates/{candidateId}` | Implemented detail view for provenance, parser evidence, notes, history, duplicate, approval, and moderation sections | Improve stale-version and validation failure rendering around mutations. |
-| Reviewer note creation | Existing: `POST /admin/import-candidates/{candidateId}/notes` | Implemented with actor and `If-Match` context | Add backend-backed failure fixtures for 409/validation paths. |
+| Candidate detail | Existing: `GET /admin/import-candidates/{candidateId}` | Implemented detail view for provenance, parser evidence, notes, history, duplicate, approval, moderation, and candidate-local audit sections | Continue testing against real seeded data and refine dense UI layout as workflows mature. |
+| Reviewer note creation | Existing: `POST /admin/import-candidates/{candidateId}/notes` | Implemented with actor, `If-Match` context, stale-version handling, and non-leaky failure states | Add backend-backed validation fixtures if note policy grows beyond required body/category checks. |
 | Duplicate comparison | Existing in candidate detail plus `GET /admin/import-candidates/{candidateId}/duplicates` | Rendered from detail response | Decide whether a dedicated duplicate route is needed or detail route remains sufficient for v1. |
-| Merge decisions | Existing: `POST /admin/import-candidates/{candidateId}/merge-decisions` | Implemented basic confirmed mutation | Add fuller allowed-action gating and backend validation failure states. |
-| Approval actions and reversals | Existing: `POST /admin/import-candidates/{candidateId}/approval-actions` | Implemented basic confirmed mutation | Add role-boundary tests for doctrinal and musical reviewer variants. |
-| Moderation flags | Existing: create, assign, resolve, and escalate endpoints | Create/view support is implemented in candidate detail; assign/resolve/escalate UI is deferred | Add moderation flag management batch for assign, resolve, escalate, and failure states. |
-| Candidate audit history | Existing: `GET /admin/import-candidates/{candidateId}/audit-history` | Related audit references render; global audit route implemented | Add candidate-local audit history panel if needed for ADR-011 workflows. |
+| Merge decisions | Existing: `POST /admin/import-candidates/{candidateId}/merge-decisions` | Implemented confirmed mutation with actor, ETag context, validation/stale/forbidden failure states | Add role-boundary tests only if backend introduces role-specific merge decisions. |
+| Approval actions and reversals | Existing: `POST /admin/import-candidates/{candidateId}/approval-actions` | Implemented confirmed mutation with backend validation and failure-state coverage | Add role-boundary tests for doctrinal and musical reviewer variants. |
+| Moderation flags | Existing: create, assign, resolve, and escalate endpoints | Create, assign, resolve, escalate, audit attribution, and failure states are implemented in candidate detail | Add backend-backed policy fixtures as moderation rules expand. |
+| Candidate audit history | Existing: `GET /admin/import-candidates/{candidateId}/audit-history` | Implemented candidate-local audit history panel plus global audit route links | Expand only if the API later exposes a safe detailed event view. |
 | Global audit search | Existing: `GET /admin/audit-events` | Implemented search filters and redacted table | Add deeper audit-event detail view only if the API returns a safe detail shape. |
-| Rollback preview | Existing: `POST /admin/rollback-previews` | Implemented preview form and impact rendering | Harden blocked preview and stale-preview UX. |
-| Rollback execution | Existing: `POST /admin/rollbacks` | Implemented exact request-ID confirmation | Add explicit 400/403/409/412/5xx tests and copy. |
-| Diagnostics | Existing: `GET /admin/diagnostics` | Implemented feature-flag and capability-gated diagnostics view | Replace scaffolded backend diagnostics with persisted/observed recommendation diagnostics when available. |
-| Instance configuration | Existing: `GET/PUT /admin/instance-configuration` | Implemented read/edit flow with actor, version, and ETag context | Clarify which fields are truly editable and connect to persisted instance configuration. |
-| Feature flags | Existing: list, preview, and confirm endpoints | List is rendered in settings; preview/confirm UI is deferred | Add feature-flag preview/confirm batch with high-risk confirmation. |
+| Rollback preview | Existing: `POST /admin/rollback-previews` | Implemented preview form, impact rendering, stale preview clearing, blocked-preview gating, and documented error responses | Add backend-backed rollback policy fixtures as rollback target coverage grows. |
+| Rollback execution | Existing: `POST /admin/rollbacks` | Implemented exact request-ID confirmation with explicit 400/403/409/412/5xx failure copy and documented error responses | Add integration coverage once rollback persistence/read models exist. |
+| Diagnostics | Existing: `GET /admin/diagnostics` | Implemented feature-flag and capability-gated diagnostics view with documented recommendation diagnostics shape | Replace scaffolded backend diagnostics with persisted/observed recommendation diagnostics when available. |
+| Instance configuration | Existing: `GET/PUT /admin/instance-configuration` | Implemented read/edit flow with actor, version, ETag context, documented errors, and validation hardening | Connect to persisted instance configuration outside local development. |
+| Feature flags | Existing: list, preview, and confirm endpoints | Implemented list, preview, exact confirmation, blockers, documented errors, and validation hardening | Connect to persistent feature-flag storage outside local development. |
 | Connectors, bot channels, scoring profiles, background jobs | Deferred / not fully specified for ADR-036 v1 | Deferred placeholders only | Define API contracts OpenAPI-first in later operations-console batches. |
 
 ## Proposed Batches
 
 1. Documentation reconciliation and API-gap matrix. Keep this batch
    documentation-only and use it to anchor follow-up implementation scope.
-2. Moderation workflow completion: assign, resolve, escalate, role boundaries,
-   and failure states using existing OpenAPI endpoints.
-3. Rollback and audit hardening: stale preview, forbidden/conflict/server-error
-   paths, and candidate-local audit history if still needed.
-4. Feature-flag operations UI: preview, confirmation, blockers, audit
-   references, and concurrency context.
-5. Backend persistence pass for scaffolded admin operations where current
+2. Role-boundary and seeded-data validation pass across import queue, candidate
+   review, approvals, moderation, audit, rollback, diagnostics, and settings.
+3. Operations persistence pass for scaffolded admin operations where current
    endpoints return placeholder diagnostics, settings, or feature-flag data.
-6. End-to-end smoke tests for authenticated route bootstrap, import queue,
+4. Deferred operations-console API design for connectors, bot channels, scoring
+   profiles, and background jobs.
+5. End-to-end smoke tests for authenticated route bootstrap, import queue,
    candidate detail, audit/rollback, settings, and non-leaky unauthorized paths.
 
 ## Guiding Principles
