@@ -10,6 +10,7 @@ import type { AdminSession } from '../src/auth/session';
 let container: HTMLDivElement;
 let root: Root;
 const session: AdminSession = { actorId: 'reviewer-1', displayName: 'Reviewer One', churchInstanceId: 'church-1', roles: ['CATALOG_EDITOR'], capabilities: ['VIEW_IMPORT_QUEUE', 'REVIEW_CATALOG'] };
+const adminSession: AdminSession = { actorId: 'admin-1', displayName: 'Admin One', churchInstanceId: 'church-1', roles: ['ADMIN'], capabilities: ['VIEW_IMPORT_QUEUE', 'REVIEW_CATALOG', 'MANAGE_MODERATION'] };
 
 const relatedAuditReferenceId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const duplicateAuditReferenceId = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
@@ -21,11 +22,11 @@ const baseDetail: CandidateDetail = {
     moderationFlags: [{ id: '66666666-6666-6666-6666-666666666666', scope: 'IMPORT_CANDIDATE', type: 'METADATA_CONFLICT', reason: 'Conflicting author metadata', status: 'OPEN', eligibilityImpactPolicy: 'BLOCK_UNTIL_RESOLVED', openedBy: 'reviewer-2', auditReferenceId: 'audit-flag-1' }],
 };
 
-const render = async (detail: CandidateDetail | Error, request = vi.fn()) => {
+const render = async (detail: CandidateDetail | Error, request = vi.fn(), activeSession = session) => {
     if (!request.getMockImplementation()) request.mockImplementation((path: string) => path.endsWith('/notes') ? Promise.resolve({ noteId: '55555555-5555-5555-5555-555555555555', authorId: 'reviewer-1', body: 'New note', createdAt: '2026-06-22T04:00:00Z' }) : detail instanceof Error ? Promise.reject(detail) : Promise.resolve(detail));
     const apiClient: AdminApiClient = { getAdminSession: vi.fn(), request };
     container = document.createElement('div'); document.body.appendChild(container);
-    await act(async () => { root = createRoot(container); root.render(<ImportCandidateDetail session={session} candidateId={baseDetail.candidateId} apiClient={apiClient} />); });
+    await act(async () => { root = createRoot(container); root.render(<ImportCandidateDetail session={activeSession} candidateId={baseDetail.candidateId} apiClient={apiClient} />); });
     return { node: container, request };
 };
 
@@ -96,6 +97,42 @@ describe('import candidate detail', () => {
         await act(async () => { forms[2].dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); });
         await act(async () => { (node.querySelector('.admin-dialog button.danger') as HTMLButtonElement).click(); });
         expect(request).toHaveBeenCalledWith('/admin/import-candidates/11111111-1111-1111-1111-111111111111/moderation-flags', expect.objectContaining({ method: 'POST', body: expect.stringContaining('BLOCK_UNTIL_RESOLVED') }), { actorId: 'reviewer-1', etag: 'W/"candidate-7"' });
+    });
+
+    it('assigns, resolves, and escalates moderation flags through documented endpoints', async () => {
+        const request = vi.fn().mockImplementation((path: string) => {
+            if (path.endsWith('/assign')) return Promise.resolve({ ...baseDetail.moderationFlags![0], assignedTo: 'reviewer-3', status: 'ASSIGNED' });
+            if (path.endsWith('/resolve')) return Promise.resolve({ ...baseDetail.moderationFlags![0], status: 'RESOLVED', resolutionNotes: 'Cleared with source correction' });
+            if (path.endsWith('/escalate')) return Promise.resolve({ ...baseDetail.moderationFlags![0], status: 'ESCALATED' });
+            return Promise.resolve(baseDetail);
+        });
+        const { node } = await render(baseDetail, request, adminSession);
+        let forms = node.querySelectorAll('form');
+
+        await act(async () => { Simulate.change(forms[2].querySelectorAll('input')[0], { target: { value: 'reviewer-3' } } as never); });
+        await act(async () => { Simulate.change(forms[2].querySelectorAll('input')[1], { target: { value: 'Needs provenance owner' } } as never); });
+        await act(async () => { forms[2].dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); });
+        await act(async () => { (node.querySelector('.admin-dialog button.danger') as HTMLButtonElement).click(); });
+        expect(request).toHaveBeenCalledWith('/admin/moderation-flags/66666666-6666-6666-6666-666666666666/assign', expect.objectContaining({ method: 'POST', body: expect.stringContaining('reviewer-3') }), { actorId: 'admin-1' });
+
+        forms = node.querySelectorAll('form');
+        await act(async () => { Simulate.change(forms[3].querySelector('textarea')!, { target: { value: 'Cleared with source correction' } } as never); });
+        await act(async () => { forms[3].dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); });
+        await act(async () => { (node.querySelector('.admin-dialog button.danger') as HTMLButtonElement).click(); });
+        expect(request).toHaveBeenCalledWith('/admin/moderation-flags/66666666-6666-6666-6666-666666666666/resolve', expect.objectContaining({ method: 'POST', body: expect.stringContaining('Cleared with source correction') }), { actorId: 'admin-1' });
+
+        forms = node.querySelectorAll('form');
+        await act(async () => { Simulate.change(forms[4].querySelector('textarea')!, { target: { value: 'Escalate to admin queue' } } as never); });
+        await act(async () => { forms[4].dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); });
+        await act(async () => { (node.querySelector('.admin-dialog button.danger') as HTMLButtonElement).click(); });
+        expect(request).toHaveBeenCalledWith('/admin/moderation-flags/66666666-6666-6666-6666-666666666666/escalate', expect.objectContaining({ method: 'POST', body: expect.stringContaining('Escalate to admin queue') }), { actorId: 'admin-1' });
+    });
+
+    it('hides moderation management controls from reviewers without manage capability', async () => {
+        const { node } = await render(baseDetail);
+        expect(node.textContent).not.toContain('Assign flag');
+        expect(node.textContent).not.toContain('Resolve flag');
+        expect(node.textContent).not.toContain('Escalate flag');
     });
 
     it('adds structured notes through documented endpoint with actor and If-Match concurrency context', async () => {
