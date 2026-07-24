@@ -8,6 +8,15 @@ import { AuditReferenceLink, Badge, Breadcrumbs, DataTable, Field, PageHeader, S
 
 const canUpdate = (config: InstanceConfiguration) => config.allowedActions.includes('UPDATE');
 const deferred = (title: string) => <section className="admin-shell__panel"><h2>{title}</h2><p>This capability is not yet available for the current instance or release. This does not imply missing permissions or hidden data.</p></section>;
+const operationalFailureMessage = (status?: number) => {
+    if (status === 400 || status === 422) return 'Backend validation rejected this operations change. Review required fields, reason, and confirmation text before retrying.';
+    if (status === 401) return 'Your admin session expired. Sign in again before retrying operations changes.';
+    if (status === 403) return 'You are not authorized to change this operations setting.';
+    if (status === 404) return 'The requested operations setting is not available for this instance.';
+    if (status === 409 || status === 412) return 'Operations state changed. Reload settings and request a fresh backend preview before retrying.';
+    if (status === 501) return 'This operations capability is documented but persistent backend support is not configured for this instance.';
+    return 'Operations change failed safely. No protected backend details were exposed.';
+};
 
 export const InstanceSettings = ({ session, apiClient = createAdminApiClient({ environment: adminEnvironment, getAccessToken: async () => null }) }: { session: AdminSession; apiClient?: AdminApiClient }) => {
     const [config, setConfig] = useState<InstanceConfiguration | null>(null);
@@ -33,7 +42,7 @@ export const InstanceSettings = ({ session, apiClient = createAdminApiClient({ e
         try {
             const updated = await updateInstanceConfiguration(apiClient, { displayName: String(form.get('displayName')), defaultLocale: String(form.get('defaultLocale')), timeZone: String(form.get('timeZone')), diagnosticsEnabled: form.get('diagnosticsEnabled') === 'on', botChannelsEnabled: form.get('botChannelsEnabled') === 'on', expectedVersion: config.concurrency.version, actorId: session.actorId, reason: String(form.get('reason') || 'Admin settings update') }, config.concurrency.etag);
             setConfig(updated); setMessage('Settings updated with backend validation and audit attribution.');
-        } catch (caught) { setMessage(redactSensitiveError((caught as Error).message)); }
+        } catch (caught) { setMessage(operationalFailureMessage((caught as AdminApiError).status)); }
     };
 
     const previewFlag = async (flagKey: string, enabled: boolean, reason: string) => {
@@ -45,7 +54,7 @@ export const InstanceSettings = ({ session, apiClient = createAdminApiClient({ e
             setFlagPreviews((current) => ({ ...current, [flagKey]: preview }));
             setFlagConfirmation((current) => ({ ...current, [flagKey]: '' }));
         } catch (caught) {
-            setFlagMessage(redactSensitiveError((caught as Error).message));
+            setFlagMessage(operationalFailureMessage((caught as AdminApiError).status));
         }
     };
 
@@ -59,7 +68,7 @@ export const InstanceSettings = ({ session, apiClient = createAdminApiClient({ e
             setFlagPreviews((current) => { const next = { ...current }; delete next[flagKey]; return next; });
             setFlagMessage(`${updated.flagKey} updated with backend confirmation and audit attribution.`);
         } catch (caught) {
-            setFlagMessage(redactSensitiveError((caught as Error).message));
+            setFlagMessage(operationalFailureMessage((caught as AdminApiError).status));
         }
     };
 

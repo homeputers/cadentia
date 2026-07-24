@@ -210,10 +210,13 @@ AdminInstanceConfigurationResponse:
       type: string
     displayName:
       type: string
+      minLength: 1
     defaultLocale:
       type: string
+      minLength: 1
     timeZone:
       type: string
+      minLength: 1
     diagnosticsEnabled:
       type: boolean
     botChannelsEnabled:
@@ -250,10 +253,13 @@ UpdateAdminInstanceConfigurationRequest:
     expectedVersion:
       type: integer
       format: int64
+      minimum: 1
     actorId:
       type: string
+      minLength: 1
     reason:
       type: string
+      minLength: 1
 AdminFeatureFlagResponse:
   type: object
   required:
@@ -302,10 +308,13 @@ PreviewAdminFeatureFlagChangeRequest:
     expectedVersion:
       type: integer
       format: int64
+      minimum: 1
     actorId:
       type: string
+      minLength: 1
     reason:
       type: string
+      minLength: 1
 AdminFeatureFlagChangePreviewResponse:
   type: object
   required:
@@ -343,5 +352,7 @@ ConfirmAdminFeatureFlagChangeRequest:
       format: uuid
     actorId:
       type: string
+      minLength: 1
     confirmationText:
       type: string
+      minLength: 1
