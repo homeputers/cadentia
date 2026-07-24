@@ -72,8 +72,9 @@ Known implementation gaps:
 
 - The frontend client wrapper is typed and OpenAPI-route-aware, but it is not a
   fully generated operation-specific TypeScript client.
-- Several operational endpoints currently return scaffolded placeholder data
-  instead of persisted backend state.
+- Several operational mutation endpoints still use local-development in-memory
+  state, while operational read models now derive safe summaries from runtime
+  instance configuration where available.
 - Some high-risk workflows render confirmation and mutation surfaces, but need
   backend-backed allowed-action tests as policies become more granular.
 - End-to-end browser tests are not yet present; current coverage is component,
@@ -98,8 +99,8 @@ Known implementation gaps:
 | Global audit search | Existing: `GET /admin/audit-events` | Implemented search filters and redacted table | Add deeper audit-event detail view only if the API returns a safe detail shape. |
 | Rollback preview | Existing: `POST /admin/rollback-previews` | Implemented preview form, impact rendering, stale preview clearing, blocked-preview gating, and documented error responses | Add backend-backed rollback policy fixtures as rollback target coverage grows. |
 | Rollback execution | Existing: `POST /admin/rollbacks` | Implemented exact request-ID confirmation with explicit 400/403/409/412/5xx failure copy and documented error responses | Add integration coverage once rollback persistence/read models exist. |
-| Diagnostics | Existing: `GET /admin/diagnostics` | Implemented feature-flag and capability-gated diagnostics view with documented recommendation diagnostics shape | Replace scaffolded backend diagnostics with persisted/observed recommendation diagnostics when available. |
-| Instance configuration | Existing: `GET/PUT /admin/instance-configuration` | Implemented read/edit flow with actor, version, ETag context, documented errors, and validation hardening | Connect to persisted instance configuration outside local development. |
+| Diagnostics | Existing: `GET /admin/diagnostics` | Implemented feature-flag and capability-gated diagnostics view with documented recommendation diagnostics shape and runtime-configuration component | Replace empty recommendation diagnostics with persisted/observed recommendation diagnostics when available. |
+| Instance configuration | Existing: `GET/PUT /admin/instance-configuration` | Implemented read/edit flow with actor, version, ETag context, documented errors, validation hardening, and runtime-derived connectors, bot channels, scoring profiles, and operational settings | Connect mutations to persisted instance configuration outside local development. |
 | Feature flags | Existing: list, preview, and confirm endpoints | Implemented list, preview, exact confirmation, blockers, documented errors, and validation hardening | Connect to persistent feature-flag storage outside local development. |
 | Connectors, bot channels, scoring profiles, background jobs | Deferred / not fully specified for ADR-036 v1 | Deferred placeholders only | Define API contracts OpenAPI-first in later operations-console batches. |
 
@@ -109,8 +110,8 @@ Known implementation gaps:
    documentation-only and use it to anchor follow-up implementation scope.
 2. Role-boundary and seeded-data validation pass across import queue, candidate
    review, approvals, moderation, audit, rollback, diagnostics, and settings.
-3. Operations persistence pass for scaffolded admin operations where current
-   endpoints return placeholder diagnostics, settings, or feature-flag data.
+3. Operations persistence pass for admin operations where current mutations use
+   local-development in-memory settings or feature-flag data.
 4. Deferred operations-console API design for connectors, bot channels, scoring
    profiles, and background jobs.
 5. End-to-end smoke tests for authenticated route bootstrap, import queue,
