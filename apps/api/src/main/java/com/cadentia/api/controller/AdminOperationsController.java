@@ -13,7 +13,9 @@ import com.cadentia.generated.model.ConfirmAdminFeatureFlagChangeRequest;
 import com.cadentia.generated.model.PreviewAdminFeatureFlagChangeRequest;
 import com.cadentia.generated.model.UpdateAdminInstanceConfigurationRequest;
 import java.util.Arrays;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -50,17 +52,21 @@ public class AdminOperationsController implements AdminOperationsApi {
     public ResponseEntity<AdminSessionResponse> getAdminSession() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String actorId = authentication == null ? "anonymous" : authentication.getName();
+        List<String> authorities = authentication == null
+                ? List.of()
+                : authentication.getAuthorities().stream()
+                        .map(GrantedAuthority::getAuthority)
+                        .toList();
 
         List<String> roles = isLocalDevelopment()
                 ? List.of("ADMIN")
-                : authentication.getAuthorities().stream()
-                        .map(GrantedAuthority::getAuthority)
+                : authorities.stream()
                         .map(AdminOperationsController::normalizeRole)
                         .toList();
 
         List<AdminCapability> capabilities = isLocalDevelopment()
                 ? Arrays.asList(AdminCapability.values())
-                : capabilitiesForRoles(roles);
+                : capabilitiesForAuthorities(authorities);
 
         AdminSessionResponse response = new AdminSessionResponse()
                 .actorId(actorId)
@@ -106,20 +112,47 @@ public class AdminOperationsController implements AdminOperationsApi {
 
     private static String normalizeRole(String authority) {
         return switch (authority) {
-            case RbacAuthorities.ROLE_ADMIN -> "ADMIN";
-            case RbacAuthorities.ROLE_WORSHIP_LEADER -> "WORSHIP_LEADER";
-            case RbacAuthorities.ROLE_CATALOG_EDITOR -> "CATALOG_EDITOR";
-            case RbacAuthorities.ROLE_DOCTRINAL_REVIEWER -> "DOCTRINAL_REVIEWER";
-            case RbacAuthorities.ROLE_MUSICAL_REVIEWER -> "MUSICAL_REVIEWER";
+            case RbacAuthorities.ROLE_ADMIN, "ROLE_ADMIN" -> "ADMIN";
+            case RbacAuthorities.ROLE_WORSHIP_LEADER, "ROLE_WORSHIP_LEADER" -> "WORSHIP_LEADER";
+            case RbacAuthorities.ROLE_CATALOG_EDITOR, "ROLE_CATALOG_EDITOR" -> "CATALOG_EDITOR";
+            case RbacAuthorities.ROLE_DOCTRINAL_REVIEWER, "ROLE_DOCTRINAL_REVIEWER" -> "DOCTRINAL_REVIEWER";
+            case RbacAuthorities.ROLE_MUSICAL_REVIEWER, "ROLE_MUSICAL_REVIEWER" -> "MUSICAL_REVIEWER";
             default -> authority.startsWith("ROLE_") ? authority.substring("ROLE_".length()) : authority;
         };
     }
 
-    private static List<AdminCapability> capabilitiesForRoles(List<String> roles) {
-        if (roles.contains("ADMIN")) {
+    private static List<AdminCapability> capabilitiesForAuthorities(List<String> authorities) {
+        if (hasAnyAuthority(authorities, RbacAuthorities.ROLE_ADMIN, "ROLE_ADMIN")) {
             return Arrays.asList(AdminCapability.values());
         }
-        return List.of();
+        Set<AdminCapability> capabilities = new LinkedHashSet<>();
+        if (hasAnyAuthority(
+                authorities,
+                RbacAuthorities.ROLE_CATALOG_EDITOR,
+                "ROLE_CATALOG_EDITOR",
+                "catalog.admin.review",
+                "catalog.admin.approve")) {
+            capabilities.add(AdminCapability.VIEW_IMPORT_QUEUE);
+            capabilities.add(AdminCapability.REVIEW_CATALOG);
+            capabilities.add(AdminCapability.MANAGE_MODERATION);
+        }
+        if (hasAnyAuthority(authorities, RbacAuthorities.ROLE_CATALOG_EDITOR, "ROLE_CATALOG_EDITOR")) {
+            capabilities.add(AdminCapability.VIEW_AUDIT);
+        }
+        if (hasAnyAuthority(
+                authorities,
+                RbacAuthorities.ROLE_DOCTRINAL_REVIEWER,
+                "ROLE_DOCTRINAL_REVIEWER",
+                RbacAuthorities.ROLE_MUSICAL_REVIEWER,
+                "ROLE_MUSICAL_REVIEWER")) {
+            capabilities.add(AdminCapability.VIEW_IMPORT_QUEUE);
+            capabilities.add(AdminCapability.REVIEW_CATALOG);
+        }
+        return List.copyOf(capabilities);
+    }
+
+    private static boolean hasAnyAuthority(List<String> authorities, String... expectedAuthorities) {
+        return Arrays.stream(expectedAuthorities).anyMatch(authorities::contains);
     }
 
 }
