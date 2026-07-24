@@ -56,7 +56,7 @@ Implemented foundations:
   operations runbook are documented.
 - The admin shell bootstraps `/admin/session`, handles missing church-instance,
   unauthenticated, expired, forbidden, disabled-feature, and general failure
-  states, and renders capability-aware navigation.
+  states, and renders capability-aware navigation and direct-route guards.
 - Shared UI components cover breadcrumbs, page headers, filter panels, semantic
   tables, badges, audit-reference links, diff panels, confirmation dialogs,
   support/debug metadata, form validation, and redacted state panels.
@@ -75,11 +75,9 @@ Known implementation gaps:
 - Several operational endpoints currently return scaffolded placeholder data
   instead of persisted backend state.
 - Some high-risk workflows render confirmation and mutation surfaces, but need
-  fuller failure-path handling and backend-backed allowed-action tests.
+  backend-backed allowed-action tests as policies become more granular.
 - End-to-end browser tests are not yet present; current coverage is component,
   unit, contract, accessibility, and backend integration tests.
-- Feature-flag preview and confirmation APIs are specified, but the UI does not
-  yet expose the preview/confirm workflow.
 - Connector, bot-channel, scoring-profile, background-job, and broader
   operations-console screens remain deferred until their APIs are implemented.
 
@@ -88,7 +86,7 @@ Known implementation gaps:
 | ADR-036 workflow | Current API status | UI status | Gap / next action |
 | --- | --- | --- | --- |
 | Session bootstrap and capability discovery | Existing: `GET /admin/session` | Implemented in shell bootstrap | Expand production identity-provider integration beyond local Basic-auth development wiring. |
-| Role-aware navigation and permission states | Existing session capability schema | Implemented for route visibility and common permission states | Add more role-boundary tests as workflows mature. |
+| Role-aware navigation and permission states | Existing session capability schema | Implemented for route visibility, direct-route guards, and common permission states | Continue adding backend-backed role-boundary tests as workflow policies become more granular. |
 | Import candidate queue | Existing: `GET /admin/import-candidates` with filters, sort, and pagination | Implemented with URL-addressable filters and safe summaries | Validate against real seeded data and add any missing server filters OpenAPI-first. |
 | Candidate detail | Existing: `GET /admin/import-candidates/{candidateId}` | Implemented detail view for provenance, parser evidence, notes, history, duplicate, approval, moderation, and candidate-local audit sections | Continue testing against real seeded data and refine dense UI layout as workflows mature. |
 | Reviewer note creation | Existing: `POST /admin/import-candidates/{candidateId}/notes` | Implemented with actor, `If-Match` context, stale-version handling, and non-leaky failure states | Add backend-backed validation fixtures if note policy grows beyond required body/category checks. |

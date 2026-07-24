@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { canRenderAction, visibleRoutes } from '../src/auth/permissions';
+import { canAccessRoute, canRenderAction, visibleRoutes } from '../src/auth/permissions';
 import type { AdminCapability, AdminRole, AdminSession } from '../src/auth/session';
 
 const session = (roles: AdminRole[], capabilities: AdminCapability[]): AdminSession => ({
@@ -12,10 +12,12 @@ const session = (roles: AdminRole[], capabilities: AdminCapability[]): AdminSess
 
 describe('admin permission presentation helpers', () => {
     it('shows catalog editor import review and catalog review action', () => {
-        const catalogEditor = session(['CATALOG_EDITOR'], ['VIEW_IMPORT_QUEUE', 'REVIEW_CATALOG', 'MANAGE_MODERATION']);
+        const catalogEditor = session(['CATALOG_EDITOR'], ['VIEW_IMPORT_QUEUE', 'REVIEW_CATALOG', 'MANAGE_MODERATION', 'VIEW_AUDIT']);
 
-        expect(visibleRoutes(catalogEditor, []).map((route) => route.href)).toEqual(['/admin/imports']);
+        expect(visibleRoutes(catalogEditor, []).map((route) => route.href)).toEqual(['/admin/imports', '/admin/audit']);
         expect(canRenderAction(catalogEditor, 'REVIEW_CATALOG')).toBe(true);
+        expect(canAccessRoute(catalogEditor, [], '/admin/imports/candidate-1')).toBe(true);
+        expect(canAccessRoute(catalogEditor, [], '/admin/settings')).toBe(false);
     });
 
     it('shows doctrinal reviewer review action without admin settings', () => {
@@ -23,6 +25,7 @@ describe('admin permission presentation helpers', () => {
 
         expect(visibleRoutes(doctrinalReviewer, []).map((route) => route.href)).toEqual(['/admin/imports']);
         expect(canRenderAction(doctrinalReviewer, 'MANAGE_INSTANCE_CONFIGURATION')).toBe(false);
+        expect(canAccessRoute(doctrinalReviewer, [], '/admin/audit')).toBe(false);
     });
 
     it('shows musical reviewer review action without rollback execution', () => {
@@ -48,6 +51,8 @@ describe('admin permission presentation helpers', () => {
             '/admin/settings',
         ]);
         expect(canRenderAction(admin, 'EXECUTE_ROLLBACK')).toBe(true);
+        expect(canAccessRoute(admin, ['admin-diagnostics'], '/admin/diagnostics')).toBe(true);
+        expect(canAccessRoute(admin, [], '/admin/diagnostics')).toBe(false);
     });
 
     it('keeps read-only viewer navigation and mutations hidden', () => {

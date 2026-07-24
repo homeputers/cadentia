@@ -24,5 +24,16 @@ export const visibleRoutes = (session: AdminSession, enabledFeatures: string[]):
             (!route.requiredFeature || enabledFeatures.includes(route.requiredFeature)),
     );
 
+export const routeForPath = (pathname: string): AdminRoute | undefined =>
+    adminRoutes.find((route) => pathname === route.href || pathname.startsWith(`${route.href}/`));
+
+export const canAccessRoute = (session: AdminSession, enabledFeatures: string[], pathname: string): boolean => {
+    const route = routeForPath(pathname);
+    return !route || (
+        hasCapability(session, route.requiredCapability) &&
+        (!route.requiredFeature || enabledFeatures.includes(route.requiredFeature))
+    );
+};
+
 export const canRenderAction = (session: AdminSession, capability: AdminCapability): boolean =>
     hasCapability(session, capability);

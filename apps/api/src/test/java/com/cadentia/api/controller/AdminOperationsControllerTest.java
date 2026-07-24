@@ -3,6 +3,7 @@ package com.cadentia.api.controller;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.cadentia.api.security.RbacAuthorities;
 import com.cadentia.generated.model.AdminCapability;
 import com.cadentia.generated.model.ConfirmAdminFeatureFlagChangeRequest;
 import com.cadentia.generated.model.PreviewAdminFeatureFlagChangeRequest;
@@ -61,6 +62,69 @@ class AdminOperationsControllerTest {
         assertThat(response).isNotNull();
         assertThat(response.getRoles()).containsExactly("ADMIN");
         assertThat(response.getCapabilities()).containsExactly(AdminCapability.values());
+    }
+
+    @Test
+    void mapsNonLocalCatalogEditorAuthorityToReviewAndAuditCapabilities() {
+        // Arrange
+        SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(
+                "catalog-editor",
+                "password",
+                List.of(new SimpleGrantedAuthority(RbacAuthorities.ROLE_CATALOG_EDITOR))));
+        AdminOperationsController controller = controller("church-prod");
+
+        // Act
+        var response = controller.getAdminSession().getBody();
+
+        // Assert
+        assertThat(response).isNotNull();
+        assertThat(response.getRoles()).containsExactly("CATALOG_EDITOR");
+        assertThat(response.getCapabilities()).containsExactly(
+                AdminCapability.VIEW_IMPORT_QUEUE,
+                AdminCapability.REVIEW_CATALOG,
+                AdminCapability.MANAGE_MODERATION,
+                AdminCapability.VIEW_AUDIT);
+    }
+
+    @Test
+    void mapsNonLocalReviewerAuthoritiesToReviewOnlyCapabilities() {
+        // Arrange
+        SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(
+                "doctrinal-reviewer",
+                "password",
+                List.of(new SimpleGrantedAuthority(RbacAuthorities.ROLE_DOCTRINAL_REVIEWER))));
+        AdminOperationsController controller = controller("church-prod");
+
+        // Act
+        var response = controller.getAdminSession().getBody();
+
+        // Assert
+        assertThat(response).isNotNull();
+        assertThat(response.getRoles()).containsExactly("DOCTRINAL_REVIEWER");
+        assertThat(response.getCapabilities()).containsExactly(
+                AdminCapability.VIEW_IMPORT_QUEUE,
+                AdminCapability.REVIEW_CATALOG);
+    }
+
+    @Test
+    void mapsLegacyCatalogReviewAuthorityToReviewCapabilities() {
+        // Arrange
+        SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(
+                "legacy-reviewer",
+                "password",
+                List.of(new SimpleGrantedAuthority("catalog.admin.review"))));
+        AdminOperationsController controller = controller("church-prod");
+
+        // Act
+        var response = controller.getAdminSession().getBody();
+
+        // Assert
+        assertThat(response).isNotNull();
+        assertThat(response.getRoles()).containsExactly("catalog.admin.review");
+        assertThat(response.getCapabilities()).containsExactly(
+                AdminCapability.VIEW_IMPORT_QUEUE,
+                AdminCapability.REVIEW_CATALOG,
+                AdminCapability.MANAGE_MODERATION);
     }
 
     @Test

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { adminEnvironment, missingRequiredEnvironment } from '../config/environment';
 import { bootstrapAdminSession, type PermissionState } from '../auth/session';
-import { canRenderAction, visibleRoutes } from '../auth/permissions';
+import { canAccessRoute, canRenderAction, visibleRoutes } from '../auth/permissions';
 import { defaultImportCandidateFilters, listImportCandidates, type ImportCandidateQueueResponse } from '../import-candidates';
 import { ImportCandidateQueue } from './ImportCandidateQueue';
 import { ImportCandidateDetail } from './ImportCandidateDetail';
@@ -91,6 +91,11 @@ export const AdminShell = () => {
 
     const session = permissionState.kind === 'authenticated' ? permissionState.session : null;
     const routes = useMemo(() => (session ? visibleRoutes(session, adminEnvironment.featureFlags) : []), [session]);
+    const blockedDirectRoute = session && !canAccessRoute(session, adminEnvironment.featureFlags, window.location.pathname);
+
+    if (blockedDirectRoute) {
+        return <main className="admin-shell"><Breadcrumbs items={[{ label: 'Admin', href: '/admin' }, { label: 'Access denied' }]} /><StatePanel state="forbidden" title="Access denied">This admin route is not available for the current session capabilities.</StatePanel></main>;
+    }
 
     if (session && window.location.pathname === '/admin/imports') {
         return <ImportCandidateQueue session={session} />;
