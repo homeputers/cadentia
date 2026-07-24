@@ -444,6 +444,16 @@
           application/json:
             schema:
               "$ref": "../components/schemas/admin-review.yaml#/RollbackPreviewResponse"
+      '400':
+        "$ref": "../components/shared/responses.yaml#/ValidationError"
+      '401':
+        "$ref": "../components/shared/responses.yaml#/Unauthorized"
+      '403':
+        "$ref": "../components/shared/responses.yaml#/Forbidden"
+      '409':
+        "$ref": "../components/shared/responses.yaml#/Conflict"
+      '422':
+        "$ref": "../components/shared/responses.yaml#/ValidationError"
 "/admin/rollbacks":
   post:
     tags:
@@ -467,6 +477,18 @@
           application/json:
             schema:
               "$ref": "../components/schemas/admin-review.yaml#/RollbackExecutionResponse"
+      '400':
+        "$ref": "../components/shared/responses.yaml#/ValidationError"
+      '401':
+        "$ref": "../components/shared/responses.yaml#/Unauthorized"
+      '403':
+        "$ref": "../components/shared/responses.yaml#/Forbidden"
+      '409':
+        "$ref": "../components/shared/responses.yaml#/Conflict"
+      '412':
+        "$ref": "../components/shared/responses.yaml#/Conflict"
+      '422':
+        "$ref": "../components/shared/responses.yaml#/ValidationError"
 "/admin/audit-events":
   get:
     tags:
