@@ -8,6 +8,14 @@ import { AuditReferenceLink, Badge, Breadcrumbs, DataTable, Field, FilterPanel, 
 
 const update = (filters: AuditFilters, name: string, value: string): AuditFilters => ({ ...filters, [name]: value || undefined, page: 1 });
 
+const rollbackFailureMessage = (status?: number) => {
+    if (status === 401) return 'Your admin session expired. Sign in again before retrying rollback operations.';
+    if (status === 403) return 'You are not authorized to perform this rollback operation.';
+    if (status === 400 || status === 422) return 'Rollback validation failed. Review the target, blockers, and request a fresh backend preview.';
+    if (status === 409 || status === 412) return 'Preview is stale or conflicted. Create a fresh backend preview before retrying.';
+    return 'Rollback failed safely before execution could be confirmed. Retry only after verifying the backend preview is still valid.';
+};
+
 export const AuditRollback = ({ session, apiClient = createAdminApiClient({ environment: adminEnvironment, getAccessToken: async () => null }), initialSearch = window.location.search }: { session: AdminSession; apiClient?: AdminApiClient; initialSearch?: string }) => {
     const [filters, setFilters] = useState(() => parseAuditFilters(initialSearch));
     const [events, setEvents] = useState<Awaited<ReturnType<typeof searchAuditEvents>> | null>(null);
@@ -37,9 +45,14 @@ export const AuditRollback = ({ session, apiClient = createAdminApiClient({ envi
     const applyUrl = () => { const query = serializeAuditFilters(filters); window.history.replaceState(null, '', `/admin/audit${query ? `?${query}` : ''}`); void load(true); };
     const makePreview = async () => {
         setRollbackMessage('');
-        const result = await createRollbackPreview(apiClient, { targetType: rollbackForm.targetType, targetId: rollbackForm.targetId, importBatchId: rollbackForm.importBatchId || undefined, reason: rollbackForm.reason || undefined }, session.actorId);
-        setPreview(result);
-        setRollbackForm((current) => ({ ...current, confirmation: '' }));
+        setPreview(null);
+        try {
+            const result = await createRollbackPreview(apiClient, { targetType: rollbackForm.targetType, targetId: rollbackForm.targetId, importBatchId: rollbackForm.importBatchId || undefined, reason: rollbackForm.reason || undefined }, session.actorId);
+            setPreview(result);
+            setRollbackForm((current) => ({ ...current, confirmation: '' }));
+        } catch (caught) {
+            setRollbackMessage(rollbackFailureMessage((caught as AdminApiError).status));
+        }
     };
     const runRollback = async () => {
         if (!preview || rollbackForm.confirmation !== preview.rollbackRequestId) return setRollbackMessage('Type the exact backend rollback request ID before execution.');
@@ -49,8 +62,7 @@ export const AuditRollback = ({ session, apiClient = createAdminApiClient({ envi
             setFilters((current) => ({ ...current, rollbackRequestId: result.rollbackRequestId, page: 1 }));
             await load(true);
         } catch (caught) {
-            const status = (caught as AdminApiError).status;
-            setRollbackMessage(status === 409 || status === 412 ? 'Preview is stale or conflicted. Create a fresh backend preview before retrying.' : status === 403 ? 'You are not authorized to execute this rollback.' : status === 400 || status === 422 ? 'Rollback validation failed. Review blockers and request a new preview.' : 'Rollback failed safely before execution could be confirmed. Retry with the same backend preview only if it remains valid.');
+            setRollbackMessage(rollbackFailureMessage((caught as AdminApiError).status));
         }
     };
 
