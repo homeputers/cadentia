@@ -37,13 +37,16 @@ export type DuplicateSummary = { confidence?: string | null; matchCount?: number
 export type DuplicateMatch = { id: string; candidateSongId: string; matchScore: number; matchSignalsJson?: string | null; status: string; matchingFeatures?: string[]; conflicts?: string[]; existingCatalogState?: string | null; safeCandidateExcerpt?: string | null; safeExistingExcerpt?: string | null };
 export type DuplicateComparison = { candidate: Record<string, string | number | boolean | null | undefined>; existing: Record<string, string | number | boolean | null | undefined>; matchingFeatures: string[]; conflicts: string[]; confidenceFeatures: string[]; currentApprovedCatalogState?: string | null; eligibilityEffects: string[]; auditReferenceId?: string | null };
 export type ApprovalState = { requiredTypes: string[]; statuses: Array<{ type: string; status: string; actor?: string | null; auditReferenceId?: string | null }>; blockers: string[]; allowedTransitions: string[]; eligibilityImpact: string; auditReferenceId?: string | null };
-export type ModerationFlag = { id: string; scope?: string | null; type?: string | null; reason?: string | null; status: string; eligibilityImpactPolicy?: string | null; openedBy?: string | null; auditReferenceId?: string | null };
+export type ModerationFlag = { id: string; scope?: string | null; type?: string | null; reason?: string | null; status: string; eligibilityImpactPolicy?: string | null; openedBy?: string | null; assignedTo?: string | null; resolutionNotes?: string | null; auditReferenceId?: string | null };
 export type ReviewNote = { noteId: string; authorId: string; authorDisplayName?: string | null; category?: string | null; body: string; createdAt: string; auditReferenceId?: string | null };
 export type ReviewHistoryItem = { id: string; proposedDuplicateMatchId?: string | null; decision: string; reviewer: string; reviewNotes?: string | null; reviewedAt: string };
 export type CreateReviewNoteRequest = { actor: string; category?: string; body: string };
 export type MergeDecisionRequest = { actor: string; decision: string; duplicateMatchId?: string; fieldSelections?: Record<string, 'CANDIDATE' | 'EXISTING'>; rationale: string };
 export type ApprovalActionRequest = { actor: string; approvalType: string; action: string; rationale: string };
 export type OpenModerationFlagRequest = { openedBy: string; scope: string; type: string; reason: string; eligibilityImpactPolicy: string; excludeFromRecommendation: boolean };
+export type AssignModerationFlagRequest = { actor: string; assignedTo: string; reason: string };
+export type ResolveModerationFlagRequest = { actor: string; resolutionNotes: string };
+export type EscalateModerationFlagRequest = { actor: string; reason: string };
 
 const candidatePath = (candidateId: string, suffix = '') => `/admin/import-candidates/${encodeURIComponent(candidateId)}${suffix}`;
 
@@ -77,6 +80,27 @@ export const openModerationFlag = (client: AdminApiClient, candidateId: string, 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(request),
     }, { actorId, etag });
+
+export const assignModerationFlag = (client: AdminApiClient, flagId: string, request: AssignModerationFlagRequest, actorId: string) =>
+    client.request<ModerationFlag>(`/admin/moderation-flags/${encodeURIComponent(flagId)}/assign`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(request),
+    }, { actorId });
+
+export const resolveModerationFlag = (client: AdminApiClient, flagId: string, request: ResolveModerationFlagRequest, actorId: string) =>
+    client.request<ModerationFlag>(`/admin/moderation-flags/${encodeURIComponent(flagId)}/resolve`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(request),
+    }, { actorId });
+
+export const escalateModerationFlag = (client: AdminApiClient, flagId: string, request: EscalateModerationFlagRequest, actorId: string) =>
+    client.request<ModerationFlag>(`/admin/moderation-flags/${encodeURIComponent(flagId)}/escalate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(request),
+    }, { actorId });
 
 export const safeParserEvidence = (detail: CandidateDetail): ParserEvidence => ({
     parserName: detail.parserEvidence?.parserName ?? detail.parserName,
