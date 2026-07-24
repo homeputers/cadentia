@@ -41,6 +41,7 @@ export type InstanceConfiguration = {
 };
 export type FeatureFlag = { flagKey: string; description?: string; enabled: boolean; allowedActions: AllowedAction[]; concurrency: Concurrency; lastAuditReference?: AuditReference };
 export type FeatureFlagList = { churchInstanceId: string; flags: FeatureFlag[] };
+export type FeatureFlagPreview = { previewId: string; flagKey: string; requestedEnabled: boolean; confirmationRequired: boolean; impactSummary?: string; blockers: string[] };
 export type UpdateInstanceConfigurationRequest = { displayName: string; defaultLocale: string; timeZone: string; diagnosticsEnabled?: boolean; botChannelsEnabled?: boolean; expectedVersion: number; actorId: string; reason: string };
 
 export const getDiagnostics = (apiClient: AdminApiClient) => apiClient.request<DiagnosticsResponse>('/admin/diagnostics');
@@ -49,4 +50,6 @@ export const updateInstanceConfiguration = (apiClient: AdminApiClient, payload: 
     apiClient.request<InstanceConfiguration>('/admin/instance-configuration', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }, { actorId: payload.actorId, etag });
 export const listFeatureFlags = (apiClient: AdminApiClient) => apiClient.request<FeatureFlagList>('/admin/feature-flags');
 export const previewFeatureFlagChange = (apiClient: AdminApiClient, flag: FeatureFlag, enabled: boolean, actorId: string, reason: string) =>
-    apiClient.request<{ previewId: string; flagKey: string; requestedEnabled: boolean; confirmationRequired: boolean; impactSummary?: string; blockers: string[] }>(`/admin/feature-flags/${encodeURIComponent(flag.flagKey)}:preview`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled, expectedVersion: flag.concurrency.version, actorId, reason }) }, { actorId, etag: flag.concurrency.etag });
+    apiClient.request<FeatureFlagPreview>(`/admin/feature-flags/${encodeURIComponent(flag.flagKey)}:preview`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled, expectedVersion: flag.concurrency.version, actorId, reason }) }, { actorId, etag: flag.concurrency.etag });
+export const confirmFeatureFlagChange = (apiClient: AdminApiClient, flagKey: string, previewId: string, actorId: string, confirmationText: string) =>
+    apiClient.request<FeatureFlag>(`/admin/feature-flags/${encodeURIComponent(flagKey)}:confirm`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ previewId, actorId, confirmationText }) }, { actorId });

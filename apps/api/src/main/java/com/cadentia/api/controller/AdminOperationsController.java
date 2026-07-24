@@ -3,7 +3,15 @@ package com.cadentia.api.controller;
 import com.cadentia.api.security.RbacAuthorities;
 import com.cadentia.generated.api.AdminOperationsApi;
 import com.cadentia.generated.model.AdminCapability;
+import com.cadentia.generated.model.AdminDiagnosticsResponse;
+import com.cadentia.generated.model.AdminFeatureFlagChangePreviewResponse;
+import com.cadentia.generated.model.AdminFeatureFlagListResponse;
+import com.cadentia.generated.model.AdminFeatureFlagResponse;
+import com.cadentia.generated.model.AdminInstanceConfigurationResponse;
 import com.cadentia.generated.model.AdminSessionResponse;
+import com.cadentia.generated.model.ConfirmAdminFeatureFlagChangeRequest;
+import com.cadentia.generated.model.PreviewAdminFeatureFlagChangeRequest;
+import com.cadentia.generated.model.UpdateAdminInstanceConfigurationRequest;
 import java.util.Arrays;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
@@ -19,9 +27,23 @@ public class AdminOperationsController implements AdminOperationsApi {
     private static final String LOCAL_DEVELOPMENT_INSTANCE = "local-development";
 
     private final String instanceId;
+    private final AdminOperationsService adminOperationsService;
 
-    public AdminOperationsController(@Value("${cadentia.instance.id:local-development}") String instanceId) {
+    public AdminOperationsController(
+            @Value("${cadentia.instance.id:local-development}") String instanceId,
+            AdminOperationsService adminOperationsService) {
         this.instanceId = instanceId;
+        this.adminOperationsService = adminOperationsService;
+    }
+
+    @Override
+    public ResponseEntity<AdminDiagnosticsResponse> getAdminDiagnostics(String xChurchInstanceId) {
+        return ResponseEntity.ok(adminOperationsService.diagnostics(xChurchInstanceId));
+    }
+
+    @Override
+    public ResponseEntity<AdminInstanceConfigurationResponse> getAdminInstanceConfiguration(String xChurchInstanceId) {
+        return ResponseEntity.ok(adminOperationsService.instanceConfiguration(xChurchInstanceId));
     }
 
     @Override
@@ -50,6 +72,34 @@ public class AdminOperationsController implements AdminOperationsApi {
         return ResponseEntity.ok(response);
     }
 
+    @Override
+    public ResponseEntity<AdminFeatureFlagListResponse> listAdminFeatureFlags(String xChurchInstanceId) {
+        return ResponseEntity.ok(adminOperationsService.featureFlags(xChurchInstanceId));
+    }
+
+    @Override
+    public ResponseEntity<AdminFeatureFlagChangePreviewResponse> previewAdminFeatureFlagChange(
+            String xChurchInstanceId,
+            String flagKey,
+            PreviewAdminFeatureFlagChangeRequest request) {
+        return ResponseEntity.ok(adminOperationsService.previewFeatureFlagChange(flagKey, request));
+    }
+
+    @Override
+    public ResponseEntity<AdminFeatureFlagResponse> confirmAdminFeatureFlagChange(
+            String xChurchInstanceId,
+            String flagKey,
+            ConfirmAdminFeatureFlagChangeRequest request) {
+        return ResponseEntity.ok(adminOperationsService.confirmFeatureFlagChange(flagKey, request));
+    }
+
+    @Override
+    public ResponseEntity<AdminInstanceConfigurationResponse> updateAdminInstanceConfiguration(
+            String xChurchInstanceId,
+            UpdateAdminInstanceConfigurationRequest request) {
+        return ResponseEntity.ok(adminOperationsService.updateInstanceConfiguration(xChurchInstanceId, request));
+    }
+
     private boolean isLocalDevelopment() {
         return LOCAL_DEVELOPMENT_INSTANCE.equals(instanceId);
     }
@@ -71,4 +121,5 @@ public class AdminOperationsController implements AdminOperationsApi {
         }
         return List.of();
     }
+
 }
