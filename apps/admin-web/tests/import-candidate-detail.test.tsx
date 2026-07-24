@@ -161,6 +161,46 @@ describe('import candidate detail', () => {
         expect(node.textContent).not.toContain('Escalate flag');
     });
 
+    it('reports backend validation failures for merge actions without leaking protected details', async () => {
+        const request = vi.fn().mockImplementation((path: string) => {
+            if (path.endsWith('/audit-history')) return Promise.resolve(auditHistory);
+            if (path.endsWith('/merge-decisions')) return Promise.reject(Object.assign(new Error('rawPayload=secret invalid merge'), { status: 400 }));
+            return Promise.resolve(baseDetail);
+        });
+        const { node } = await render(baseDetail, request);
+        await act(async () => { Simulate.change(node.querySelectorAll('textarea')[0], { target: { value: 'Backend signals are inconclusive' } } as never); });
+        await act(async () => { node.querySelectorAll('form')[0].dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); });
+        await act(async () => { (node.querySelector('.admin-dialog button.danger') as HTMLButtonElement).click(); });
+        expect(node.textContent).toContain('Backend validation rejected this action');
+        expect(node.textContent).not.toContain('secret');
+        expect(node.textContent).not.toContain('rawPayload=secret');
+    });
+
+    it('reports forbidden approval actions and stale moderation actions safely', async () => {
+        const request = vi.fn().mockImplementation((path: string) => {
+            if (path.endsWith('/audit-history')) return Promise.resolve(auditHistory);
+            if (path.endsWith('/approval-actions')) return Promise.reject(Object.assign(new Error('Bearer secret approval'), { status: 403 }));
+            if (path.endsWith('/assign')) return Promise.reject(Object.assign(new Error('stale moderation'), { status: 412 }));
+            return Promise.resolve(baseDetail);
+        });
+        const approval = await render(baseDetail, request);
+        await act(async () => { Simulate.change(approval.node.querySelectorAll('select')[1], { target: { value: 'DOCTRINAL' } } as never); });
+        await act(async () => { Simulate.change(approval.node.querySelectorAll('textarea')[1], { target: { value: 'Rejected by backend policy' } } as never); });
+        await act(async () => { approval.node.querySelectorAll('form')[1].dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); });
+        await act(async () => { (approval.node.querySelector('.admin-dialog button.danger') as HTMLButtonElement).click(); });
+        expect(approval.node.textContent).toContain('Action is forbidden by backend policy');
+        expect(approval.node.textContent).not.toContain('secret');
+
+        act(() => { root.unmount(); }); container.remove();
+        const moderation = await render(baseDetail, request, adminSession);
+        const assignForm = moderation.node.querySelectorAll('form')[2];
+        await act(async () => { Simulate.change(assignForm.querySelectorAll('input')[0], { target: { value: 'reviewer-3' } } as never); });
+        await act(async () => { Simulate.change(assignForm.querySelectorAll('input')[1], { target: { value: 'Needs provenance owner' } } as never); });
+        await act(async () => { assignForm.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); });
+        await act(async () => { (moderation.node.querySelector('.admin-dialog button.danger') as HTMLButtonElement).click(); });
+        expect(moderation.node.textContent).toContain('Version is stale');
+    });
+
     it('handles candidate audit history load failures without blocking the rest of the detail page', async () => {
         const request = vi.fn().mockImplementation((path: string) => path.endsWith('/audit-history')
             ? Promise.reject(Object.assign(new Error('rawPayload=secret token=abc'), { status: 500 }))
