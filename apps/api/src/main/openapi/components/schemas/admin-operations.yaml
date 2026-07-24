@@ -81,6 +81,72 @@ AdminDiagnosticStatus:
   - DEGRADED
   - UNAVAILABLE
   - UNKNOWN
+AdminConnectorSummary:
+  type: object
+  required:
+  - key
+  - label
+  - enabled
+  - status
+  properties:
+    key:
+      type: string
+    label:
+      type: string
+    enabled:
+      type: boolean
+    status:
+      type: string
+    credentialState:
+      type: string
+AdminBotChannelSummary:
+  type: object
+  required:
+  - channelId
+  - label
+  - enabled
+  - status
+  properties:
+    channelId:
+      type: string
+    label:
+      type: string
+    enabled:
+      type: boolean
+    status:
+      type: string
+AdminScoringProfileSummary:
+  type: object
+  required:
+  - profileKey
+  - label
+  - active
+  - policyVersion
+  properties:
+    profileKey:
+      type: string
+    label:
+      type: string
+    active:
+      type: boolean
+    policyVersion:
+      type: string
+AdminOperationalSettingSummary:
+  type: object
+  required:
+  - key
+  - label
+  - value
+  - editable
+  properties:
+    key:
+      type: string
+    label:
+      type: string
+    value:
+      type: string
+    editable:
+      type: boolean
 AdminDiagnosticsComponent:
   type: object
   required:
@@ -221,6 +287,22 @@ AdminInstanceConfigurationResponse:
       type: boolean
     botChannelsEnabled:
       type: boolean
+    connectors:
+      type: array
+      items:
+        "$ref": "#/AdminConnectorSummary"
+    botChannels:
+      type: array
+      items:
+        "$ref": "#/AdminBotChannelSummary"
+    scoringProfiles:
+      type: array
+      items:
+        "$ref": "#/AdminScoringProfileSummary"
+    operationalSettings:
+      type: array
+      items:
+        "$ref": "#/AdminOperationalSettingSummary"
     allowedActions:
       type: array
       items:
