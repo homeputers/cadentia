@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { hasCapability } from '../auth/permissions';
 import type { AdminSession } from '../auth/session';
 import { adminEnvironment } from '../config/environment';
@@ -18,7 +18,8 @@ const row = (diagnostic: RecommendationDiagnostic) => [
     <><p>Correlation {redactId(diagnostic.correlationId)}</p><p>Trace {redactId(diagnostic.traceId)}</p>{diagnostic.auditReference && <AuditReferenceLink auditId={diagnostic.auditReference.auditEventId} />}</>,
 ];
 
-export const Diagnostics = ({ session, apiClient = createAdminApiClient({ environment: adminEnvironment, getAccessToken: async () => null }) }: { session: AdminSession; apiClient?: AdminApiClient }) => {
+export const Diagnostics = ({ session, apiClient: providedApiClient }: { session: AdminSession; apiClient?: AdminApiClient }) => {
+    const apiClient = useMemo(() => providedApiClient ?? createAdminApiClient({ environment: adminEnvironment, getAccessToken: async () => null }), [providedApiClient]);
     const [data, setData] = useState<DiagnosticsResponse | null>(null);
     const [state, setState] = useState<'loading' | 'empty' | 'ready' | 'unauthorized' | 'forbidden' | 'error'>('loading');
     const [error, setError] = useState('');

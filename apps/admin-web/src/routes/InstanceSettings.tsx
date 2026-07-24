@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { hasCapability } from '../auth/permissions';
 import type { AdminSession } from '../auth/session';
 import { adminEnvironment } from '../config/environment';
@@ -18,7 +18,8 @@ const operationalFailureMessage = (status?: number) => {
     return 'Operations change failed safely. No protected backend details were exposed.';
 };
 
-export const InstanceSettings = ({ session, apiClient = createAdminApiClient({ environment: adminEnvironment, getAccessToken: async () => null }) }: { session: AdminSession; apiClient?: AdminApiClient }) => {
+export const InstanceSettings = ({ session, apiClient: providedApiClient }: { session: AdminSession; apiClient?: AdminApiClient }) => {
+    const apiClient = useMemo(() => providedApiClient ?? createAdminApiClient({ environment: adminEnvironment, getAccessToken: async () => null }), [providedApiClient]);
     const [config, setConfig] = useState<InstanceConfiguration | null>(null);
     const [flags, setFlags] = useState<FeatureFlagList | null>(null);
     const [flagPreviews, setFlagPreviews] = useState<Record<string, FeatureFlagPreview>>({});
