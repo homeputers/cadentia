@@ -78,8 +78,9 @@ Known implementation gaps:
   instance configuration where available.
 - Some high-risk workflows render confirmation and mutation surfaces, but need
   backend-backed allowed-action tests as policies become more granular.
-- End-to-end browser tests are not yet present; current coverage is component,
-  unit, contract, accessibility, and backend integration tests.
+- Admin shell integration smoke tests now cover bootstrap, role-aware navigation,
+  direct-route denial, import snapshot loading, missing church-instance startup,
+  and redacted failure states; full browser end-to-end coverage is still deferred.
 - Connector, bot-channel, scoring-profile, background-job, and broader
   operations-console screens remain deferred until their APIs are implemented.
 
@@ -115,8 +116,9 @@ Known implementation gaps:
    local-development in-memory settings or feature-flag data.
 4. Deferred operations-console API design for connectors, bot channels, scoring
    profiles, and background jobs.
-5. End-to-end smoke tests for authenticated route bootstrap, import queue,
-   candidate detail, audit/rollback, settings, and non-leaky unauthorized paths.
+5. Expand smoke coverage from admin shell integration tests into full browser
+   tests for candidate detail, audit/rollback, settings, and non-leaky
+   unauthorized paths when browser tooling is introduced.
 
 ## Guiding Principles
 
