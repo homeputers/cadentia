@@ -7,6 +7,8 @@ import com.cadentia.generated.model.AdminCapability;
 import com.cadentia.generated.model.ConfirmAdminFeatureFlagChangeRequest;
 import com.cadentia.generated.model.PreviewAdminFeatureFlagChangeRequest;
 import com.cadentia.generated.model.UpdateAdminInstanceConfigurationRequest;
+import com.cadentia.runtime.InstanceConfiguration;
+import com.cadentia.runtime.StaticInstanceConfigurationProvider;
 import java.util.List;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -29,7 +31,7 @@ class AdminOperationsControllerTest {
                 "user",
                 "password",
                 List.of(new SimpleGrantedAuthority("ROLE_USER"))));
-        AdminOperationsController controller = new AdminOperationsController("local-development");
+        AdminOperationsController controller = controller("local-development");
 
         // Act
         var response = controller.getAdminSession().getBody();
@@ -50,7 +52,7 @@ class AdminOperationsControllerTest {
                 "operator",
                 "password",
                 List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))));
-        AdminOperationsController controller = new AdminOperationsController("church-prod");
+        AdminOperationsController controller = controller("church-prod");
 
         // Act
         var response = controller.getAdminSession().getBody();
@@ -62,14 +64,14 @@ class AdminOperationsControllerTest {
     }
 
     @Test
-    void returnsOperationalConfigurationAndFeatureFlagsOutOfTheBox() {
+    void returnsLocalOperationalConfigurationAndFeatureFlagsOutOfTheBox() {
         // Arrange
-        AdminOperationsController controller = new AdminOperationsController("church-prod");
+        AdminOperationsController controller = controller("local-development");
 
         // Act
-        var configuration = controller.getAdminInstanceConfiguration("church-prod").getBody();
-        var flags = controller.listAdminFeatureFlags("church-prod").getBody();
-        var diagnostics = controller.getAdminDiagnostics("church-prod").getBody();
+        var configuration = controller.getAdminInstanceConfiguration("local-development").getBody();
+        var flags = controller.listAdminFeatureFlags("local-development").getBody();
+        var diagnostics = controller.getAdminDiagnostics("local-development").getBody();
 
         // Assert
         assertThat(configuration).isNotNull();
@@ -84,7 +86,7 @@ class AdminOperationsControllerTest {
     @Test
     void previewsAndConfirmsFeatureFlagChangesWithExactPreviewConfirmation() {
         // Arrange
-        AdminOperationsController controller = new AdminOperationsController("church-prod");
+        AdminOperationsController controller = controller("local-development");
         PreviewAdminFeatureFlagChangeRequest previewRequest = new PreviewAdminFeatureFlagChangeRequest()
                 .enabled(false)
                 .expectedVersion(1L)
@@ -93,7 +95,7 @@ class AdminOperationsControllerTest {
 
         // Act
         var preview = controller.previewAdminFeatureFlagChange(
-                "church-prod",
+                "local-development",
                 "admin-diagnostics",
                 previewRequest).getBody();
 
@@ -101,7 +103,7 @@ class AdminOperationsControllerTest {
         assertThat(preview).isNotNull();
         assertThat(preview.getConfirmationRequired()).isTrue();
         assertThatThrownBy(() -> controller.confirmAdminFeatureFlagChange(
-                "church-prod",
+                "local-development",
                 "admin-diagnostics",
                 new ConfirmAdminFeatureFlagChangeRequest()
                         .previewId(preview.getPreviewId())
@@ -111,7 +113,7 @@ class AdminOperationsControllerTest {
                 .hasMessageContaining("400 BAD_REQUEST");
 
         var updated = controller.confirmAdminFeatureFlagChange(
-                "church-prod",
+                "local-development",
                 "admin-diagnostics",
                 new ConfirmAdminFeatureFlagChangeRequest()
                         .previewId(preview.getPreviewId())
@@ -125,9 +127,9 @@ class AdminOperationsControllerTest {
     @Test
     void rejectsStaleInstanceConfigurationUpdates() {
         // Arrange
-        AdminOperationsController controller = new AdminOperationsController("church-prod");
+        AdminOperationsController controller = controller("local-development");
         controller.updateAdminInstanceConfiguration(
-                "church-prod",
+                "local-development",
                 new UpdateAdminInstanceConfigurationRequest()
                         .displayName("Updated")
                         .defaultLocale("en-US")
@@ -140,7 +142,7 @@ class AdminOperationsControllerTest {
 
         // Act / Assert
         assertThatThrownBy(() -> controller.updateAdminInstanceConfiguration(
-                "church-prod",
+                "local-development",
                 new UpdateAdminInstanceConfigurationRequest()
                         .displayName("Stale")
                         .defaultLocale("en-US")
@@ -152,5 +154,42 @@ class AdminOperationsControllerTest {
                         .reason("stale update")))
                 .isInstanceOf(ResponseStatusException.class)
                 .hasMessageContaining("409 CONFLICT");
+    }
+
+    @Test
+    void doesNotExposeLocalFeatureFlagsForNonLocalInstances() {
+        // Arrange
+        AdminOperationsController controller = controller("church-prod");
+
+        // Act
+        var flags = controller.listAdminFeatureFlags("church-prod").getBody();
+
+        // Assert
+        assertThat(flags).isNotNull();
+        assertThat(flags.getFlags()).isEmpty();
+        assertThatThrownBy(() -> controller.previewAdminFeatureFlagChange(
+                "church-prod",
+                "admin-diagnostics",
+                new PreviewAdminFeatureFlagChangeRequest()
+                        .enabled(false)
+                        .expectedVersion(1L)
+                        .actorId("admin-1")
+                        .reason("not local")))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("501 NOT_IMPLEMENTED");
+    }
+
+    private static AdminOperationsController controller(String instanceId) {
+        InstanceConfiguration configuration = InstanceConfiguration.localDevelopment(
+                instanceId,
+                "local",
+                "bucket",
+                instanceId,
+                "key",
+                "cache",
+                "events",
+                List.of("events.audit-events"));
+        AdminOperationsService service = new AdminOperationsService(new StaticInstanceConfigurationProvider(configuration));
+        return new AdminOperationsController(instanceId, service);
     }
 }
