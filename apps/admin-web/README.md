@@ -11,7 +11,7 @@ The admin web package is a separate React + Vite single-page application for ADR
 - `npm run lint -w @cadentia/admin-web` - TypeScript lint gate for the scaffold.
 - `npm run typecheck -w @cadentia/admin-web` - explicit TypeScript check.
 - `npm run preview -w @cadentia/admin-web` - preview the built static artifact.
-- `npm run smoke -w @cadentia/admin-web` - verify `dist/index.html`, `dist/admin-build.json`, and `dist/admin-health.json`.
+- `npm run smoke -w @cadentia/admin-web` - verify `dist/index.html`, `dist/admin-build.json`, and `dist/admin-health.json`. Set `CADENTIA_ADMIN_STRICT_SMOKE=true` for promotion checks that must reject missing API-base-url configuration or local build metadata.
 - `npm run generate:client -w @cadentia/admin-web` - regenerate documented route artifacts from the aggregate OpenAPI entrypoint.
 - `npm run generate:client:check -w @cadentia/admin-web` - fail CI when generated client artifacts drift from the OpenAPI entrypoint.
 
@@ -33,7 +33,7 @@ All values are supplied per church instance by deployment tooling. Do not commit
 
 The v1 artifact is a static SPA in `dist/`. The preferred ADR-036/ADR-022-compatible hosting model is separately hosted static assets behind the same identity provider and church-instance deployment boundary as the API. Operators may reverse-proxy the assets under the API origin later, but the UI must continue to consume only documented OpenAPI routes through `VITE_CADENTIA_API_BASE_URL`.
 
-Smoke tests verify `admin-build.json` for bundle version and API-base-url configuration status, `admin-health.json` for static availability, and `index.html` for SPA availability. CI also runs the generated-client drift check against the aggregate OpenAPI entrypoint and `mvn -pl apps/api -DskipTests generate-sources` after API/OpenAPI changes.
+Smoke tests verify `admin-build.json` for bundle version, commit, timestamp, API-base-url configuration status, and diagnostics status; `admin-health.json` for static availability; and `index.html` for SPA availability. CI runs non-strict smoke to validate the bundle shape, while promotion pipelines should set `CADENTIA_ADMIN_STRICT_SMOKE=true`. CI also runs the generated-client drift check against the aggregate OpenAPI entrypoint and `mvn -pl apps/api -DskipTests generate-sources` after API/OpenAPI changes.
 
 ## Shared admin UI foundations
 
