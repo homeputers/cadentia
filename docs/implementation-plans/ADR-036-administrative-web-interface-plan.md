@@ -14,28 +14,111 @@ backend API, RBAC, provenance rules, and audit trail authoritative.
 
 ## Status
 
-Overall status: Planned.
+Overall status: In progress.
 
 - Subtask 1: Complete - admin web application architecture, framework decision,
   package scaffolding, and deployment contract.
-- Subtask 2: Planned - OpenAPI-first API gap closure and generated typed client
+- Subtask 2: In progress - OpenAPI-first API gap closure and generated typed client
   workflow.
-- Subtask 3: Planned - authentication, authorization, role-aware routing, and
+- Subtask 3: In progress - authentication, authorization, role-aware routing, and
   permission-state UX.
-- Subtask 4: Planned - shared admin layout, design system, accessibility,
+- Subtask 4: In progress - shared admin layout, design system, accessibility,
   loading, empty, and error states.
-- Subtask 5: Planned - import candidate queues, filtering, sorting, and triage
+- Subtask 5: In progress - import candidate queues, filtering, sorting, and triage
   summaries.
-- Subtask 6: Planned - candidate detail, provenance, parser evidence, review
+- Subtask 6: In progress - candidate detail, provenance, parser evidence, review
   notes, and review history.
-- Subtask 7: Planned - duplicate comparison, merge decisions, approval actions,
+- Subtask 7: In progress - duplicate comparison, merge decisions, approval actions,
   and moderation flag workflows.
-- Subtask 8: Planned - audit history, rollback preview, rollback execution, and
+- Subtask 8: In progress - audit history, rollback preview, rollback execution, and
   high-risk confirmation flows.
-- Subtask 9: Planned - recommendation diagnostics, operational configuration,
+- Subtask 9: In progress - recommendation diagnostics, operational configuration,
   feature flags, and safe deferred screens.
-- Subtask 10: Planned - testing, CI, deployment, runbook updates, smoke tests,
+- Subtask 10: In progress - testing, CI, deployment, runbook updates, smoke tests,
   and rollout controls.
+
+## Batch Policy
+
+ADR-036 implementation will proceed in small reviewable batches. Each batch
+should target no more than roughly 1,500 changed lines, including tests and
+documentation, unless the team explicitly approves a larger mechanical
+generated-artifact change. API behavior changes must remain OpenAPI-first:
+update the split OpenAPI contract, regenerate or verify generated artifacts,
+then implement backend and frontend behavior.
+
+## Current Implementation Snapshot
+
+Implemented foundations:
+
+- `apps/admin-web` is a React + Vite static SPA with documented build, test,
+  typecheck, accessibility, smoke, preview, and generated-client commands.
+- Runtime configuration, build metadata, deployment smoke metadata, and the
+  operations runbook are documented.
+- The admin shell bootstraps `/admin/session`, handles missing church-instance,
+  unauthenticated, expired, forbidden, disabled-feature, and general failure
+  states, and renders capability-aware navigation.
+- Shared UI components cover breadcrumbs, page headers, filter panels, semantic
+  tables, badges, audit-reference links, diff panels, confirmation dialogs,
+  support/debug metadata, form validation, and redacted state panels.
+- Import queue, candidate detail, audit/rollback, diagnostics, and instance
+  settings routes exist and use documented admin API paths.
+- Tests cover environment parsing, session bootstrap, permissions, API client
+  headers, generated route drift, accessibility foundations, import queue,
+  candidate detail, audit/rollback, operational surfaces, and shared UI states.
+- CI builds and tests the admin package, checks generated-client drift, verifies
+  OpenAPI generation, and runs backend tests.
+
+Known implementation gaps:
+
+- The frontend client wrapper is typed and OpenAPI-route-aware, but it is not a
+  fully generated operation-specific TypeScript client.
+- Several operational endpoints currently return scaffolded placeholder data
+  instead of persisted backend state.
+- Some high-risk workflows render confirmation and mutation surfaces, but need
+  fuller failure-path handling and backend-backed allowed-action tests.
+- End-to-end browser tests are not yet present; current coverage is component,
+  unit, contract, accessibility, and backend integration tests.
+- Feature-flag preview and confirmation APIs are specified, but the UI does not
+  yet expose the preview/confirm workflow.
+- Connector, bot-channel, scoring-profile, background-job, and broader
+  operations-console screens remain deferred until their APIs are implemented.
+
+## API Gap Matrix
+
+| ADR-036 workflow | Current API status | UI status | Gap / next action |
+| --- | --- | --- | --- |
+| Session bootstrap and capability discovery | Existing: `GET /admin/session` | Implemented in shell bootstrap | Expand production identity-provider integration beyond local Basic-auth development wiring. |
+| Role-aware navigation and permission states | Existing session capability schema | Implemented for route visibility and common permission states | Add more role-boundary tests as workflows mature. |
+| Import candidate queue | Existing: `GET /admin/import-candidates` with filters, sort, and pagination | Implemented with URL-addressable filters and safe summaries | Validate against real seeded data and add any missing server filters OpenAPI-first. |
+| Candidate detail | Existing: `GET /admin/import-candidates/{candidateId}` | Implemented detail view for provenance, parser evidence, notes, history, duplicate, approval, and moderation sections | Improve stale-version and validation failure rendering around mutations. |
+| Reviewer note creation | Existing: `POST /admin/import-candidates/{candidateId}/notes` | Implemented with actor and `If-Match` context | Add backend-backed failure fixtures for 409/validation paths. |
+| Duplicate comparison | Existing in candidate detail plus `GET /admin/import-candidates/{candidateId}/duplicates` | Rendered from detail response | Decide whether a dedicated duplicate route is needed or detail route remains sufficient for v1. |
+| Merge decisions | Existing: `POST /admin/import-candidates/{candidateId}/merge-decisions` | Implemented basic confirmed mutation | Add fuller allowed-action gating and backend validation failure states. |
+| Approval actions and reversals | Existing: `POST /admin/import-candidates/{candidateId}/approval-actions` | Implemented basic confirmed mutation | Add role-boundary tests for doctrinal and musical reviewer variants. |
+| Moderation flags | Existing: create, assign, resolve, and escalate endpoints | Create/view support is implemented in candidate detail; assign/resolve/escalate UI is deferred | Add moderation flag management batch for assign, resolve, escalate, and failure states. |
+| Candidate audit history | Existing: `GET /admin/import-candidates/{candidateId}/audit-history` | Related audit references render; global audit route implemented | Add candidate-local audit history panel if needed for ADR-011 workflows. |
+| Global audit search | Existing: `GET /admin/audit-events` | Implemented search filters and redacted table | Add deeper audit-event detail view only if the API returns a safe detail shape. |
+| Rollback preview | Existing: `POST /admin/rollback-previews` | Implemented preview form and impact rendering | Harden blocked preview and stale-preview UX. |
+| Rollback execution | Existing: `POST /admin/rollbacks` | Implemented exact request-ID confirmation | Add explicit 400/403/409/412/5xx tests and copy. |
+| Diagnostics | Existing: `GET /admin/diagnostics` | Implemented feature-flag and capability-gated diagnostics view | Replace scaffolded backend diagnostics with persisted/observed recommendation diagnostics when available. |
+| Instance configuration | Existing: `GET/PUT /admin/instance-configuration` | Implemented read/edit flow with actor, version, and ETag context | Clarify which fields are truly editable and connect to persisted instance configuration. |
+| Feature flags | Existing: list, preview, and confirm endpoints | List is rendered in settings; preview/confirm UI is deferred | Add feature-flag preview/confirm batch with high-risk confirmation. |
+| Connectors, bot channels, scoring profiles, background jobs | Deferred / not fully specified for ADR-036 v1 | Deferred placeholders only | Define API contracts OpenAPI-first in later operations-console batches. |
+
+## Proposed Batches
+
+1. Documentation reconciliation and API-gap matrix. Keep this batch
+   documentation-only and use it to anchor follow-up implementation scope.
+2. Moderation workflow completion: assign, resolve, escalate, role boundaries,
+   and failure states using existing OpenAPI endpoints.
+3. Rollback and audit hardening: stale preview, forbidden/conflict/server-error
+   paths, and candidate-local audit history if still needed.
+4. Feature-flag operations UI: preview, confirmation, blockers, audit
+   references, and concurrency context.
+5. Backend persistence pass for scaffolded admin operations where current
+   endpoints return placeholder diagnostics, settings, or feature-flag data.
+6. End-to-end smoke tests for authenticated route bootstrap, import queue,
+   candidate detail, audit/rollback, settings, and non-leaky unauthorized paths.
 
 ## Guiding Principles
 
