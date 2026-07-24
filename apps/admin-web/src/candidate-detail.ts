@@ -40,6 +40,7 @@ export type ApprovalState = { requiredTypes: string[]; statuses: Array<{ type: s
 export type ModerationFlag = { id: string; scope?: string | null; type?: string | null; reason?: string | null; status: string; eligibilityImpactPolicy?: string | null; openedBy?: string | null; assignedTo?: string | null; resolutionNotes?: string | null; auditReferenceId?: string | null };
 export type ReviewNote = { noteId: string; authorId: string; authorDisplayName?: string | null; category?: string | null; body: string; createdAt: string; auditReferenceId?: string | null };
 export type ReviewHistoryItem = { id: string; proposedDuplicateMatchId?: string | null; decision: string; reviewer: string; reviewNotes?: string | null; reviewedAt: string };
+export type AuditHistoryItem = { id: string; entityId: string; entityType: string; action: string; actor: string; occurredAt: string; reason?: string | null; beforeState?: Record<string, unknown> | null; afterState?: Record<string, unknown> | null };
 export type CreateReviewNoteRequest = { actor: string; category?: string; body: string };
 export type MergeDecisionRequest = { actor: string; decision: string; duplicateMatchId?: string; fieldSelections?: Record<string, 'CANDIDATE' | 'EXISTING'>; rationale: string };
 export type ApprovalActionRequest = { actor: string; approvalType: string; action: string; rationale: string };
@@ -52,6 +53,9 @@ const candidatePath = (candidateId: string, suffix = '') => `/admin/import-candi
 
 export const getCandidateDetail = (client: AdminApiClient, candidateId: string) =>
     client.request<CandidateDetail>(candidatePath(candidateId));
+
+export const getCandidateAuditHistory = (client: AdminApiClient, candidateId: string) =>
+    client.request<AuditHistoryItem[]>(candidatePath(candidateId, '/audit-history'));
 
 export const createCandidateReviewNote = (client: AdminApiClient, candidateId: string, request: CreateReviewNoteRequest, actorId: string, etag: string) =>
     client.request<ReviewNote>(candidatePath(candidateId, '/notes'), {

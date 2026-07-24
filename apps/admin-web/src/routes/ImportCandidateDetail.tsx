@@ -3,15 +3,22 @@ import { hasCapability } from '../auth/permissions';
 import type { AdminSession } from '../auth/session';
 import { adminEnvironment } from '../config/environment';
 import { createAdminApiClient, type AdminApiClient, type AdminApiError } from '../generated/cadentia-api/client';
-import { assignModerationFlag, createCandidateReviewNote, escalateModerationFlag, getCandidateDetail, hasVisibleWarnings, openModerationFlag, resolveModerationFlag, safeParserEvidence, submitApprovalAction, submitMergeDecision, type CandidateDetail, type ModerationFlag } from '../candidate-detail';
+import { assignModerationFlag, createCandidateReviewNote, escalateModerationFlag, getCandidateAuditHistory, getCandidateDetail, hasVisibleWarnings, openModerationFlag, resolveModerationFlag, safeParserEvidence, submitApprovalAction, submitMergeDecision, type AuditHistoryItem, type CandidateDetail, type ModerationFlag } from '../candidate-detail';
 import { ActionBadge, AuditReferenceLink, Badge, Breadcrumbs, ConfirmationDialog, DataTable, DiffPanel, Field, PageHeader, StatePanel, redactSensitiveError } from './admin-ui';
 
 const label = (value?: string | null) => value ? value.replaceAll('_', ' ').toLowerCase().replace(/^./, (c) => c.toUpperCase()) : 'None';
 const severityFor = (value?: string | null) => value === 'BLOCKED' || value === 'ERROR' || value === 'HIGH' || value === 'REJECTED' ? 'danger' : value === 'READY' || value === 'VERIFIED' || value === 'CLEAR' ? 'success' : value === 'NONE' ? 'neutral' : 'warning';
 const pct = (value?: number | null) => typeof value === 'number' && Number.isFinite(value) ? `${Math.round(value * 100)}%` : 'n/a';
+const summarizeStateKeys = (state?: Record<string, unknown> | null) => {
+    const keys = Object.keys(state ?? {});
+    return keys.length ? keys.sort().join(', ') : 'No state fields returned';
+};
 
 export const ImportCandidateDetail = ({ session, candidateId, apiClient = createAdminApiClient({ environment: adminEnvironment, getAccessToken: async () => null }) }: { session: AdminSession; candidateId: string; apiClient?: AdminApiClient }) => {
     const [detail, setDetail] = useState<CandidateDetail | null>(null);
+    const [auditHistory, setAuditHistory] = useState<AuditHistoryItem[]>([]);
+    const [auditState, setAuditState] = useState<'loading' | 'ready' | 'empty' | 'error'>('loading');
+    const [auditError, setAuditError] = useState('');
     const [state, setState] = useState<'loading' | 'ready' | 'unauthorized' | 'forbidden' | 'stale' | 'error'>('loading');
     const [error, setError] = useState('');
     const [noteBody, setNoteBody] = useState('');
@@ -45,7 +52,22 @@ export const ImportCandidateDetail = ({ session, candidateId, apiClient = create
         }
     };
 
-    useEffect(() => { void load(); }, [candidateId]);
+    const loadAuditHistory = async () => {
+        setAuditState('loading');
+        setAuditError('');
+        try {
+            const response = await getCandidateAuditHistory(apiClient, candidateId);
+            const items = Array.isArray(response) ? response : [];
+            setAuditHistory(items);
+            setAuditState(items.length ? 'ready' : 'empty');
+        } catch (caught) {
+            const apiError = caught as AdminApiError;
+            setAuditError(redactSensitiveError(apiError.message));
+            setAuditState('error');
+        }
+    };
+
+    useEffect(() => { void load(); void loadAuditHistory(); }, [candidateId]);
 
     const addNote = async (event: FormEvent) => {
         event.preventDefault();
@@ -69,7 +91,7 @@ export const ImportCandidateDetail = ({ session, candidateId, apiClient = create
     const canOpenFlag = detail?.allowedActions.includes('OPEN_MODERATION_FLAG') && hasCapability(session, 'REVIEW_CATALOG');
     const canManageModeration = hasCapability(session, 'MANAGE_MODERATION');
     const handleActionError = (caught: unknown) => { const apiError = caught as AdminApiError; setActionState(apiError.status === 409 || apiError.status === 412 ? 'stale' : apiError.status === 403 ? 'forbidden' : 'error'); };
-    const confirmAndRun = async () => { if (!pendingAction) return; setActionState('saving'); try { await pendingAction.run(); setPendingAction(null); setActionState('idle'); await load(); } catch (caught) { handleActionError(caught); setPendingAction(null); } };
+    const confirmAndRun = async () => { if (!pendingAction) return; setActionState('saving'); try { await pendingAction.run(); setPendingAction(null); setActionState('idle'); await load(); await loadAuditHistory(); } catch (caught) { handleActionError(caught); setPendingAction(null); } };
     const replaceModerationFlag = (flag: ModerationFlag) => {
         if (!detail) return;
         setDetail({ ...detail, moderationFlags: (detail.moderationFlags ?? []).map((current) => current.id === flag.id ? flag : current) });
@@ -101,6 +123,7 @@ export const ImportCandidateDetail = ({ session, candidateId, apiClient = create
 
                 <section className="admin-shell__panel" aria-labelledby="notes-title"><h2 id="notes-title">Reviewer notes (not approved metadata)</h2>{canAddNotes && <form onSubmit={addNote}><Field label="Note category">{({ inputId }) => <select id={inputId} value={noteCategory} onChange={(e) => setNoteCategory(e.target.value)}><option>GENERAL</option><option>DOCTRINAL</option><option>MUSICAL</option><option>PROVENANCE</option></select>}</Field><Field label="Structured review note">{({ inputId }) => <textarea id={inputId} value={noteBody} onChange={(e) => setNoteBody(e.target.value)} maxLength={2000} />}</Field><button type="submit" disabled={noteState === 'saving'}>Add reviewer note</button>{noteState === 'stale' && <p role="alert">Candidate version is stale. Reload before adding the note.</p>}{noteState === 'error' && <p role="alert">Note could not be saved.</p>}</form>}{detail.reviewNotes.map((note) => <article key={note.noteId}><h3>{note.category ?? 'GENERAL'} note by {note.authorDisplayName ?? note.authorId}</h3><p>{note.body}</p><small>{note.createdAt} {note.auditReferenceId && <AuditReferenceLink auditId={note.auditReferenceId} />}</small></article>)}</section>
                 <section className="admin-shell__panel" aria-labelledby="history-title"><h2 id="history-title">Review history and audit references</h2><DataTable caption="Review history" columns={['Decision', 'Reviewer', 'Reviewed', 'Notes']} rows={detail.reviewHistory.map((item) => [label(item.decision), item.reviewer, item.reviewedAt, item.reviewNotes ?? 'No note'])} />{detail.relatedAuditReferences?.map((auditId) => <p key={auditId}><AuditReferenceLink auditId={auditId} /></p>)}</section>
+                <section className="admin-shell__panel" aria-labelledby="candidate-audit-title"><h2 id="candidate-audit-title">Candidate audit history</h2><StatePanel state={auditState} title="Candidate audit history" onRetry={() => void loadAuditHistory()}>{auditError && <p>{auditError}</p>}<DataTable caption="Candidate audit events" columns={['Audit reference', 'Action', 'Actor', 'Occurred', 'Reason', 'State fields']} rows={auditHistory.map((item) => [<AuditReferenceLink auditId={item.id} />, label(item.action), item.actor, item.occurredAt, item.reason ?? 'No reason returned', `${summarizeStateKeys(item.beforeState)} → ${summarizeStateKeys(item.afterState)}`])} /></StatePanel></section>
             </>}
             <ConfirmationDialog open={Boolean(pendingAction)} title={pendingAction?.label ?? 'Confirm action'} acknowledgement="This action can affect publication or recommendation eligibility and will be audited." facts={pendingAction?.consequences.length ? pendingAction.consequences : ['Backend will validate allowed actions, blockers, actor attribution, and stale versions.']} auditActor={session.actorId} versionContext={detail ? `If-Match: ${detail.etag}; version ${detail.version}` : 'No version loaded'} onCancel={() => setPendingAction(null)} onConfirm={() => void confirmAndRun()} />
         </main>
