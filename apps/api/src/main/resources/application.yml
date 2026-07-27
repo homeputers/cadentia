@@ -30,6 +30,8 @@ cadentia:
 
   instance:
     id: ${CADENTIA_INSTANCE_ID:local-development}
+  auth:
+    provider: ${CADENTIA_AUTH_PROVIDER:local}
   local-admin:
     username: ${CADENTIA_LOCAL_ADMIN_USERNAME:user}
     password: ${CADENTIA_LOCAL_ADMIN_PASSWORD:cadentia}
