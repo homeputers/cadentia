@@ -14,7 +14,7 @@ describe('admin permission presentation helpers', () => {
     it('shows catalog editor import review and catalog review action', () => {
         const catalogEditor = session(['CATALOG_EDITOR'], ['VIEW_IMPORT_QUEUE', 'REVIEW_CATALOG', 'MANAGE_MODERATION', 'VIEW_AUDIT']);
 
-        expect(visibleRoutes(catalogEditor, []).map((route) => route.href)).toEqual(['/admin/imports', '/admin/audit']);
+        expect(visibleRoutes(catalogEditor, []).map((route) => route.href)).toEqual(['/admin/song-imports', '/admin/imports', '/admin/audit']);
         expect(canRenderAction(catalogEditor, 'REVIEW_CATALOG')).toBe(true);
         expect(canAccessRoute(catalogEditor, [], '/admin/imports/candidate-1')).toBe(true);
         expect(canAccessRoute(catalogEditor, [], '/admin/settings')).toBe(false);
@@ -23,7 +23,7 @@ describe('admin permission presentation helpers', () => {
     it('shows doctrinal reviewer review action without admin settings', () => {
         const doctrinalReviewer = session(['DOCTRINAL_REVIEWER'], ['VIEW_IMPORT_QUEUE', 'REVIEW_CATALOG']);
 
-        expect(visibleRoutes(doctrinalReviewer, []).map((route) => route.href)).toEqual(['/admin/imports']);
+        expect(visibleRoutes(doctrinalReviewer, []).map((route) => route.href)).toEqual(['/admin/song-imports', '/admin/imports']);
         expect(canRenderAction(doctrinalReviewer, 'MANAGE_INSTANCE_CONFIGURATION')).toBe(false);
         expect(canAccessRoute(doctrinalReviewer, [], '/admin/audit')).toBe(false);
     });

@@ -1,9 +1,14 @@
 package com.cadentia.api.controller;
 
 import com.cadentia.catalog.entity.ApprovalRecord;
+import com.cadentia.catalog.entity.ImportCandidate;
 import com.cadentia.catalog.entity.ImportCandidateReview;
 import com.cadentia.catalog.entity.ProposedDuplicateMatch;
+import com.cadentia.catalog.model.ApprovalStatus;
 import com.cadentia.catalog.model.ApprovalType;
+import com.cadentia.catalog.model.ImportCandidateReviewDecision;
+import com.cadentia.catalog.model.ImportCandidateStatus;
+import com.cadentia.catalog.model.LicenseType;
 import com.cadentia.generated.api.AdminReviewApi;
 import com.cadentia.generated.model.AdminApprovalState;
 import com.cadentia.generated.model.AdminApprovalStateStatusesInner;
@@ -14,20 +19,27 @@ import com.cadentia.generated.model.AdminDuplicateSummary;
 import com.cadentia.generated.model.AdminImportCandidateDetailResponse;
 import com.cadentia.generated.model.AdminImportCandidateQueueItem;
 import com.cadentia.generated.model.AdminImportCandidateQueueResponse;
+import com.cadentia.generated.model.AdminManualSongImportRequest;
 import com.cadentia.generated.model.AdminParserEvidence;
 import com.cadentia.generated.model.AdminProvenanceReference;
 import com.cadentia.generated.model.AdminReviewHistoryItem;
 import com.cadentia.generated.model.AdminReviewNote;
+import com.cadentia.generated.model.AdminSongImportCandidateSummary;
+import com.cadentia.generated.model.AdminSongImportMethod;
+import com.cadentia.generated.model.AdminSongImportResponse;
+import com.cadentia.generated.model.AdminSongImportValidationError;
+import com.cadentia.generated.model.AdminSongLicenseType;
+import com.cadentia.generated.model.AdminSongResource;
 import com.cadentia.generated.model.AllowedImportCandidateAction;
 import com.cadentia.generated.model.ApprovalActionRequest;
 import com.cadentia.generated.model.ApprovalReadiness;
 import com.cadentia.generated.model.AssignModerationFlagRequest;
+import com.cadentia.generated.model.CommitMergeRequest;
 import com.cadentia.generated.model.CreateAdminReviewNoteRequest;
 import com.cadentia.generated.model.CreateRollbackPreviewRequest;
 import com.cadentia.generated.model.DuplicateConfidence;
 import com.cadentia.generated.model.EscalateModerationFlagRequest;
 import com.cadentia.generated.model.ExecuteRollbackRequest;
-import com.cadentia.generated.model.ImportCandidateStatus;
 import com.cadentia.generated.model.ModerationFlagResponse;
 import com.cadentia.generated.model.ModerationFlagStatus;
 import com.cadentia.generated.model.ModerationState;
@@ -43,8 +55,14 @@ import com.cadentia.generated.model.RollbackPreviewResponse;
 import com.cadentia.scraperadmin.AdminAuditEvent;
 import com.cadentia.scraperadmin.AdminImportCandidateDetail;
 import com.cadentia.scraperadmin.AdminImportReviewService;
+import com.cadentia.scraperadmin.AdminSongImportService;
+import com.cadentia.scraperadmin.AdminSongImportService.AdminSongImportResult;
+import com.cadentia.scraperadmin.AdminSongImportService.CsvSongImportCommand;
+import com.cadentia.scraperadmin.AdminSongImportService.ManualSongImportCommand;
+import com.cadentia.scraperadmin.AdminSongImportService.SongResource;
 import com.cadentia.scraperadmin.ApplyApprovalActionCommand;
 import com.cadentia.scraperadmin.ApprovalReviewAction;
+import com.cadentia.scraperadmin.MergeIntoExistingSongCommand;
 import com.cadentia.scraperadmin.ModerationFlag;
 import com.cadentia.scraperadmin.ModerationFlagSeverity;
 import com.cadentia.scraperadmin.ModerationFlagType;
@@ -54,12 +72,17 @@ import com.cadentia.scraperadmin.RollbackTargetType;
 import com.cadentia.scraperadmin.StructuredReviewNote;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -67,17 +90,23 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 public class AdminImportCandidateController implements AdminReviewApi {
 
     private final AdminImportReviewService reviewService;
+    private final AdminSongImportService songImportService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    public AdminImportCandidateController(AdminImportReviewService reviewService) {
+    public AdminImportCandidateController(
+            AdminImportReviewService reviewService,
+            AdminSongImportService songImportService) {
         this.reviewService = reviewService;
+        this.songImportService = songImportService;
     }
 
     @Override
@@ -121,9 +150,58 @@ public class AdminImportCandidateController implements AdminReviewApi {
     }
 
     @Override
+    @PreAuthorize("hasAnyAuthority(T(com.cadentia.api.security.RbacAuthorities).ROLE_CATALOG_EDITOR, T(com.cadentia.api.security.RbacAuthorities).ROLE_ADMIN)")
+    public ResponseEntity<AdminSongImportResponse> createAdminManualSongImport(
+            @RequestBody AdminManualSongImportRequest request) {
+        AdminSongImportResult result = songImportService.importManualSong(new ManualSongImportCommand(
+                request.getActor(),
+                request.getTitle(),
+                request.getAuthor(),
+                request.getArtist(),
+                request.getCcliNumber(),
+                request.getCopyright(),
+                request.getPublisher(),
+                request.getLanguage(),
+                request.getKey(),
+                request.getBpm(),
+                request.getTimeSignature(),
+                request.getEnergy(),
+                request.getDifficulty(),
+                request.getThemes(),
+                request.getScriptureReferences(),
+                request.getLyrics(),
+                request.getChordChart(),
+                request.getArrangementNotes(),
+                request.getSourceReference(),
+                LicenseType.valueOf(request.getLicenseType().getValue()),
+                request.getLicenseEvidence(),
+                request.getResources().stream().map(AdminImportCandidateController::toSongResource).toList()));
+        return ResponseEntity.status(HttpStatus.CREATED).body(toSongImportResponse(result));
+    }
+
+    @Override
+    @PreAuthorize("hasAnyAuthority(T(com.cadentia.api.security.RbacAuthorities).ROLE_CATALOG_EDITOR, T(com.cadentia.api.security.RbacAuthorities).ROLE_ADMIN)")
+    public ResponseEntity<AdminSongImportResponse> createAdminCsvSongImport(
+            @RequestParam String actor,
+            @RequestPart MultipartFile file,
+            @RequestParam AdminSongLicenseType licenseType,
+            @RequestParam(required = false) String licenseEvidence) {
+        if (file == null || file.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "CSV file is required");
+        }
+        AdminSongImportResult result = songImportService.importCsv(new CsvSongImportCommand(
+                actor,
+                readCsvFile(file),
+                file.getOriginalFilename(),
+                LicenseType.valueOf(licenseType.getValue()),
+                licenseEvidence));
+        return ResponseEntity.status(HttpStatus.CREATED).body(toSongImportResponse(result));
+    }
+
+    @Override
     @PreAuthorize("hasAnyAuthority(T(com.cadentia.api.security.RbacAuthorities).ROLE_CATALOG_EDITOR, T(com.cadentia.api.security.RbacAuthorities).ROLE_DOCTRINAL_REVIEWER, T(com.cadentia.api.security.RbacAuthorities).ROLE_MUSICAL_REVIEWER, T(com.cadentia.api.security.RbacAuthorities).ROLE_ADMIN)")
     public ResponseEntity<AdminImportCandidateQueueResponse> listAdminImportCandidates(
-            @RequestParam(required = false) ImportCandidateStatus status,
+            @RequestParam(required = false) com.cadentia.generated.model.ImportCandidateStatus status,
             @RequestParam(required = false) String connectorKey,
             @RequestParam(required = false) UUID batchId,
             @RequestParam(required = false) LocalDate submittedFrom,
@@ -137,40 +215,52 @@ public class AdminImportCandidateController implements AdminReviewApi {
             @RequestParam(required = false) String sort,
             @RequestParam(required = false, defaultValue = "1") Integer page,
             @RequestParam(required = false, defaultValue = "25") Integer pageSize) {
-        List<AdminImportCandidateQueueItem> items = batchId == null
-                ? List.of()
-                : reviewService.findCandidatesForBatch(
-                        batchId,
-                        status == null ? null : com.cadentia.catalog.model.ImportCandidateStatus.valueOf(status.getValue()))
+        int safePage = page == null || page < 1 ? 1 : page;
+        int safePageSize = pageSize == null || pageSize < 1 ? 25 : Math.min(pageSize, 100);
+        ImportCandidateStatus domainStatus =
+                status == null ? null : ImportCandidateStatus.valueOf(status.getValue());
+        List<ImportCandidate> candidates = candidatesForQueue(
+                domainStatus,
+                batchId,
+                safePage,
+                safePageSize);
+        int totalItems = totalCandidatesForQueue(domainStatus, batchId, candidates);
+        List<AdminImportCandidateQueueItem> items = candidates
                 .stream()
-                .map(candidate -> new AdminImportCandidateQueueItem()
+                .skip(domainStatus == null || batchId != null ? (long) (safePage - 1) * safePageSize : 0L)
+                .limit(safePageSize)
+                .map(candidate -> {
+                    ProvenanceStatus candidateProvenanceStatus = provenanceStatusFor(candidate);
+                    ApprovalReadiness candidateApprovalReadiness = approvalReadinessFor(candidate);
+                    return new AdminImportCandidateQueueItem()
                         .candidateId(candidate.id())
                         .importBatchId(candidate.importBatchId())
                         .connectorKey("import")
                         .rawTitle(candidate.rawTitle())
                         .normalizedTitle(candidate.normalizedTitle())
                         .sourceArtistName(candidate.sourceArtistName())
-                        .status(ImportCandidateStatus.fromValue(candidate.status().name()))
+                        .status(com.cadentia.generated.model.ImportCandidateStatus.fromValue(candidate.status().name()))
                         .submittedAt(OffsetDateTime.ofInstant(candidate.createdAt(), ZoneOffset.UTC))
                         .updatedAt(OffsetDateTime.ofInstant(candidate.updatedAt(), ZoneOffset.UTC))
                         .parserSeverity(ParserSeverity.NONE)
                         .parserWarningCount(0)
-                        .provenanceStatus(ProvenanceStatus.NEEDS_REVIEW)
+                        .provenanceStatus(candidateProvenanceStatus)
+                        .provenanceSummary(provenanceSummaryFor(candidate, candidateProvenanceStatus))
                         .duplicateConfidence(DuplicateConfidence.NONE)
                         .duplicateMatchCount(0)
                         .moderationState(ModerationState.CLEAR)
                         .reviewPriority(ReviewPriority.NORMAL)
-                        .approvalReadiness(ApprovalReadiness.NEEDS_REVIEW)
-                        .allowedActions(List.of(AllowedImportCandidateAction.VIEW_DETAIL)))
+                        .approvalReadiness(candidateApprovalReadiness)
+                        .readinessSummary(readinessSummaryFor(candidate, candidateApprovalReadiness))
+                        .allowedActions(List.of(AllowedImportCandidateAction.VIEW_DETAIL));
+                })
                 .toList();
-        int safePage = page == null || page < 1 ? 1 : page;
-        int safePageSize = pageSize == null || pageSize < 1 ? 25 : pageSize;
         AdminImportCandidateQueueResponse response = new AdminImportCandidateQueueResponse()
                 .items(items)
                 .page(safePage)
                 .pageSize(safePageSize)
-                .totalItems(items.size())
-                .totalPages(items.isEmpty() ? 0 : 1)
+                .totalItems(totalItems)
+                .totalPages(totalItems == 0 ? 0 : (int) Math.ceil((double) totalItems / safePageSize))
                 .sort(sort == null || sort.isBlank() ? "updatedAt:desc" : sort);
         return ResponseEntity.ok(response);
     }
@@ -230,6 +320,23 @@ public class AdminImportCandidateController implements AdminReviewApi {
                 request.getActor(),
                 request.getDecision().getValue(),
                 request.getDuplicateMatchId(),
+                request.getRationale());
+        return ResponseEntity.ok(toDetail(reviewService.getCandidateDetail(candidateId)));
+    }
+
+    @Override
+    @PreAuthorize("hasAnyAuthority(T(com.cadentia.api.security.RbacAuthorities).ROLE_CATALOG_EDITOR, T(com.cadentia.api.security.RbacAuthorities).ROLE_ADMIN, 'catalog.admin.review', 'catalog.admin.approve')")
+    public ResponseEntity<AdminImportCandidateDetailResponse> commitAdminImportCandidateMerge(
+            @PathVariable UUID candidateId,
+            @RequestHeader("If-Match") String ifMatch,
+            @RequestBody CommitMergeRequest request) {
+        requireFreshCandidate(candidateId, ifMatch);
+        reviewService.commitCandidateMerge(
+                candidateId,
+                request.getActor(),
+                request.getAction().getValue(),
+                request.getTargetSongId(),
+                selectedFields(request),
                 request.getRationale());
         return ResponseEntity.ok(toDetail(reviewService.getCandidateDetail(candidateId)));
     }
@@ -332,9 +439,58 @@ public class AdminImportCandidateController implements AdminReviewApi {
                 .auditEventId(result.auditEventId()));
     }
 
+    private static String readCsvFile(MultipartFile file) {
+        try {
+            return new String(file.getBytes(), StandardCharsets.UTF_8);
+        } catch (IOException ex) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unable to read uploaded CSV file", ex);
+        }
+    }
+
+    private List<ImportCandidate> candidatesForQueue(
+            ImportCandidateStatus status,
+            UUID batchId,
+            int page,
+            int pageSize) {
+        if (batchId != null) {
+            return filterDefaultQueueCandidates(reviewService.findCandidatesForBatch(batchId, status), status);
+        }
+        if (status != null) {
+            return reviewService.findCandidates(status, pageSize, (page - 1) * pageSize);
+        }
+        return filterDefaultQueueCandidates(reviewService.findCandidates(null, 10_000, 0), null);
+    }
+
+    private int totalCandidatesForQueue(
+            ImportCandidateStatus status,
+            UUID batchId,
+            List<ImportCandidate> currentCandidates) {
+        if (status != null && batchId == null) {
+            return reviewService.countCandidates(status);
+        }
+        return currentCandidates.size();
+    }
+
+    private List<ImportCandidate> filterDefaultQueueCandidates(
+            List<ImportCandidate> candidates,
+            ImportCandidateStatus status) {
+        if (status != null) {
+            return candidates;
+        }
+        return candidates.stream()
+                .filter(candidate -> !isCompletedQueueCandidate(candidate))
+                .toList();
+    }
+
+    private boolean isCompletedQueueCandidate(ImportCandidate candidate) {
+        return candidate.status() == ImportCandidateStatus.MERGED
+                && approvalReadinessFor(candidate) == ApprovalReadiness.READY
+                && provenanceStatusFor(candidate) == ProvenanceStatus.VERIFIED;
+    }
+
     private AdminImportCandidateDetailResponse toDetail(AdminImportCandidateDetail detail) {
         List<AdminReviewNote> reviewNotes = detail.reviewHistory().stream()
-                .filter(review -> review.decision() == com.cadentia.catalog.model.ImportCandidateReviewDecision.NEEDS_MORE_INFO)
+                .filter(review -> review.decision() == ImportCandidateReviewDecision.NEEDS_MORE_INFO)
                 .map(this::toReviewNote)
                 .toList();
         double topDuplicateScore = detail.duplicateMatches().stream()
@@ -360,7 +516,7 @@ public class AdminImportCandidateController implements AdminReviewApi {
                 .parserVersion(detail.parserVersion())
                 .parserConfidence(detail.parserConfidence())
                 .parserWarnings(detail.parserWarnings())
-                .status(ImportCandidateStatus.fromValue(detail.candidate().status().name()))
+                .status(com.cadentia.generated.model.ImportCandidateStatus.fromValue(detail.candidate().status().name()))
                 .allowedActions(allowedActions(detail))
                 .version(versionFor(detail))
                 .etag(etagFor(detail))
@@ -374,7 +530,7 @@ public class AdminImportCandidateController implements AdminReviewApi {
                         .label("import")
                         .sourceReference(sourceReferenceFor(detail))
                         .fingerprint(detail.candidate().lyricsHash())
-                        .status(ProvenanceStatus.NEEDS_REVIEW)))
+                        .status(provenanceStatusFor(detail.candidate()))))
                 .parserEvidence(new AdminParserEvidence()
                         .parserName(detail.parserName())
                         .parserVersion(detail.parserVersion())
@@ -401,48 +557,159 @@ public class AdminImportCandidateController implements AdminReviewApi {
         return detail;
     }
 
-    private static List<AllowedImportCandidateAction> allowedActions(AdminImportCandidateDetail detail) {
-        List<AllowedImportCandidateAction> actions = new java.util.ArrayList<>();
+    private static SongResource toSongResource(AdminSongResource resource) {
+        return new SongResource(
+                resource.getResourceType().getValue(),
+                resource.getTitle(),
+                resource.getUrl(),
+                resource.getAssetId(),
+                resource.getNotes());
+    }
+
+    private static AdminSongImportResponse toSongImportResponse(AdminSongImportResult result) {
+        List<AdminSongImportValidationError> validationErrors = result.validationErrors().stream()
+                .map(error -> new AdminSongImportValidationError()
+                        .rowIdentifier(error.candidateIdentifier())
+                        .field(error.field())
+                        .message(error.message()))
+                .toList();
+        return new AdminSongImportResponse()
+                .importBatchId(result.importBatchId())
+                .status(AdminSongImportResponse.StatusEnum.fromValue(result.status()))
+                .method(AdminSongImportMethod.fromValue(result.method().name()))
+                .acceptedCount(result.acceptedCount())
+                .validationErrorCount(validationErrors.size())
+                .candidateIds(result.candidateIds())
+                .candidates(result.candidates().stream()
+                        .map(candidate -> new AdminSongImportCandidateSummary()
+                                .candidateId(candidate.candidateId())
+                                .rawTitle(candidate.rawTitle())
+                                .normalizedTitle(candidate.normalizedTitle())
+                                .sourceArtistName(candidate.sourceArtistName())
+                                .status(com.cadentia.generated.model.ImportCandidateStatus.fromValue(candidate.status().name())))
+                        .toList())
+                .validationErrors(validationErrors);
+    }
+
+    private List<AllowedImportCandidateAction> allowedActions(AdminImportCandidateDetail detail) {
+        List<AllowedImportCandidateAction> actions = new ArrayList<>();
         actions.add(AllowedImportCandidateAction.VIEW_DETAIL);
         actions.add(AllowedImportCandidateAction.ADD_REVIEW_NOTE);
         actions.add(AllowedImportCandidateAction.OPEN_MODERATION_FLAG);
-        actions.add(AllowedImportCandidateAction.MERGE_DECISION_DEFER);
-        actions.add(AllowedImportCandidateAction.MERGE_DECISION_CREATE_NEW);
-        if (!detail.duplicateMatches().isEmpty()) {
-            actions.add(AllowedImportCandidateAction.MERGE_DECISION_MERGE_EXISTING);
-            actions.add(AllowedImportCandidateAction.MERGE_DECISION_REJECT_DUPLICATE);
+        if (detail.candidate().status() == ImportCandidateStatus.STAGED
+                || detail.candidate().status() == ImportCandidateStatus.DEDUPLICATION_REVIEW) {
+            actions.add(AllowedImportCandidateAction.MERGE_DECISION_DEFER);
+            actions.add(AllowedImportCandidateAction.MERGE_DECISION_CREATE_NEW);
+            if (!detail.duplicateMatches().isEmpty()) {
+                actions.add(AllowedImportCandidateAction.MERGE_DECISION_MERGE_EXISTING);
+                actions.add(AllowedImportCandidateAction.MERGE_DECISION_REJECT_DUPLICATE);
+            }
+            actions.add(AllowedImportCandidateAction.MERGE_DECISION_REJECT_NOT_PERMITTED);
         }
-        actions.add(AllowedImportCandidateAction.MERGE_DECISION_REJECT_NOT_PERMITTED);
         if (detail.candidate().mergedSongId() != null) {
-            actions.add(AllowedImportCandidateAction.SUBMIT_APPROVAL_ACTION);
-            actions.add(AllowedImportCandidateAction.REVERSE_APPROVAL);
+            List<ApprovalRecord> approvals = reviewService.findApprovalRecordsForSong(detail.candidate().mergedSongId());
+            if (!pendingApprovalTypes(approvals).isEmpty()) {
+                actions.add(AllowedImportCandidateAction.SUBMIT_APPROVAL_ACTION);
+            }
+            if (approvals.stream().anyMatch(record -> record.status() == ApprovalStatus.APPROVED)) {
+                actions.add(AllowedImportCandidateAction.REVERSE_APPROVAL);
+            }
+        } else if (detail.candidate().status() == ImportCandidateStatus.READY_TO_MERGE) {
+            actions.add(AllowedImportCandidateAction.COMMIT_MERGE);
         }
         return actions;
+    }
+
+    private static Set<MergeIntoExistingSongCommand.MergeField> selectedFields(CommitMergeRequest request) {
+        if (request.getSelectedFields() == null) {
+            return Set.of();
+        }
+        return request.getSelectedFields().stream()
+                .map(field -> MergeIntoExistingSongCommand.MergeField.valueOf(field.getValue()))
+                .collect(Collectors.toSet());
     }
 
     private AdminApprovalState approvalState(AdminImportCandidateDetail detail) {
         List<ApprovalRecord> approvals = detail.candidate().mergedSongId() == null
                 ? List.of()
                 : reviewService.findApprovalRecordsForSong(detail.candidate().mergedSongId());
+        List<String> requiredTypes = requiredApprovalTypes().stream().map(ApprovalType::name).toList();
         List<AdminApprovalStateStatusesInner> statuses = approvals.stream()
                 .map(record -> new AdminApprovalStateStatusesInner()
                         .type(record.approvalType().name())
                         .status(record.status().name())
                         .actor(record.reviewer()))
                 .toList();
+        List<String> pendingTypes = pendingApprovalTypes(approvals).stream().map(ApprovalType::name).toList();
         List<String> blockers = detail.candidate().mergedSongId() == null
                 ? List.of("Candidate must be merged before approval actions")
-                : approvals.stream().anyMatch(record -> record.status() == com.cadentia.catalog.model.ApprovalStatus.APPROVED)
+                : pendingTypes.isEmpty()
                         ? List.of()
-                        : List.of("At least one approved approval record is required for recommendation eligibility");
+                        : List.of("Pending catalog approvals: " + String.join(", ", pendingTypes));
         return new AdminApprovalState()
-                .requiredTypes(List.of(ApprovalType.EDITORIAL.name(), ApprovalType.DOCTRINAL.name()))
+                .requiredTypes(requiredTypes)
                 .statuses(statuses)
                 .blockers(blockers)
-                .allowedTransitions(List.of("APPROVE", "REJECT_APPROVAL", "REVERSE_APPROVAL"))
+                .allowedTransitions(pendingTypes.isEmpty() ? List.of("REVERSE_APPROVAL") : List.of("APPROVE", "REJECT_APPROVAL", "REVERSE_APPROVAL"))
                 .eligibilityImpact(blockers.isEmpty()
                         ? "Backend approval gates may permit recommendation eligibility when provenance and moderation also pass."
                         : "Backend approval gates currently block recommendation eligibility.");
+    }
+
+    private ProvenanceStatus provenanceStatusFor(ImportCandidate candidate) {
+        if (candidate.mergedSongId() == null) {
+            return ProvenanceStatus.NEEDS_REVIEW;
+        }
+        return reviewService.findProvenanceRecordsForSong(candidate.mergedSongId()).isEmpty()
+                ? ProvenanceStatus.NEEDS_REVIEW
+                : ProvenanceStatus.VERIFIED;
+    }
+
+    private String provenanceSummaryFor(
+            ImportCandidate candidate,
+            ProvenanceStatus provenanceStatus) {
+        if (provenanceStatus == ProvenanceStatus.VERIFIED) {
+            return "Reviewed import provenance captured during catalog commit.";
+        }
+        return candidate.mergedSongId() == null
+                ? "Commit the candidate to capture catalog provenance."
+                : "No catalog provenance record was found for the merged song.";
+    }
+
+    private ApprovalReadiness approvalReadinessFor(ImportCandidate candidate) {
+        if (candidate.mergedSongId() == null) {
+            return ApprovalReadiness.NEEDS_REVIEW;
+        }
+        return pendingApprovalTypes(reviewService.findApprovalRecordsForSong(candidate.mergedSongId())).isEmpty()
+                ? ApprovalReadiness.READY
+                : ApprovalReadiness.NEEDS_REVIEW;
+    }
+
+    private String readinessSummaryFor(
+            ImportCandidate candidate,
+            ApprovalReadiness approvalReadiness) {
+        if (candidate.mergedSongId() == null) {
+            return "Open detail to review and commit this candidate.";
+        }
+        if (approvalReadiness == ApprovalReadiness.READY) {
+            return "Required catalog approvals are complete.";
+        }
+        List<String> pendingTypes = pendingApprovalTypes(reviewService.findApprovalRecordsForSong(candidate.mergedSongId()))
+                .stream()
+                .map(ApprovalType::name)
+                .toList();
+        return "Pending catalog approvals: " + String.join(", ", pendingTypes);
+    }
+
+    private static List<ApprovalType> requiredApprovalTypes() {
+        return List.of(ApprovalType.EDITORIAL, ApprovalType.LICENSING);
+    }
+
+    private static List<ApprovalType> pendingApprovalTypes(List<ApprovalRecord> approvals) {
+        return requiredApprovalTypes().stream()
+                .filter(type -> approvals.stream()
+                        .noneMatch(record -> record.approvalType() == type && record.status() == ApprovalStatus.APPROVED))
+                .toList();
     }
 
     private static ApprovalReviewAction approvalActionFor(ApprovalActionRequest.ActionEnum action) {
@@ -464,8 +731,8 @@ public class AdminImportCandidateController implements AdminReviewApi {
     }
 
     private List<String> eligibilityBlockers(AdminImportCandidateDetail detail) {
-        if (detail.candidate().status() == com.cadentia.catalog.model.ImportCandidateStatus.REJECTED
-                || detail.candidate().status() == com.cadentia.catalog.model.ImportCandidateStatus.FAILED) {
+        if (detail.candidate().status() == ImportCandidateStatus.REJECTED
+                || detail.candidate().status() == ImportCandidateStatus.FAILED) {
             return List.of("Candidate status is " + detail.candidate().status().name());
         }
         if (!detail.parserWarnings().isEmpty()) {

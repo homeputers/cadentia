@@ -5,6 +5,7 @@ import { canAccessRoute, canRenderAction, visibleRoutes } from '../auth/permissi
 import { defaultImportCandidateFilters, listImportCandidates, type ImportCandidateQueueResponse } from '../import-candidates';
 import { ImportCandidateQueue } from './ImportCandidateQueue';
 import { ImportCandidateDetail } from './ImportCandidateDetail';
+import { SongImport } from './SongImport';
 import { AuditRollback } from './AuditRollback';
 import { Diagnostics } from './Diagnostics';
 import { InstanceSettings } from './InstanceSettings';
@@ -99,6 +100,9 @@ export const AdminShell = () => {
 
     if (session && window.location.pathname === '/admin/imports') {
         return <ImportCandidateQueue session={session} />;
+    }
+    if (session && window.location.pathname === '/admin/song-imports') {
+        return <SongImport session={session} />;
     }
     if (session && window.location.pathname === '/admin/audit') {
         return <AuditRollback session={session} />;

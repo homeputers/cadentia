@@ -2,9 +2,11 @@ package com.cadentia.scraperadmin;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.groups.Tuple.tuple;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -34,6 +36,7 @@ import com.cadentia.catalog.repository.SongRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -71,6 +74,9 @@ class AdminImportReviewServiceTest {
 
     @Captor
     private ArgumentCaptor<CreateApprovalRecordCommand> approvalCommandCaptor;
+
+    @Captor
+    private ArgumentCaptor<AdminAuditEvent> auditEventCaptor;
 
     @AfterEach
     void cleanupSecurityContext() {
@@ -197,7 +203,10 @@ class AdminImportReviewServiceTest {
         ImportCandidateReview review = review(candidate.id(), null, ImportCandidateReviewDecision.CREATE_NEW_SONG);
         ProvenanceRecord songProvenance = provenanceRecord(UUID.randomUUID(), song.id(), null, candidate.importBatchId());
         ProvenanceRecord arrangementProvenance = provenanceRecord(UUID.randomUUID(), null, arrangement.id(), candidate.importBatchId());
-        ApprovalRecord approvalRecord = approvalRecord(UUID.randomUUID(), song.id(), ApprovalStatus.PENDING);
+        ApprovalRecord editorialApprovalRecord =
+                approvalRecord(UUID.randomUUID(), song.id(), ApprovalType.EDITORIAL, ApprovalStatus.PENDING);
+        ApprovalRecord licensingApprovalRecord =
+                approvalRecord(UUID.randomUUID(), song.id(), ApprovalType.LICENSING, ApprovalStatus.PENDING);
         when(songRepository.findImportCandidateById(candidate.id())).thenReturn(Optional.of(candidate));
         when(songRepository.findImportCandidateReviewsByImportCandidateId(candidate.id())).thenReturn(List.of(review));
         when(songRepository.findByNormalizedTitleAndLanguage("new-song", "en")).thenReturn(Optional.empty());
@@ -206,7 +215,8 @@ class AdminImportReviewServiceTest {
         when(songRepository.createArrangement(any(CreateArrangementCommand.class))).thenReturn(arrangement);
         when(songRepository.createProvenanceRecord(any(CreateProvenanceRecordCommand.class)))
                 .thenReturn(songProvenance, arrangementProvenance);
-        when(songRepository.createApprovalRecord(any(CreateApprovalRecordCommand.class))).thenReturn(approvalRecord);
+        when(songRepository.createApprovalRecord(any(CreateApprovalRecordCommand.class)))
+                .thenReturn(editorialApprovalRecord, licensingApprovalRecord);
         when(songRepository.markImportCandidateMerged(candidate.id(), song.id()))
                 .thenReturn(Optional.of(candidate(candidate.id(), ImportCandidateStatus.MERGED, song.id())));
         AdminImportReviewService service = new AdminImportReviewService(songRepository);
@@ -234,7 +244,7 @@ class AdminImportReviewServiceTest {
         assertThat(result.song()).isEqualTo(song);
         assertThat(result.arrangement()).isEqualTo(arrangement);
         assertThat(result.provenanceRecords()).containsExactly(songProvenance, arrangementProvenance);
-        assertThat(result.approvalRecords()).containsExactly(approvalRecord);
+        assertThat(result.approvalRecords()).containsExactly(editorialApprovalRecord, licensingApprovalRecord);
         verify(songRepository).createSong(songCommandCaptor.capture());
         assertThat(songCommandCaptor.getValue())
                 .extracting(CreateSongCommand::normalizedTitle, CreateSongCommand::songStatus)
@@ -244,20 +254,22 @@ class AdminImportReviewServiceTest {
                 .extracting(CreateArrangementCommand::songId, CreateArrangementCommand::normalizedName,
                         CreateArrangementCommand::defaultForSong)
                 .containsExactly(song.id(), "new-song", true);
-        verify(songRepository).createApprovalRecord(approvalCommandCaptor.capture());
-        assertThat(approvalCommandCaptor.getValue())
+        verify(songRepository, times(2)).createApprovalRecord(approvalCommandCaptor.capture());
+        assertThat(approvalCommandCaptor.getAllValues())
                 .extracting(CreateApprovalRecordCommand::approvalType, CreateApprovalRecordCommand::status)
-                .containsExactly(ApprovalType.EDITORIAL, ApprovalStatus.PENDING);
+                .containsExactly(
+                        tuple(ApprovalType.EDITORIAL, ApprovalStatus.PENDING),
+                        tuple(ApprovalType.LICENSING, ApprovalStatus.PENDING));
         verify(songRepository).markImportCandidateMerged(candidate.id(), song.id());
     }
 
 
     @Test
     void applyApprovalActionApprovesExistingReviewRecord() {
-        authenticateAs("role.doctrinal_reviewer");
+        authenticateAs("catalog.admin.approve", "role.doctrinal_reviewer");
         UUID songId = UUID.randomUUID();
-        ApprovalRecord pending = approvalRecord(UUID.randomUUID(), songId, ApprovalStatus.PENDING);
-        ApprovalRecord approved = approvalRecord(UUID.randomUUID(), songId, ApprovalStatus.APPROVED);
+        ApprovalRecord pending = approvalRecord(UUID.randomUUID(), songId, ApprovalType.DOCTRINAL, ApprovalStatus.PENDING);
+        ApprovalRecord approved = approvalRecord(UUID.randomUUID(), songId, ApprovalType.DOCTRINAL, ApprovalStatus.APPROVED);
         when(songRepository.findApprovalRecord(songId, null, null, ApprovalType.DOCTRINAL)).thenReturn(Optional.of(pending));
         when(songRepository.updateApprovalRecord(any(UUID.class), any())).thenReturn(Optional.of(approved));
         AdminImportReviewService service = new AdminImportReviewService(songRepository);
@@ -271,9 +283,9 @@ class AdminImportReviewServiceTest {
 
     @Test
     void applyApprovalActionRejectsUnsupportedStatusTransition() {
-        authenticateAs("role.doctrinal_reviewer");
+        authenticateAs("catalog.admin.approve", "role.doctrinal_reviewer");
         UUID songId = UUID.randomUUID();
-        ApprovalRecord approved = approvalRecord(UUID.randomUUID(), songId, ApprovalStatus.APPROVED);
+        ApprovalRecord approved = approvalRecord(UUID.randomUUID(), songId, ApprovalType.DOCTRINAL, ApprovalStatus.APPROVED);
         when(songRepository.findApprovalRecord(songId, null, null, ApprovalType.DOCTRINAL)).thenReturn(Optional.of(approved));
         AdminImportReviewService service = new AdminImportReviewService(songRepository);
 
@@ -285,10 +297,10 @@ class AdminImportReviewServiceTest {
 
     @Test
     void applyApprovalActionMapsNeedsChangesAndRevokeToNeedsReview() {
-        authenticateAs("role.catalog_editor");
+        authenticateAs("catalog.admin.approve", "role.catalog_editor");
         UUID songId = UUID.randomUUID();
-        ApprovalRecord approved = approvalRecord(UUID.randomUUID(), songId, ApprovalStatus.APPROVED);
-        ApprovalRecord needsReview = approvalRecord(UUID.randomUUID(), songId, ApprovalStatus.NEEDS_REVIEW);
+        ApprovalRecord approved = approvalRecord(UUID.randomUUID(), songId, ApprovalType.EDITORIAL, ApprovalStatus.APPROVED);
+        ApprovalRecord needsReview = approvalRecord(UUID.randomUUID(), songId, ApprovalType.EDITORIAL, ApprovalStatus.NEEDS_REVIEW);
         when(songRepository.findApprovalRecord(songId, null, null, ApprovalType.EDITORIAL)).thenReturn(Optional.of(approved));
         when(songRepository.updateApprovalRecord(any(UUID.class), any())).thenReturn(Optional.of(needsReview));
         AdminImportReviewService service = new AdminImportReviewService(songRepository);
@@ -642,6 +654,11 @@ class AdminImportReviewServiceTest {
         assertThat(service.getAuditHistory(candidate.id()))
                 .extracting(AdminAuditEvent::action)
                 .containsExactly("REVIEW_RECORD_DENIED");
+        verify(songRepository).appendPrivilegedActionAuditEvent(auditEventCaptor.capture());
+        AdminAuditEvent deniedAudit = auditEventCaptor.getValue();
+        assertThat(deniedAudit.reason()).isEqualTo("access-denied");
+        assertThat(new ObjectMapper().findAndRegisterModules().valueToTree(deniedAudit).toString())
+                .doesNotContainIgnoringCase("authorization");
     }
 
     @ParameterizedTest
@@ -672,13 +689,17 @@ class AdminImportReviewServiceTest {
                 .containsExactly("PREVIEW_ROLLBACK_DENIED");
     }
 
-    private static ApprovalRecord approvalRecord(UUID id, UUID songId, ApprovalStatus status) {
+    private static ApprovalRecord approvalRecord(
+            UUID id,
+            UUID songId,
+            ApprovalType approvalType,
+            ApprovalStatus status) {
         return new ApprovalRecord(
                 id,
                 songId,
                 null,
                 null,
-                ApprovalType.EDITORIAL,
+                approvalType,
                 status,
                 "reviewer@example.test",
                 "Created from reviewed import candidate; approval remains pending.",
@@ -686,10 +707,12 @@ class AdminImportReviewServiceTest {
                 Instant.EPOCH);
     }
 
-    private void authenticateAs(String authority) {
+    private void authenticateAs(String... authorities) {
         SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(
                 "tester",
                 "n/a",
-                List.of(new SimpleGrantedAuthority(authority))));
+                Arrays.stream(authorities)
+                        .map(SimpleGrantedAuthority::new)
+                        .toList()));
     }
 }

@@ -8,6 +8,7 @@ export type AdminRoute = {
 };
 
 export const adminRoutes: AdminRoute[] = [
+    { href: '/admin/song-imports', label: 'Song import', requiredCapability: 'REVIEW_CATALOG' },
     { href: '/admin/imports', label: 'Import review', requiredCapability: 'VIEW_IMPORT_QUEUE' },
     { href: '/admin/audit', label: 'Audit history', requiredCapability: 'VIEW_AUDIT' },
     { href: '/admin/diagnostics', label: 'Diagnostics', requiredCapability: 'VIEW_DIAGNOSTICS', requiredFeature: 'admin-diagnostics' },

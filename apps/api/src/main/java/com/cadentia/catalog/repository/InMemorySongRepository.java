@@ -194,6 +194,16 @@ public class InMemorySongRepository implements SongRepository {
     }
 
     @Override
+    public int countImportCandidates(ImportCandidateStatus status) {
+        return 0;
+    }
+
+    @Override
+    public List<ImportCandidate> findImportCandidates(ImportCandidateStatus status, int limit, int offset) {
+        return List.of();
+    }
+
+    @Override
     public List<ImportCandidate> findImportCandidatesByBatchId(UUID importBatchId) {
         return List.of();
     }

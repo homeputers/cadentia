@@ -7,6 +7,253 @@ ImportCandidateStatus:
   - MERGED
   - REJECTED
   - FAILED
+AdminSongImportMethod:
+  type: string
+  enum:
+  - MANUAL_ENTRY
+  - CSV_IMPORT
+AdminSongLicenseType:
+  type: string
+  enum:
+  - PUBLIC_DOMAIN
+  - CCLI
+  - DIRECT_PERMISSION
+  - NOT_APPLICABLE
+AdminSongResource:
+  type: object
+  additionalProperties: false
+  required:
+  - resourceType
+  - title
+  properties:
+    resourceType:
+      type: string
+      enum:
+      - CHORD_CHART
+      - LEAD_SHEET
+      - SHEET_MUSIC
+      - AUDIO_REFERENCE
+      - VIDEO_REFERENCE
+      - PLANNING_CENTER_RESOURCE
+      - OTHER
+    title:
+      type: string
+      minLength: 1
+      maxLength: 160
+    url:
+      type: string
+      maxLength: 1000
+      nullable: true
+    assetId:
+      type: string
+      format: uuid
+      nullable: true
+    notes:
+      type: string
+      maxLength: 1000
+      nullable: true
+AdminManualSongImportRequest:
+  type: object
+  additionalProperties: false
+  required:
+  - actor
+  - title
+  - licenseType
+  properties:
+    actor:
+      type: string
+      minLength: 1
+      maxLength: 160
+    title:
+      type: string
+      minLength: 1
+      maxLength: 240
+    author:
+      type: string
+      maxLength: 240
+      nullable: true
+    artist:
+      type: string
+      maxLength: 240
+      nullable: true
+    ccliNumber:
+      type: string
+      maxLength: 64
+      nullable: true
+    copyright:
+      type: string
+      maxLength: 500
+      nullable: true
+    publisher:
+      type: string
+      maxLength: 240
+      nullable: true
+    language:
+      type: string
+      maxLength: 32
+      nullable: true
+    key:
+      type: string
+      maxLength: 16
+      nullable: true
+    bpm:
+      type: integer
+      minimum: 30
+      maximum: 260
+      nullable: true
+    timeSignature:
+      type: string
+      maxLength: 16
+      nullable: true
+    energy:
+      type: integer
+      minimum: 1
+      maximum: 5
+      nullable: true
+    difficulty:
+      type: integer
+      minimum: 1
+      maximum: 5
+      nullable: true
+    themes:
+      type: array
+      items:
+        type: string
+        maxLength: 80
+      maxItems: 20
+    scriptureReferences:
+      type: array
+      items:
+        type: string
+        maxLength: 80
+      maxItems: 20
+    lyrics:
+      type: string
+      maxLength: 30000
+      nullable: true
+      description: Operator-provided lyrics or chord text retained only as staged source evidence until review.
+    chordChart:
+      type: string
+      maxLength: 30000
+      nullable: true
+    arrangementNotes:
+      type: string
+      maxLength: 4000
+      nullable: true
+    sourceReference:
+      type: string
+      maxLength: 500
+      nullable: true
+    licenseType:
+      "$ref": "#/AdminSongLicenseType"
+    licenseEvidence:
+      type: string
+      maxLength: 1000
+      nullable: true
+    resources:
+      type: array
+      items:
+        "$ref": "#/AdminSongResource"
+      maxItems: 20
+AdminCsvSongImportRequest:
+  type: object
+  additionalProperties: false
+  required:
+  - actor
+  - file
+  - licenseType
+  properties:
+    actor:
+      type: string
+      minLength: 1
+      maxLength: 160
+    file:
+      type: string
+      format: binary
+      description: UTF-8 CSV file. Header names follow the manual import field names where possible.
+    licenseType:
+      "$ref": "#/AdminSongLicenseType"
+    licenseEvidence:
+      type: string
+      maxLength: 1000
+      nullable: true
+AdminSongImportValidationError:
+  type: object
+  required:
+  - rowIdentifier
+  - field
+  - message
+  properties:
+    rowIdentifier:
+      type: string
+    field:
+      type: string
+    message:
+      type: string
+AdminSongImportCandidateSummary:
+  type: object
+  required:
+  - candidateId
+  - rawTitle
+  - status
+  properties:
+    candidateId:
+      type: string
+      format: uuid
+    rawTitle:
+      type: string
+    normalizedTitle:
+      type: string
+      nullable: true
+    sourceArtistName:
+      type: string
+      nullable: true
+    status:
+      "$ref": "#/ImportCandidateStatus"
+AdminSongImportResponse:
+  type: object
+  required:
+  - importBatchId
+  - status
+  - acceptedCount
+  - validationErrorCount
+  - candidateIds
+  - candidates
+  - validationErrors
+  properties:
+    importBatchId:
+      type: string
+      format: uuid
+    status:
+      type: string
+      enum:
+      - PENDING
+      - RUNNING
+      - COMPLETED
+      - FAILED
+      - CANCELLED
+    method:
+      "$ref": "#/AdminSongImportMethod"
+    acceptedCount:
+      type: integer
+      minimum: 0
+    validationErrorCount:
+      type: integer
+      minimum: 0
+    candidateIds:
+      type: array
+      items:
+        type: string
+        format: uuid
+      description: Deprecated for UI rendering; use candidates for display labels.
+    candidates:
+      type: array
+      items:
+        "$ref": "#/AdminSongImportCandidateSummary"
+    validationErrors:
+      type: array
+      items:
+        "$ref": "#/AdminSongImportValidationError"
 ParserSeverity:
   type: string
   enum:
@@ -61,6 +308,7 @@ AllowedImportCandidateAction:
   - MERGE_DECISION_REJECT_DUPLICATE
   - MERGE_DECISION_REJECT_NOT_PERMITTED
   - MERGE_DECISION_DEFER
+  - COMMIT_MERGE
   - SUBMIT_APPROVAL_ACTION
   - REVERSE_APPROVAL
 AdminImportCandidateQueueResponse:
@@ -809,6 +1057,39 @@ ApprovalActionRequest:
       - APPROVE
       - REVERSE_APPROVAL
       - REJECT_APPROVAL
+    rationale:
+      type: string
+      minLength: 1
+CommitMergeRequest:
+  type: object
+  additionalProperties: false
+  required:
+  - actor
+  - action
+  - rationale
+  properties:
+    actor:
+      type: string
+    action:
+      type: string
+      enum:
+      - CREATE_NEW
+      - MERGE_EXISTING
+    targetSongId:
+      type: string
+      format: uuid
+      nullable: true
+    selectedFields:
+      type: array
+      items:
+        type: string
+        enum:
+        - CANONICAL_TITLE
+        - ORIGINAL_ARTIST_DISPLAY
+        - COMPOSER_CREDITS
+        - CCLI_NUMBER
+        - YEAR_WRITTEN
+        - DOCTRINAL_NOTES
     rationale:
       type: string
       minLength: 1

@@ -102,6 +102,10 @@ public interface SongRepository {
 
     ImportCandidate createImportCandidate(CreateImportCandidateCommand command);
 
+    int countImportCandidates(ImportCandidateStatus status);
+
+    List<ImportCandidate> findImportCandidates(ImportCandidateStatus status, int limit, int offset);
+
     List<ImportCandidate> findImportCandidatesByBatchId(UUID importBatchId);
 
     Optional<ImportCandidate> findImportCandidateById(UUID id);

@@ -67,10 +67,11 @@ public class AdminOperationsController implements AdminOperationsApi {
         List<AdminCapability> capabilities = isLocalDevelopment()
                 ? Arrays.asList(AdminCapability.values())
                 : capabilitiesForAuthorities(authorities);
+        String effectiveActorId = isLocalDevelopment() ? "local-admin-approver" : actorId;
 
         AdminSessionResponse response = new AdminSessionResponse()
-                .actorId(actorId)
-                .displayName(actorId)
+                .actorId(effectiveActorId)
+                .displayName(effectiveActorId)
                 .churchInstanceId(instanceId)
                 .roles(roles)
                 .capabilities(capabilities);

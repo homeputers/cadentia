@@ -235,6 +235,20 @@ schemas:
     "$ref": "./components/schemas/admin-operations.yaml#/ConfirmAdminFeatureFlagChangeRequest"
   ImportCandidateStatus:
     "$ref": "./components/schemas/admin-review.yaml#/ImportCandidateStatus"
+  AdminSongImportMethod:
+    "$ref": "./components/schemas/admin-review.yaml#/AdminSongImportMethod"
+  AdminSongLicenseType:
+    "$ref": "./components/schemas/admin-review.yaml#/AdminSongLicenseType"
+  AdminManualSongImportRequest:
+    "$ref": "./components/schemas/admin-review.yaml#/AdminManualSongImportRequest"
+  AdminCsvSongImportRequest:
+    "$ref": "./components/schemas/admin-review.yaml#/AdminCsvSongImportRequest"
+  AdminSongImportResponse:
+    "$ref": "./components/schemas/admin-review.yaml#/AdminSongImportResponse"
+  AdminSongImportValidationError:
+    "$ref": "./components/schemas/admin-review.yaml#/AdminSongImportValidationError"
+  AdminSongImportCandidateSummary:
+    "$ref": "./components/schemas/admin-review.yaml#/AdminSongImportCandidateSummary"
   AdminImportCandidateQueueItem:
     "$ref": "./components/schemas/admin-review.yaml#/AdminImportCandidateQueueItem"
   AdminDuplicateMatch:
@@ -243,6 +257,8 @@ schemas:
     "$ref": "./components/schemas/admin-review.yaml#/AdminImportCandidateDetailResponse"
   AdminReviewHistoryItem:
     "$ref": "./components/schemas/admin-review.yaml#/AdminReviewHistoryItem"
+  CommitMergeRequest:
+    "$ref": "./components/schemas/admin-review.yaml#/CommitMergeRequest"
   ModerationFlagType:
     "$ref": "./components/schemas/admin-review.yaml#/ModerationFlagType"
   ModerationFlagStatus:

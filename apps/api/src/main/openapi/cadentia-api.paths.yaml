@@ -48,6 +48,10 @@
   "$ref": "./paths/admin-operations.yaml#/~1admin~1feature-flags~1{flagKey}:confirm"
 "/admin/audit-events":
   "$ref": "./paths/admin-review.yaml#/~1admin~1audit-events"
+"/admin/song-imports/manual":
+  "$ref": "./paths/admin-review.yaml#/~1admin~1song-imports~1manual"
+"/admin/song-imports/csv":
+  "$ref": "./paths/admin-review.yaml#/~1admin~1song-imports~1csv"
 "/admin/import-candidates":
   "$ref": "./paths/admin-review.yaml#/~1admin~1import-candidates"
 "/admin/import-candidates/{candidateId}":
@@ -62,6 +66,8 @@
   "$ref": "./paths/admin-review.yaml#/~1admin~1import-candidates~1{candidateId}~1merge-decisions"
 "/admin/import-candidates/{candidateId}/approval-actions":
   "$ref": "./paths/admin-review.yaml#/~1admin~1import-candidates~1{candidateId}~1approval-actions"
+"/admin/import-candidates/{candidateId}/commit-merge":
+  "$ref": "./paths/admin-review.yaml#/~1admin~1import-candidates~1{candidateId}~1commit-merge"
 "/admin/import-candidates/{candidateId}/moderation-flags":
   "$ref": "./paths/admin-review.yaml#/~1admin~1import-candidates~1{candidateId}~1moderation-flags"
 "/admin/moderation-flags/{flagId}/assign":

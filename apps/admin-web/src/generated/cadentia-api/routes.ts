@@ -11,6 +11,7 @@ export type CadentiaApiRoute =
     | '/admin/import-candidates/{candidateId}'
     | '/admin/import-candidates/{candidateId}/approval-actions'
     | '/admin/import-candidates/{candidateId}/audit-history'
+    | '/admin/import-candidates/{candidateId}/commit-merge'
     | '/admin/import-candidates/{candidateId}/duplicates'
     | '/admin/import-candidates/{candidateId}/merge-decisions'
     | '/admin/import-candidates/{candidateId}/moderation-flags'
@@ -28,6 +29,8 @@ export type CadentiaApiRoute =
     | '/admin/rollback-previews'
     | '/admin/rollbacks'
     | '/admin/session'
+    | '/admin/song-imports/csv'
+    | '/admin/song-imports/manual'
     | '/admin/telegram/bots/{botId}/status'
     | '/admin/telegram/channels/{channelId}/settings'
     | '/asset-attachments'
@@ -103,11 +106,14 @@ export type CadentiaApiOperationId =
     | 'autocompleteCatalog'
     | 'cancelConversationSession'
     | 'cancelTelegramSession'
+    | 'commitAdminImportCandidateMerge'
     | 'commitSetlistEdits'
     | 'confirmAdminFeatureFlagChange'
     | 'confirmConversationSession'
     | 'confirmTelegramAccountLink'
+    | 'createAdminCsvSongImport'
     | 'createAdminImportCandidateReviewNote'
+    | 'createAdminManualSongImport'
     | 'createAdminRollbackPreview'
     | 'createArrangementOverride'
     | 'createAssetAttachment'
@@ -215,6 +221,7 @@ export const cadentiaApiRoutes = [
     '/admin/import-candidates/{candidateId}',
     '/admin/import-candidates/{candidateId}/approval-actions',
     '/admin/import-candidates/{candidateId}/audit-history',
+    '/admin/import-candidates/{candidateId}/commit-merge',
     '/admin/import-candidates/{candidateId}/duplicates',
     '/admin/import-candidates/{candidateId}/merge-decisions',
     '/admin/import-candidates/{candidateId}/moderation-flags',
@@ -232,6 +239,8 @@ export const cadentiaApiRoutes = [
     '/admin/rollback-previews',
     '/admin/rollbacks',
     '/admin/session',
+    '/admin/song-imports/csv',
+    '/admin/song-imports/manual',
     '/admin/telegram/bots/{botId}/status',
     '/admin/telegram/channels/{channelId}/settings',
     '/asset-attachments',
@@ -306,6 +315,7 @@ export const cadentiaApiRouteRefs: Record<CadentiaApiRoute, string> = {
     '/admin/import-candidates/{candidateId}': './paths/admin-review.yaml#/~1admin~1import-candidates~1{candidateId}',
     '/admin/import-candidates/{candidateId}/approval-actions': './paths/admin-review.yaml#/~1admin~1import-candidates~1{candidateId}~1approval-actions',
     '/admin/import-candidates/{candidateId}/audit-history': './paths/admin-review.yaml#/~1admin~1import-candidates~1{candidateId}~1audit-history',
+    '/admin/import-candidates/{candidateId}/commit-merge': './paths/admin-review.yaml#/~1admin~1import-candidates~1{candidateId}~1commit-merge',
     '/admin/import-candidates/{candidateId}/duplicates': './paths/admin-review.yaml#/~1admin~1import-candidates~1{candidateId}~1duplicates',
     '/admin/import-candidates/{candidateId}/merge-decisions': './paths/admin-review.yaml#/~1admin~1import-candidates~1{candidateId}~1merge-decisions',
     '/admin/import-candidates/{candidateId}/moderation-flags': './paths/admin-review.yaml#/~1admin~1import-candidates~1{candidateId}~1moderation-flags',
@@ -323,6 +333,8 @@ export const cadentiaApiRouteRefs: Record<CadentiaApiRoute, string> = {
     '/admin/rollback-previews': './paths/admin-review.yaml#/~1admin~1rollback-previews',
     '/admin/rollbacks': './paths/admin-review.yaml#/~1admin~1rollbacks',
     '/admin/session': './paths/admin-operations.yaml#/~1admin~1session',
+    '/admin/song-imports/csv': './paths/admin-review.yaml#/~1admin~1song-imports~1csv',
+    '/admin/song-imports/manual': './paths/admin-review.yaml#/~1admin~1song-imports~1manual',
     '/admin/telegram/bots/{botId}/status': './paths/telegram.yaml#/~1admin~1telegram~1bots~1{botId}~1status',
     '/admin/telegram/channels/{channelId}/settings': './paths/telegram.yaml#/~1admin~1telegram~1channels~1{channelId}~1settings',
     '/asset-attachments': './paths/assets.yaml#/~1asset-attachments',
@@ -399,11 +411,14 @@ export const cadentiaApiOperations = [
     { operationId: 'autocompleteCatalog', method: 'POST', path: '/catalog/autocomplete', ref: './paths/search.yaml#/~1catalog~1autocomplete' },
     { operationId: 'cancelConversationSession', method: 'POST', path: '/conversation-sessions/{sessionId}/cancel', ref: './paths/conversation-sessions.yaml#/~1conversation-sessions~1{sessionId}~1cancel' },
     { operationId: 'cancelTelegramSession', method: 'POST', path: '/telegram/sessions/{sessionId}:cancel', ref: './paths/telegram.yaml#/~1telegram~1sessions~1{sessionId}:cancel' },
+    { operationId: 'commitAdminImportCandidateMerge', method: 'POST', path: '/admin/import-candidates/{candidateId}/commit-merge', ref: './paths/admin-review.yaml#/~1admin~1import-candidates~1{candidateId}~1commit-merge' },
     { operationId: 'commitSetlistEdits', method: 'POST', path: '/setlists/{setlistId}/edits', ref: './paths/setlists.yaml#/~1setlists~1{setlistId}~1edits' },
     { operationId: 'confirmAdminFeatureFlagChange', method: 'POST', path: '/admin/feature-flags/{flagKey}:confirm', ref: './paths/admin-operations.yaml#/~1admin~1feature-flags~1{flagKey}:confirm' },
     { operationId: 'confirmConversationSession', method: 'POST', path: '/conversation-sessions/{sessionId}/confirm', ref: './paths/conversation-sessions.yaml#/~1conversation-sessions~1{sessionId}~1confirm' },
     { operationId: 'confirmTelegramAccountLink', method: 'POST', path: '/telegram/account-links:confirm', ref: './paths/telegram.yaml#/~1telegram~1account-links:confirm' },
+    { operationId: 'createAdminCsvSongImport', method: 'POST', path: '/admin/song-imports/csv', ref: './paths/admin-review.yaml#/~1admin~1song-imports~1csv' },
     { operationId: 'createAdminImportCandidateReviewNote', method: 'POST', path: '/admin/import-candidates/{candidateId}/notes', ref: './paths/admin-review.yaml#/~1admin~1import-candidates~1{candidateId}~1notes' },
+    { operationId: 'createAdminManualSongImport', method: 'POST', path: '/admin/song-imports/manual', ref: './paths/admin-review.yaml#/~1admin~1song-imports~1manual' },
     { operationId: 'createAdminRollbackPreview', method: 'POST', path: '/admin/rollback-previews', ref: './paths/admin-review.yaml#/~1admin~1rollback-previews' },
     { operationId: 'createArrangementOverride', method: 'POST', path: '/service-plans/{servicePlanId}/arrangement-overrides', ref: './paths/rehearsal-workflow.yaml#/~1service-plans~1{servicePlanId}~1arrangement-overrides' },
     { operationId: 'createAssetAttachment', method: 'POST', path: '/asset-attachments', ref: './paths/assets.yaml#/~1asset-attachments' },

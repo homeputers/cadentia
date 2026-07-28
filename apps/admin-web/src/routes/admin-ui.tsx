@@ -55,13 +55,15 @@ export const FilterPanel = ({ title, children, onSubmit }: { title: string; chil
     );
 };
 
-export const Field = ({ label, error, children }: { label: string; error?: string; children: (ids: { inputId: string; errorId?: string }) => ReactNode }) => {
+export const Field = ({ label, error, description, required = false, children }: { label: string; error?: string; description?: string; required?: boolean; children: (ids: { inputId: string; errorId?: string; descriptionId?: string }) => ReactNode }) => {
     const inputId = useId();
     const errorId = error ? `${inputId}-error` : undefined;
+    const descriptionId = description ? `${inputId}-description` : undefined;
     return (
         <div className="admin-field">
-            <label htmlFor={inputId}>{label}</label>
-            {children({ inputId, errorId })}
+            <label htmlFor={inputId}>{label}{required && <span className="admin-field__required" aria-label="required"> *</span>}</label>
+            {description && <p id={descriptionId} className="admin-field__description">{description}</p>}
+            {children({ inputId, errorId, descriptionId })}
             {error && <p id={errorId} role="alert" className="admin-field__error">{error}</p>}
         </div>
     );

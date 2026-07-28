@@ -42,8 +42,8 @@ class AdminOperationsControllerTest {
 
         // Assert
         assertThat(response).isNotNull();
-        assertThat(response.getActorId()).isEqualTo("user");
-        assertThat(response.getDisplayName()).isEqualTo("user");
+        assertThat(response.getActorId()).isEqualTo("local-admin-approver");
+        assertThat(response.getDisplayName()).isEqualTo("local-admin-approver");
         assertThat(response.getChurchInstanceId()).isEqualTo("local-development");
         assertThat(response.getRoles()).containsExactly("ADMIN");
         assertThat(response.getCapabilities()).containsExactly(AdminCapability.values());
