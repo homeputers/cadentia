@@ -72,6 +72,9 @@ class AdminImportReviewServiceTest {
     @Captor
     private ArgumentCaptor<CreateApprovalRecordCommand> approvalCommandCaptor;
 
+    @Captor
+    private ArgumentCaptor<AdminAuditEvent> auditEventCaptor;
+
     @AfterEach
     void cleanupSecurityContext() {
         SecurityContextHolder.clearContext();
@@ -642,6 +645,11 @@ class AdminImportReviewServiceTest {
         assertThat(service.getAuditHistory(candidate.id()))
                 .extracting(AdminAuditEvent::action)
                 .containsExactly("REVIEW_RECORD_DENIED");
+        verify(songRepository).appendPrivilegedActionAuditEvent(auditEventCaptor.capture());
+        AdminAuditEvent deniedAudit = auditEventCaptor.getValue();
+        assertThat(deniedAudit.reason()).isEqualTo("access-denied");
+        assertThat(new ObjectMapper().valueToTree(deniedAudit).toString())
+                .doesNotContainIgnoringCase("authorization");
     }
 
     @ParameterizedTest

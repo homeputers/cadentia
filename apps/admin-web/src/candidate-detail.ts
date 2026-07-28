@@ -43,6 +43,7 @@ export type ReviewHistoryItem = { id: string; proposedDuplicateMatchId?: string 
 export type AuditHistoryItem = { id: string; entityId: string; entityType: string; action: string; actor: string; occurredAt: string; reason?: string | null; beforeState?: Record<string, unknown> | null; afterState?: Record<string, unknown> | null };
 export type CreateReviewNoteRequest = { actor: string; category?: string; body: string };
 export type MergeDecisionRequest = { actor: string; decision: string; duplicateMatchId?: string; fieldSelections?: Record<string, 'CANDIDATE' | 'EXISTING'>; rationale: string };
+export type CommitMergeRequest = { actor: string; action: 'CREATE_NEW' | 'MERGE_EXISTING' | string; targetSongId?: string; selectedFields?: string[]; rationale: string };
 export type ApprovalActionRequest = { actor: string; approvalType: string; action: string; rationale: string };
 export type OpenModerationFlagRequest = { openedBy: string; scope: string; type: string; reason: string; eligibilityImpactPolicy: string; excludeFromRecommendation: boolean };
 export type AssignModerationFlagRequest = { actor: string; assignedTo: string; reason: string };
@@ -66,6 +67,13 @@ export const createCandidateReviewNote = (client: AdminApiClient, candidateId: s
 
 export const submitMergeDecision = (client: AdminApiClient, candidateId: string, request: MergeDecisionRequest, actorId: string, etag: string) =>
     client.request<CandidateDetail>(candidatePath(candidateId, '/merge-decisions'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(request),
+    }, { actorId, etag });
+
+export const commitCandidateMerge = (client: AdminApiClient, candidateId: string, request: CommitMergeRequest, actorId: string, etag: string) =>
+    client.request<CandidateDetail>(candidatePath(candidateId, '/commit-merge'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(request),

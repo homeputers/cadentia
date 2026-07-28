@@ -7,6 +7,7 @@ The UI must use only documented routes from the generated client.
 | ADR-036 workflow | v1 status | Endpoint coverage | Notes |
 | --- | --- | --- | --- |
 | Admin session bootstrap, role-aware navigation, and capability display | New endpoint | `GET /admin/session` | Returns actor, church-instance scope, roles, and capabilities; backend RBAC remains authoritative. |
+| Manual song import and CSV import staging | New endpoint | `POST /admin/song-imports/manual`, `POST /admin/song-imports/csv` | Stages operator-entered song metadata, suggestion details, lyrics/chords, and resources into import batches; does not create approved catalog records directly. |
 | Import candidate queue filtering and triage summaries | Existing endpoint | `GET /admin/import-candidates` | Uses ADR-011 governance queue. |
 | Candidate detail, provenance, parser evidence, and review history | Existing endpoint with redaction constraints | `GET /admin/import-candidates/{candidateId}` | OpenAPI response shape avoids full copyrighted lyrics and should not expose raw connector payloads in v1 UI. |
 | Duplicate comparison and duplicate evidence | Existing endpoint | `GET /admin/import-candidates/{candidateId}/duplicates` | Backend supplies ranked matches and stable IDs. |

@@ -8,6 +8,7 @@ import com.cadentia.generated.api.AdminReviewApi;
 import com.cadentia.generated.model.ModerationFlagType;
 import com.cadentia.generated.model.OpenModerationFlagRequest;
 import com.cadentia.scraperadmin.AdminImportReviewService;
+import com.cadentia.scraperadmin.AdminSongImportService;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
@@ -37,6 +38,11 @@ class AdminImportCandidateControllerSecurityTest {
         AdminImportReviewService adminImportReviewService() {
             SongRepository songRepository = mock(SongRepository.class);
             return new AdminImportReviewService(songRepository);
+        }
+
+        @Bean
+        AdminSongImportService adminSongImportService() {
+            return new AdminSongImportService(null, null);
         }
     }
 

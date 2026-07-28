@@ -479,6 +479,36 @@ public class JdbcSongRepository implements SongRepository {
     }
 
     @Override
+    public int countImportCandidates(ImportCandidateStatus status) {
+        if (status == null) {
+            Integer count = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM import_candidates", Map.of(), Integer.class);
+            return count == null ? 0 : count;
+        }
+        Integer count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM import_candidates WHERE status = :status",
+                Map.of("status", status.name()),
+                Integer.class);
+        return count == null ? 0 : count;
+    }
+
+    @Override
+    public List<ImportCandidate> findImportCandidates(ImportCandidateStatus status, int limit, int offset) {
+        int safeLimit = Math.max(1, Math.min(limit, 100));
+        int safeOffset = Math.max(0, offset);
+        if (status == null) {
+            return jdbcTemplate.query("SELECT " + IMPORT_CANDIDATE_COLUMNS
+                            + " FROM import_candidates ORDER BY updated_at DESC, created_at DESC, id DESC"
+                            + " LIMIT :limit OFFSET :offset",
+                    Map.of("limit", safeLimit, "offset", safeOffset), importCandidateMapper());
+        }
+        return jdbcTemplate.query("SELECT " + IMPORT_CANDIDATE_COLUMNS
+                        + " FROM import_candidates WHERE status = :status"
+                        + " ORDER BY updated_at DESC, created_at DESC, id DESC"
+                        + " LIMIT :limit OFFSET :offset",
+                Map.of("status", status.name(), "limit", safeLimit, "offset", safeOffset), importCandidateMapper());
+    }
+
+    @Override
     public List<ImportCandidate> findImportCandidatesByBatchId(UUID importBatchId) {
         return jdbcTemplate.query("SELECT " + IMPORT_CANDIDATE_COLUMNS
                         + " FROM import_candidates WHERE import_batch_id = :importBatchId ORDER BY created_at, id",

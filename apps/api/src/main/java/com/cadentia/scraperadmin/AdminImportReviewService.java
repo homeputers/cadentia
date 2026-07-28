@@ -7,6 +7,7 @@ import com.cadentia.catalog.entity.ImportCandidateReview;
 import com.cadentia.catalog.entity.ProposedDuplicateMatch;
 import com.cadentia.catalog.entity.ProvenanceRecord;
 import com.cadentia.catalog.entity.Song;
+import com.cadentia.api.security.RbacAuthorities;
 import com.cadentia.catalog.model.ApprovalStatus;
 
 import com.cadentia.catalog.model.ApprovalStatusTransition;
@@ -37,9 +38,13 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -88,6 +93,16 @@ public class AdminImportReviewService {
     }
 
     @Transactional(readOnly = true)
+    public int countCandidates(ImportCandidateStatus status) {
+        return songRepository.countImportCandidates(status);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ImportCandidate> findCandidates(ImportCandidateStatus status, int limit, int offset) {
+        return songRepository.findImportCandidates(status, limit, offset);
+    }
+
+    @Transactional(readOnly = true)
     public List<ImportCandidate> findCandidatesForBatch(UUID importBatchId, ImportCandidateStatus status) {
         List<ImportCandidate> candidates = songRepository.findImportCandidatesByBatchId(importBatchId);
         if (status == null) {
@@ -133,6 +148,15 @@ public class AdminImportReviewService {
         return songRepository.findApprovalRecordsForSong(songId);
     }
 
+    @Transactional(readOnly = true)
+    public List<ProvenanceRecord> findProvenanceRecordsForSong(UUID songId) {
+        if (songId == null) {
+            return List.of();
+        }
+        requireSong(songId);
+        return songRepository.findProvenanceRecordsForSong(songId);
+    }
+
     @Transactional
     public ImportCandidateReview submitMergeDecision(
             UUID importCandidateId,
@@ -171,6 +195,83 @@ public class AdminImportReviewService {
             case "DEFER" -> ImportCandidateReviewDecision.NEEDS_MORE_INFO;
             default -> throw new IllegalArgumentException("Unsupported merge decision: " + decision);
         };
+    }
+
+    @Transactional
+    public AdminMergeResult commitCandidateMerge(
+            UUID importCandidateId,
+            String actor,
+            String action,
+            UUID targetSongId,
+            Set<MergeIntoExistingSongCommand.MergeField> selectedFields,
+            String rationale) {
+        ImportCandidate candidate = requireCandidate(importCandidateId);
+        if (candidate.status() != ImportCandidateStatus.READY_TO_MERGE
+                && candidate.status() != ImportCandidateStatus.MERGED) {
+            throw new IllegalStateException("Candidate must be ready to merge before commit");
+        }
+        AdminMergeResult result = switch (action) {
+            case "CREATE_NEW" -> createNewCanonicalSong(createCanonicalSongCommand(candidate, actor, rationale));
+            case "MERGE_EXISTING" -> mergeIntoExistingSong(mergeIntoExistingSongCommand(
+                    candidate, targetSongId, actor, selectedFields, rationale));
+            default -> throw new IllegalArgumentException("Unsupported commit action: " + action);
+        };
+        addAuditEvent(importCandidateId, "IMPORT_CANDIDATE", "MERGE_COMMITTED", actor, "merge-committed",
+                Map.of("status", candidate.status().name()),
+                Map.of("action", action, "songId", result.song().id().toString()));
+        return result;
+    }
+
+    private CreateCanonicalSongFromImportCandidateCommand createCanonicalSongCommand(
+            ImportCandidate candidate,
+            String actor,
+            String rationale) {
+        Map<String, Object> payload = parseJsonObject(candidate.sourcePayloadJson());
+        Map<String, Object> metadata = nestedMap(payload, "metadata");
+        String title = firstText(metadata.get("title"), payload.get("title"), candidate.rawTitle(), candidate.normalizedTitle());
+        String language = firstText(metadata.get("language"), payload.get("language"), "en");
+        String artist = firstText(metadata.get("artist"), metadata.get("author"), candidate.sourceArtistName());
+        String author = firstText(metadata.get("author"), metadata.get("artist"), candidate.sourceArtistName());
+        String ccliNumber = firstText(metadata.get("ccliNumber"), metadata.get("ccli"), candidate.ccliNumber());
+        return new CreateCanonicalSongFromImportCandidateCommand(
+                candidate.id(),
+                actor,
+                title,
+                language,
+                artist,
+                author,
+                ccliNumber,
+                integerOrNull(metadata.get("yearWritten")),
+                firstText(metadata.get("doctrinalNotes")),
+                title,
+                "admin-import",
+                firstText(payload.get("sourceReference"), candidate.externalCandidateId(), candidate.id().toString()),
+                "Admin reviewed import",
+                licenseTypeFor(ccliNumber),
+                rationale,
+                ImportMethod.SCRAPER_REVIEWED);
+    }
+
+    private MergeIntoExistingSongCommand mergeIntoExistingSongCommand(
+            ImportCandidate candidate,
+            UUID targetSongId,
+            String actor,
+            Set<MergeIntoExistingSongCommand.MergeField> selectedFields,
+            String rationale) {
+        Map<String, Object> payload = parseJsonObject(candidate.sourcePayloadJson());
+        Map<String, Object> metadata = nestedMap(payload, "metadata");
+        String ccliNumber = firstText(metadata.get("ccliNumber"), metadata.get("ccli"), candidate.ccliNumber());
+        return new MergeIntoExistingSongCommand(
+                candidate.id(),
+                targetSongId,
+                actor,
+                "admin-import",
+                firstText(payload.get("sourceReference"), candidate.externalCandidateId(), candidate.id().toString()),
+                "Admin reviewed import",
+                licenseTypeFor(ccliNumber),
+                rationale,
+                ImportMethod.SCRAPER_REVIEWED,
+                selectedFields);
     }
 
     @Transactional(readOnly = true)
@@ -543,7 +644,9 @@ public class AdminImportReviewService {
                                     "Approval record disappeared during update: " + existingRecord.id()));
                 })
                 .orElseGet(() -> {
-                    if (nextStatus != ApprovalStatus.PENDING) {
+                    if (nextStatus != ApprovalStatus.PENDING
+                            && nextStatus != ApprovalStatus.APPROVED
+                            && nextStatus != ApprovalStatus.REJECTED) {
                         throw new IllegalArgumentException(
                                 "Cannot apply " + command.action() + " without an existing approval record");
                     }
@@ -606,11 +709,19 @@ public class AdminImportReviewService {
                 ApprovalStatus.PENDING,
                 command.reviewer(),
                 "Created from reviewed import candidate; approval remains pending."));
+        ApprovalRecord licensingApprovalRecord = songRepository.createApprovalRecord(new CreateApprovalRecordCommand(
+                song.id(),
+                null,
+                null,
+                ApprovalType.LICENSING,
+                ApprovalStatus.PENDING,
+                command.reviewer(),
+                "Reviewed import provenance captured; licensing approval remains pending."));
 
         songRepository.markImportCandidateMerged(candidate.id(), song.id())
                 .orElseThrow(() -> new IllegalStateException("Import candidate disappeared during create-new merge"));
         return new AdminMergeResult(song, arrangement, List.of(songProvenanceRecord, arrangementProvenanceRecord),
-                List.of(approvalRecord), false);
+                List.of(approvalRecord, licensingApprovalRecord), false);
     }
 
     private Arrangement ensureImportedDefaultArrangement(Song song, CreateCanonicalSongFromImportCandidateCommand command) {
@@ -692,14 +803,42 @@ public class AdminImportReviewService {
     }
 
     private void requireAuthorized(String action, String actor, UUID entityId, String entityType) {
-        AdminAuthorizationRole role = AdminAuthorizationRole.fromActor(actor);
+        AdminAuthorizationRole role = effectiveRole(action, actor);
         List<AdminAuthorizationRole> allowedRoles = AUTHORIZATION_MATRIX.getOrDefault(action, List.of());
         if (allowedRoles.contains(role)) {
             return;
         }
-        addAuditEvent(entityId, entityType, action + "_DENIED", actor, "authorization denied",
+        addAuditEvent(entityId, entityType, action + "_DENIED", actor, "access-denied",
                 Map.of("requiredRoles", allowedRoles.toString()), Map.of("actualRole", role.name()));
         throw new IllegalStateException("Authorization denied for action " + action + " with role " + role.name());
+    }
+
+    private static AdminAuthorizationRole effectiveRole(String action, String actor) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        List<String> authorities = authentication == null
+                ? List.of()
+                : authentication.getAuthorities().stream()
+                        .map(GrantedAuthority::getAuthority)
+                        .toList();
+        if (hasAnyAuthority(authorities, RbacAuthorities.ROLE_ADMIN, "ROLE_ADMIN", "catalog.admin.approve")) {
+            return action.contains("ROLLBACK") ? AdminAuthorizationRole.ROLLBACK_ADMIN : AdminAuthorizationRole.APPROVER;
+        }
+        if (hasAnyAuthority(
+                authorities,
+                RbacAuthorities.ROLE_CATALOG_EDITOR,
+                "ROLE_CATALOG_EDITOR",
+                RbacAuthorities.ROLE_DOCTRINAL_REVIEWER,
+                "ROLE_DOCTRINAL_REVIEWER",
+                RbacAuthorities.ROLE_MUSICAL_REVIEWER,
+                "ROLE_MUSICAL_REVIEWER",
+                "catalog.admin.review")) {
+            return AdminAuthorizationRole.REVIEWER;
+        }
+        return AdminAuthorizationRole.fromActor(actor);
+    }
+
+    private static boolean hasAnyAuthority(List<String> authorities, String... expectedAuthorities) {
+        return java.util.Arrays.stream(expectedAuthorities).anyMatch(authorities::contains);
     }
 
     private void requirePermittingReview(
@@ -804,6 +943,30 @@ public class AdminImportReviewService {
 
     private static String asString(Object value) {
         return value == null ? null : String.valueOf(value);
+    }
+
+    private static String firstText(Object... values) {
+        for (Object value : values) {
+            if (value != null && !String.valueOf(value).isBlank()) {
+                return String.valueOf(value);
+            }
+        }
+        return null;
+    }
+
+    private static Integer integerOrNull(Object value) {
+        if (value == null || String.valueOf(value).isBlank()) {
+            return null;
+        }
+        try {
+            return Integer.valueOf(String.valueOf(value));
+        } catch (NumberFormatException ignored) {
+            return null;
+        }
+    }
+
+    private static LicenseType licenseTypeFor(String ccliNumber) {
+        return ccliNumber == null || ccliNumber.isBlank() ? LicenseType.UNKNOWN : LicenseType.CCLI;
     }
 
     private String toJson(Map<String, Object> value) {

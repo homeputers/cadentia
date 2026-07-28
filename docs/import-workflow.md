@@ -36,9 +36,23 @@ Cadentia's core guardrails.
 | Candidate record DTO | `apps/api/src/main/java/com/cadentia/scraperadmin/ImportCandidateRecord.java` |
 | Merge command DTOs | `apps/api/src/main/java/com/cadentia/scraperadmin/MergeIntoExistingSongCommand.java`, `apps/api/src/main/java/com/cadentia/scraperadmin/CreateCanonicalSongFromImportCandidateCommand.java` |
 
-There is no supported production import-source adapter, REST endpoint, or CLI
-command documented as implemented at this time. Current repeatable execution is
-through service tests and repository integration tests.
+Admin REST endpoints now exist for operator-entered manual song imports and
+uploaded CSV imports:
+
+- `POST /admin/song-imports/manual`
+- `POST /admin/song-imports/csv`
+
+These endpoints stage candidates through the same import batch ingestion
+workflow. They do not write directly to approved canonical catalog records.
+Current repeatable non-HTTP execution remains through service tests and
+repository integration tests.
+
+The CSV endpoint accepts `multipart/form-data` with `actor`, `file`,
+`licenseType`, and optional `licenseEvidence` parts. The uploaded file must be
+UTF-8 CSV with a header row. Recognized headers include `title`, `author`,
+`artist`, `ccliNumber`, `key`, `bpm`, `timeSignature`, `energy`, `difficulty`,
+`themes`, `scriptureReferences`, `lyrics`, `chordChart`, `resources`,
+`licenseType`, and `licenseEvidence`. List-valued cells use semicolons or pipes.
 
 ## End-to-end lifecycle
 
