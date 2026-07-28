@@ -1,10 +1,13 @@
 package com.cadentia.api.controller;
 
 import com.cadentia.catalog.entity.ApprovalRecord;
+import com.cadentia.catalog.entity.ImportCandidate;
 import com.cadentia.catalog.entity.ImportCandidateReview;
 import com.cadentia.catalog.entity.ProposedDuplicateMatch;
-import com.cadentia.catalog.model.ApprovalType;
 import com.cadentia.catalog.model.ApprovalStatus;
+import com.cadentia.catalog.model.ApprovalType;
+import com.cadentia.catalog.model.ImportCandidateReviewDecision;
+import com.cadentia.catalog.model.ImportCandidateStatus;
 import com.cadentia.catalog.model.LicenseType;
 import com.cadentia.generated.api.AdminReviewApi;
 import com.cadentia.generated.model.AdminApprovalState;
@@ -37,7 +40,6 @@ import com.cadentia.generated.model.CreateRollbackPreviewRequest;
 import com.cadentia.generated.model.DuplicateConfidence;
 import com.cadentia.generated.model.EscalateModerationFlagRequest;
 import com.cadentia.generated.model.ExecuteRollbackRequest;
-import com.cadentia.generated.model.ImportCandidateStatus;
 import com.cadentia.generated.model.ModerationFlagResponse;
 import com.cadentia.generated.model.ModerationFlagStatus;
 import com.cadentia.generated.model.ModerationState;
@@ -75,10 +77,12 @@ import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -194,18 +198,10 @@ public class AdminImportCandidateController implements AdminReviewApi {
         return ResponseEntity.status(HttpStatus.CREATED).body(toSongImportResponse(result));
     }
 
-    private static String readCsvFile(MultipartFile file) {
-        try {
-            return new String(file.getBytes(), StandardCharsets.UTF_8);
-        } catch (IOException ex) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unable to read uploaded CSV file", ex);
-        }
-    }
-
     @Override
     @PreAuthorize("hasAnyAuthority(T(com.cadentia.api.security.RbacAuthorities).ROLE_CATALOG_EDITOR, T(com.cadentia.api.security.RbacAuthorities).ROLE_DOCTRINAL_REVIEWER, T(com.cadentia.api.security.RbacAuthorities).ROLE_MUSICAL_REVIEWER, T(com.cadentia.api.security.RbacAuthorities).ROLE_ADMIN)")
     public ResponseEntity<AdminImportCandidateQueueResponse> listAdminImportCandidates(
-            @RequestParam(required = false) ImportCandidateStatus status,
+            @RequestParam(required = false) com.cadentia.generated.model.ImportCandidateStatus status,
             @RequestParam(required = false) String connectorKey,
             @RequestParam(required = false) UUID batchId,
             @RequestParam(required = false) LocalDate submittedFrom,
@@ -221,9 +217,9 @@ public class AdminImportCandidateController implements AdminReviewApi {
             @RequestParam(required = false, defaultValue = "25") Integer pageSize) {
         int safePage = page == null || page < 1 ? 1 : page;
         int safePageSize = pageSize == null || pageSize < 1 ? 25 : Math.min(pageSize, 100);
-        com.cadentia.catalog.model.ImportCandidateStatus domainStatus =
-                status == null ? null : com.cadentia.catalog.model.ImportCandidateStatus.valueOf(status.getValue());
-        List<com.cadentia.catalog.entity.ImportCandidate> candidates = candidatesForQueue(
+        ImportCandidateStatus domainStatus =
+                status == null ? null : ImportCandidateStatus.valueOf(status.getValue());
+        List<ImportCandidate> candidates = candidatesForQueue(
                 domainStatus,
                 batchId,
                 safePage,
@@ -243,7 +239,7 @@ public class AdminImportCandidateController implements AdminReviewApi {
                         .rawTitle(candidate.rawTitle())
                         .normalizedTitle(candidate.normalizedTitle())
                         .sourceArtistName(candidate.sourceArtistName())
-                        .status(ImportCandidateStatus.fromValue(candidate.status().name()))
+                        .status(com.cadentia.generated.model.ImportCandidateStatus.fromValue(candidate.status().name()))
                         .submittedAt(OffsetDateTime.ofInstant(candidate.createdAt(), ZoneOffset.UTC))
                         .updatedAt(OffsetDateTime.ofInstant(candidate.updatedAt(), ZoneOffset.UTC))
                         .parserSeverity(ParserSeverity.NONE)
@@ -267,47 +263,6 @@ public class AdminImportCandidateController implements AdminReviewApi {
                 .totalPages(totalItems == 0 ? 0 : (int) Math.ceil((double) totalItems / safePageSize))
                 .sort(sort == null || sort.isBlank() ? "updatedAt:desc" : sort);
         return ResponseEntity.ok(response);
-    }
-
-    private List<com.cadentia.catalog.entity.ImportCandidate> candidatesForQueue(
-            com.cadentia.catalog.model.ImportCandidateStatus status,
-            UUID batchId,
-            int page,
-            int pageSize) {
-        if (batchId != null) {
-            return filterDefaultQueueCandidates(reviewService.findCandidatesForBatch(batchId, status), status);
-        }
-        if (status != null) {
-            return reviewService.findCandidates(status, pageSize, (page - 1) * pageSize);
-        }
-        return filterDefaultQueueCandidates(reviewService.findCandidates(null, 10_000, 0), null);
-    }
-
-    private int totalCandidatesForQueue(
-            com.cadentia.catalog.model.ImportCandidateStatus status,
-            UUID batchId,
-            List<com.cadentia.catalog.entity.ImportCandidate> currentCandidates) {
-        if (status != null && batchId == null) {
-            return reviewService.countCandidates(status);
-        }
-        return currentCandidates.size();
-    }
-
-    private List<com.cadentia.catalog.entity.ImportCandidate> filterDefaultQueueCandidates(
-            List<com.cadentia.catalog.entity.ImportCandidate> candidates,
-            com.cadentia.catalog.model.ImportCandidateStatus status) {
-        if (status != null) {
-            return candidates;
-        }
-        return candidates.stream()
-                .filter(candidate -> !isCompletedQueueCandidate(candidate))
-                .toList();
-    }
-
-    private boolean isCompletedQueueCandidate(com.cadentia.catalog.entity.ImportCandidate candidate) {
-        return candidate.status() == com.cadentia.catalog.model.ImportCandidateStatus.MERGED
-                && approvalReadinessFor(candidate) == ApprovalReadiness.READY
-                && provenanceStatusFor(candidate) == ProvenanceStatus.VERIFIED;
     }
 
     @Override
@@ -484,9 +439,58 @@ public class AdminImportCandidateController implements AdminReviewApi {
                 .auditEventId(result.auditEventId()));
     }
 
+    private static String readCsvFile(MultipartFile file) {
+        try {
+            return new String(file.getBytes(), StandardCharsets.UTF_8);
+        } catch (IOException ex) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unable to read uploaded CSV file", ex);
+        }
+    }
+
+    private List<ImportCandidate> candidatesForQueue(
+            ImportCandidateStatus status,
+            UUID batchId,
+            int page,
+            int pageSize) {
+        if (batchId != null) {
+            return filterDefaultQueueCandidates(reviewService.findCandidatesForBatch(batchId, status), status);
+        }
+        if (status != null) {
+            return reviewService.findCandidates(status, pageSize, (page - 1) * pageSize);
+        }
+        return filterDefaultQueueCandidates(reviewService.findCandidates(null, 10_000, 0), null);
+    }
+
+    private int totalCandidatesForQueue(
+            ImportCandidateStatus status,
+            UUID batchId,
+            List<ImportCandidate> currentCandidates) {
+        if (status != null && batchId == null) {
+            return reviewService.countCandidates(status);
+        }
+        return currentCandidates.size();
+    }
+
+    private List<ImportCandidate> filterDefaultQueueCandidates(
+            List<ImportCandidate> candidates,
+            ImportCandidateStatus status) {
+        if (status != null) {
+            return candidates;
+        }
+        return candidates.stream()
+                .filter(candidate -> !isCompletedQueueCandidate(candidate))
+                .toList();
+    }
+
+    private boolean isCompletedQueueCandidate(ImportCandidate candidate) {
+        return candidate.status() == ImportCandidateStatus.MERGED
+                && approvalReadinessFor(candidate) == ApprovalReadiness.READY
+                && provenanceStatusFor(candidate) == ProvenanceStatus.VERIFIED;
+    }
+
     private AdminImportCandidateDetailResponse toDetail(AdminImportCandidateDetail detail) {
         List<AdminReviewNote> reviewNotes = detail.reviewHistory().stream()
-                .filter(review -> review.decision() == com.cadentia.catalog.model.ImportCandidateReviewDecision.NEEDS_MORE_INFO)
+                .filter(review -> review.decision() == ImportCandidateReviewDecision.NEEDS_MORE_INFO)
                 .map(this::toReviewNote)
                 .toList();
         double topDuplicateScore = detail.duplicateMatches().stream()
@@ -512,7 +516,7 @@ public class AdminImportCandidateController implements AdminReviewApi {
                 .parserVersion(detail.parserVersion())
                 .parserConfidence(detail.parserConfidence())
                 .parserWarnings(detail.parserWarnings())
-                .status(ImportCandidateStatus.fromValue(detail.candidate().status().name()))
+                .status(com.cadentia.generated.model.ImportCandidateStatus.fromValue(detail.candidate().status().name()))
                 .allowedActions(allowedActions(detail))
                 .version(versionFor(detail))
                 .etag(etagFor(detail))
@@ -582,18 +586,18 @@ public class AdminImportCandidateController implements AdminReviewApi {
                                 .rawTitle(candidate.rawTitle())
                                 .normalizedTitle(candidate.normalizedTitle())
                                 .sourceArtistName(candidate.sourceArtistName())
-                                .status(ImportCandidateStatus.fromValue(candidate.status().name())))
+                                .status(com.cadentia.generated.model.ImportCandidateStatus.fromValue(candidate.status().name())))
                         .toList())
                 .validationErrors(validationErrors);
     }
 
     private List<AllowedImportCandidateAction> allowedActions(AdminImportCandidateDetail detail) {
-        List<AllowedImportCandidateAction> actions = new java.util.ArrayList<>();
+        List<AllowedImportCandidateAction> actions = new ArrayList<>();
         actions.add(AllowedImportCandidateAction.VIEW_DETAIL);
         actions.add(AllowedImportCandidateAction.ADD_REVIEW_NOTE);
         actions.add(AllowedImportCandidateAction.OPEN_MODERATION_FLAG);
-        if (detail.candidate().status() == com.cadentia.catalog.model.ImportCandidateStatus.STAGED
-                || detail.candidate().status() == com.cadentia.catalog.model.ImportCandidateStatus.DEDUPLICATION_REVIEW) {
+        if (detail.candidate().status() == ImportCandidateStatus.STAGED
+                || detail.candidate().status() == ImportCandidateStatus.DEDUPLICATION_REVIEW) {
             actions.add(AllowedImportCandidateAction.MERGE_DECISION_DEFER);
             actions.add(AllowedImportCandidateAction.MERGE_DECISION_CREATE_NEW);
             if (!detail.duplicateMatches().isEmpty()) {
@@ -610,7 +614,7 @@ public class AdminImportCandidateController implements AdminReviewApi {
             if (approvals.stream().anyMatch(record -> record.status() == ApprovalStatus.APPROVED)) {
                 actions.add(AllowedImportCandidateAction.REVERSE_APPROVAL);
             }
-        } else if (detail.candidate().status() == com.cadentia.catalog.model.ImportCandidateStatus.READY_TO_MERGE) {
+        } else if (detail.candidate().status() == ImportCandidateStatus.READY_TO_MERGE) {
             actions.add(AllowedImportCandidateAction.COMMIT_MERGE);
         }
         return actions;
@@ -622,7 +626,7 @@ public class AdminImportCandidateController implements AdminReviewApi {
         }
         return request.getSelectedFields().stream()
                 .map(field -> MergeIntoExistingSongCommand.MergeField.valueOf(field.getValue()))
-                .collect(java.util.stream.Collectors.toSet());
+                .collect(Collectors.toSet());
     }
 
     private AdminApprovalState approvalState(AdminImportCandidateDetail detail) {
@@ -652,7 +656,7 @@ public class AdminImportCandidateController implements AdminReviewApi {
                         : "Backend approval gates currently block recommendation eligibility.");
     }
 
-    private ProvenanceStatus provenanceStatusFor(com.cadentia.catalog.entity.ImportCandidate candidate) {
+    private ProvenanceStatus provenanceStatusFor(ImportCandidate candidate) {
         if (candidate.mergedSongId() == null) {
             return ProvenanceStatus.NEEDS_REVIEW;
         }
@@ -662,7 +666,7 @@ public class AdminImportCandidateController implements AdminReviewApi {
     }
 
     private String provenanceSummaryFor(
-            com.cadentia.catalog.entity.ImportCandidate candidate,
+            ImportCandidate candidate,
             ProvenanceStatus provenanceStatus) {
         if (provenanceStatus == ProvenanceStatus.VERIFIED) {
             return "Reviewed import provenance captured during catalog commit.";
@@ -672,7 +676,7 @@ public class AdminImportCandidateController implements AdminReviewApi {
                 : "No catalog provenance record was found for the merged song.";
     }
 
-    private ApprovalReadiness approvalReadinessFor(com.cadentia.catalog.entity.ImportCandidate candidate) {
+    private ApprovalReadiness approvalReadinessFor(ImportCandidate candidate) {
         if (candidate.mergedSongId() == null) {
             return ApprovalReadiness.NEEDS_REVIEW;
         }
@@ -682,7 +686,7 @@ public class AdminImportCandidateController implements AdminReviewApi {
     }
 
     private String readinessSummaryFor(
-            com.cadentia.catalog.entity.ImportCandidate candidate,
+            ImportCandidate candidate,
             ApprovalReadiness approvalReadiness) {
         if (candidate.mergedSongId() == null) {
             return "Open detail to review and commit this candidate.";
@@ -727,8 +731,8 @@ public class AdminImportCandidateController implements AdminReviewApi {
     }
 
     private List<String> eligibilityBlockers(AdminImportCandidateDetail detail) {
-        if (detail.candidate().status() == com.cadentia.catalog.model.ImportCandidateStatus.REJECTED
-                || detail.candidate().status() == com.cadentia.catalog.model.ImportCandidateStatus.FAILED) {
+        if (detail.candidate().status() == ImportCandidateStatus.REJECTED
+                || detail.candidate().status() == ImportCandidateStatus.FAILED) {
             return List.of("Candidate status is " + detail.candidate().status().name());
         }
         if (!detail.parserWarnings().isEmpty()) {

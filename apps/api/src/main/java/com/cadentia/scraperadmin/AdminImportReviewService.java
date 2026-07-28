@@ -187,16 +187,6 @@ public class AdminImportReviewService {
         return review;
     }
 
-    private static ImportCandidateReviewDecision reviewDecisionForMergeDecision(String decision) {
-        return switch (decision) {
-            case "CREATE_NEW" -> ImportCandidateReviewDecision.CREATE_NEW_SONG;
-            case "MERGE_EXISTING" -> ImportCandidateReviewDecision.CONFIRM_MATCH;
-            case "REJECT_DUPLICATE", "REJECT_NOT_PERMITTED" -> ImportCandidateReviewDecision.REJECT_CANDIDATE;
-            case "DEFER" -> ImportCandidateReviewDecision.NEEDS_MORE_INFO;
-            default -> throw new IllegalArgumentException("Unsupported merge decision: " + decision);
-        };
-    }
-
     @Transactional
     public AdminMergeResult commitCandidateMerge(
             UUID importCandidateId,
@@ -220,58 +210,6 @@ public class AdminImportReviewService {
                 Map.of("status", candidate.status().name()),
                 Map.of("action", action, "songId", result.song().id().toString()));
         return result;
-    }
-
-    private CreateCanonicalSongFromImportCandidateCommand createCanonicalSongCommand(
-            ImportCandidate candidate,
-            String actor,
-            String rationale) {
-        Map<String, Object> payload = parseJsonObject(candidate.sourcePayloadJson());
-        Map<String, Object> metadata = nestedMap(payload, "metadata");
-        String title = firstText(metadata.get("title"), payload.get("title"), candidate.rawTitle(), candidate.normalizedTitle());
-        String language = firstText(metadata.get("language"), payload.get("language"), "en");
-        String artist = firstText(metadata.get("artist"), metadata.get("author"), candidate.sourceArtistName());
-        String author = firstText(metadata.get("author"), metadata.get("artist"), candidate.sourceArtistName());
-        String ccliNumber = firstText(metadata.get("ccliNumber"), metadata.get("ccli"), candidate.ccliNumber());
-        return new CreateCanonicalSongFromImportCandidateCommand(
-                candidate.id(),
-                actor,
-                title,
-                language,
-                artist,
-                author,
-                ccliNumber,
-                integerOrNull(metadata.get("yearWritten")),
-                firstText(metadata.get("doctrinalNotes")),
-                title,
-                "admin-import",
-                firstText(payload.get("sourceReference"), candidate.externalCandidateId(), candidate.id().toString()),
-                "Admin reviewed import",
-                licenseTypeFor(ccliNumber),
-                rationale,
-                ImportMethod.SCRAPER_REVIEWED);
-    }
-
-    private MergeIntoExistingSongCommand mergeIntoExistingSongCommand(
-            ImportCandidate candidate,
-            UUID targetSongId,
-            String actor,
-            Set<MergeIntoExistingSongCommand.MergeField> selectedFields,
-            String rationale) {
-        Map<String, Object> payload = parseJsonObject(candidate.sourcePayloadJson());
-        Map<String, Object> metadata = nestedMap(payload, "metadata");
-        String ccliNumber = firstText(metadata.get("ccliNumber"), metadata.get("ccli"), candidate.ccliNumber());
-        return new MergeIntoExistingSongCommand(
-                candidate.id(),
-                targetSongId,
-                actor,
-                "admin-import",
-                firstText(payload.get("sourceReference"), candidate.externalCandidateId(), candidate.id().toString()),
-                "Admin reviewed import",
-                licenseTypeFor(ccliNumber),
-                rationale,
-                ImportMethod.SCRAPER_REVIEWED,
-                selectedFields);
     }
 
     @Transactional(readOnly = true)
@@ -583,48 +521,6 @@ public class AdminImportReviewService {
         return new AdminMergeResult(mergedSong, null, List.of(provenanceRecord), List.of(), false);
     }
 
-    private static boolean matchesAuditValue(AdminAuditEvent event, String key, UUID expected) {
-        if (expected == null) {
-            return true;
-        }
-        return expected.toString().equals(String.valueOf(event.beforeState().get(key)))
-                || expected.toString().equals(String.valueOf(event.afterState().get(key)));
-    }
-
-    private Song mergeSelectedCandidateFields(ImportCandidate candidate, Song targetSong, MergeIntoExistingSongCommand command) {
-        if (command.selectedFields().isEmpty()) {
-            return targetSong;
-        }
-        Map<String, Object> payload = parseJsonObject(candidate.sourcePayloadJson());
-        boolean approvedSong = songRepository.findApprovalRecordsForSong(targetSong.id()).stream()
-                .anyMatch(record -> record.status() == ApprovalStatus.APPROVED);
-        String importedTitle = stringOrNull(payload.get("title"));
-        if (approvedSong && importedTitle != null
-                && !importedTitle.equals(targetSong.canonicalTitle())
-                && !command.selectedFields().contains(MergeIntoExistingSongCommand.MergeField.CANONICAL_TITLE)) {
-            throw new IllegalStateException("Conflict on canonicalTitle requires explicit reviewer field selection");
-        }
-        UpdateSongCommand update = new UpdateSongCommand(
-                command.selectedFields().contains(MergeIntoExistingSongCommand.MergeField.CANONICAL_TITLE) && importedTitle != null
-                        ? importedTitle
-                        : targetSong.canonicalTitle(),
-                command.selectedFields().contains(MergeIntoExistingSongCommand.MergeField.CANONICAL_TITLE) && importedTitle != null
-                        ? titleNormalizer.normalize(importedTitle)
-                        : targetSong.normalizedTitle(),
-                targetSong.primaryLanguage(),
-                targetSong.originalArtistDisplay(),
-                targetSong.composerCredits(),
-                targetSong.ccliNumber(),
-                targetSong.yearWritten(),
-                targetSong.songStatus(),
-                targetSong.doctrinalNotes());
-        return songRepository.updateSong(targetSong.id(), update).orElse(targetSong);
-    }
-
-    private static String stringOrNull(Object value) {
-        return value == null ? null : String.valueOf(value);
-    }
-
     @Transactional
     public ApprovalRecord applyApprovalAction(ApplyApprovalActionCommand command) {
         UUID approvalEntityId = command.songId() == null
@@ -722,6 +618,110 @@ public class AdminImportReviewService {
                 .orElseThrow(() -> new IllegalStateException("Import candidate disappeared during create-new merge"));
         return new AdminMergeResult(song, arrangement, List.of(songProvenanceRecord, arrangementProvenanceRecord),
                 List.of(approvalRecord, licensingApprovalRecord), false);
+    }
+
+    private static ImportCandidateReviewDecision reviewDecisionForMergeDecision(String decision) {
+        return switch (decision) {
+            case "CREATE_NEW" -> ImportCandidateReviewDecision.CREATE_NEW_SONG;
+            case "MERGE_EXISTING" -> ImportCandidateReviewDecision.CONFIRM_MATCH;
+            case "REJECT_DUPLICATE", "REJECT_NOT_PERMITTED" -> ImportCandidateReviewDecision.REJECT_CANDIDATE;
+            case "DEFER" -> ImportCandidateReviewDecision.NEEDS_MORE_INFO;
+            default -> throw new IllegalArgumentException("Unsupported merge decision: " + decision);
+        };
+    }
+
+    private CreateCanonicalSongFromImportCandidateCommand createCanonicalSongCommand(
+            ImportCandidate candidate,
+            String actor,
+            String rationale) {
+        Map<String, Object> payload = parseJsonObject(candidate.sourcePayloadJson());
+        Map<String, Object> metadata = nestedMap(payload, "metadata");
+        String title = firstText(metadata.get("title"), payload.get("title"), candidate.rawTitle(), candidate.normalizedTitle());
+        String language = firstText(metadata.get("language"), payload.get("language"), "en");
+        String artist = firstText(metadata.get("artist"), metadata.get("author"), candidate.sourceArtistName());
+        String author = firstText(metadata.get("author"), metadata.get("artist"), candidate.sourceArtistName());
+        String ccliNumber = firstText(metadata.get("ccliNumber"), metadata.get("ccli"), candidate.ccliNumber());
+        return new CreateCanonicalSongFromImportCandidateCommand(
+                candidate.id(),
+                actor,
+                title,
+                language,
+                artist,
+                author,
+                ccliNumber,
+                integerOrNull(metadata.get("yearWritten")),
+                firstText(metadata.get("doctrinalNotes")),
+                title,
+                "admin-import",
+                firstText(payload.get("sourceReference"), candidate.externalCandidateId(), candidate.id().toString()),
+                "Admin reviewed import",
+                licenseTypeFor(ccliNumber),
+                rationale,
+                ImportMethod.SCRAPER_REVIEWED);
+    }
+
+    private MergeIntoExistingSongCommand mergeIntoExistingSongCommand(
+            ImportCandidate candidate,
+            UUID targetSongId,
+            String actor,
+            Set<MergeIntoExistingSongCommand.MergeField> selectedFields,
+            String rationale) {
+        Map<String, Object> payload = parseJsonObject(candidate.sourcePayloadJson());
+        Map<String, Object> metadata = nestedMap(payload, "metadata");
+        String ccliNumber = firstText(metadata.get("ccliNumber"), metadata.get("ccli"), candidate.ccliNumber());
+        return new MergeIntoExistingSongCommand(
+                candidate.id(),
+                targetSongId,
+                actor,
+                "admin-import",
+                firstText(payload.get("sourceReference"), candidate.externalCandidateId(), candidate.id().toString()),
+                "Admin reviewed import",
+                licenseTypeFor(ccliNumber),
+                rationale,
+                ImportMethod.SCRAPER_REVIEWED,
+                selectedFields);
+    }
+
+    private static boolean matchesAuditValue(AdminAuditEvent event, String key, UUID expected) {
+        if (expected == null) {
+            return true;
+        }
+        return expected.toString().equals(String.valueOf(event.beforeState().get(key)))
+                || expected.toString().equals(String.valueOf(event.afterState().get(key)));
+    }
+
+    private Song mergeSelectedCandidateFields(ImportCandidate candidate, Song targetSong, MergeIntoExistingSongCommand command) {
+        if (command.selectedFields().isEmpty()) {
+            return targetSong;
+        }
+        Map<String, Object> payload = parseJsonObject(candidate.sourcePayloadJson());
+        boolean approvedSong = songRepository.findApprovalRecordsForSong(targetSong.id()).stream()
+                .anyMatch(record -> record.status() == ApprovalStatus.APPROVED);
+        String importedTitle = stringOrNull(payload.get("title"));
+        if (approvedSong && importedTitle != null
+                && !importedTitle.equals(targetSong.canonicalTitle())
+                && !command.selectedFields().contains(MergeIntoExistingSongCommand.MergeField.CANONICAL_TITLE)) {
+            throw new IllegalStateException("Conflict on canonicalTitle requires explicit reviewer field selection");
+        }
+        UpdateSongCommand update = new UpdateSongCommand(
+                command.selectedFields().contains(MergeIntoExistingSongCommand.MergeField.CANONICAL_TITLE) && importedTitle != null
+                        ? importedTitle
+                        : targetSong.canonicalTitle(),
+                command.selectedFields().contains(MergeIntoExistingSongCommand.MergeField.CANONICAL_TITLE) && importedTitle != null
+                        ? titleNormalizer.normalize(importedTitle)
+                        : targetSong.normalizedTitle(),
+                targetSong.primaryLanguage(),
+                targetSong.originalArtistDisplay(),
+                targetSong.composerCredits(),
+                targetSong.ccliNumber(),
+                targetSong.yearWritten(),
+                targetSong.songStatus(),
+                targetSong.doctrinalNotes());
+        return songRepository.updateSong(targetSong.id(), update).orElse(targetSong);
+    }
+
+    private static String stringOrNull(Object value) {
+        return value == null ? null : String.valueOf(value);
     }
 
     private Arrangement ensureImportedDefaultArrangement(Song song, CreateCanonicalSongFromImportCandidateCommand command) {
