@@ -15,8 +15,6 @@ import org.springframework.stereotype.Repository;
 @Repository
 public class JdbcApprovedSearchDocumentProvider implements ApprovedSearchDocumentProvider {
 
-    private static final UUID INSTANCE_ID = UUID.fromString("00000000-0000-0000-0000-000000000001");
-
     private final NamedParameterJdbcTemplate jdbcTemplate;
 
     public JdbcApprovedSearchDocumentProvider(NamedParameterJdbcTemplate jdbcTemplate) {
@@ -69,7 +67,7 @@ public class JdbcApprovedSearchDocumentProvider implements ApprovedSearchDocumen
         return new ApprovedSearchDocument(
                 rs.getObject("song_id", UUID.class),
                 rs.getObject("arrangement_id", UUID.class),
-                INSTANCE_ID,
+                null,
                 rs.getString("canonical_title"),
                 List.of(),
                 List.of(),

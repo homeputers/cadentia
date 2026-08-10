@@ -4,7 +4,6 @@ import com.cadentia.search.ApprovedSearchModels.ApprovedSearchDocument;
 import com.cadentia.search.ApprovedSearchModels.SearchActor;
 import com.cadentia.search.ApprovedSearchModels.SearchEligibilityDecision;
 import com.cadentia.search.ApprovedSearchModels.SearchVisibilityPolicy;
-import java.util.Objects;
 import java.util.Set;
 
 public class SearchEligibilityPolicy {
@@ -15,9 +14,6 @@ public class SearchEligibilityPolicy {
         }
         if (actor == null || !actor.authenticated()) {
             return SearchEligibilityDecision.deny("unauthenticated");
-        }
-        if (!Objects.equals(actor.instanceId(), document.instanceId())) {
-            return SearchEligibilityDecision.deny("instanceScope");
         }
         if (!document.approved()) {
             return SearchEligibilityDecision.deny("approvalState");

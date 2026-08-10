@@ -32,22 +32,23 @@ class SearchEligibilityPolicyTest {
         ApprovedSearchDocument inactive = document("Hidden Inactive", UUID.randomUUID(), INSTANCE_ID, false, true, true, true, true);
         ApprovedSearchDocument unlicensed = document("Hidden Unlicensed", UUID.randomUUID(), INSTANCE_ID, true, true, true, false, true);
         ApprovedSearchDocument packageHidden = document("Hidden Package", UUID.randomUUID(), INSTANCE_ID, true, true, true, true, false);
-        ApprovedSearchDocument crossInstance = document("Hidden Instance", UUID.randomUUID(), OTHER_INSTANCE_ID, true, true, true, true, true);
+        ApprovedSearchDocument otherInstance = document("Visible Other Instance", UUID.randomUUID(), OTHER_INSTANCE_ID, true, true, true, true, true);
         ApprovedSearchDocument unauthorized = restricted("Hidden Unauthorized", UUID.randomUUID(), Set.of("role.admin"), Set.of());
         ApprovedSearchDocument governed = restricted("Hidden Governed", UUID.randomUUID(), Set.of("role.worship_leader"), Set.of("LOCAL_ONLY"));
         ApprovedLexicalSearchService service = new ApprovedLexicalSearchService(List.of(
-                eligible, unapproved, inactive, unlicensed, packageHidden, crossInstance, unauthorized, governed));
+                eligible, unapproved, inactive, unlicensed, packageHidden, otherInstance, unauthorized, governed));
 
         // Act
         var query = new ApprovedSearchModels.SearchQuery(INSTANCE_ID, "Hidden", null, null, null, null, null, null, null, null);
         var allQuery = new ApprovedSearchModels.SearchQuery(INSTANCE_ID, "Amazing", null, null, null, null, null, null, null, null);
+        var otherInstanceQuery = new ApprovedSearchModels.SearchQuery(INSTANCE_ID, "Visible Other", null, null, null, null, null, null, null, null);
         var results = service.search(WORSHIP_LEADER, query);
         var counts = service.search(WORSHIP_LEADER, query).size();
         var facets = service.facets(WORSHIP_LEADER, query);
         var suggestions = service.autocomplete(WORSHIP_LEADER, "hid", 20);
         var spellingCorrections = service.spellingCorrections(WORSHIP_LEADER, "hid", 20);
         var semantic = service.semanticNeighbors(WORSHIP_LEADER, List.of(
-                unapproved.songId(), inactive.songId(), unlicensed.songId(), crossInstance.songId(), eligible.songId()), 10);
+                unapproved.songId(), inactive.songId(), unlicensed.songId(), otherInstance.songId(), eligible.songId()), 10);
         var hydrated = service.hydrate(WORSHIP_LEADER, List.of(
                 new SearchResult(unapproved.songId(), unapproved.arrangementId(), unapproved.title(), null, 99),
                 new SearchResult(eligible.songId(), eligible.arrangementId(), eligible.title(), null, 1)));
@@ -59,10 +60,11 @@ class SearchEligibilityPolicyTest {
         assertThat(facets).isEmpty();
         assertThat(suggestions).isEmpty();
         assertThat(spellingCorrections).isEmpty();
-        assertThat(semantic).extracting("title").containsExactly("Amazing Grace");
+        assertThat(semantic).extracting("title").containsExactly("Amazing Grace", "Visible Other Instance");
         assertThat(hydrated).extracting("title").containsExactly("Amazing Grace");
         assertThat(explanations).extracting("songId").containsExactly(SONG_ID);
         assertThat(service.search(WORSHIP_LEADER, allQuery)).hasSize(1);
+        assertThat(service.search(WORSHIP_LEADER, otherInstanceQuery)).extracting("title").containsExactly("Visible Other Instance");
     }
 
     @Test
