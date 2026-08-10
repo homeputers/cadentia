@@ -26,7 +26,9 @@ import com.cadentia.search.ApprovedSearchModels.TagFacet;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -35,20 +37,22 @@ import org.springframework.web.server.ResponseStatusException;
 public class CatalogSearchApplicationService {
 
     private static final UUID INSTANCE_ID = UUID.fromString("00000000-0000-0000-0000-000000000001");
-    private final ApprovedLexicalSearchService lexicalSearchService;
+    private final ApprovedSearchDocumentProvider documentProvider;
 
     public CatalogSearchApplicationService() {
-        this(new ApprovedLexicalSearchService(seedDocuments()));
+        this(CatalogSearchApplicationService::seedDocuments);
     }
 
-    CatalogSearchApplicationService(ApprovedLexicalSearchService lexicalSearchService) {
-        this.lexicalSearchService = lexicalSearchService;
+    @Autowired
+    public CatalogSearchApplicationService(ApprovedSearchDocumentProvider documentProvider) {
+        this.documentProvider = documentProvider;
     }
 
     public CatalogSearchResponse search(CatalogSearchRequest request) {
         validateSearch(request);
         SearchActor actor = actor();
         SearchQuery query = toQuery(request);
+        ApprovedLexicalSearchService lexicalSearchService = lexicalSearchService();
         List<SearchResult> allResults = lexicalSearchService.hydrate(actor, lexicalSearchService.search(actor, query));
         int pageSize = pageSize(request);
         int offset = cursorOffset(request == null || request.getPagination() == null ? null : request.getPagination().getCursor());
@@ -61,7 +65,7 @@ public class CatalogSearchApplicationService {
                         .nextCursor(hasMore ? String.valueOf(offset + page.size()) : null))
                 .emptyState(emptyState(page.isEmpty(), page.isEmpty() ? "NO_MATCHES" : null));
         if (Boolean.TRUE.equals(request.getIncludeFacets())) {
-            response.facets(facets(actor, query));
+            response.facets(facets(lexicalSearchService, actor, query));
         }
         if (Boolean.TRUE.equals(request.getIncludeDiagnostics())) {
             var diagnostics = lexicalSearchService.diagnostics(actor, query);
@@ -76,7 +80,7 @@ public class CatalogSearchApplicationService {
 
     public CatalogAutocompleteResponse autocomplete(CatalogAutocompleteRequest request) {
         int limit = request.getLimit() == null ? 10 : request.getLimit();
-        List<AutocompleteSuggestion> suggestions = lexicalSearchService.autocomplete(actor(), request.getPrefix(), limit).stream()
+        List<AutocompleteSuggestion> suggestions = lexicalSearchService().autocomplete(actor(), request.getPrefix(), limit).stream()
                 .map(suggestion -> new AutocompleteSuggestion()
                         .type(AutocompleteSuggestion.TypeEnum.fromValue(suggestion.type().name().equals("TITLE") ? "SONG" : suggestion.type().name()))
                         .value(suggestion.value())
@@ -134,7 +138,7 @@ public class CatalogSearchApplicationService {
         return summary;
     }
 
-    private List<SearchFacetGroup> facets(SearchActor actor, SearchQuery query) {
+    private List<SearchFacetGroup> facets(ApprovedLexicalSearchService lexicalSearchService, SearchActor actor, SearchQuery query) {
         List<SearchFacetBucket> buckets = lexicalSearchService.facets(actor, query).entrySet().stream()
                 .sorted(Comparator.comparing(entry -> entry.getKey().label()))
                 .map(entry -> new SearchFacetBucket().value(entry.getKey().code()).label(entry.getKey().label()).count(entry.getValue()))
@@ -163,7 +167,11 @@ public class CatalogSearchApplicationService {
     }
 
     private SearchActor actor() {
-        return new SearchActor("api-catalog-search", INSTANCE_ID, java.util.Set.of("role.admin", "role.worship_leader"), java.util.Set.of(), true);
+        return new SearchActor("api-catalog-search", INSTANCE_ID, Set.of("role.admin", "role.worship_leader"), Set.of(), true);
+    }
+
+    private ApprovedLexicalSearchService lexicalSearchService() {
+        return new ApprovedLexicalSearchService(documentProvider.documents());
     }
 
     private static String first(List<String> values) {

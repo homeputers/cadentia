@@ -6,6 +6,8 @@ import { defaultImportCandidateFilters, listImportCandidates, type ImportCandida
 import { ImportCandidateQueue } from './ImportCandidateQueue';
 import { ImportCandidateDetail } from './ImportCandidateDetail';
 import { SongImport } from './SongImport';
+import { SongReviewDetail } from './SongReviewDetail';
+import { SongReviewQueue } from './SongReviewQueue';
 import { AuditRollback } from './AuditRollback';
 import { Diagnostics } from './Diagnostics';
 import { InstanceSettings } from './InstanceSettings';
@@ -104,6 +106,9 @@ export const AdminShell = () => {
     if (session && window.location.pathname === '/admin/song-imports') {
         return <SongImport session={session} />;
     }
+    if (session && window.location.pathname === '/admin/songs') {
+        return <SongReviewQueue session={session} />;
+    }
     if (session && window.location.pathname === '/admin/audit') {
         return <AuditRollback session={session} />;
     }
@@ -116,6 +121,10 @@ export const AdminShell = () => {
     const detailMatch = window.location.pathname.match(/^\/admin\/imports\/([^/]+)$/);
     if (session && detailMatch) {
         return <ImportCandidateDetail session={session} candidateId={decodeURIComponent(detailMatch[1])} />;
+    }
+    const songDetailMatch = window.location.pathname.match(/^\/admin\/songs\/([^/]+)$/);
+    if (session && songDetailMatch) {
+        return <SongReviewDetail session={session} songId={decodeURIComponent(songDetailMatch[1])} />;
     }
 
     return (
