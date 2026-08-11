@@ -52,6 +52,10 @@
   "$ref": "./paths/admin-review.yaml#/~1admin~1song-imports~1manual"
 "/admin/song-imports/csv":
   "$ref": "./paths/admin-review.yaml#/~1admin~1song-imports~1csv"
+"/admin/songs":
+  "$ref": "./paths/admin-review.yaml#/~1admin~1songs"
+"/admin/songs/{songId}":
+  "$ref": "./paths/admin-review.yaml#/~1admin~1songs~1{songId}"
 "/admin/import-candidates":
   "$ref": "./paths/admin-review.yaml#/~1admin~1import-candidates"
 "/admin/import-candidates/{candidateId}":

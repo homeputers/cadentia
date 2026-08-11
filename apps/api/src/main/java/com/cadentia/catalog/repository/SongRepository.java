@@ -48,6 +48,10 @@ public interface SongRepository {
 
     Optional<Song> findByNormalizedTitleAndLanguage(String normalizedTitle, String primaryLanguage);
 
+    List<Song> findReviewedSongs(String query, String status, String sort, int limit, int offset);
+
+    int countReviewedSongs(String query, String status);
+
     Optional<Song> updateSong(UUID id, UpdateSongCommand command);
 
     Arrangement createArrangement(CreateArrangementCommand command);

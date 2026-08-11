@@ -18,18 +18,24 @@ const session: AdminSession = {
 };
 
 const searchResponse = {
-    results: [{
-        id: '66666666-6666-4666-8666-666666666666',
+    items: [{
         songId: '55555555-5555-4555-8555-555555555555',
-        arrangementId: '77777777-7777-4777-8777-777777777777',
-        resultType: 'ARRANGEMENT',
-        title: 'Reviewed Song',
-        subtitle: 'Arrangement',
-        score: 30,
-        matchedFields: [{ field: 'TITLE', value: 'Reviewed Song' }],
+        canonicalTitle: 'Reviewed Song',
+        normalizedTitle: 'reviewed song',
+        primaryLanguage: 'en',
+        originalArtistDisplay: 'Reviewer Band',
+        composerCredits: null,
+        ccliNumber: null,
+        yearWritten: null,
+        songStatus: 'APPROVED',
+        updatedAt: '2026-08-11T17:00:00Z',
+        arrangementCount: 1,
     }],
-    pagination: { pageSize: 20, hasMore: false },
-    emptyState: { empty: false },
+    page: 1,
+    pageSize: 25,
+    totalItems: 1,
+    totalPages: 1,
+    sort: 'TITLE',
 };
 
 const render = async (apiClient: AdminApiClient, initialSearch = '') => {
@@ -55,13 +61,15 @@ afterEach(() => {
 });
 
 describe('song review queue', () => {
-    it('does not post catalog search requests on each search keystroke', async () => {
+    it('loads all statuses by default and does not reload on each search keystroke', async () => {
         const request = vi.fn().mockResolvedValue(searchResponse);
         const node = await render({ getAdminSession: vi.fn(), request } as unknown as AdminApiClient);
         const search = [...node.querySelectorAll('input')].find((input) => input.name === 'query')!;
+        const status = [...node.querySelectorAll('select')].find((select) => select.id.includes('status') || select.value === 'ALL')!;
 
-        expect(request).not.toHaveBeenCalled();
-        expect(node.textContent).toContain('Enter catalog search criteria');
+        expect(status.textContent).toContain('All');
+        expect(request).toHaveBeenCalledTimes(1);
+        expect(request.mock.calls[0][0]).toBe('/admin/songs?sort=TITLE&page=1&pageSize=25');
 
         await act(async () => {
             typeValue(search, 'A');
@@ -70,14 +78,13 @@ describe('song review queue', () => {
             await Promise.resolve();
         });
 
-        expect(request).not.toHaveBeenCalled();
+        expect(request).toHaveBeenCalledTimes(1);
 
         await act(async () => {
             node.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
         });
 
-        expect(request).toHaveBeenCalledTimes(1);
-        expect(request.mock.calls[0][0]).toBe('/catalog/search');
-        expect(request.mock.calls[0][1].body).toContain('"query":"Ama"');
+        expect(request).toHaveBeenCalledTimes(2);
+        expect(request.mock.calls[1][0]).toBe('/admin/songs?sort=TITLE&page=1&pageSize=25&query=Ama');
     });
 });

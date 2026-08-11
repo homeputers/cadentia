@@ -7,12 +7,17 @@ import com.cadentia.catalog.entity.ImportCandidate;
 import com.cadentia.catalog.entity.ApprovalRecord;
 import com.cadentia.catalog.entity.ImportCandidateReview;
 import com.cadentia.catalog.entity.ProvenanceRecord;
+import com.cadentia.catalog.entity.Song;
 import com.cadentia.catalog.model.ApprovalStatus;
 import com.cadentia.catalog.model.ApprovalType;
 import com.cadentia.catalog.model.ImportCandidateReviewDecision;
 import com.cadentia.catalog.model.ImportCandidateStatus;
 import com.cadentia.catalog.model.ImportMethod;
 import com.cadentia.catalog.model.LicenseType;
+import com.cadentia.catalog.model.SongStatus;
+import com.cadentia.catalog.repository.InMemorySongRepository;
+import com.cadentia.catalog.repository.SongRepository;
+import com.cadentia.generated.model.AdminCatalogSongListResponse;
 import com.cadentia.generated.model.AdminAuditEventSearchResponse;
 import com.cadentia.generated.model.AdminImportCandidateDetailResponse;
 import com.cadentia.generated.model.AdminManualSongImportRequest;
@@ -449,6 +454,49 @@ class AdminImportCandidateControllerTest {
                 .containsExactly(completedCandidateId);
     }
 
+    @Test
+    void listCatalogSongsWithoutStatusPassesNullStatusForAllSongs() {
+        // Arrange
+        FakeSongRepository songRepository = new FakeSongRepository(List.of(
+                song("Approved Fixture", SongStatus.APPROVED),
+                song("Needs Review Fixture", SongStatus.IN_REVIEW),
+                song("Rejected Import Fixture", SongStatus.REJECTED)));
+        AdminImportCandidateController controller = controller(new FakeReviewService(null, null), songRepository);
+
+        // Act
+        AdminCatalogSongListResponse response = controller.listAdminCatalogSongs(
+                null,
+                null,
+                "TITLE",
+                1,
+                25).getBody();
+        AdminCatalogSongListResponse explicitAllResponse = controller.listAdminCatalogSongs(
+                null,
+                "ALL",
+                "TITLE",
+                1,
+                25).getBody();
+
+        // Assert
+        assertThat(songRepository.lastStatus).isNull();
+        assertThat(response).isNotNull();
+        assertThat(response.getItems()).extracting(item -> item.getSongStatus())
+                .containsExactly("APPROVED", "IN_REVIEW");
+        assertThat(explicitAllResponse).isNotNull();
+        assertThat(explicitAllResponse.getTotalItems()).isEqualTo(2);
+    }
+
+    @Test
+    void listCatalogSongsRejectsImportReviewOnlyStatuses() {
+        // Arrange
+        AdminImportCandidateController controller = controller(new FakeReviewService(null, null), new FakeSongRepository(List.of()));
+
+        // Act / Assert
+        assertThatThrownBy(() -> controller.listAdminCatalogSongs(null, "REJECTED", "TITLE", 1, 25))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("Invalid catalog song status");
+    }
+
     private static final class FakeReviewService extends AdminImportReviewService {
 
         private final AdminImportCandidateDetail detail;
@@ -664,7 +712,63 @@ class AdminImportCandidateControllerTest {
     private static AdminImportCandidateController controller(
             FakeReviewService reviewService,
             AdminSongImportService songImportService) {
-        return new AdminImportCandidateController(reviewService, songImportService);
+        return new AdminImportCandidateController(reviewService, songImportService, new InMemorySongRepository());
+    }
+
+    private static AdminImportCandidateController controller(
+            FakeReviewService reviewService,
+            SongRepository songRepository) {
+        return new AdminImportCandidateController(reviewService, new FakeSongImportService(), songRepository);
+    }
+
+    private static Song song(String title, SongStatus status) {
+        return new Song(
+                UUID.randomUUID(),
+                title,
+                title.toLowerCase().replace(" ", "-"),
+                "en",
+                null,
+                null,
+                null,
+                null,
+                status,
+                null,
+                Instant.EPOCH,
+                Instant.EPOCH);
+    }
+
+    private static final class FakeSongRepository extends InMemorySongRepository {
+
+        private final List<Song> songs;
+        private String lastStatus;
+
+        private FakeSongRepository(List<Song> songs) {
+            this.songs = songs;
+        }
+
+        @Override
+        public List<Song> findReviewedSongs(String query, String status, String sort, int limit, int offset) {
+            lastStatus = status;
+            return filteredSongs(status);
+        }
+
+        @Override
+        public int countReviewedSongs(String query, String status) {
+            lastStatus = status;
+            return filteredSongs(status).size();
+        }
+
+        private List<Song> filteredSongs(String status) {
+            if (status == null) {
+                return songs.stream()
+                        .filter(song -> song.songStatus() == SongStatus.APPROVED
+                                || song.songStatus() == SongStatus.IN_REVIEW)
+                        .toList();
+            }
+            return songs.stream()
+                    .filter(song -> song.songStatus().name().equals(status))
+                    .toList();
+        }
     }
 
     private static final class FakeSongImportService extends AdminSongImportService {

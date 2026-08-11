@@ -101,6 +101,7 @@ public class AssetController implements AssetsApi {
                 license(request.getLicensing(), modelPolicy(request.getAccessPolicy()))));
         return ResponseEntity.status(201).body(new AssetUploadInstructions(
                 instructions.uploadId(),
+                instructions.storageKey(),
                 instructions.method(),
                 URI.create(instructions.uploadUrl()),
                 OffsetDateTime.ofInstant(instructions.expiresAt(), ZoneOffset.UTC),

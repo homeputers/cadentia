@@ -249,6 +249,28 @@ schemas:
     "$ref": "./components/schemas/admin-review.yaml#/AdminSongImportValidationError"
   AdminSongImportCandidateSummary:
     "$ref": "./components/schemas/admin-review.yaml#/AdminSongImportCandidateSummary"
+  AdminCatalogSongSummary:
+    "$ref": "./components/schemas/admin-review.yaml#/AdminCatalogSongSummary"
+  AdminCatalogSongListResponse:
+    "$ref": "./components/schemas/admin-review.yaml#/AdminCatalogSongListResponse"
+  AdminCatalogSongDetailResponse:
+    "$ref": "./components/schemas/admin-review.yaml#/AdminCatalogSongDetailResponse"
+  AdminCatalogSongUpdateRequest:
+    "$ref": "./components/schemas/admin-review.yaml#/AdminCatalogSongUpdateRequest"
+  AdminCatalogArrangement:
+    "$ref": "./components/schemas/admin-review.yaml#/AdminCatalogArrangement"
+  AdminCatalogArrangementUpdateRequest:
+    "$ref": "./components/schemas/admin-review.yaml#/AdminCatalogArrangementUpdateRequest"
+  AdminCatalogLyricsDocument:
+    "$ref": "./components/schemas/admin-review.yaml#/AdminCatalogLyricsDocument"
+  AdminCatalogLyricsUpdateRequest:
+    "$ref": "./components/schemas/admin-review.yaml#/AdminCatalogLyricsUpdateRequest"
+  AdminCatalogProvenanceRecord:
+    "$ref": "./components/schemas/admin-review.yaml#/AdminCatalogProvenanceRecord"
+  AdminCatalogApprovalRecord:
+    "$ref": "./components/schemas/admin-review.yaml#/AdminCatalogApprovalRecord"
+  AdminCatalogTag:
+    "$ref": "./components/schemas/admin-review.yaml#/AdminCatalogTag"
   AdminImportCandidateQueueItem:
     "$ref": "./components/schemas/admin-review.yaml#/AdminImportCandidateQueueItem"
   AdminDuplicateMatch:
