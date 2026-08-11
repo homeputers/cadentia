@@ -8,7 +8,10 @@ import com.cadentia.generated.model.CatalogAutocompleteRequest;
 import com.cadentia.generated.model.CatalogSearchFilters;
 import com.cadentia.generated.model.CatalogSearchRequest;
 import com.cadentia.generated.model.SearchPaginationRequest;
+import com.cadentia.search.ApprovedSearchModels.ApprovedSearchDocument;
 import com.cadentia.search.CatalogSearchApplicationService;
+import java.util.List;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
@@ -45,6 +48,37 @@ class CatalogSearchControllerTest {
         assertThat(response).isNotNull();
         assertThat(response.getSuggestions()).extracting("value").contains("Amazing Grace");
         assertThat(response.getEmptyState().getEmpty()).isFalse();
+    }
+
+    @Test
+    void searchesCurrentProviderDocumentsInsteadOfOnlyStaticSeeds() {
+        UUID songId = UUID.fromString("55555555-5555-4555-8555-555555555555");
+        UUID arrangementId = UUID.fromString("77777777-7777-4777-8777-777777777777");
+        CatalogSearchController dynamicController = new CatalogSearchController(new CatalogSearchApplicationService(() -> List.of(
+                new ApprovedSearchDocument(
+                        songId,
+                        arrangementId,
+                        UUID.fromString("00000000-0000-0000-0000-000000000001"),
+                        "Porque mayor",
+                        List.of(),
+                        List.of(),
+                        List.of(),
+                        List.of("Imported Artist"),
+                        "G",
+                        96,
+                        "Imported arrangement",
+                        List.of("Imported arrangement"),
+                        List.of(),
+                        true,
+                        true,
+                        true,
+                        true))));
+
+        var response = dynamicController.searchCatalog(new CatalogSearchRequest().query("mayor")).getBody();
+
+        assertThat(response).isNotNull();
+        assertThat(response.getResults()).extracting("songId").contains(songId);
+        assertThat(response.getResults()).extracting("title").contains("Porque mayor");
     }
 
     @Test
