@@ -163,6 +163,56 @@ cd apps/api
 mvn spring-boot:run
 ```
 
+### Live local Telegram webhook testing
+
+For local Telegram testing, expose the API through a public HTTPS tunnel and
+register Telegram against the existing webhook endpoint:
+
+```text
+https://<public-host>/telegram/webhooks/<botId>
+```
+
+Keep real Telegram values in `.env.local` or `.env`; both are ignored by git:
+
+```bash
+CADENTIA_TELEGRAM_BOT_TOKEN=...
+CADENTIA_TELEGRAM_WEBHOOK_SECRET=...
+CADENTIA_TELEGRAM_BOT_ID=local
+CADENTIA_TELEGRAM_PUBLIC_BASE_URL=https://<cloudflare-or-tailscale-funnel-host>
+```
+
+Start dependencies and the API:
+
+```bash
+docker compose up -d postgres
+cd apps/api
+mvn spring-boot:run
+```
+
+Expose port `8080` with the current local tunnel. For Cloudflare quick tunnels:
+
+```bash
+cloudflared tunnel --url http://localhost:8080
+```
+
+If using Tailscale Funnel instead, use its public HTTPS URL as
+`CADENTIA_TELEGRAM_PUBLIC_BASE_URL`. A normal tailnet-only Tailscale URL is not
+enough for Telegram because Telegram must reach the webhook from the public
+internet.
+
+Register and verify the webhook:
+
+```bash
+scripts/telegram-webhook.sh set
+scripts/telegram-webhook.sh info
+```
+
+When finished:
+
+```bash
+scripts/telegram-webhook.sh delete
+```
+
 ### PostgreSQL connection troubleshooting
 
 If `mvn spring-boot:run` fails with `Connection to localhost:5432 refused`, verify the database is actually reachable before starting Spring Boot:

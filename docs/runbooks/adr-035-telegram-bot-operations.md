@@ -147,6 +147,65 @@ Automated tests and local development must not call Telegram or use real credent
 mvn -pl apps/api -Dtest=TelegramE2eFixtureTest test
 ```
 
+### Live local webhook testing with Cloudflare or Tailscale
+
+Use this only for manual Telegram testing from a local Cadentia API. Do not use
+real personal messages as fixtures, and do not commit `.env` or `.env.local`.
+
+1. Create a high-entropy local webhook secret distinct from the bot token.
+2. Store local values in `.env.local` or `.env`:
+
+```bash
+CADENTIA_TELEGRAM_BOT_TOKEN=...
+CADENTIA_TELEGRAM_WEBHOOK_SECRET=...
+CADENTIA_TELEGRAM_BOT_ID=local
+CADENTIA_TELEGRAM_PUBLIC_BASE_URL=https://<public-tunnel-host>
+```
+
+3. Start PostgreSQL and the API:
+
+```bash
+docker compose up -d postgres
+cd apps/api
+mvn spring-boot:run
+```
+
+4. Expose the API over public HTTPS. A Cloudflare quick tunnel can point
+   directly at the local API:
+
+```bash
+cloudflared tunnel --url http://localhost:8080
+```
+
+   If using Tailscale, use Tailscale Funnel's public HTTPS URL or route that
+   URL through the existing Cloudflare tunnel. Tailnet-only `tailscale serve`
+   URLs are not reachable by Telegram.
+
+5. Register Telegram with the public URL:
+
+```bash
+scripts/telegram-webhook.sh set
+scripts/telegram-webhook.sh info
+```
+
+6. Send a sanitized smoke command such as `/newsetlist` from the Telegram test
+   account, then verify Cadentia logs contain `telegram_webhook outcome=ACCEPTED`.
+
+7. Deregister the webhook before shutting down the local API:
+
+```bash
+scripts/telegram-webhook.sh delete
+```
+
+Expected local failure modes:
+
+- `401` or `403`: Telegram's registered secret does not match
+  `CADENTIA_TELEGRAM_WEBHOOK_SECRET`.
+- `500` with `telegram-secret-unavailable`: the API cannot resolve
+  `CADENTIA_TELEGRAM_BOT_TOKEN`.
+- Telegram `getWebhookInfo.last_error_message`: the tunnel URL is stale, not
+  HTTPS, or not routing to local port `8080`.
+
 ## Register or Refresh the Production Webhook
 
 1. Confirm the bot token and current webhook secret references resolve in the runtime secret manager.
