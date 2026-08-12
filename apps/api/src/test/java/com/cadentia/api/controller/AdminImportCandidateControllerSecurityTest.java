@@ -1,8 +1,8 @@
 package com.cadentia.api.controller;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.mock;
 import com.cadentia.api.config.MethodSecurityConfig;
+import com.cadentia.catalog.repository.InMemorySongRepository;
 import com.cadentia.catalog.repository.SongRepository;
 import com.cadentia.generated.api.AdminReviewApi;
 import com.cadentia.generated.model.ModerationFlagType;
@@ -35,8 +35,12 @@ class AdminImportCandidateControllerSecurityTest {
     @Configuration
     static class TestConfig {
         @Bean
-        AdminImportReviewService adminImportReviewService() {
-            SongRepository songRepository = mock(SongRepository.class);
+        SongRepository songRepository() {
+            return new InMemorySongRepository();
+        }
+
+        @Bean
+        AdminImportReviewService adminImportReviewService(SongRepository songRepository) {
             return new AdminImportReviewService(songRepository);
         }
 

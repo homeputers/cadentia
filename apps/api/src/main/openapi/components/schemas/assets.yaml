@@ -262,6 +262,7 @@ AssetUploadInstructions:
   additionalProperties: false
   required:
   - uploadId
+  - storageKey
   - uploadMethod
   - uploadUrl
   - expiresAt
@@ -273,6 +274,8 @@ AssetUploadInstructions:
     uploadId:
       type: string
       format: uuid
+    storageKey:
+      type: string
     uploadMethod:
       type: string
     uploadUrl:

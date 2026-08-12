@@ -65,24 +65,68 @@ const queueResponse = {
 };
 
 const songQueueResponse = {
-    results: [{
-        id: '66666666-6666-4666-8666-666666666666',
+    items: [{
         songId: '55555555-5555-4555-8555-555555555555',
-        arrangementId: '77777777-7777-4777-8777-777777777777',
-        resultType: 'ARRANGEMENT',
-        title: 'Reviewed Shell Song',
-        subtitle: 'Catalog Artist arrangement',
-        score: 31,
-        matchedFields: [{ field: 'TITLE', value: 'Reviewed Shell Song' }],
-        rankingFactors: [{ code: 'exactTitleMatch', contribution: 30, visibility: 'publicSafe' }],
-        hydration: { available: true, href: '/catalog/arrangements/77777777-7777-4777-8777-777777777777' },
+        canonicalTitle: 'Reviewed Shell Song',
+        normalizedTitle: 'reviewed shell song',
+        primaryLanguage: 'en',
+        originalArtistDisplay: 'Catalog Artist',
+        composerCredits: 'Catalog Composer',
+        ccliNumber: '123456',
+        yearWritten: 2020,
+        songStatus: 'APPROVED',
+        updatedAt: '2026-06-23T00:00:00Z',
+        arrangementCount: 1,
     }],
-    pagination: { pageSize: 20, hasMore: false },
-    emptyState: { empty: false },
+    page: 1,
+    pageSize: 25,
+    totalItems: 1,
+    totalPages: 1,
+    sort: 'TITLE',
 };
 
 const songId = '55555555-5555-4555-8555-555555555555';
 const arrangementId = '77777777-7777-4777-8777-777777777777';
+const songDetailResponse = {
+    song: songQueueResponse.items[0],
+    doctrinalNotes: 'Reviewed doctrinal notes',
+    arrangements: [{
+        arrangementId,
+        songId,
+        name: 'Reviewed Shell Song',
+        normalizedName: 'reviewed shell song',
+        sourceType: 'ORIGINAL',
+        language: 'en',
+        musicalKey: 'G',
+        keyMode: 'MAJOR',
+        tempoBpm: 120,
+        timeSignature: '4/4',
+        durationSeconds: 240,
+        energyLevel: 4,
+        difficultyLevel: 2,
+        defaultForSong: true,
+        active: true,
+        updatedAt: '2026-06-23T00:00:00Z',
+        lyricsDocuments: [{
+            lyricsDocumentId: 'cccccccc-1111-4111-8111-cccccccccccc',
+            arrangementId,
+            format: 'plain_text',
+            content: 'full lyrics',
+            contentHash: 'sha256:lyrics',
+            versionNumber: 1,
+            current: true,
+            containsChords: false,
+            containsSections: true,
+            sourceReference: 'source:shell',
+            createdBy: 'admin-1',
+            createdAt: '2026-06-23T00:00:00Z',
+            parseStatus: 'parsed',
+        }],
+    }],
+    provenance: [],
+    approvals: [],
+    tags: [],
+};
 const songAttachments = [{
     attachmentId: '88888888-8888-4888-8888-888888888888',
     targetType: 'song',
@@ -388,11 +432,12 @@ describe('admin shell integration smoke', () => {
         expect(node.textContent).not.toContain('do-not-render-audit-payload');
     });
 
-    it('loads reviewed song queue and song resource detail routes from existing read-only APIs', async () => {
+    it('loads reviewed song queue and editable song resource detail routes from admin catalog APIs', async () => {
         const fetchImpl = vi.fn().mockImplementation((input: RequestInfo | URL) => {
             const url = String(input);
             if (url === '/api/admin/session') return Promise.resolve(response(adminSession));
-            if (url === '/api/catalog/search') return Promise.resolve(response(songQueueResponse));
+            if (url === '/api/admin/songs?sort=TITLE&page=1&pageSize=25&query=Reviewed') return Promise.resolve(response(songQueueResponse));
+            if (url === `/api/admin/songs/${songId}`) return Promise.resolve(response(songDetailResponse));
             if (url === `/api/asset-attachments?targetType=song&targetId=${songId}`) return Promise.resolve(response(songAttachments));
             if (url === `/api/asset-attachments?targetType=arrangement&targetId=${arrangementId}`) return Promise.resolve(response(arrangementAttachments));
             return Promise.resolve(response({ error: 'unexpected' }, 404));
@@ -401,22 +446,24 @@ describe('admin shell integration smoke', () => {
 
         const queueNode = await renderShell('/admin/songs?query=Reviewed');
 
-        expect(fetchImpl).toHaveBeenCalledWith('/api/catalog/search', expect.objectContaining({ method: 'POST' }));
+        expect(fetchImpl).toHaveBeenCalledWith('/api/admin/songs?sort=TITLE&page=1&pageSize=25&query=Reviewed', expect.any(Object));
         expect(queueNode.textContent).toContain('Reviewed Shell Song');
-        expect(queueNode.textContent).toContain('exactTitleMatch');
+        expect(queueNode.textContent).toContain('Approved');
 
         act(() => { root.unmount(); });
         queueNode.remove();
 
-        const detailNode = await renderShell(`/admin/songs/${songId}?title=Reviewed%20Shell%20Song&subtitle=Catalog%20Artist%20arrangement&arrangementId=${arrangementId}&hydrationHref=%2Fcatalog%2Farrangements%2F${arrangementId}`);
+        const detailNode = await renderShell(`/admin/songs/${songId}`);
 
+        expect(fetchImpl).toHaveBeenCalledWith(`/api/admin/songs/${songId}`, expect.any(Object));
         expect(fetchImpl).toHaveBeenCalledWith(`/api/asset-attachments?targetType=song&targetId=${songId}`, expect.any(Object));
         expect(fetchImpl).toHaveBeenCalledWith(`/api/asset-attachments?targetType=arrangement&targetId=${arrangementId}`, expect.any(Object));
         expect(detailNode.textContent).toContain('Reviewed Shell Song');
+        expect(detailNode.textContent).toContain('Song metadata');
+        expect(detailNode.textContent).toContain('Arrangements');
         expect(detailNode.textContent).toContain('Chord chart');
         expect(detailNode.textContent).toContain('Lead sheet');
-        expect(detailNode.textContent).toContain('Editing boundary');
-        expect(detailNode.textContent).not.toContain('full lyrics');
+        expect(detailNode.textContent).toContain('full lyrics');
         expect(detailNode.textContent).not.toContain('rawPayload');
     });
 

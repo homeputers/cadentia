@@ -31,6 +31,8 @@ export type CadentiaApiRoute =
     | '/admin/session'
     | '/admin/song-imports/csv'
     | '/admin/song-imports/manual'
+    | '/admin/songs'
+    | '/admin/songs/{songId}'
     | '/admin/telegram/bots/{botId}/status'
     | '/admin/telegram/channels/{channelId}/settings'
     | '/asset-attachments'
@@ -137,6 +139,7 @@ export type CadentiaApiOperationId =
     | 'finalizeAssetUpload'
     | 'generateSetlistProposal'
     | 'generateSetlistProposalFromNaturalLanguage'
+    | 'getAdminCatalogSong'
     | 'getAdminDiagnostics'
     | 'getAdminImportCandidateAuditHistory'
     | 'getAdminImportCandidateDetail'
@@ -154,6 +157,7 @@ export type CadentiaApiOperationId =
     | 'getTelegramBotStatus'
     | 'getTelegramSessionStatus'
     | 'initiateTelegramAccountLink'
+    | 'listAdminCatalogSongs'
     | 'listAdminFeatureFlags'
     | 'listAdminImportCandidates'
     | 'listArrangementOverrides'
@@ -191,6 +195,7 @@ export type CadentiaApiOperationId =
     | 'submitAdminImportCandidateMergeDecision'
     | 'substituteServiceTeamAssignment'
     | 'transitionReadinessState'
+    | 'updateAdminCatalogSong'
     | 'updateAdminInstanceConfiguration'
     | 'updateArrangementOverride'
     | 'updateConversationSessionSlots'
@@ -241,6 +246,8 @@ export const cadentiaApiRoutes = [
     '/admin/session',
     '/admin/song-imports/csv',
     '/admin/song-imports/manual',
+    '/admin/songs',
+    '/admin/songs/{songId}',
     '/admin/telegram/bots/{botId}/status',
     '/admin/telegram/channels/{channelId}/settings',
     '/asset-attachments',
@@ -335,6 +342,8 @@ export const cadentiaApiRouteRefs: Record<CadentiaApiRoute, string> = {
     '/admin/session': './paths/admin-operations.yaml#/~1admin~1session',
     '/admin/song-imports/csv': './paths/admin-review.yaml#/~1admin~1song-imports~1csv',
     '/admin/song-imports/manual': './paths/admin-review.yaml#/~1admin~1song-imports~1manual',
+    '/admin/songs': './paths/admin-review.yaml#/~1admin~1songs',
+    '/admin/songs/{songId}': './paths/admin-review.yaml#/~1admin~1songs~1{songId}',
     '/admin/telegram/bots/{botId}/status': './paths/telegram.yaml#/~1admin~1telegram~1bots~1{botId}~1status',
     '/admin/telegram/channels/{channelId}/settings': './paths/telegram.yaml#/~1admin~1telegram~1channels~1{channelId}~1settings',
     '/asset-attachments': './paths/assets.yaml#/~1asset-attachments',
@@ -442,6 +451,7 @@ export const cadentiaApiOperations = [
     { operationId: 'finalizeAssetUpload', method: 'POST', path: '/assets/uploads/{uploadId}/finalize', ref: './paths/assets.yaml#/~1assets~1uploads~1{uploadId}~1finalize' },
     { operationId: 'generateSetlistProposal', method: 'POST', path: '/setlists/proposals', ref: './paths/setlists.yaml#/~1setlists~1proposals' },
     { operationId: 'generateSetlistProposalFromNaturalLanguage', method: 'POST', path: '/setlists/proposals/natural-language', ref: './paths/setlists.yaml#/~1setlists~1proposals~1natural-language' },
+    { operationId: 'getAdminCatalogSong', method: 'GET', path: '/admin/songs/{songId}', ref: './paths/admin-review.yaml#/~1admin~1songs~1{songId}' },
     { operationId: 'getAdminDiagnostics', method: 'GET', path: '/admin/diagnostics', ref: './paths/admin-operations.yaml#/~1admin~1diagnostics' },
     { operationId: 'getAdminImportCandidateAuditHistory', method: 'GET', path: '/admin/import-candidates/{candidateId}/audit-history', ref: './paths/admin-review.yaml#/~1admin~1import-candidates~1{candidateId}~1audit-history' },
     { operationId: 'getAdminImportCandidateDetail', method: 'GET', path: '/admin/import-candidates/{candidateId}', ref: './paths/admin-review.yaml#/~1admin~1import-candidates~1{candidateId}' },
@@ -459,6 +469,7 @@ export const cadentiaApiOperations = [
     { operationId: 'getTelegramBotStatus', method: 'GET', path: '/admin/telegram/bots/{botId}/status', ref: './paths/telegram.yaml#/~1admin~1telegram~1bots~1{botId}~1status' },
     { operationId: 'getTelegramSessionStatus', method: 'GET', path: '/telegram/sessions/{sessionId}', ref: './paths/telegram.yaml#/~1telegram~1sessions~1{sessionId}' },
     { operationId: 'initiateTelegramAccountLink', method: 'POST', path: '/telegram/account-links', ref: './paths/telegram.yaml#/~1telegram~1account-links' },
+    { operationId: 'listAdminCatalogSongs', method: 'GET', path: '/admin/songs', ref: './paths/admin-review.yaml#/~1admin~1songs' },
     { operationId: 'listAdminFeatureFlags', method: 'GET', path: '/admin/feature-flags', ref: './paths/admin-operations.yaml#/~1admin~1feature-flags' },
     { operationId: 'listAdminImportCandidates', method: 'GET', path: '/admin/import-candidates', ref: './paths/admin-review.yaml#/~1admin~1import-candidates' },
     { operationId: 'listArrangementOverrides', method: 'GET', path: '/service-plans/{servicePlanId}/arrangement-overrides', ref: './paths/rehearsal-workflow.yaml#/~1service-plans~1{servicePlanId}~1arrangement-overrides' },
@@ -496,6 +507,7 @@ export const cadentiaApiOperations = [
     { operationId: 'submitAdminImportCandidateMergeDecision', method: 'POST', path: '/admin/import-candidates/{candidateId}/merge-decisions', ref: './paths/admin-review.yaml#/~1admin~1import-candidates~1{candidateId}~1merge-decisions' },
     { operationId: 'substituteServiceTeamAssignment', method: 'POST', path: '/team-assignments/services/{servicePlanId}/assignments/{assignmentId}/substitute', ref: './paths/team-assignments.yaml#/~1team-assignments~1services~1{servicePlanId}~1assignments~1{assignmentId}~1substitute' },
     { operationId: 'transitionReadinessState', method: 'POST', path: '/service-plans/{servicePlanId}/readiness-transitions', ref: './paths/rehearsal-workflow.yaml#/~1service-plans~1{servicePlanId}~1readiness-transitions' },
+    { operationId: 'updateAdminCatalogSong', method: 'PUT', path: '/admin/songs/{songId}', ref: './paths/admin-review.yaml#/~1admin~1songs~1{songId}' },
     { operationId: 'updateAdminInstanceConfiguration', method: 'PUT', path: '/admin/instance-configuration', ref: './paths/admin-operations.yaml#/~1admin~1instance-configuration' },
     { operationId: 'updateArrangementOverride', method: 'PATCH', path: '/service-plans/{servicePlanId}/arrangement-overrides/{arrangementOverrideId}', ref: './paths/rehearsal-workflow.yaml#/~1service-plans~1{servicePlanId}~1arrangement-overrides~1{arrangementOverrideId}' },
     { operationId: 'updateConversationSessionSlots', method: 'PATCH', path: '/conversation-sessions/{sessionId}/slots', ref: './paths/conversation-sessions.yaml#/~1conversation-sessions~1{sessionId}~1slots' },

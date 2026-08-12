@@ -105,6 +105,10 @@ paths:
     "$ref": "./paths/admin-review.yaml#/~1admin~1song-imports~1manual"
   "/admin/song-imports/csv":
     "$ref": "./paths/admin-review.yaml#/~1admin~1song-imports~1csv"
+  "/admin/songs":
+    "$ref": "./paths/admin-review.yaml#/~1admin~1songs"
+  "/admin/songs/{songId}":
+    "$ref": "./paths/admin-review.yaml#/~1admin~1songs~1{songId}"
   "/admin/import-candidates":
     "$ref": "./paths/admin-review.yaml#/~1admin~1import-candidates"
   "/admin/import-candidates/{candidateId}":
@@ -397,6 +401,28 @@ components:
       "$ref": "./components/schemas/admin-operations.yaml#/ConfirmAdminFeatureFlagChangeRequest"
     ImportCandidateStatus:
       "$ref": "./components/schemas/admin-review.yaml#/ImportCandidateStatus"
+    AdminCatalogSongSummary:
+      "$ref": "./components/schemas/admin-review.yaml#/AdminCatalogSongSummary"
+    AdminCatalogSongListResponse:
+      "$ref": "./components/schemas/admin-review.yaml#/AdminCatalogSongListResponse"
+    AdminCatalogSongDetailResponse:
+      "$ref": "./components/schemas/admin-review.yaml#/AdminCatalogSongDetailResponse"
+    AdminCatalogSongUpdateRequest:
+      "$ref": "./components/schemas/admin-review.yaml#/AdminCatalogSongUpdateRequest"
+    AdminCatalogArrangement:
+      "$ref": "./components/schemas/admin-review.yaml#/AdminCatalogArrangement"
+    AdminCatalogArrangementUpdateRequest:
+      "$ref": "./components/schemas/admin-review.yaml#/AdminCatalogArrangementUpdateRequest"
+    AdminCatalogLyricsDocument:
+      "$ref": "./components/schemas/admin-review.yaml#/AdminCatalogLyricsDocument"
+    AdminCatalogLyricsUpdateRequest:
+      "$ref": "./components/schemas/admin-review.yaml#/AdminCatalogLyricsUpdateRequest"
+    AdminCatalogProvenanceRecord:
+      "$ref": "./components/schemas/admin-review.yaml#/AdminCatalogProvenanceRecord"
+    AdminCatalogApprovalRecord:
+      "$ref": "./components/schemas/admin-review.yaml#/AdminCatalogApprovalRecord"
+    AdminCatalogTag:
+      "$ref": "./components/schemas/admin-review.yaml#/AdminCatalogTag"
     AdminImportCandidateQueueItem:
       "$ref": "./components/schemas/admin-review.yaml#/AdminImportCandidateQueueItem"
     AdminDuplicateMatch:

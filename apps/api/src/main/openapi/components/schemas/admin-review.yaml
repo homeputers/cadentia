@@ -254,6 +254,486 @@ AdminSongImportResponse:
       type: array
       items:
         "$ref": "#/AdminSongImportValidationError"
+AdminCatalogSongSummary:
+  type: object
+  required:
+  - songId
+  - canonicalTitle
+  - primaryLanguage
+  - songStatus
+  - updatedAt
+  - arrangementCount
+  properties:
+    songId:
+      type: string
+      format: uuid
+    canonicalTitle:
+      type: string
+    normalizedTitle:
+      type: string
+    primaryLanguage:
+      type: string
+    originalArtistDisplay:
+      type: string
+      nullable: true
+    composerCredits:
+      type: string
+      nullable: true
+    ccliNumber:
+      type: string
+      nullable: true
+    yearWritten:
+      type: integer
+      nullable: true
+    songStatus:
+      type: string
+    updatedAt:
+      type: string
+      format: date-time
+    arrangementCount:
+      type: integer
+      minimum: 0
+AdminCatalogSongListResponse:
+  type: object
+  required:
+  - items
+  - page
+  - pageSize
+  - totalItems
+  - totalPages
+  - sort
+  properties:
+    items:
+      type: array
+      items:
+        "$ref": "#/AdminCatalogSongSummary"
+    page:
+      type: integer
+      minimum: 1
+    pageSize:
+      type: integer
+      minimum: 1
+    totalItems:
+      type: integer
+      minimum: 0
+    totalPages:
+      type: integer
+      minimum: 0
+    sort:
+      type: string
+AdminCatalogSongDetailResponse:
+  type: object
+  required:
+  - song
+  - arrangements
+  - provenance
+  - approvals
+  - tags
+  properties:
+    song:
+      "$ref": "#/AdminCatalogSongSummary"
+    doctrinalNotes:
+      type: string
+      nullable: true
+    arrangements:
+      type: array
+      items:
+        "$ref": "#/AdminCatalogArrangement"
+    provenance:
+      type: array
+      items:
+        "$ref": "#/AdminCatalogProvenanceRecord"
+    approvals:
+      type: array
+      items:
+        "$ref": "#/AdminCatalogApprovalRecord"
+    tags:
+      type: array
+      items:
+        "$ref": "#/AdminCatalogTag"
+AdminCatalogSongUpdateRequest:
+  type: object
+  additionalProperties: false
+  required:
+  - canonicalTitle
+  - primaryLanguage
+  - songStatus
+  - actor
+  properties:
+    actor:
+      type: string
+      minLength: 1
+      maxLength: 160
+    canonicalTitle:
+      type: string
+      minLength: 1
+      maxLength: 240
+    normalizedTitle:
+      type: string
+      maxLength: 240
+      nullable: true
+      description: Optional deterministic title key override. If omitted, the backend derives it from canonicalTitle.
+    primaryLanguage:
+      type: string
+      minLength: 1
+      maxLength: 32
+    originalArtistDisplay:
+      type: string
+      maxLength: 240
+      nullable: true
+    composerCredits:
+      type: string
+      maxLength: 500
+      nullable: true
+    ccliNumber:
+      type: string
+      maxLength: 64
+      nullable: true
+    yearWritten:
+      type: integer
+      minimum: 1
+      maximum: 9999
+      nullable: true
+    songStatus:
+      type: string
+      enum:
+      - DRAFT
+      - IN_REVIEW
+      - APPROVED
+      - REJECTED
+      - ARCHIVED
+    doctrinalNotes:
+      type: string
+      maxLength: 4000
+      nullable: true
+    arrangements:
+      type: array
+      items:
+        "$ref": "#/AdminCatalogArrangementUpdateRequest"
+      maxItems: 25
+    lyricsDocuments:
+      type: array
+      items:
+        "$ref": "#/AdminCatalogLyricsUpdateRequest"
+      maxItems: 25
+AdminCatalogArrangement:
+  type: object
+  required:
+  - arrangementId
+  - songId
+  - name
+  - normalizedName
+  - sourceType
+  - language
+  - defaultForSong
+  - active
+  - updatedAt
+  - lyricsDocuments
+  properties:
+    arrangementId:
+      type: string
+      format: uuid
+    songId:
+      type: string
+      format: uuid
+    name:
+      type: string
+    normalizedName:
+      type: string
+    sourceType:
+      type: string
+    language:
+      type: string
+    musicalKey:
+      type: string
+      nullable: true
+    keyMode:
+      type: string
+      nullable: true
+    tempoBpm:
+      type: integer
+      nullable: true
+    timeSignature:
+      type: string
+      nullable: true
+    durationSeconds:
+      type: integer
+      nullable: true
+    energyLevel:
+      type: integer
+      nullable: true
+    difficultyLevel:
+      type: integer
+      nullable: true
+    defaultForSong:
+      type: boolean
+    active:
+      type: boolean
+    updatedAt:
+      type: string
+      format: date-time
+    lyricsDocuments:
+      type: array
+      items:
+        "$ref": "#/AdminCatalogLyricsDocument"
+AdminCatalogArrangementUpdateRequest:
+  type: object
+  additionalProperties: false
+  required:
+  - name
+  - sourceType
+  - language
+  - defaultForSong
+  - active
+  properties:
+    arrangementId:
+      type: string
+      format: uuid
+      nullable: true
+      description: Existing arrangement identifier. Omit to create a new arrangement for this song.
+    name:
+      type: string
+      minLength: 1
+      maxLength: 240
+    normalizedName:
+      type: string
+      maxLength: 240
+      nullable: true
+    sourceType:
+      type: string
+      enum:
+      - ORIGINAL
+      - LIVE
+      - ACOUSTIC
+      - STUDIO
+      - TRANSLATION
+      - CUSTOM
+      - UNKNOWN
+    language:
+      type: string
+      minLength: 1
+      maxLength: 32
+    musicalKey:
+      type: string
+      maxLength: 16
+      nullable: true
+    keyMode:
+      type: string
+      enum:
+      - MAJOR
+      - MINOR
+      - MODAL
+      - UNKNOWN
+      nullable: true
+    tempoBpm:
+      type: integer
+      minimum: 30
+      maximum: 260
+      nullable: true
+    timeSignature:
+      type: string
+      maxLength: 16
+      nullable: true
+    durationSeconds:
+      type: integer
+      minimum: 1
+      nullable: true
+    energyLevel:
+      type: integer
+      minimum: 1
+      maximum: 5
+      nullable: true
+    difficultyLevel:
+      type: integer
+      minimum: 1
+      maximum: 5
+      nullable: true
+    defaultForSong:
+      type: boolean
+    active:
+      type: boolean
+AdminCatalogLyricsDocument:
+  type: object
+  required:
+  - lyricsDocumentId
+  - arrangementId
+  - format
+  - versionNumber
+  - current
+  - containsChords
+  - containsSections
+  - sourceReference
+  - createdBy
+  - createdAt
+  - parseStatus
+  properties:
+    lyricsDocumentId:
+      type: string
+      format: uuid
+    arrangementId:
+      type: string
+      format: uuid
+    format:
+      type: string
+    content:
+      type: string
+      nullable: true
+      description: Current catalog lyrics/chord content for review users. Clients must not use this field for recommendation selection.
+    contentHash:
+      type: string
+    versionNumber:
+      type: integer
+    current:
+      type: boolean
+    containsChords:
+      type: boolean
+    containsSections:
+      type: boolean
+    sourceReference:
+      type: string
+    createdBy:
+      type: string
+    createdAt:
+      type: string
+      format: date-time
+    parseStatus:
+      type: string
+    parseError:
+      type: string
+      nullable: true
+AdminCatalogLyricsUpdateRequest:
+  type: object
+  additionalProperties: false
+  required:
+  - lyricsDocumentId
+  - format
+  - content
+  - sourceReference
+  properties:
+    lyricsDocumentId:
+      type: string
+      format: uuid
+    format:
+      type: string
+      enum:
+      - plain_text
+      - chordpro
+      - onsong
+      - markdown
+    content:
+      type: string
+      minLength: 1
+      maxLength: 30000
+    containsChords:
+      type: boolean
+      default: false
+    containsSections:
+      type: boolean
+      default: false
+    sourceReference:
+      type: string
+      minLength: 1
+      maxLength: 500
+AdminCatalogProvenanceRecord:
+  type: object
+  required:
+  - provenanceId
+  - sourceSystem
+  - sourceLabel
+  - licenseType
+  - importMethod
+  - capturedAt
+  properties:
+    provenanceId:
+      type: string
+      format: uuid
+    arrangementId:
+      type: string
+      format: uuid
+      nullable: true
+    lyricsDocumentId:
+      type: string
+      format: uuid
+      nullable: true
+    sourceSystem:
+      type: string
+    sourceUri:
+      type: string
+      nullable: true
+    sourceLabel:
+      type: string
+    licenseType:
+      type: string
+    licenseNotes:
+      type: string
+      nullable: true
+    importMethod:
+      type: string
+    confidenceScore:
+      type: number
+      nullable: true
+    capturedAt:
+      type: string
+      format: date-time
+AdminCatalogApprovalRecord:
+  type: object
+  required:
+  - approvalId
+  - approvalType
+  - status
+  - createdAt
+  properties:
+    approvalId:
+      type: string
+      format: uuid
+    arrangementId:
+      type: string
+      format: uuid
+      nullable: true
+    lyricsDocumentId:
+      type: string
+      format: uuid
+      nullable: true
+    approvalType:
+      type: string
+    status:
+      type: string
+    reviewer:
+      type: string
+      nullable: true
+    reviewNotes:
+      type: string
+      nullable: true
+    reviewedAt:
+      type: string
+      format: date-time
+      nullable: true
+    createdAt:
+      type: string
+      format: date-time
+AdminCatalogTag:
+  type: object
+  required:
+  - tagId
+  - tagType
+  - name
+  - slug
+  - active
+  properties:
+    tagId:
+      type: string
+      format: uuid
+    tagType:
+      type: string
+    name:
+      type: string
+    slug:
+      type: string
+    description:
+      type: string
+      nullable: true
+    active:
+      type: boolean
 ParserSeverity:
   type: string
   enum:

@@ -62,6 +62,134 @@
         "$ref": "../components/shared/responses.yaml#/Forbidden"
       '422':
         "$ref": "../components/shared/responses.yaml#/ValidationError"
+"/admin/songs":
+  get:
+    tags:
+    - AdminReview
+    operationId: listAdminCatalogSongs
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - CATALOG_EDITOR
+    - DOCTRINAL_REVIEWER
+    - MUSICAL_REVIEWER
+    - ADMIN
+    summary: List reviewed catalog songs with optional text filtering
+    parameters:
+    - in: query
+      name: query
+      schema:
+        type: string
+        maxLength: 160
+      description: Optional title, artist, CCLI, or composer text filter. Omit for show all.
+    - in: query
+      name: status
+      schema:
+        type: string
+        enum:
+        - ALL
+        - APPROVED
+        - IN_REVIEW
+      description: Optional catalog-review status filter. Omit or pass ALL to include approved and in-review songs.
+    - in: query
+      name: sort
+      schema:
+        type: string
+        enum:
+        - TITLE
+        - UPDATED_AT
+        default: TITLE
+    - in: query
+      name: page
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    - in: query
+      name: pageSize
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 25
+    responses:
+      '200':
+        description: Catalog song page.
+        content:
+          application/json:
+            schema:
+              "$ref": "../components/schemas/admin-review.yaml#/AdminCatalogSongListResponse"
+      '401':
+        "$ref": "../components/shared/responses.yaml#/Unauthorized"
+      '403':
+        "$ref": "../components/shared/responses.yaml#/Forbidden"
+"/admin/songs/{songId}":
+  get:
+    tags:
+    - AdminReview
+    operationId: getAdminCatalogSong
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - CATALOG_EDITOR
+    - DOCTRINAL_REVIEWER
+    - MUSICAL_REVIEWER
+    - ADMIN
+    summary: Fetch editable catalog song metadata and resource context
+    parameters:
+    - in: path
+      name: songId
+      required: true
+      schema:
+        type: string
+        format: uuid
+    responses:
+      '200':
+        description: Catalog song detail.
+        content:
+          application/json:
+            schema:
+              "$ref": "../components/schemas/admin-review.yaml#/AdminCatalogSongDetailResponse"
+      '404':
+        description: Song not found.
+  put:
+    tags:
+    - AdminReview
+    operationId: updateAdminCatalogSong
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - CATALOG_EDITOR
+    - ADMIN
+    summary: Update song, arrangement, and current lyrics metadata
+    parameters:
+    - in: path
+      name: songId
+      required: true
+      schema:
+        type: string
+        format: uuid
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            "$ref": "../components/schemas/admin-review.yaml#/AdminCatalogSongUpdateRequest"
+    responses:
+      '200':
+        description: Updated catalog song detail.
+        content:
+          application/json:
+            schema:
+              "$ref": "../components/schemas/admin-review.yaml#/AdminCatalogSongDetailResponse"
+      '400':
+        "$ref": "../components/shared/responses.yaml#/ValidationError"
+      '401':
+        "$ref": "../components/shared/responses.yaml#/Unauthorized"
+      '403':
+        "$ref": "../components/shared/responses.yaml#/Forbidden"
+      '404':
+        description: Song or nested catalog record not found.
 "/admin/import-candidates":
   get:
     tags:

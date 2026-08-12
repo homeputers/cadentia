@@ -145,6 +145,52 @@ public class JdbcSongRepository implements SongRepository {
     }
 
     @Override
+    public List<Song> findReviewedSongs(String query, String status, String sort, int limit, int offset) {
+        String orderBy = "UPDATED_AT".equals(sort) ? "songs.updated_at DESC, songs.canonical_title ASC" : "songs.canonical_title ASC";
+        String sql = """
+                SELECT %s
+                FROM songs
+                WHERE (
+                    (CAST(:status AS text) IS NULL AND songs.song_status IN ('APPROVED', 'IN_REVIEW'))
+                    OR songs.song_status = CAST(:status AS text)
+                  )
+                  AND (
+                    CAST(:queryPattern AS text) IS NULL
+                    OR lower(songs.canonical_title) LIKE CAST(:queryPattern AS text)
+                    OR lower(coalesce(songs.original_artist_display, '')) LIKE CAST(:queryPattern AS text)
+                    OR lower(coalesce(songs.composer_credits, '')) LIKE CAST(:queryPattern AS text)
+                    OR lower(coalesce(songs.ccli_number, '')) LIKE CAST(:queryPattern AS text)
+                  )
+                ORDER BY %s
+                LIMIT :limit OFFSET :offset
+                """.formatted(SONG_COLUMNS, orderBy);
+        return jdbcTemplate.query(sql, reviewedSongsParams(query, status)
+                .addValue("limit", limit)
+                .addValue("offset", offset), songMapper());
+    }
+
+    @Override
+    public int countReviewedSongs(String query, String status) {
+        String sql = """
+                SELECT count(*)
+                FROM songs
+                WHERE (
+                    (CAST(:status AS text) IS NULL AND songs.song_status IN ('APPROVED', 'IN_REVIEW'))
+                    OR songs.song_status = CAST(:status AS text)
+                  )
+                  AND (
+                    CAST(:queryPattern AS text) IS NULL
+                    OR lower(songs.canonical_title) LIKE CAST(:queryPattern AS text)
+                    OR lower(coalesce(songs.original_artist_display, '')) LIKE CAST(:queryPattern AS text)
+                    OR lower(coalesce(songs.composer_credits, '')) LIKE CAST(:queryPattern AS text)
+                    OR lower(coalesce(songs.ccli_number, '')) LIKE CAST(:queryPattern AS text)
+                  )
+                """;
+        Integer count = jdbcTemplate.queryForObject(sql, reviewedSongsParams(query, status), Integer.class);
+        return count == null ? 0 : count;
+    }
+
+    @Override
     public Optional<Song> updateSong(UUID id, UpdateSongCommand command) {
         String sql = """
                 UPDATE songs
@@ -894,6 +940,13 @@ public class JdbcSongRepository implements SongRepository {
                 .addValue("yearWritten", command.yearWritten())
                 .addValue("songStatus", command.songStatus().name())
                 .addValue("doctrinalNotes", command.doctrinalNotes());
+    }
+
+    private static MapSqlParameterSource reviewedSongsParams(String query, String status) {
+        String normalizedQuery = query == null || query.isBlank() ? null : query.trim().toLowerCase();
+        return new MapSqlParameterSource()
+                .addValue("queryPattern", normalizedQuery == null ? null : "%" + normalizedQuery + "%")
+                .addValue("status", status == null || status.isBlank() ? null : status);
     }
 
     private static MapSqlParameterSource arrangementParams(CreateArrangementCommand command) {

@@ -1,19 +1,44 @@
 package com.cadentia.api.controller;
 
 import com.cadentia.catalog.entity.ApprovalRecord;
+import com.cadentia.catalog.entity.Arrangement;
 import com.cadentia.catalog.entity.ImportCandidate;
 import com.cadentia.catalog.entity.ImportCandidateReview;
+import com.cadentia.catalog.entity.LyricsDocument;
 import com.cadentia.catalog.entity.ProposedDuplicateMatch;
+import com.cadentia.catalog.entity.ProvenanceRecord;
+import com.cadentia.catalog.entity.Song;
+import com.cadentia.catalog.entity.Tag;
 import com.cadentia.catalog.model.ApprovalStatus;
 import com.cadentia.catalog.model.ApprovalType;
+import com.cadentia.catalog.model.ArrangementSourceType;
+import com.cadentia.catalog.model.CreateArrangementCommand;
 import com.cadentia.catalog.model.ImportCandidateReviewDecision;
 import com.cadentia.catalog.model.ImportCandidateStatus;
+import com.cadentia.catalog.model.KeyMode;
 import com.cadentia.catalog.model.LicenseType;
+import com.cadentia.catalog.model.LyricsFormat;
+import com.cadentia.catalog.model.SongStatus;
+import com.cadentia.catalog.model.UpdateArrangementCommand;
+import com.cadentia.catalog.model.UpdateLyricsDocumentCommand;
+import com.cadentia.catalog.model.UpdateSongCommand;
+import com.cadentia.catalog.repository.SongRepository;
 import com.cadentia.generated.api.AdminReviewApi;
 import com.cadentia.generated.model.AdminApprovalState;
 import com.cadentia.generated.model.AdminApprovalStateStatusesInner;
 import com.cadentia.generated.model.AdminAuditEventSearchResponse;
 import com.cadentia.generated.model.AdminAuditHistoryItem;
+import com.cadentia.generated.model.AdminCatalogApprovalRecord;
+import com.cadentia.generated.model.AdminCatalogArrangement;
+import com.cadentia.generated.model.AdminCatalogArrangementUpdateRequest;
+import com.cadentia.generated.model.AdminCatalogLyricsDocument;
+import com.cadentia.generated.model.AdminCatalogLyricsUpdateRequest;
+import com.cadentia.generated.model.AdminCatalogProvenanceRecord;
+import com.cadentia.generated.model.AdminCatalogSongDetailResponse;
+import com.cadentia.generated.model.AdminCatalogSongListResponse;
+import com.cadentia.generated.model.AdminCatalogSongSummary;
+import com.cadentia.generated.model.AdminCatalogSongUpdateRequest;
+import com.cadentia.generated.model.AdminCatalogTag;
 import com.cadentia.generated.model.AdminDuplicateMatch;
 import com.cadentia.generated.model.AdminDuplicateSummary;
 import com.cadentia.generated.model.AdminImportCandidateDetailResponse;
@@ -70,14 +95,18 @@ import com.cadentia.scraperadmin.RollbackExecutionResult;
 import com.cadentia.scraperadmin.RollbackPreview;
 import com.cadentia.scraperadmin.RollbackTargetType;
 import com.cadentia.scraperadmin.StructuredReviewNote;
+import com.cadentia.scraperadmin.TitleNormalizer;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -94,19 +123,24 @@ import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.transaction.annotation.Transactional;
 
 @RestController
 public class AdminImportCandidateController implements AdminReviewApi {
 
     private final AdminImportReviewService reviewService;
     private final AdminSongImportService songImportService;
+    private final SongRepository songRepository;
+    private final TitleNormalizer titleNormalizer = new TitleNormalizer();
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public AdminImportCandidateController(
             AdminImportReviewService reviewService,
-            AdminSongImportService songImportService) {
+            AdminSongImportService songImportService,
+            SongRepository songRepository) {
         this.reviewService = reviewService;
         this.songImportService = songImportService;
+        this.songRepository = songRepository;
     }
 
     @Override
@@ -196,6 +230,136 @@ public class AdminImportCandidateController implements AdminReviewApi {
                 LicenseType.valueOf(licenseType.getValue()),
                 licenseEvidence));
         return ResponseEntity.status(HttpStatus.CREATED).body(toSongImportResponse(result));
+    }
+
+    @Override
+    @PreAuthorize("hasAnyAuthority(T(com.cadentia.api.security.RbacAuthorities).ROLE_CATALOG_EDITOR, T(com.cadentia.api.security.RbacAuthorities).ROLE_DOCTRINAL_REVIEWER, T(com.cadentia.api.security.RbacAuthorities).ROLE_MUSICAL_REVIEWER, T(com.cadentia.api.security.RbacAuthorities).ROLE_ADMIN)")
+    public ResponseEntity<AdminCatalogSongListResponse> listAdminCatalogSongs(
+            @RequestParam(required = false) String query,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false, defaultValue = "TITLE") String sort,
+            @RequestParam(required = false, defaultValue = "1") Integer page,
+            @RequestParam(required = false, defaultValue = "25") Integer pageSize) {
+        int safePage = page == null || page < 1 ? 1 : page;
+        int safePageSize = pageSize == null || pageSize < 1 ? 25 : Math.min(pageSize, 100);
+        String safeStatus = validateSongStatus(status);
+        String safeSort = "UPDATED_AT".equals(sort) ? "UPDATED_AT" : "TITLE";
+        int offset = (safePage - 1) * safePageSize;
+        List<Song> songs = songRepository.findReviewedSongs(query, safeStatus, safeSort, safePageSize, offset);
+        int totalItems = songRepository.countReviewedSongs(query, safeStatus);
+        List<AdminCatalogSongSummary> items = songs.stream()
+                .map(this::toSongSummary)
+                .toList();
+        return ResponseEntity.ok(new AdminCatalogSongListResponse()
+                .items(items)
+                .page(safePage)
+                .pageSize(safePageSize)
+                .totalItems(totalItems)
+                .totalPages(totalItems == 0 ? 0 : (int) Math.ceil((double) totalItems / safePageSize))
+                .sort(safeSort));
+    }
+
+    @Override
+    @PreAuthorize("hasAnyAuthority(T(com.cadentia.api.security.RbacAuthorities).ROLE_CATALOG_EDITOR, T(com.cadentia.api.security.RbacAuthorities).ROLE_DOCTRINAL_REVIEWER, T(com.cadentia.api.security.RbacAuthorities).ROLE_MUSICAL_REVIEWER, T(com.cadentia.api.security.RbacAuthorities).ROLE_ADMIN)")
+    public ResponseEntity<AdminCatalogSongDetailResponse> getAdminCatalogSong(@PathVariable UUID songId) {
+        Song song = songRepository.findById(songId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Song not found"));
+        return ResponseEntity.ok(toCatalogSongDetail(song));
+    }
+
+    @Override
+    @Transactional
+    @PreAuthorize("hasAnyAuthority(T(com.cadentia.api.security.RbacAuthorities).ROLE_CATALOG_EDITOR, T(com.cadentia.api.security.RbacAuthorities).ROLE_ADMIN)")
+    public ResponseEntity<AdminCatalogSongDetailResponse> updateAdminCatalogSong(
+            @PathVariable UUID songId,
+            @RequestBody AdminCatalogSongUpdateRequest request) {
+        Song existing = songRepository.findById(songId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Song not found"));
+        String normalizedTitle = request.getNormalizedTitle() == null || request.getNormalizedTitle().isBlank()
+                ? titleNormalizer.normalize(request.getCanonicalTitle())
+                : request.getNormalizedTitle().trim();
+        Song updated = songRepository.updateSong(songId, new UpdateSongCommand(
+                        request.getCanonicalTitle(),
+                        normalizedTitle,
+                        request.getPrimaryLanguage(),
+                        blankToNull(request.getOriginalArtistDisplay()),
+                        blankToNull(request.getComposerCredits()),
+                        blankToNull(request.getCcliNumber()),
+                        request.getYearWritten(),
+                        SongStatus.valueOf(request.getSongStatus().getValue()),
+                        blankToNull(request.getDoctrinalNotes())))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Song not found"));
+
+        for (AdminCatalogArrangementUpdateRequest arrangement : emptyIfNull(request.getArrangements())) {
+            String normalizedName = arrangement.getNormalizedName() == null || arrangement.getNormalizedName().isBlank()
+                    ? titleNormalizer.normalize(arrangement.getName())
+                    : arrangement.getNormalizedName().trim();
+            if (arrangement.getArrangementId() == null) {
+                songRepository.createArrangement(new CreateArrangementCommand(
+                        songId,
+                        arrangement.getName(),
+                        normalizedName,
+                        ArrangementSourceType.valueOf(arrangement.getSourceType().getValue()),
+                        arrangement.getLanguage(),
+                        blankToNull(arrangement.getMusicalKey()),
+                        arrangement.getKeyMode() == null ? null : KeyMode.valueOf(arrangement.getKeyMode().getValue()),
+                        arrangement.getTempoBpm(),
+                        blankToNull(arrangement.getTimeSignature()),
+                        arrangement.getDurationSeconds(),
+                        arrangement.getEnergyLevel(),
+                        arrangement.getDifficultyLevel(),
+                        Boolean.TRUE.equals(arrangement.getDefaultForSong()),
+                        Boolean.TRUE.equals(arrangement.getActive())));
+            } else {
+                Arrangement existingArrangement = songRepository.findArrangementById(arrangement.getArrangementId())
+                        .filter(candidate -> candidate.songId().equals(songId))
+                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Arrangement not found"));
+                songRepository.updateArrangement(existingArrangement.id(), new UpdateArrangementCommand(
+                                arrangement.getName(),
+                                normalizedName,
+                                ArrangementSourceType.valueOf(arrangement.getSourceType().getValue()),
+                                arrangement.getLanguage(),
+                                blankToNull(arrangement.getMusicalKey()),
+                                arrangement.getKeyMode() == null ? null : KeyMode.valueOf(arrangement.getKeyMode().getValue()),
+                                arrangement.getTempoBpm(),
+                                blankToNull(arrangement.getTimeSignature()),
+                                arrangement.getDurationSeconds(),
+                                arrangement.getEnergyLevel(),
+                                arrangement.getDifficultyLevel(),
+                                Boolean.TRUE.equals(arrangement.getDefaultForSong()),
+                                Boolean.TRUE.equals(arrangement.getActive())))
+                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Arrangement not found"));
+            }
+        }
+
+        for (AdminCatalogLyricsUpdateRequest lyrics : emptyIfNull(request.getLyricsDocuments())) {
+            LyricsDocument existingLyrics = songRepository.findLyricsDocumentById(lyrics.getLyricsDocumentId())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Lyrics document not found"));
+            songRepository.findArrangementById(existingLyrics.arrangementId())
+                    .filter(candidate -> candidate.songId().equals(songId))
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Lyrics arrangement not found"));
+            songRepository.updateLyricsDocument(existingLyrics.id(), new UpdateLyricsDocumentCommand(
+                            LyricsFormat.fromDeclaredValue(lyrics.getFormat().getValue()),
+                            lyrics.getContent(),
+                            sha256(lyrics.getContent()),
+                            Boolean.TRUE.equals(lyrics.getContainsChords()),
+                            Boolean.TRUE.equals(lyrics.getContainsSections()),
+                            lyrics.getSourceReference(),
+                            request.getActor()))
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Lyrics document not found"));
+        }
+
+        songRepository.appendPrivilegedActionAuditEvent(new AdminAuditEvent(
+                UUID.randomUUID(),
+                songId,
+                "SONG",
+                "ADMIN_CATALOG_SONG_UPDATE",
+                request.getActor(),
+                java.time.Instant.now(),
+                "Admin catalog metadata update",
+                Map.of("canonicalTitle", existing.canonicalTitle(), "songStatus", existing.songStatus().name()),
+                Map.of("canonicalTitle", updated.canonicalTitle(), "songStatus", updated.songStatus().name())));
+        return ResponseEntity.ok(toCatalogSongDetail(updated));
     }
 
     @Override
@@ -728,6 +892,151 @@ public class AdminImportCandidateController implements AdminReviewApi {
             return detail.candidate().externalCandidateId();
         }
         return detail.candidate().id().toString();
+    }
+
+    private AdminCatalogSongDetailResponse toCatalogSongDetail(Song song) {
+        List<Arrangement> arrangements = songRepository.findArrangementsBySongId(song.id());
+        return new AdminCatalogSongDetailResponse()
+                .song(toSongSummary(song, arrangements.size()))
+                .doctrinalNotes(song.doctrinalNotes())
+                .arrangements(arrangements.stream().map(this::toArrangement).toList())
+                .provenance(songRepository.findProvenanceRecordsForSong(song.id()).stream()
+                        .map(AdminImportCandidateController::toProvenance)
+                        .toList())
+                .approvals(songRepository.findApprovalRecordsForSong(song.id()).stream()
+                        .map(AdminImportCandidateController::toApproval)
+                        .toList())
+                .tags(songRepository.findTagsBySongId(song.id()).stream()
+                        .map(AdminImportCandidateController::toTag)
+                        .toList());
+    }
+
+    private AdminCatalogSongSummary toSongSummary(Song song) {
+        return toSongSummary(song, songRepository.findArrangementsBySongId(song.id()).size());
+    }
+
+    private static AdminCatalogSongSummary toSongSummary(Song song, int arrangementCount) {
+        return new AdminCatalogSongSummary()
+                .songId(song.id())
+                .canonicalTitle(song.canonicalTitle())
+                .normalizedTitle(song.normalizedTitle())
+                .primaryLanguage(song.primaryLanguage())
+                .originalArtistDisplay(song.originalArtistDisplay())
+                .composerCredits(song.composerCredits())
+                .ccliNumber(song.ccliNumber())
+                .yearWritten(song.yearWritten())
+                .songStatus(song.songStatus().name())
+                .updatedAt(OffsetDateTime.ofInstant(song.updatedAt(), ZoneOffset.UTC))
+                .arrangementCount(arrangementCount);
+    }
+
+    private AdminCatalogArrangement toArrangement(Arrangement arrangement) {
+        return new AdminCatalogArrangement()
+                .arrangementId(arrangement.id())
+                .songId(arrangement.songId())
+                .name(arrangement.name())
+                .normalizedName(arrangement.normalizedName())
+                .sourceType(arrangement.sourceType().name())
+                .language(arrangement.language())
+                .musicalKey(arrangement.musicalKey())
+                .keyMode(arrangement.keyMode() == null ? null : arrangement.keyMode().name())
+                .tempoBpm(arrangement.tempoBpm())
+                .timeSignature(arrangement.timeSignature())
+                .durationSeconds(arrangement.durationSeconds())
+                .energyLevel(arrangement.energyLevel())
+                .difficultyLevel(arrangement.difficultyLevel())
+                .defaultForSong(arrangement.defaultForSong())
+                .active(arrangement.active())
+                .updatedAt(OffsetDateTime.ofInstant(arrangement.updatedAt(), ZoneOffset.UTC))
+                .lyricsDocuments(songRepository.findLyricsDocumentsByArrangementId(arrangement.id()).stream()
+                        .map(AdminImportCandidateController::toLyricsDocument)
+                        .toList());
+    }
+
+    private static AdminCatalogLyricsDocument toLyricsDocument(LyricsDocument lyricsDocument) {
+        return new AdminCatalogLyricsDocument()
+                .lyricsDocumentId(lyricsDocument.id())
+                .arrangementId(lyricsDocument.arrangementId())
+                .format(lyricsDocument.format().storageValue())
+                .content(lyricsDocument.content())
+                .contentHash(lyricsDocument.contentHash())
+                .versionNumber(lyricsDocument.versionNumber())
+                .current(lyricsDocument.current())
+                .containsChords(lyricsDocument.containsChords())
+                .containsSections(lyricsDocument.containsSections())
+                .sourceReference(lyricsDocument.sourceReference())
+                .createdBy(lyricsDocument.createdBy())
+                .createdAt(OffsetDateTime.ofInstant(lyricsDocument.createdAt(), ZoneOffset.UTC))
+                .parseStatus(lyricsDocument.parseStatus().name())
+                .parseError(lyricsDocument.parseError());
+    }
+
+    private static AdminCatalogProvenanceRecord toProvenance(ProvenanceRecord provenanceRecord) {
+        return new AdminCatalogProvenanceRecord()
+                .provenanceId(provenanceRecord.id())
+                .arrangementId(provenanceRecord.arrangementId())
+                .lyricsDocumentId(provenanceRecord.lyricsDocumentId())
+                .sourceSystem(provenanceRecord.sourceSystem())
+                .sourceUri(provenanceRecord.sourceUri())
+                .sourceLabel(provenanceRecord.sourceLabel())
+                .licenseType(provenanceRecord.licenseType().name())
+                .licenseNotes(provenanceRecord.licenseNotes())
+                .importMethod(provenanceRecord.importMethod().name())
+                .confidenceScore(provenanceRecord.confidenceScore())
+                .capturedAt(OffsetDateTime.ofInstant(provenanceRecord.capturedAt(), ZoneOffset.UTC));
+    }
+
+    private static AdminCatalogApprovalRecord toApproval(ApprovalRecord approvalRecord) {
+        return new AdminCatalogApprovalRecord()
+                .approvalId(approvalRecord.id())
+                .arrangementId(approvalRecord.arrangementId())
+                .lyricsDocumentId(approvalRecord.lyricsDocumentId())
+                .approvalType(approvalRecord.approvalType().name())
+                .status(approvalRecord.status().name())
+                .reviewer(approvalRecord.reviewer())
+                .reviewNotes(approvalRecord.reviewNotes())
+                .reviewedAt(approvalRecord.reviewedAt() == null
+                        ? null
+                        : OffsetDateTime.ofInstant(approvalRecord.reviewedAt(), ZoneOffset.UTC))
+                .createdAt(OffsetDateTime.ofInstant(approvalRecord.createdAt(), ZoneOffset.UTC));
+    }
+
+    private static AdminCatalogTag toTag(Tag tag) {
+        return new AdminCatalogTag()
+                .tagId(tag.id())
+                .tagType(tag.tagType().name())
+                .name(tag.name())
+                .slug(tag.slug())
+                .description(tag.description())
+                .active(tag.active());
+    }
+
+    private static String validateSongStatus(String status) {
+        if (status == null || status.isBlank() || "ALL".equalsIgnoreCase(status)) {
+            return null;
+        }
+        try {
+            SongStatus songStatus = SongStatus.valueOf(status);
+            if (songStatus != SongStatus.APPROVED && songStatus != SongStatus.IN_REVIEW) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid catalog song status");
+            }
+            return songStatus.name();
+        } catch (IllegalArgumentException exception) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid song status");
+        }
+    }
+
+    private static String sha256(String content) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            return HexFormat.of().formatHex(digest.digest(content.getBytes(StandardCharsets.UTF_8)));
+        } catch (NoSuchAlgorithmException exception) {
+            throw new IllegalStateException("SHA-256 is unavailable", exception);
+        }
+    }
+
+    private static <T> List<T> emptyIfNull(List<T> values) {
+        return values == null ? List.of() : values;
     }
 
     private List<String> eligibilityBlockers(AdminImportCandidateDetail detail) {

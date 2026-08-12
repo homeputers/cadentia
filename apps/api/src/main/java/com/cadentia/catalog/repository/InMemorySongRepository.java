@@ -57,6 +57,16 @@ public class InMemorySongRepository implements SongRepository {
     }
 
     @Override
+    public List<Song> findReviewedSongs(String query, String status, String sort, int limit, int offset) {
+        return List.of();
+    }
+
+    @Override
+    public int countReviewedSongs(String query, String status) {
+        return 0;
+    }
+
+    @Override
     public Optional<Song> updateSong(UUID id, UpdateSongCommand command) {
         return Optional.empty();
     }
