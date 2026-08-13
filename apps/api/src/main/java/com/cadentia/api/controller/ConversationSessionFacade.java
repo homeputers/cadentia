@@ -1,5 +1,6 @@
 package com.cadentia.api.controller;
 
+import com.cadentia.api.controller.ConversationSessionRecord.ConversationSessionSourceStamp;
 import com.cadentia.generated.model.ChannelType;
 import com.cadentia.generated.model.ConversationClarificationRequest;
 import com.cadentia.generated.model.ConversationConfirmRequest;
@@ -47,7 +48,7 @@ public class ConversationSessionFacade {
     private final Duration inactivityTimeout;
     private final Duration absoluteLifetime;
     private final IntentService intentService;
-    private final Map<UUID, SessionRecord> sessions = new HashMap<>();
+    private final ConversationSessionRepository repository;
 
     @Autowired
     public ConversationSessionFacade(
@@ -55,11 +56,13 @@ public class ConversationSessionFacade {
             ValidatedSetlistRequestMapper mapper,
             @Value("${cadentia.conversation.session.inactivity-timeout:PT30M}") Duration inactivityTimeout,
             @Value("${cadentia.conversation.session.absolute-lifetime:PT4H}") Duration absoluteLifetime,
+            ObjectProvider<ConversationSessionRepository> repositoryProvider,
             ObjectProvider<IntentService> intentServiceProvider) {
         this.mergeService = mergeService;
         this.mapper = mapper;
         this.inactivityTimeout = inactivityTimeout;
         this.absoluteLifetime = absoluteLifetime;
+        this.repository = repositoryProvider.getIfAvailable(InMemoryConversationSessionRepository::new);
         this.intentService = intentServiceProvider.getIfAvailable();
     }
 
@@ -68,7 +71,7 @@ public class ConversationSessionFacade {
             ValidatedSetlistRequestMapper mapper,
             Duration inactivityTimeout,
             Duration absoluteLifetime) {
-        this(mergeService, mapper, inactivityTimeout, absoluteLifetime, (IntentService) null);
+        this(mergeService, mapper, inactivityTimeout, absoluteLifetime, new InMemoryConversationSessionRepository(), null);
     }
 
     public ConversationSessionFacade(
@@ -77,60 +80,71 @@ public class ConversationSessionFacade {
             Duration inactivityTimeout,
             Duration absoluteLifetime,
             IntentService intentService) {
+        this(mergeService, mapper, inactivityTimeout, absoluteLifetime, new InMemoryConversationSessionRepository(), intentService);
+    }
+
+    public ConversationSessionFacade(
+            DefaultSessionMergeService mergeService,
+            ValidatedSetlistRequestMapper mapper,
+            Duration inactivityTimeout,
+            Duration absoluteLifetime,
+            ConversationSessionRepository repository,
+            IntentService intentService) {
         this.mergeService = mergeService;
         this.mapper = mapper;
         this.inactivityTimeout = inactivityTimeout;
         this.absoluteLifetime = absoluteLifetime;
+        this.repository = repository;
         this.intentService = intentService;
     }
 
     public ConversationSessionStateResponse get(UUID sessionId) {
-        SessionRecord record = currentRecord(sessionId, ConversationState.COLLECTING);
+        ConversationSessionRecord record = currentRecord(sessionId, ConversationState.COLLECTING);
         return snapshot(sessionId, record, List.of("Session state emitted."));
     }
 
     public ConversationSessionStateResponse clarify(UUID sessionId, ConversationClarificationRequest request) {
-        SessionRecord record = transition(
+        ConversationSessionRecord record = transition(
                 currentRecord(sessionId, ConversationState.COLLECTING),
                 ConversationState.CLARIFICATION_REQUIRED,
                 revision(ConversationRevisionEvent.EventTypeEnum.CLARIFICATION_ANSWER,
                         SlotValueSource.USER_EDIT,
                         "Clarification requested."));
-        sessions.put(sessionId, record);
+        repository.save(record);
         return snapshot(sessionId, record, List.of("Clarification requested."));
     }
 
     public ConversationSessionStateResponse confirm(UUID sessionId, ConversationConfirmRequest request) {
-        SessionRecord baseline = currentRecord(sessionId, ConversationState.COLLECTING);
+        ConversationSessionRecord baseline = currentRecord(sessionId, ConversationState.COLLECTING);
         if (baseline.state() != ConversationState.READY_TO_CONFIRM) {
             return snapshot(
                     sessionId,
                     baseline,
                     List.of("Session is not ready to confirm. Provide a valid request before recommendation."));
         }
-        SessionRecord record = transition(
+        ConversationSessionRecord record = transition(
                 baseline,
                 ConversationState.CONFIRMED,
                 revision(ConversationRevisionEvent.EventTypeEnum.CONFIRM,
                         SlotValueSource.USER_EDIT,
                         "Session confirmed."));
-        sessions.put(sessionId, record);
+        repository.save(record);
         return snapshot(sessionId, record, List.of("Session confirmed."));
     }
 
     public ConversationSessionStateResponse cancel(UUID sessionId) {
-        SessionRecord record = transition(
+        ConversationSessionRecord record = transition(
                 currentRecord(sessionId, ConversationState.COLLECTING),
                 ConversationState.CANCELLED,
                 revision(ConversationRevisionEvent.EventTypeEnum.CANCEL,
                         SlotValueSource.USER_EDIT,
                         "Session cancelled."));
-        sessions.put(sessionId, record);
+        repository.save(record);
         return snapshot(sessionId, record, List.of("Session cancelled."));
     }
 
     public ConversationSessionStateResponse update(UUID sessionId, ConversationSlotUpdateRequest request) {
-        SessionRecord baselineRecord = currentRecord(sessionId, ConversationState.COLLECTING);
+        ConversationSessionRecord baselineRecord = currentRecord(sessionId, ConversationState.COLLECTING);
         if (request.getSlotPatch() == null) {
             return snapshot(
                     sessionId,
@@ -147,15 +161,13 @@ public class ConversationSessionFacade {
                         updateSource,
                         false));
         OffsetDateTime updatedAt = OffsetDateTime.now();
-        SessionRecord updated = new SessionRecord(
+        ConversationSessionRecord updated = baselineRecord.withSlots(
                 ConversationState.COLLECTING,
                 merged.mergedSlots(),
                 mergedSources(baselineRecord.slotSources(), merged, updatedAt),
                 appendRevisions(baselineRecord.revisionHistory(), mergeRevisions(merged, updatedAt)),
-                baselineRecord.createdAt(),
-                updatedAt,
-                null);
-        sessions.put(sessionId, updated);
+                updatedAt);
+        repository.save(updated);
         return snapshot(sessionId, updated, List.of("Session slots updated via deterministic merge."));
     }
 
@@ -166,55 +178,54 @@ public class ConversationSessionFacade {
         IntentParseResult parseResult = intentService.parse(text);
         ValidatedIntent parsedIntent = parseResult.intent();
         if (parsedIntent.intentType() == IntentType.CLARIFY_REQUEST) {
-            SessionRecord record = transition(
+            ConversationSessionRecord record = transition(
                     currentRecord(sessionId, ConversationState.COLLECTING),
                     ConversationState.CLARIFICATION_REQUIRED,
                     revision(ConversationRevisionEvent.EventTypeEnum.CLARIFICATION_ANSWER,
                             SlotValueSource.FREE_TEXT,
                             "Intent extraction requested clarification."));
-            sessions.put(sessionId, record);
+            repository.save(record);
             return snapshot(sessionId, record, List.of("Intent extraction requested clarification before recommendation."));
         }
         if (parsedIntent.intentType() == IntentType.UNSUPPORTED_REQUEST) {
-            SessionRecord record = transition(
+            ConversationSessionRecord record = transition(
                     currentRecord(sessionId, ConversationState.COLLECTING),
                     ConversationState.CANCELLED,
                     revision(ConversationRevisionEvent.EventTypeEnum.CANCEL,
                             SlotValueSource.FREE_TEXT,
                             "Intent extraction safely rejected the request."));
-            sessions.put(sessionId, record);
+            repository.save(record);
             return snapshot(sessionId, record, List.of("Intent extraction safely rejected the request before recommendation."));
         }
         GenerateSetlistIntent intent = (GenerateSetlistIntent) parsedIntent;
-        SessionRecord baselineRecord = currentRecord(sessionId, ConversationState.COLLECTING);
+        ConversationSessionRecord baselineRecord = currentRecord(sessionId, ConversationState.COLLECTING);
         SessionMergeResult merged = mergeService.merge(
                 baselineRecord.slots(),
                 new SessionSlotUpdate(intent.slots(), SlotValueSource.FREE_TEXT, true));
         OffsetDateTime updatedAt = OffsetDateTime.now();
-        SessionRecord updated = new SessionRecord(
+        ConversationSessionRecord updated = baselineRecord.withSlots(
                 ConversationState.READY_TO_CONFIRM,
                 merged.mergedSlots(),
                 mergedSources(baselineRecord.slotSources(), merged, updatedAt),
                 appendRevisions(baselineRecord.revisionHistory(), mergeRevisions(merged, updatedAt)),
-                baselineRecord.createdAt(),
-                updatedAt,
-                null);
-        sessions.put(sessionId, updated);
+                updatedAt);
+        repository.save(updated);
         return snapshot(sessionId, updated, List.of("Free-text request was validated by the shared intent boundary."));
     }
 
     public ConversationRecoveryResponse recover(UUID sessionId) {
-        SessionRecord prior = currentRecord(sessionId, ConversationState.COLLECTING);
-        SessionRecord expired = transition(
+        ConversationSessionRecord prior = currentRecord(sessionId, ConversationState.COLLECTING);
+        ConversationSessionRecord expired = transition(
                 prior,
                 ConversationState.EXPIRED,
                 revision(ConversationRevisionEvent.EventTypeEnum.EXPIRE,
                         SlotValueSource.DEFAULT,
                         "Session expired before recovery."));
-        sessions.put(sessionId, expired);
+        repository.save(expired);
 
         OffsetDateTime restartedAt = OffsetDateTime.now();
-        SessionRecord restarted = new SessionRecord(
+        ConversationSessionRecord restarted = new ConversationSessionRecord(
+                sessionId,
                 ConversationState.START,
                 empty(),
                 defaultSlotSources(restartedAt),
@@ -224,8 +235,12 @@ public class ConversationSessionFacade {
                         "Session recovered with a fresh request state.")),
                 restartedAt,
                 restartedAt,
-                null);
-        sessions.put(sessionId, restarted);
+                null,
+                expired.channel(),
+                expired.channelUpdateId(),
+                expired.recommendationResultId(),
+                expired.correlationMetadata());
+        repository.save(restarted);
 
         ConversationSessionStateResponse recoveredState = snapshot(
                 sessionId,
@@ -242,52 +257,82 @@ public class ConversationSessionFacade {
                 true);
     }
 
-    private SessionRecord currentRecord(UUID sessionId, ConversationState defaultState) {
-        SessionRecord record = sessions.computeIfAbsent(
-                sessionId,
-                id -> {
-                    OffsetDateTime now = OffsetDateTime.now();
-                    return new SessionRecord(defaultState, empty(), defaultSlotSources(now), List.of(), now, now, null);
-                });
+    public void recordChannelCorrelation(UUID sessionId, String channel, String channelUpdateId, String correlationId) {
+        ConversationSessionRecord record = currentRecord(sessionId, ConversationState.COLLECTING);
+        repository.save(record.withCorrelation(
+                channel,
+                channelUpdateId,
+                null,
+                Map.of("correlationId", correlationId),
+                OffsetDateTime.now()));
+    }
+
+    public void recordRecommendationCorrelation(UUID sessionId, String recommendationResultId) {
+        ConversationSessionRecord record = currentRecord(sessionId, ConversationState.COLLECTING);
+        repository.save(record.withCorrelation(
+                null,
+                null,
+                recommendationResultId,
+                record.correlationMetadata(),
+                OffsetDateTime.now()));
+    }
+
+    private ConversationSessionRecord currentRecord(UUID sessionId, ConversationState defaultState) {
+        ConversationSessionRecord record = repository.findById(sessionId)
+                .orElseGet(() -> repository.save(newRecord(sessionId, defaultState)));
         if (record.state() == ConversationState.EXPIRED) {
             return record;
         }
         if (isExpired(record)) {
-            SessionRecord expired = transition(
+            ConversationSessionRecord expired = transition(
                     record,
                     ConversationState.EXPIRED,
                     revision(ConversationRevisionEvent.EventTypeEnum.EXPIRE,
                             SlotValueSource.DEFAULT,
                             "Session expired."));
-            sessions.put(sessionId, expired);
+            repository.save(expired);
             return expired;
         }
         return record;
     }
 
-    private boolean isExpired(SessionRecord record) {
+    private ConversationSessionRecord newRecord(UUID sessionId, ConversationState state) {
+        OffsetDateTime now = OffsetDateTime.now();
+        return new ConversationSessionRecord(
+                sessionId,
+                state,
+                empty(),
+                defaultSlotSources(now),
+                List.of(),
+                now,
+                now,
+                null,
+                ChannelType.MIXED.getValue(),
+                null,
+                null,
+                Map.of());
+    }
+
+    private boolean isExpired(ConversationSessionRecord record) {
         OffsetDateTime now = OffsetDateTime.now();
         boolean inactive = record.updatedAt().plus(inactivityTimeout).isBefore(now);
         boolean tooOld = record.createdAt().plus(absoluteLifetime).isBefore(now);
         return inactive || tooOld;
     }
 
-    private SessionRecord transition(
-            SessionRecord record,
+    private ConversationSessionRecord transition(
+            ConversationSessionRecord record,
             ConversationState targetState,
             ConversationRevisionEvent revision) {
         OffsetDateTime updatedAt = OffsetDateTime.now();
-        return new SessionRecord(
+        return record.withState(
                 targetState,
-                record.slots(),
-                record.slotSources(),
                 appendRevisions(record.revisionHistory(), revision),
-                record.createdAt(),
                 updatedAt,
                 targetState == ConversationState.CONFIRMED ? updatedAt : record.confirmedAt());
     }
 
-    private ConversationSessionStateResponse snapshot(UUID sessionId, SessionRecord record, List<String> messages) {
+    private ConversationSessionStateResponse snapshot(UUID sessionId, ConversationSessionRecord record, List<String> messages) {
         GenerateSetlistRequest slots = mapper.toGenerateSetlistRequest(new GenerateSetlistIntent("v1", record.slots()));
         OffsetDateTime expiresAt = record.updatedAt().plus(inactivityTimeout);
         return new ConversationSessionStateResponse(
@@ -302,20 +347,20 @@ public class ConversationSessionFacade {
                 .confirmedAt(record.confirmedAt());
     }
 
-    private Map<String, SourceStamp> mergedSources(
-            Map<String, SourceStamp> baselineSources,
+    private Map<String, ConversationSessionSourceStamp> mergedSources(
+            Map<String, ConversationSessionSourceStamp> baselineSources,
             SessionMergeResult merged,
             OffsetDateTime updatedAt) {
-        Map<String, SourceStamp> sources = new HashMap<>(baselineSources);
-        merged.slotSources().forEach((slot, source) -> sources.put(slot, new SourceStamp(source, updatedAt)));
+        Map<String, ConversationSessionSourceStamp> sources = new HashMap<>(baselineSources);
+        merged.slotSources().forEach((slot, source) -> sources.put(slot, new ConversationSessionSourceStamp(source, updatedAt)));
         return Map.copyOf(sources);
     }
 
-    private Map<String, SourceStamp> defaultSlotSources(OffsetDateTime updatedAt) {
+    private Map<String, ConversationSessionSourceStamp> defaultSlotSources(OffsetDateTime updatedAt) {
         return Map.of(
-                "counts", new SourceStamp(SlotValueSource.DEFAULT, updatedAt),
-                "keyPolicy", new SourceStamp(SlotValueSource.DEFAULT, updatedAt),
-                "tempoPolicy", new SourceStamp(SlotValueSource.DEFAULT, updatedAt));
+                "counts", new ConversationSessionSourceStamp(SlotValueSource.DEFAULT, updatedAt),
+                "keyPolicy", new ConversationSessionSourceStamp(SlotValueSource.DEFAULT, updatedAt),
+                "tempoPolicy", new ConversationSessionSourceStamp(SlotValueSource.DEFAULT, updatedAt));
     }
 
     private List<ConversationRevisionEvent> mergeRevisions(SessionMergeResult merged, OffsetDateTime occurredAt) {
@@ -362,7 +407,7 @@ public class ConversationSessionFacade {
                 .summary(summary);
     }
 
-    private List<ConversationSlotSource> slotSources(SessionRecord record) {
+    private List<ConversationSlotSource> slotSources(ConversationSessionRecord record) {
         return record.slotSources().entrySet().stream()
                 .sorted(Comparator.comparing(Map.Entry::getKey))
                 .map(entry -> new ConversationSlotSource(
@@ -400,14 +445,4 @@ public class ConversationSessionFacade {
         return new GenerateSetlistSlots("", List.of(), List.of(), new Counts(10, 5), new IntentKeyPolicy(true, true, 2), new IntentTempoPolicy(12), null, null, List.of(), null);
     }
 
-    private record SessionRecord(
-            ConversationState state,
-            GenerateSetlistSlots slots,
-            Map<String, SourceStamp> slotSources,
-            List<ConversationRevisionEvent> revisionHistory,
-            OffsetDateTime createdAt,
-            OffsetDateTime updatedAt,
-            OffsetDateTime confirmedAt) {}
-
-    private record SourceStamp(SlotValueSource source, OffsetDateTime updatedAt) {}
 }
