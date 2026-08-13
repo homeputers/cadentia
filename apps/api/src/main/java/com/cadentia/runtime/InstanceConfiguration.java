@@ -1,5 +1,6 @@
 package com.cadentia.runtime;
 
+import com.cadentia.reng.scoring.CandidateFeatureScorer;
 import com.cadentia.reng.scoring.ScoringProfile;
 import com.cadentia.reng.scoring.ScoringProfileLifecycle;
 import com.cadentia.reng.scoring.TeamConstraintCode;
@@ -52,7 +53,10 @@ public record InstanceConfiguration(
                         true),
                 new ScoringProfile(
                         "local-development",
-                        Map.of("themeFit", 3.0, "scriptureFit", 3.0, "musicalFit", 2.0),
+                        Map.of(
+                                CandidateFeatureScorer.THEME_MATCH, 3.0,
+                                CandidateFeatureScorer.SCRIPTURE_MATCH, 3.0,
+                                CandidateFeatureScorer.MUSICAL_FIT, 2.0),
                         List.of("title", "arrangement_id"),
                         ScoringProfileLifecycle.active()),
                 List.of(),
