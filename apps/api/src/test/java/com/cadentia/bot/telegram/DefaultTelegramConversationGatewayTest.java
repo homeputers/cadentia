@@ -60,6 +60,7 @@ class DefaultTelegramConversationGatewayTest {
         assertThat(telegramState.getSlots().getKeyPolicy()).usingRecursiveComparison().isEqualTo(httpState.getSlots().getKeyPolicy());
         assertThat(telegramState.getSlots().getTempoPolicy()).usingRecursiveComparison().isEqualTo(httpState.getSlots().getTempoPolicy());
         assertThat(confirmResponse.status()).isEqualTo(TelegramAdapterResponseStatus.COMPLETED);
+        assertThat(confirmResponse.proposal()).isSameAs(setlistService.proposal);
         assertThat(setlistService.lastRequest).usingRecursiveComparison().isEqualTo(telegramState.getSlots());
     }
 
@@ -200,13 +201,15 @@ class DefaultTelegramConversationGatewayTest {
 
     private static class CapturingSetlistService extends SetlistService {
         private GenerateSetlistRequest lastRequest;
+        private SetlistProposalResponse proposal;
 
         @Override
         public SetlistProposalResponse generate(GenerateSetlistRequest request) {
             lastRequest = request;
-            return new SetlistProposalResponse().status("PROPOSED").auditMessages(List.of(
+            proposal = new SetlistProposalResponse().status("PROPOSED").auditMessages(List.of(
                     "Candidate eligibility used approved catalog snapshot fixture.",
                     "Recommendation ordering and explanation references are deterministic."));
+            return proposal;
         }
     }
 }

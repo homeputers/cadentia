@@ -52,8 +52,8 @@ class TelegramE2eFixtureTest {
         TelegramAdapterResponse prompt = harness.handle("newsetlist-prompt.json", "corr-9002");
         ConversationSessionStateResponse state = harness.facade.get(sessionId("42001", "99001"));
         TelegramAdapterResponse confirm = harness.handle("newsetlist-confirm-callback.json", "corr-9003");
-        List<TelegramRenderedMessage> rendered = harness.renderer.renderProposal("42001", harness.setlistService.proposal);
-        TelegramOutboundSendRecord sent = harness.outbound.send(rendered.get(0), "corr-9003", "proposal");
+        List<TelegramRenderedMessage> rendered = harness.renderer.render(confirm);
+        TelegramOutboundSendRecord sent = harness.outbound.send(rendered.get(1), "corr-9003", "proposal");
 
         // Assert
         assertThat(idempotency.record("bot-fixture", "42001", 9001)).isEqualTo(TelegramWebhookIdempotencyStore.IdempotencyResult.ACCEPTED);
@@ -62,9 +62,11 @@ class TelegramE2eFixtureTest {
         assertThat(prompt.status()).isEqualTo(TelegramAdapterResponseStatus.CONTINUED);
         assertThat(state.getState()).isEqualTo(ConversationState.READY_TO_CONFIRM);
         assertThat(confirm.status()).isEqualTo(TelegramAdapterResponseStatus.COMPLETED);
+        assertThat(confirm.proposal()).isSameAs(harness.setlistService.proposal);
         assertThat(harness.setlistService.lastRequest).usingRecursiveComparison().isEqualTo(state.getSlots());
-        assertThat(rendered.get(0).text()).contains("Setlist proposal", "catalog:song-approved-1", "approval:fixture-approved-1");
-        assertThat(rendered.get(0).text()).doesNotContain("unapproved").doesNotContain("raw lyric");
+        assertThat(rendered.get(0).callbackAcknowledgement()).isEqualTo("Proposal generated.");
+        assertThat(rendered.get(1).text()).contains("Setlist proposal", "catalog:song-approved-1", "approval:fixture-approved-1");
+        assertThat(rendered.get(1).text()).doesNotContain("unapproved").doesNotContain("raw lyric");
         assertThat(sent.status()).isEqualTo(OutboundStatus.SENT);
         assertThat(harness.client.sent).hasSize(1);
     }
