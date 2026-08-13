@@ -25,6 +25,8 @@ import com.cadentia.reng.scoring.OrderedSetResponse;
 import com.cadentia.reng.scoring.RecommendationExplanationFact;
 import com.cadentia.reng.scoring.ScoringRequest;
 import com.cadentia.reng.scoring.ScoringRequestFactory;
+import com.cadentia.reng.setlist.SetlistProposalPersistenceService;
+import com.cadentia.reng.setlist.SetlistVersionModels.SetlistVersionSnapshot;
 import com.cadentia.rehearsal.RehearsalWorkflowModels.RehearsalWorkflowSummaryAudience;
 import com.cadentia.rehearsal.RehearsalWorkflowSummaryProvider;
 import com.cadentia.runtime.InstanceConfiguration;
@@ -40,6 +42,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -56,6 +59,7 @@ public class SetlistService {
     private final CandidateFeatureScorer candidateFeatureScorer;
     private final SetOrderer setOrderer;
     private final RehearsalWorkflowSummaryProvider workflowSummaryService;
+    private final SetlistProposalPersistenceService proposalPersistenceService;
 
     public SetlistService() {
         this(new StaticInstanceConfigurationProvider(InstanceConfiguration.localDevelopment(
@@ -72,6 +76,7 @@ public class SetlistService {
                 new HardConstraintFilter(),
                 new CandidateFeatureScorer(),
                 new DeterministicSetOrderer(),
+                null,
                 null);
     }
 
@@ -82,6 +87,28 @@ public class SetlistService {
     }
 
     @Autowired
+    public SetlistService(
+            CandidateRetriever candidateRetriever,
+            RehearsalWorkflowSummaryProvider workflowSummaryService,
+            ObjectProvider<SetlistProposalPersistenceService> proposalPersistenceServiceProvider) {
+        this(new StaticInstanceConfigurationProvider(InstanceConfiguration.localDevelopment(
+                "local-development",
+                "local",
+                "cadentia-local-assets",
+                "local-development",
+                "env:CADENTIA_LOCAL_ASSET_KEY_REF",
+                "cadentia:local:development",
+                "local.development",
+                List.of("local.development.audit-events", "local.development.recommendation-events"))),
+                new ScoringRequestFactory(),
+                candidateRetriever,
+                new HardConstraintFilter(),
+                new CandidateFeatureScorer(),
+                new DeterministicSetOrderer(),
+                workflowSummaryService,
+                proposalPersistenceServiceProvider.getIfAvailable());
+    }
+
     public SetlistService(
             CandidateRetriever candidateRetriever,
             RehearsalWorkflowSummaryProvider workflowSummaryService) {
@@ -99,7 +126,8 @@ public class SetlistService {
                 new HardConstraintFilter(),
                 new CandidateFeatureScorer(),
                 new DeterministicSetOrderer(),
-                workflowSummaryService);
+                workflowSummaryService,
+                null);
     }
 
     public SetlistService(
@@ -113,7 +141,8 @@ public class SetlistService {
                 new HardConstraintFilter(),
                 new CandidateFeatureScorer(),
                 new DeterministicSetOrderer(),
-                workflowSummaryService);
+                workflowSummaryService,
+                null);
     }
 
     SetlistService(
@@ -124,6 +153,26 @@ public class SetlistService {
             CandidateFeatureScorer candidateFeatureScorer,
             SetOrderer setOrderer,
             RehearsalWorkflowSummaryProvider workflowSummaryService) {
+        this(
+                configurationProvider,
+                scoringRequestFactory,
+                candidateRetriever,
+                hardConstraintFilter,
+                candidateFeatureScorer,
+                setOrderer,
+                workflowSummaryService,
+                null);
+    }
+
+    SetlistService(
+            InstanceConfigurationProvider configurationProvider,
+            ScoringRequestFactory scoringRequestFactory,
+            CandidateRetriever candidateRetriever,
+            HardConstraintFilter hardConstraintFilter,
+            CandidateFeatureScorer candidateFeatureScorer,
+            SetOrderer setOrderer,
+            RehearsalWorkflowSummaryProvider workflowSummaryService,
+            SetlistProposalPersistenceService proposalPersistenceService) {
         this.configurationProvider = configurationProvider;
         this.scoringRequestFactory = scoringRequestFactory;
         this.candidateRetriever = candidateRetriever;
@@ -131,6 +180,7 @@ public class SetlistService {
         this.candidateFeatureScorer = candidateFeatureScorer;
         this.setOrderer = setOrderer;
         this.workflowSummaryService = workflowSummaryService;
+        this.proposalPersistenceService = proposalPersistenceService;
     }
 
     public SetlistProposalResponse generate(GenerateSetlistRequest request) {
@@ -175,7 +225,18 @@ public class SetlistService {
                         requestId,
                         recommendationResultId));
         attachOperationalWorkflowSummary(response, request);
+        persistGeneratedBaseline(request, response);
         return response;
+    }
+
+    private void persistGeneratedBaseline(GenerateSetlistRequest request, SetlistProposalResponse response) {
+        if (proposalPersistenceService == null || response.getExplanation() == null) {
+            return;
+        }
+        proposalPersistenceService.persistGeneratedBaseline(request, response)
+                .map(SetlistVersionSnapshot::setlistId)
+                .map(UUID::toString)
+                .ifPresent(setlistId -> response.getExplanation().setSetlistId(setlistId));
     }
 
     private List<RecommendableArrangement> retrieveCandidates(ScoringRequest request) {
