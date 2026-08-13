@@ -189,11 +189,28 @@ public class TelegramResponseRenderer {
 
     private List<String> conciseEvidence(RecommendationExplanationEntry entry) {
         List<RecommendationExplanationEvidence> evidence = entry.getEvidence() == null ? List.of() : entry.getEvidence();
-        return evidence.stream()
+        List<RecommendationExplanationEvidence> safeEvidence = evidence.stream()
                 .filter(this::telegramSafeEvidence)
-                .map(RecommendationExplanationEvidence::getRef)
-                .limit(2)
                 .toList();
+        List<String> refs = new ArrayList<>();
+        safeEvidence.stream()
+                .filter(item -> "catalog".equals(item.getType().getValue()))
+                .findFirst()
+                .map(RecommendationExplanationEvidence::getRef)
+                .ifPresent(refs::add);
+        safeEvidence.stream()
+                .filter(item -> "approval".equals(item.getType().getValue()))
+                .findFirst()
+                .map(RecommendationExplanationEvidence::getRef)
+                .ifPresent(refs::add);
+        if (refs.size() < 2) {
+            safeEvidence.stream()
+                    .map(RecommendationExplanationEvidence::getRef)
+                    .filter(ref -> !refs.contains(ref))
+                    .limit(2 - refs.size())
+                    .forEach(refs::add);
+        }
+        return List.copyOf(refs);
     }
 
     private void appendAuditMessages(StringBuilder body, List<String> auditMessages) {
