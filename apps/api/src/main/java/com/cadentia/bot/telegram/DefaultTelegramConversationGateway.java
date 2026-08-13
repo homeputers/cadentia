@@ -6,17 +6,34 @@ import com.cadentia.generated.model.ConversationSessionStateResponse;
 import com.cadentia.generated.model.ConversationState;
 import com.cadentia.generated.model.ConversationSlotUpdateRequest;
 import com.cadentia.generated.model.ConversationSlotUpdateRequestSlotPatch;
+import com.cadentia.generated.model.KeyPolicy;
+import com.cadentia.generated.model.SetlistCounts;
 import com.cadentia.generated.model.SetlistProposalResponse;
 import com.cadentia.generated.model.SlotValueSource;
+import com.cadentia.generated.model.TempoPolicy;
 import com.cadentia.reng.SetlistService;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
 public class DefaultTelegramConversationGateway implements TelegramConversationGateway {
+    private static final Pattern COUNTS_VALUE = Pattern.compile("(?<praise>\\d{1,2})p(?<worship>\\d{1,2})w");
+    private static final Map<String, KeyPolicy> KEY_POLICIES = Map.of(
+            "minimal", new KeyPolicy(true, true, 2),
+            "same", new KeyPolicy(true, false, 1),
+            "flex", new KeyPolicy(false, true, 4));
+    private static final Map<String, TempoPolicy> TEMPO_POLICIES = Map.of(
+            "tight", new TempoPolicy(8),
+            "smooth", new TempoPolicy(12),
+            "open", new TempoPolicy(20));
+
     private final ConversationSessionFacade facade;
     private final TelegramAuthorizationService authorizationService;
     private final SetlistService setlistService;
@@ -140,7 +157,16 @@ public class DefaultTelegramConversationGateway implements TelegramConversationG
             touch(decision, event, TelegramSessionState.NEW_SETLIST_ACTIVE);
             return new TelegramAdapterResponse(TelegramAdapterResponseStatus.CONTINUED, String.join(" ", state.getAuditMessages()), event, event.callbackAction().guidedField());
         }
-        ConversationSessionStateResponse state = facade.update(sessionId(event), menuPatch(event));
+        ConversationSlotUpdateRequest request = menuPatch(event);
+        if (request == null) {
+            touch(decision, event, currentState(decision));
+            return new TelegramAdapterResponse(
+                    TelegramAdapterResponseStatus.INVALID,
+                    "Unsupported guided menu selection.",
+                    event,
+                    event.callbackAction().guidedField());
+        }
+        ConversationSessionStateResponse state = facade.update(sessionId(event), request);
         touch(decision, event, toTelegramState(state));
         return new TelegramAdapterResponse(
                 TelegramAdapterResponseStatus.CONTINUED,
@@ -151,10 +177,69 @@ public class DefaultTelegramConversationGateway implements TelegramConversationG
 
     private ConversationSlotUpdateRequest menuPatch(TelegramChannelEvent event) {
         ConversationSlotUpdateRequestSlotPatch patch = new ConversationSlotUpdateRequestSlotPatch();
-        if (event.callbackAction() == TelegramCallbackAction.LANGUAGE) {
-            patch.language(event.callbackValue());
+        String value = event.callbackValue() == null ? "" : event.callbackValue().toLowerCase(Locale.ROOT);
+        switch (event.callbackAction()) {
+            case LANGUAGE -> {
+                if (!List.of("en", "es", "pt").contains(value)) {
+                    return null;
+                }
+                patch.language(value);
+            }
+            case SHAPE_COUNTS -> {
+                SetlistCounts counts = counts(value);
+                if (counts == null) {
+                    return null;
+                }
+                patch.counts(counts);
+            }
+            case KEY_POLICY -> {
+                KeyPolicy keyPolicy = KEY_POLICIES.get(value);
+                if (keyPolicy == null) {
+                    return null;
+                }
+                patch.keyPolicy(keyPolicy);
+            }
+            case TEMPO_POLICY -> {
+                TempoPolicy tempoPolicy = TEMPO_POLICIES.get(value);
+                if (tempoPolicy == null) {
+                    return null;
+                }
+                patch.tempoPolicy(tempoPolicy);
+            }
+            case ENERGY_ARC -> {
+                ConversationSlotUpdateRequestSlotPatch.EnergyArcEnum energyArc =
+                        ConversationSlotUpdateRequestSlotPatch.EnergyArcEnum.fromValue(value);
+                if (energyArc == null) {
+                    return null;
+                }
+                patch.energyArc(energyArc);
+            }
+            case SERVICE_MOMENT -> {
+                ConversationSlotUpdateRequestSlotPatch.ServiceMomentEnum serviceMoment =
+                        ConversationSlotUpdateRequestSlotPatch.ServiceMomentEnum.fromValue(value);
+                if (serviceMoment == null) {
+                    return null;
+                }
+                patch.serviceMoment(serviceMoment);
+            }
+            default -> {
+                return null;
+            }
         }
         return new ConversationSlotUpdateRequest().source(SlotValueSource.MENU).slotPatch(patch);
+    }
+
+    private SetlistCounts counts(String value) {
+        Matcher matcher = COUNTS_VALUE.matcher(value);
+        if (!matcher.matches()) {
+            return null;
+        }
+        int praise = Integer.parseInt(matcher.group("praise"));
+        int worship = Integer.parseInt(matcher.group("worship"));
+        if (praise > 25 || worship > 25 || praise + worship == 0) {
+            return null;
+        }
+        return new SetlistCounts(praise, worship);
     }
 
     private TelegramSessionState toTelegramState(ConversationSessionStateResponse state) {

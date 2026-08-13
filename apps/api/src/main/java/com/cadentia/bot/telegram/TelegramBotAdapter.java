@@ -15,8 +15,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class TelegramBotAdapter implements BotAdapter {
 
-    static final int TELEGRAM_CALLBACK_DATA_LIMIT = 64;
-    private static final String CALLBACK_PREFIX = "cad:v1:";
+    static final int TELEGRAM_CALLBACK_DATA_LIMIT = TelegramCallbackData.LIMIT;
 
     private final ObjectMapper objectMapper;
     private final TelegramConversationGateway conversationGateway;
@@ -176,14 +175,14 @@ public class TelegramBotAdapter implements BotAdapter {
     }
 
     private TelegramCallbackPayload parseCallbackPayload(String data) {
-        if (data.length() > TELEGRAM_CALLBACK_DATA_LIMIT || data.contains("{") || data.contains("}") || !data.startsWith(CALLBACK_PREFIX)) {
+        if (data.length() > TELEGRAM_CALLBACK_DATA_LIMIT || data.contains("{") || data.contains("}") || !data.startsWith(TelegramCallbackData.PREFIX)) {
             throw new IllegalArgumentException("Invalid Telegram callback payload.");
         }
-        String[] parts = data.substring(CALLBACK_PREFIX.length()).split(":", 2);
+        String[] parts = data.substring(TelegramCallbackData.PREFIX.length()).split(":", 2);
         TelegramCallbackAction action = TelegramCallbackAction.fromToken(parts[0])
                 .orElseThrow(() -> new IllegalArgumentException("Unsupported Telegram callback action."));
         String value = parts.length == 2 ? parts[1] : "";
-        if (!value.matches("[A-Za-z0-9_.-]{0,32}")) {
+        if (!TelegramCallbackData.validValue(value)) {
             throw new IllegalArgumentException("Invalid Telegram callback value.");
         }
         return new TelegramCallbackPayload(action, value);

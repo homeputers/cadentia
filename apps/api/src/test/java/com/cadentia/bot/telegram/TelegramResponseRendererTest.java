@@ -36,7 +36,22 @@ class TelegramResponseRendererTest {
                 .contains("token=[redacted]")
                 .contains("secret=[redacted]")
                 .contains("/newsetlist");
-        assertThat(rendered.get(0).inlineKeyboard().rows()).hasSize(2);
+        assertThat(rendered.get(0).inlineKeyboard().rows()).hasSizeGreaterThan(2);
+        assertThat(rendered.get(0).inlineKeyboard().rows())
+                .flatExtracting(row -> row)
+                .extracting(TelegramRenderedMessage.TelegramInlineKeyboardButton::callbackData)
+                .allSatisfy(callbackData -> {
+                    assertThat(callbackData).startsWith("cad:v1:");
+                    assertThat(callbackData.length()).isLessThanOrEqualTo(TelegramCallbackData.LIMIT);
+                })
+                .contains(
+                        "cad:v1:shape_counts:3p2w",
+                        "cad:v1:language:es",
+                        "cad:v1:key_policy:minimal",
+                        "cad:v1:tempo_policy:smooth",
+                        "cad:v1:energy_arc:rising",
+                        "cad:v1:service_moment:opening",
+                        "cad:v1:confirm");
     }
 
     @Test
