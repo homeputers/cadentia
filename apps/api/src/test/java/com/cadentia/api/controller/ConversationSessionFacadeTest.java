@@ -5,11 +5,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.cadentia.generated.model.ConversationRecoveryResponse;
 import com.cadentia.generated.model.ConversationRevisionEvent;
 import com.cadentia.generated.model.ConversationSessionStateResponse;
-import com.cadentia.generated.model.SlotValueSource;
-import com.cadentia.generated.model.ConversationSlotUpdateRequest;
-import com.cadentia.generated.model.ConversationState;
 import com.cadentia.generated.model.ConversationConfirmRequest;
+import com.cadentia.generated.model.ConversationSlotUpdateRequest;
+import com.cadentia.generated.model.ConversationSlotUpdateRequestSlotPatch;
+import com.cadentia.generated.model.ConversationState;
 import com.cadentia.generated.model.SetlistCounts;
+import com.cadentia.generated.model.SlotValueSource;
 import com.cadentia.intent.Counts;
 import com.cadentia.intent.DefaultSessionMergeService;
 import com.cadentia.intent.GenerateSetlistIntent;
@@ -94,6 +95,47 @@ class ConversationSessionFacadeTest {
     }
 
     @Test
+    void repositoryBackedSessionsSurviveFacadeRestartWithSourcesAndRevisions() {
+        InMemoryConversationSessionRepository repository = new InMemoryConversationSessionRepository();
+        UUID sessionId = UUID.randomUUID();
+        ConversationSessionFacade firstFacade = facade(repository, input -> IntentParseResult.accepted(normalizedIntent(), false));
+
+        firstFacade.ingestFreeText(sessionId, "Psalm 100 thanksgiving");
+        firstFacade.confirm(sessionId, new ConversationConfirmRequest().accepted(true));
+        ConversationSessionFacade restartedFacade = facade(repository, input -> IntentParseResult.accepted(normalizedIntent(), false));
+        ConversationSessionStateResponse recovered = restartedFacade.get(sessionId);
+
+        assertThat(recovered.getState()).isEqualTo(ConversationState.CONFIRMED);
+        assertThat(recovered.getConfirmedAt()).isNotNull();
+        assertThat(recovered.getSlotSources())
+                .anySatisfy(source -> {
+                    assertThat(source.getSlot().getValue()).isEqualTo("verseText");
+                    assertThat(source.getSource()).isEqualTo(SlotValueSource.FREE_TEXT);
+                });
+        assertThat(recovered.getRevisionHistory())
+                .extracting(event -> event.getEventType().getValue())
+                .contains("slot_update", "confirm");
+    }
+
+    @Test
+    void channelAndRecommendationCorrelationAreStoredWithoutRawMessageText() {
+        InMemoryConversationSessionRepository repository = new InMemoryConversationSessionRepository();
+        ConversationSessionFacade facade = facade(repository, input -> IntentParseResult.accepted(normalizedIntent(), false));
+        UUID sessionId = UUID.randomUUID();
+
+        facade.ingestFreeText(sessionId, "Psalm 100 thanksgiving");
+        facade.recordChannelCorrelation(sessionId, "telegram", "9103", "corr-bot-e2e");
+        facade.recordRecommendationCorrelation(sessionId, "rec-result-123");
+
+        ConversationSessionRecord record = repository.findById(sessionId).orElseThrow();
+        assertThat(record.channel()).isEqualTo("telegram");
+        assertThat(record.channelUpdateId()).isEqualTo("9103");
+        assertThat(record.recommendationResultId()).isEqualTo("rec-result-123");
+        assertThat(record.correlationMetadata()).containsEntry("correlationId", "corr-bot-e2e");
+        assertThat(record.correlationMetadata().toString()).doesNotContain("Psalm 100 thanksgiving");
+    }
+
+    @Test
     void cancelledSessionDoesNotConfirm() {
         ConversationSessionFacade facade = facade(input -> IntentParseResult.accepted(normalizedIntent(), false));
         UUID sessionId = UUID.randomUUID();
@@ -122,7 +164,7 @@ class ConversationSessionFacadeTest {
                 sessionId,
                 new ConversationSlotUpdateRequest()
                         .source(SlotValueSource.USER_EDIT)
-                        .slotPatch(new com.cadentia.generated.model.ConversationSlotUpdateRequestSlotPatch()
+                        .slotPatch(new ConversationSlotUpdateRequestSlotPatch()
                                 .counts(new SetlistCounts().praise(3).worship(2))));
         ConversationSessionStateResponse confirmAttempt = facade.confirm(
                 sessionId, new ConversationConfirmRequest().accepted(true));
@@ -165,11 +207,18 @@ class ConversationSessionFacadeTest {
     }
 
     private static ConversationSessionFacade facade(IntentService intentService) {
+        return facade(new InMemoryConversationSessionRepository(), intentService);
+    }
+
+    private static ConversationSessionFacade facade(
+            ConversationSessionRepository repository,
+            IntentService intentService) {
         return new ConversationSessionFacade(
                 new DefaultSessionMergeService(),
                 new ValidatedSetlistRequestMapper(),
                 Duration.ofMinutes(30),
                 Duration.ofHours(4),
+                repository,
                 intentService);
     }
 

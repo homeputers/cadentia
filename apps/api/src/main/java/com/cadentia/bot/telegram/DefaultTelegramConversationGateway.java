@@ -142,6 +142,9 @@ public class DefaultTelegramConversationGateway implements TelegramConversationG
             }
             ConversationSessionStateResponse state = facade.confirm(sessionId(event), new ConversationConfirmRequest().accepted(true));
             SetlistProposalResponse proposal = setlistService == null ? null : setlistService.generate(state.getSlots());
+            if (proposal != null) {
+                facade.recordRecommendationCorrelation(sessionId(event), proposal.getRecommendationResultId());
+            }
             touch(decision, event, TelegramSessionState.COMPLETED);
             return new TelegramAdapterResponse(
                     TelegramAdapterResponseStatus.COMPLETED,
@@ -261,6 +264,11 @@ public class DefaultTelegramConversationGateway implements TelegramConversationG
     }
 
     private void touch(TelegramAuthorizationService.TelegramAuthorizationDecision decision, TelegramChannelEvent event, TelegramSessionState state) {
+        facade.recordChannelCorrelation(
+                sessionId(event),
+                "telegram",
+                String.valueOf(event.updateId()),
+                event.correlationId());
         if (authorizationService != null) {
             authorizationService.touch(decision, event, state);
         }
