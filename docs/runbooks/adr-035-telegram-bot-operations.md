@@ -145,7 +145,14 @@ Automated tests and local development must not call Telegram or use real credent
 
 ```bash
 mvn -pl apps/api -Dtest=TelegramE2eFixtureTest test
+mvn -pl apps/api -Dtest=TelegramWebhookE2eEquivalenceTest test
 ```
+
+`TelegramWebhookE2eEquivalenceTest` exercises the production webhook controller,
+adapter, shared conversation facade, recommendation service, renderer, outbound
+send service, and mocked Telegram client using synthetic updates and seeded
+approved catalog candidates. It compares the Telegram confirmation proposal with
+the HTTP/API `generateSetlistProposal` path for the same normalized request.
 
 ### Live local webhook testing with Cloudflare or Tailscale
 
@@ -225,6 +232,9 @@ Expected local failure modes:
 6. Repeat one update ID through the fixture/mocked path; expect duplicate accepted semantics and no duplicate outbound send.
 7. Send with a bad webhook secret in a non-production validation environment; expect rejection before processing.
 8. Disable `cadentia.telegram.enabled` or instance-level control; expect a disabled-channel response without disabling core API routes.
+9. In automated verification, compare Telegram and HTTP/API proposal status,
+   selected-song ordering, and explanation evidence references for the same
+   normalized request, policy snapshot, and seeded approved catalog snapshot.
 
 ## Health Checks and Telemetry
 
