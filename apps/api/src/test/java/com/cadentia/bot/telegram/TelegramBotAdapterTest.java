@@ -88,6 +88,11 @@ class TelegramBotAdapterTest {
         assertThat(gateway.lastEvent.callbackQueryId()).isEqualTo("cb-1");
         assertThat(gateway.lastEvent.callbackMessageId()).isEqualTo(33);
         assertThat(gateway.lastEvent.locale().toLanguageTag()).isEqualTo("en-US");
+
+        TelegramAdapterResponse serviceMoment = adapter.handleUpdate(callbackPayload(25, "cad:v1:service_moment:opening", 1781870400), "corr-25");
+        assertThat(serviceMoment.guidedField()).isEqualTo("serviceMoment");
+        assertThat(gateway.lastEvent.callbackAction()).isEqualTo(TelegramCallbackAction.SERVICE_MOMENT);
+        assertThat(gateway.lastEvent.callbackValue()).isEqualTo("opening");
     }
 
     @Test

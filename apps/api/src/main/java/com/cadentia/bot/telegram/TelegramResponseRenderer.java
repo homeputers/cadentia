@@ -14,7 +14,6 @@ public class TelegramResponseRenderer {
     static final int TELEGRAM_MESSAGE_LIMIT = 4096;
     static final int SAFE_MESSAGE_LIMIT = 3900;
     private static final int CALLBACK_LIMIT = 180;
-    private static final String CALLBACK_PREFIX = "cad:";
 
     public List<TelegramRenderedMessage> render(TelegramAdapterResponse response) {
         if (response == null) {
@@ -117,6 +116,28 @@ public class TelegramResponseRenderer {
     private TelegramRenderedMessage.TelegramInlineKeyboard keyboardFor(TelegramAdapterResponseStatus status) {
         return switch (status) {
             case STARTED, CONTINUED, ALREADY_ACTIVE -> new TelegramRenderedMessage.TelegramInlineKeyboard(List.of(
+                    List.of(
+                            button("3+2", TelegramCallbackAction.SHAPE_COUNTS, "3p2w"),
+                            button("4+2", TelegramCallbackAction.SHAPE_COUNTS, "4p2w"),
+                            button("10+5", TelegramCallbackAction.SHAPE_COUNTS, "10p5w")),
+                    List.of(
+                            button("English", TelegramCallbackAction.LANGUAGE, "en"),
+                            button("Spanish", TelegramCallbackAction.LANGUAGE, "es"),
+                            button("Portuguese", TelegramCallbackAction.LANGUAGE, "pt")),
+                    List.of(
+                            button("Rising", TelegramCallbackAction.ENERGY_ARC, "rising"),
+                            button("Steady", TelegramCallbackAction.ENERGY_ARC, "steady"),
+                            button("Falling", TelegramCallbackAction.ENERGY_ARC, "falling")),
+                    List.of(
+                            button("Opening", TelegramCallbackAction.SERVICE_MOMENT, "opening"),
+                            button("Response", TelegramCallbackAction.SERVICE_MOMENT, "response"),
+                            button("Sending", TelegramCallbackAction.SERVICE_MOMENT, "sending")),
+                    List.of(
+                            button("Tight keys", TelegramCallbackAction.KEY_POLICY, "minimal"),
+                            button("Flexible keys", TelegramCallbackAction.KEY_POLICY, "flex")),
+                    List.of(
+                            button("Smooth tempo", TelegramCallbackAction.TEMPO_POLICY, "smooth"),
+                            button("Open tempo", TelegramCallbackAction.TEMPO_POLICY, "open")),
                     List.of(button("Confirm", TelegramCallbackAction.CONFIRM), button("Revise", TelegramCallbackAction.REVISE)),
                     List.of(button("Cancel", TelegramCallbackAction.CANCEL))));
             case COMPLETED -> new TelegramRenderedMessage.TelegramInlineKeyboard(List.of(List.of(button("Revise", TelegramCallbackAction.REVISE))));
@@ -125,7 +146,11 @@ public class TelegramResponseRenderer {
     }
 
     private TelegramRenderedMessage.TelegramInlineKeyboardButton button(String label, TelegramCallbackAction action) {
-        return new TelegramRenderedMessage.TelegramInlineKeyboardButton(label, CALLBACK_PREFIX + action.token());
+        return button(label, action, "");
+    }
+
+    private TelegramRenderedMessage.TelegramInlineKeyboardButton button(String label, TelegramCallbackAction action, String value) {
+        return new TelegramRenderedMessage.TelegramInlineKeyboardButton(label, TelegramCallbackData.encode(action, value));
     }
 
     private String callbackAcknowledgement(TelegramAdapterResponse response) {

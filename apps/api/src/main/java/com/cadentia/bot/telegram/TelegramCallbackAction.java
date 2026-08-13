@@ -10,6 +10,7 @@ public enum TelegramCallbackAction {
     KEY_POLICY("key_policy", "keyPolicy"),
     TEMPO_POLICY("tempo_policy", "tempoPolicy"),
     ENERGY_ARC("energy_arc", "energyArc"),
+    SERVICE_MOMENT("service_moment", "serviceMoment"),
     CONFIRM("confirm", "confirmation"),
     REVISE("revise", "revision"),
     CANCEL("cancel", "cancellation");
