@@ -30,6 +30,7 @@ import com.cadentia.llm.IntentService;
 import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -89,38 +90,71 @@ public class ConversationSessionFacade {
     }
 
     public ConversationSessionStateResponse clarify(UUID sessionId, ConversationClarificationRequest request) {
-        SessionRecord record = transition(currentRecord(sessionId, ConversationState.COLLECTING), ConversationState.CLARIFICATION_REQUIRED);
+        SessionRecord record = transition(
+                currentRecord(sessionId, ConversationState.COLLECTING),
+                ConversationState.CLARIFICATION_REQUIRED,
+                revision(ConversationRevisionEvent.EventTypeEnum.CLARIFICATION_ANSWER,
+                        SlotValueSource.USER_EDIT,
+                        "Clarification requested."));
         sessions.put(sessionId, record);
         return snapshot(sessionId, record, List.of("Clarification requested."));
     }
 
     public ConversationSessionStateResponse confirm(UUID sessionId, ConversationConfirmRequest request) {
-        SessionRecord record = transition(currentRecord(sessionId, ConversationState.COLLECTING), ConversationState.CONFIRMED);
+        SessionRecord baseline = currentRecord(sessionId, ConversationState.COLLECTING);
+        if (baseline.state() != ConversationState.READY_TO_CONFIRM) {
+            return snapshot(
+                    sessionId,
+                    baseline,
+                    List.of("Session is not ready to confirm. Provide a valid request before recommendation."));
+        }
+        SessionRecord record = transition(
+                baseline,
+                ConversationState.CONFIRMED,
+                revision(ConversationRevisionEvent.EventTypeEnum.CONFIRM,
+                        SlotValueSource.USER_EDIT,
+                        "Session confirmed."));
         sessions.put(sessionId, record);
         return snapshot(sessionId, record, List.of("Session confirmed."));
     }
 
     public ConversationSessionStateResponse cancel(UUID sessionId) {
-        SessionRecord record = transition(currentRecord(sessionId, ConversationState.COLLECTING), ConversationState.CANCELLED);
+        SessionRecord record = transition(
+                currentRecord(sessionId, ConversationState.COLLECTING),
+                ConversationState.CANCELLED,
+                revision(ConversationRevisionEvent.EventTypeEnum.CANCEL,
+                        SlotValueSource.USER_EDIT,
+                        "Session cancelled."));
         sessions.put(sessionId, record);
         return snapshot(sessionId, record, List.of("Session cancelled."));
     }
 
     public ConversationSessionStateResponse update(UUID sessionId, ConversationSlotUpdateRequest request) {
         SessionRecord baselineRecord = currentRecord(sessionId, ConversationState.COLLECTING);
+        if (request.getSlotPatch() == null) {
+            return snapshot(
+                    sessionId,
+                    baselineRecord,
+                    List.of("Session slots unchanged; no patch was provided."));
+        }
         GenerateSetlistSlots baseline = baselineRecord.slots();
         GenerateSetlistSlots patch = toSlots(request.getSlotPatch(), baseline);
+        SlotValueSource updateSource = SlotValueSource.valueOf(request.getSource().getValue().toUpperCase());
         SessionMergeResult merged = mergeService.merge(
                 baseline,
                 new SessionSlotUpdate(
                         patch,
-                        SlotValueSource.valueOf(request.getSource().getValue().toUpperCase()),
+                        updateSource,
                         false));
+        OffsetDateTime updatedAt = OffsetDateTime.now();
         SessionRecord updated = new SessionRecord(
                 ConversationState.COLLECTING,
                 merged.mergedSlots(),
+                mergedSources(baselineRecord.slotSources(), merged, updatedAt),
+                appendRevisions(baselineRecord.revisionHistory(), mergeRevisions(merged, updatedAt)),
                 baselineRecord.createdAt(),
-                OffsetDateTime.now());
+                updatedAt,
+                null);
         sessions.put(sessionId, updated);
         return snapshot(sessionId, updated, List.of("Session slots updated via deterministic merge."));
     }
@@ -132,12 +166,22 @@ public class ConversationSessionFacade {
         IntentParseResult parseResult = intentService.parse(text);
         ValidatedIntent parsedIntent = parseResult.intent();
         if (parsedIntent.intentType() == IntentType.CLARIFY_REQUEST) {
-            SessionRecord record = transition(currentRecord(sessionId, ConversationState.COLLECTING), ConversationState.CLARIFICATION_REQUIRED);
+            SessionRecord record = transition(
+                    currentRecord(sessionId, ConversationState.COLLECTING),
+                    ConversationState.CLARIFICATION_REQUIRED,
+                    revision(ConversationRevisionEvent.EventTypeEnum.CLARIFICATION_ANSWER,
+                            SlotValueSource.FREE_TEXT,
+                            "Intent extraction requested clarification."));
             sessions.put(sessionId, record);
             return snapshot(sessionId, record, List.of("Intent extraction requested clarification before recommendation."));
         }
         if (parsedIntent.intentType() == IntentType.UNSUPPORTED_REQUEST) {
-            SessionRecord record = transition(currentRecord(sessionId, ConversationState.COLLECTING), ConversationState.CANCELLED);
+            SessionRecord record = transition(
+                    currentRecord(sessionId, ConversationState.COLLECTING),
+                    ConversationState.CANCELLED,
+                    revision(ConversationRevisionEvent.EventTypeEnum.CANCEL,
+                            SlotValueSource.FREE_TEXT,
+                            "Intent extraction safely rejected the request."));
             sessions.put(sessionId, record);
             return snapshot(sessionId, record, List.of("Intent extraction safely rejected the request before recommendation."));
         }
@@ -146,21 +190,41 @@ public class ConversationSessionFacade {
         SessionMergeResult merged = mergeService.merge(
                 baselineRecord.slots(),
                 new SessionSlotUpdate(intent.slots(), SlotValueSource.FREE_TEXT, true));
+        OffsetDateTime updatedAt = OffsetDateTime.now();
         SessionRecord updated = new SessionRecord(
                 ConversationState.READY_TO_CONFIRM,
                 merged.mergedSlots(),
+                mergedSources(baselineRecord.slotSources(), merged, updatedAt),
+                appendRevisions(baselineRecord.revisionHistory(), mergeRevisions(merged, updatedAt)),
                 baselineRecord.createdAt(),
-                OffsetDateTime.now());
+                updatedAt,
+                null);
         sessions.put(sessionId, updated);
         return snapshot(sessionId, updated, List.of("Free-text request was validated by the shared intent boundary."));
     }
 
     public ConversationRecoveryResponse recover(UUID sessionId) {
         SessionRecord prior = currentRecord(sessionId, ConversationState.COLLECTING);
-        SessionRecord expired = transition(prior, ConversationState.EXPIRED);
+        SessionRecord expired = transition(
+                prior,
+                ConversationState.EXPIRED,
+                revision(ConversationRevisionEvent.EventTypeEnum.EXPIRE,
+                        SlotValueSource.DEFAULT,
+                        "Session expired before recovery."));
         sessions.put(sessionId, expired);
 
-        SessionRecord restarted = new SessionRecord(ConversationState.START, empty(), OffsetDateTime.now(), OffsetDateTime.now());
+        OffsetDateTime restartedAt = OffsetDateTime.now();
+        SessionRecord restarted = new SessionRecord(
+                ConversationState.START,
+                empty(),
+                defaultSlotSources(restartedAt),
+                appendRevisions(expired.revisionHistory(), revision(
+                        ConversationRevisionEvent.EventTypeEnum.RECOVER,
+                        SlotValueSource.USER_EDIT,
+                        "Session recovered with a fresh request state.")),
+                restartedAt,
+                restartedAt,
+                null);
         sessions.put(sessionId, restarted);
 
         ConversationSessionStateResponse recoveredState = snapshot(
@@ -181,9 +245,20 @@ public class ConversationSessionFacade {
     private SessionRecord currentRecord(UUID sessionId, ConversationState defaultState) {
         SessionRecord record = sessions.computeIfAbsent(
                 sessionId,
-                id -> new SessionRecord(defaultState, empty(), OffsetDateTime.now(), OffsetDateTime.now()));
+                id -> {
+                    OffsetDateTime now = OffsetDateTime.now();
+                    return new SessionRecord(defaultState, empty(), defaultSlotSources(now), List.of(), now, now, null);
+                });
+        if (record.state() == ConversationState.EXPIRED) {
+            return record;
+        }
         if (isExpired(record)) {
-            SessionRecord expired = transition(record, ConversationState.EXPIRED);
+            SessionRecord expired = transition(
+                    record,
+                    ConversationState.EXPIRED,
+                    revision(ConversationRevisionEvent.EventTypeEnum.EXPIRE,
+                            SlotValueSource.DEFAULT,
+                            "Session expired."));
             sessions.put(sessionId, expired);
             return expired;
         }
@@ -197,8 +272,19 @@ public class ConversationSessionFacade {
         return inactive || tooOld;
     }
 
-    private SessionRecord transition(SessionRecord record, ConversationState targetState) {
-        return new SessionRecord(targetState, record.slots(), record.createdAt(), OffsetDateTime.now());
+    private SessionRecord transition(
+            SessionRecord record,
+            ConversationState targetState,
+            ConversationRevisionEvent revision) {
+        OffsetDateTime updatedAt = OffsetDateTime.now();
+        return new SessionRecord(
+                targetState,
+                record.slots(),
+                record.slotSources(),
+                appendRevisions(record.revisionHistory(), revision),
+                record.createdAt(),
+                updatedAt,
+                targetState == ConversationState.CONFIRMED ? updatedAt : record.confirmedAt());
     }
 
     private ConversationSessionStateResponse snapshot(UUID sessionId, SessionRecord record, List<String> messages) {
@@ -209,10 +295,85 @@ public class ConversationSessionFacade {
                 record.state(),
                 ChannelType.MIXED,
                 slots,
-                new ArrayList<ConversationSlotSource>(),
-                new ArrayList<ConversationRevisionEvent>(),
+                slotSources(record),
+                new ArrayList<>(record.revisionHistory()),
                 expiresAt,
-                messages);
+                messages)
+                .confirmedAt(record.confirmedAt());
+    }
+
+    private Map<String, SourceStamp> mergedSources(
+            Map<String, SourceStamp> baselineSources,
+            SessionMergeResult merged,
+            OffsetDateTime updatedAt) {
+        Map<String, SourceStamp> sources = new HashMap<>(baselineSources);
+        merged.slotSources().forEach((slot, source) -> sources.put(slot, new SourceStamp(source, updatedAt)));
+        return Map.copyOf(sources);
+    }
+
+    private Map<String, SourceStamp> defaultSlotSources(OffsetDateTime updatedAt) {
+        return Map.of(
+                "counts", new SourceStamp(SlotValueSource.DEFAULT, updatedAt),
+                "keyPolicy", new SourceStamp(SlotValueSource.DEFAULT, updatedAt),
+                "tempoPolicy", new SourceStamp(SlotValueSource.DEFAULT, updatedAt));
+    }
+
+    private List<ConversationRevisionEvent> mergeRevisions(SessionMergeResult merged, OffsetDateTime occurredAt) {
+        return merged.events().stream()
+                .map(event -> revision(
+                        ConversationRevisionEvent.EventTypeEnum.SLOT_UPDATE,
+                        event.source(),
+                        "Updated " + event.slotPath() + " from " + event.source().name().toLowerCase() + ".",
+                        occurredAt))
+                .toList();
+    }
+
+    private List<ConversationRevisionEvent> appendRevisions(
+            List<ConversationRevisionEvent> prior,
+            List<ConversationRevisionEvent> next) {
+        List<ConversationRevisionEvent> revisions = new ArrayList<>(prior);
+        revisions.addAll(next);
+        return List.copyOf(revisions);
+    }
+
+    private List<ConversationRevisionEvent> appendRevisions(
+            List<ConversationRevisionEvent> prior,
+            ConversationRevisionEvent next) {
+        return appendRevisions(prior, List.of(next));
+    }
+
+    private ConversationRevisionEvent revision(
+            ConversationRevisionEvent.EventTypeEnum eventType,
+            SlotValueSource source,
+            String summary) {
+        return revision(eventType, source, summary, OffsetDateTime.now());
+    }
+
+    private ConversationRevisionEvent revision(
+            ConversationRevisionEvent.EventTypeEnum eventType,
+            SlotValueSource source,
+            String summary,
+            OffsetDateTime occurredAt) {
+        return new ConversationRevisionEvent(
+                UUID.randomUUID(),
+                eventType,
+                toApiSource(source),
+                occurredAt)
+                .summary(summary);
+    }
+
+    private List<ConversationSlotSource> slotSources(SessionRecord record) {
+        return record.slotSources().entrySet().stream()
+                .sorted(Comparator.comparing(Map.Entry::getKey))
+                .map(entry -> new ConversationSlotSource(
+                        ConversationSlotSource.SlotEnum.fromValue(entry.getKey()),
+                        toApiSource(entry.getValue().source()))
+                        .updatedAt(entry.getValue().updatedAt()))
+                .toList();
+    }
+
+    private com.cadentia.generated.model.SlotValueSource toApiSource(SlotValueSource source) {
+        return com.cadentia.generated.model.SlotValueSource.fromValue(source.name().toLowerCase());
     }
 
     private GenerateSetlistSlots toSlots(ConversationSlotUpdateRequestSlotPatch patch, GenerateSetlistSlots baseline) {
@@ -242,6 +403,11 @@ public class ConversationSessionFacade {
     private record SessionRecord(
             ConversationState state,
             GenerateSetlistSlots slots,
+            Map<String, SourceStamp> slotSources,
+            List<ConversationRevisionEvent> revisionHistory,
             OffsetDateTime createdAt,
-            OffsetDateTime updatedAt) {}
+            OffsetDateTime updatedAt,
+            OffsetDateTime confirmedAt) {}
+
+    private record SourceStamp(SlotValueSource source, OffsetDateTime updatedAt) {}
 }

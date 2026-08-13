@@ -62,6 +62,27 @@ class DefaultTelegramConversationGatewayTest {
         assertThat(setlistService.lastRequest).usingRecursiveComparison().isEqualTo(telegramState.getSlots());
     }
 
+    @Test
+    void prematureTelegramConfirmDoesNotInvokeSetlistGeneration() {
+        // Arrange
+        ConversationSessionFacade facade = new ConversationSessionFacade(
+                new DefaultSessionMergeService(),
+                new ValidatedSetlistRequestMapper(),
+                Duration.ofMinutes(30),
+                Duration.ofHours(4),
+                input -> IntentParseResult.accepted(normalizedIntent(), false));
+        CapturingSetlistService setlistService = new CapturingSetlistService();
+        DefaultTelegramConversationGateway gateway = new DefaultTelegramConversationGateway(facade, null, setlistService);
+
+        // Act
+        TelegramAdapterResponse confirmResponse = gateway.menuSelection(event(null, null, TelegramCallbackAction.CONFIRM));
+
+        // Assert
+        assertThat(confirmResponse.status()).isEqualTo(TelegramAdapterResponseStatus.CONTINUED);
+        assertThat(confirmResponse.message()).contains("not ready to confirm");
+        assertThat(setlistService.lastRequest).isNull();
+    }
+
     private static GenerateSetlistIntent normalizedIntent() {
         return new GenerateSetlistIntent("v1", new GenerateSetlistSlots(
                 "Psalm 100",
