@@ -118,6 +118,36 @@ class ConversationSessionFacadeTest {
     }
 
     @Test
+    void recoverConfirmedSessionPreservesConfirmedStateAndSetlistCorrelation() throws Exception {
+        InMemoryConversationSessionRepository repository = new InMemoryConversationSessionRepository();
+        ConversationSessionFacade facade = new ConversationSessionFacade(
+                new DefaultSessionMergeService(),
+                new ValidatedSetlistRequestMapper(),
+                Duration.ofMillis(5),
+                Duration.ofHours(1),
+                repository,
+                input -> IntentParseResult.accepted(normalizedIntent(), false));
+        UUID sessionId = UUID.randomUUID();
+
+        facade.ingestFreeText(sessionId, "Psalm 100 thanksgiving");
+        facade.confirm(sessionId, new ConversationConfirmRequest().accepted(true));
+        facade.recordRecommendationCorrelation(sessionId, "rec-result-123", "setlist-456", "version-789");
+        Thread.sleep(15);
+
+        ConversationRecoveryResponse recovery = facade.recover(sessionId);
+
+        assertThat(recovery.getPriorState()).isEqualTo(ConversationState.CONFIRMED);
+        assertThat(recovery.getRecoveredState().getState()).isEqualTo(ConversationState.CONFIRMED);
+        assertThat(recovery.getRecoveredState().getRecommendationResultId()).isEqualTo("rec-result-123");
+        assertThat(recovery.getRecoveredState().getSetlistId()).isEqualTo("setlist-456");
+        assertThat(recovery.getRecoveredState().getSetlistVersionId()).isEqualTo("version-789");
+        assertThat(recovery.getRecoveredState().getRevisionHistory())
+                .extracting(event -> event.getEventType().getValue())
+                .doesNotContain("expire", "recover");
+        assertThat(recovery.getRestartSuggested()).isFalse();
+    }
+
+    @Test
     void channelAndRecommendationCorrelationAreStoredWithoutRawMessageText() {
         InMemoryConversationSessionRepository repository = new InMemoryConversationSessionRepository();
         ConversationSessionFacade facade = facade(repository, input -> IntentParseResult.accepted(normalizedIntent(), false));
@@ -125,14 +155,23 @@ class ConversationSessionFacadeTest {
 
         facade.ingestFreeText(sessionId, "Psalm 100 thanksgiving");
         facade.recordChannelCorrelation(sessionId, "telegram", "9103", "corr-bot-e2e");
-        facade.recordRecommendationCorrelation(sessionId, "rec-result-123");
+        facade.recordRecommendationCorrelation(sessionId, "rec-result-123", "setlist-456", "version-789");
+        facade.recordChannelCorrelation(sessionId, "telegram", "9104", "corr-after-confirm");
 
         ConversationSessionRecord record = repository.findById(sessionId).orElseThrow();
         assertThat(record.channel()).isEqualTo("telegram");
-        assertThat(record.channelUpdateId()).isEqualTo("9103");
+        assertThat(record.channelUpdateId()).isEqualTo("9104");
         assertThat(record.recommendationResultId()).isEqualTo("rec-result-123");
-        assertThat(record.correlationMetadata()).containsEntry("correlationId", "corr-bot-e2e");
+        assertThat(record.correlationMetadata())
+                .containsEntry("correlationId", "corr-after-confirm")
+                .containsEntry("setlistId", "setlist-456")
+                .containsEntry("setlistVersionId", "version-789");
         assertThat(record.correlationMetadata().toString()).doesNotContain("Psalm 100 thanksgiving");
+
+        ConversationSessionStateResponse state = facade.get(sessionId);
+        assertThat(state.getRecommendationResultId()).isEqualTo("rec-result-123");
+        assertThat(state.getSetlistId()).isEqualTo("setlist-456");
+        assertThat(state.getSetlistVersionId()).isEqualTo("version-789");
     }
 
     @Test
@@ -151,6 +190,34 @@ class ConversationSessionFacadeTest {
                 .extracting(ConversationRevisionEvent::getEventType)
                 .extracting(ConversationRevisionEvent.EventTypeEnum::getValue)
                 .doesNotContain("confirm");
+    }
+
+    @Test
+    void recoverCancelledSessionPreservesCancelledState() throws Exception {
+        ConversationSessionFacade facade = new ConversationSessionFacade(
+                new DefaultSessionMergeService(),
+                new ValidatedSetlistRequestMapper(),
+                Duration.ofMillis(5),
+                Duration.ofHours(1),
+                new InMemoryConversationSessionRepository(),
+                input -> IntentParseResult.accepted(normalizedIntent(), false));
+        UUID sessionId = UUID.randomUUID();
+
+        facade.ingestFreeText(sessionId, "Psalm 100 thanksgiving");
+        facade.cancel(sessionId);
+        Thread.sleep(15);
+
+        ConversationRecoveryResponse recovery = facade.recover(sessionId);
+        ConversationSessionStateResponse confirmAttempt = facade.confirm(
+                sessionId, new ConversationConfirmRequest().accepted(true));
+
+        assertThat(recovery.getPriorState()).isEqualTo(ConversationState.CANCELLED);
+        assertThat(recovery.getRecoveredState().getState()).isEqualTo(ConversationState.CANCELLED);
+        assertThat(recovery.getRecoveredState().getRevisionHistory())
+                .extracting(event -> event.getEventType().getValue())
+                .doesNotContain("expire", "recover", "confirm");
+        assertThat(recovery.getRestartSuggested()).isTrue();
+        assertThat(confirmAttempt.getState()).isEqualTo(ConversationState.CANCELLED);
     }
 
     @Test
@@ -177,6 +244,27 @@ class ConversationSessionFacadeTest {
                     assertThat(source.getSource()).isEqualTo(SlotValueSource.USER_EDIT);
                 });
         assertThat(confirmAttempt.getState()).isEqualTo(ConversationState.COLLECTING);
+    }
+
+    @Test
+    void recoverActiveSessionPreservesCurrentState() {
+        ConversationSessionFacade facade = facade(input -> IntentParseResult.accepted(normalizedIntent(), false));
+        UUID sessionId = UUID.randomUUID();
+
+        facade.ingestFreeText(sessionId, "Psalm 100 thanksgiving");
+
+        ConversationRecoveryResponse recovery = facade.recover(sessionId);
+        ConversationSessionStateResponse confirmAttempt = facade.confirm(
+                sessionId, new ConversationConfirmRequest().accepted(true));
+
+        assertThat(recovery.getPriorState()).isEqualTo(ConversationState.READY_TO_CONFIRM);
+        assertThat(recovery.getRecoveredState().getState()).isEqualTo(ConversationState.READY_TO_CONFIRM);
+        assertThat(recovery.getRecoveredState().getSlots().getVerseText()).isEqualTo("Psalm 100");
+        assertThat(recovery.getRecoveredState().getRevisionHistory())
+                .extracting(event -> event.getEventType().getValue())
+                .doesNotContain("expire", "recover");
+        assertThat(recovery.getRestartSuggested()).isFalse();
+        assertThat(confirmAttempt.getState()).isEqualTo(ConversationState.CONFIRMED);
     }
 
     @Test

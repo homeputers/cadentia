@@ -228,9 +228,10 @@ public class SetlistService {
             return;
         }
         proposalPersistenceService.persistGeneratedBaseline(request, response)
-                .map(SetlistVersionSnapshot::setlistId)
-                .map(UUID::toString)
-                .ifPresent(setlistId -> response.getExplanation().setSetlistId(setlistId));
+                .ifPresent(snapshot -> {
+                    response.getExplanation().setSetlistId(snapshot.setlistId().toString());
+                    response.getExplanation().setSetlistVersionId(snapshot.versionId().toString());
+                });
     }
 
     private List<RecommendableArrangement> retrieveCandidates(ScoringRequest request) {

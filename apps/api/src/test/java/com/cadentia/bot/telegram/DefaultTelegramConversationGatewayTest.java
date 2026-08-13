@@ -3,10 +3,13 @@ package com.cadentia.bot.telegram;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.cadentia.api.controller.ConversationSessionFacade;
+import com.cadentia.api.controller.ConversationSessionRecord;
+import com.cadentia.api.controller.ConversationSessionRepository;
 import com.cadentia.api.controller.ValidatedSetlistRequestMapper;
 import com.cadentia.generated.model.ConversationSessionStateResponse;
 import com.cadentia.generated.model.ConversationState;
 import com.cadentia.generated.model.GenerateSetlistRequest;
+import com.cadentia.generated.model.RecommendationExplanation;
 import com.cadentia.generated.model.SetlistProposalResponse;
 import com.cadentia.generated.model.SlotValueSource;
 import com.cadentia.intent.Counts;
@@ -20,8 +23,11 @@ import com.cadentia.llm.IntentService;
 import com.cadentia.reng.SetlistService;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
@@ -32,11 +38,13 @@ class DefaultTelegramConversationGatewayTest {
         // Arrange
         GenerateSetlistIntent normalizedIntent = normalizedIntent();
         StubIntentService intentService = new StubIntentService(normalizedIntent);
+        CapturingConversationSessionRepository repository = new CapturingConversationSessionRepository();
         ConversationSessionFacade facade = new ConversationSessionFacade(
                 new DefaultSessionMergeService(),
                 new ValidatedSetlistRequestMapper(),
                 Duration.ofMinutes(30),
                 Duration.ofHours(4),
+                repository,
                 intentService);
         CapturingSetlistService setlistService = new CapturingSetlistService();
         DefaultTelegramConversationGateway gateway = new DefaultTelegramConversationGateway(facade, null, setlistService);
@@ -50,6 +58,7 @@ class DefaultTelegramConversationGatewayTest {
         ConversationSessionStateResponse telegramState = facade.get(telegramSessionId);
         ConversationSessionStateResponse httpState = facade.ingestFreeText(httpSessionId, "Psalm 100 thanksgiving");
         TelegramAdapterResponse confirmResponse = gateway.menuSelection(event(null, null, TelegramCallbackAction.CONFIRM));
+        TelegramAdapterResponse statusResponse = gateway.status(event("/status", TelegramCommand.STATUS, null));
 
         // Assert
         assertThat(textResponse.message()).contains("shared intent boundary");
@@ -62,6 +71,16 @@ class DefaultTelegramConversationGatewayTest {
         assertThat(confirmResponse.status()).isEqualTo(TelegramAdapterResponseStatus.COMPLETED);
         assertThat(confirmResponse.proposal()).isSameAs(setlistService.proposal);
         assertThat(setlistService.lastRequest).usingRecursiveComparison().isEqualTo(telegramState.getSlots());
+        ConversationSessionRecord record = repository.findById(telegramSessionId).orElseThrow();
+        assertThat(record.recommendationResultId()).isEqualTo("rec-telegram-1");
+        assertThat(record.correlationMetadata())
+                .containsEntry("setlistId", "setlist-telegram-1")
+                .containsEntry("setlistVersionId", "version-telegram-1");
+        assertThat(statusResponse.message())
+                .contains("confirmed")
+                .contains("rec-telegram-1")
+                .contains("setlist-telegram-1")
+                .contains("version-telegram-1");
     }
 
     @Test
@@ -207,9 +226,28 @@ class DefaultTelegramConversationGatewayTest {
         public SetlistProposalResponse generate(GenerateSetlistRequest request) {
             lastRequest = request;
             proposal = new SetlistProposalResponse().status("PROPOSED").auditMessages(List.of(
-                    "Candidate eligibility used approved catalog snapshot fixture.",
-                    "Recommendation ordering and explanation references are deterministic."));
+                            "Candidate eligibility used approved catalog snapshot fixture.",
+                            "Recommendation ordering and explanation references are deterministic."))
+                    .recommendationResultId("rec-telegram-1")
+                    .explanation(new RecommendationExplanation()
+                            .setlistId("setlist-telegram-1")
+                            .setlistVersionId("version-telegram-1"));
             return proposal;
+        }
+    }
+
+    private static class CapturingConversationSessionRepository implements ConversationSessionRepository {
+        private final Map<UUID, ConversationSessionRecord> sessions = new HashMap<>();
+
+        @Override
+        public Optional<ConversationSessionRecord> findById(UUID sessionId) {
+            return Optional.ofNullable(sessions.get(sessionId));
+        }
+
+        @Override
+        public ConversationSessionRecord save(ConversationSessionRecord record) {
+            sessions.put(record.id(), record);
+            return record;
         }
     }
 }

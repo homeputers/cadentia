@@ -53,6 +53,12 @@ public class TelegramResponseRenderer {
             body.append("Result: <code>").append(escape(proposal.getRecommendationResultId())).append("</code>\n");
         }
         RecommendationExplanation explanation = proposal.getExplanation();
+        if (explanation != null && StringUtils.hasText(explanation.getSetlistId())) {
+            body.append("Setlist: <code>").append(escape(explanation.getSetlistId())).append("</code>\n");
+        }
+        if (explanation != null && StringUtils.hasText(explanation.getSetlistVersionId())) {
+            body.append("Version: <code>").append(escape(explanation.getSetlistVersionId())).append("</code>\n");
+        }
         List<RecommendationExplanationEntry> selected = explanation == null || explanation.getSelectedSongs() == null
                 ? List.of()
                 : explanation.getSelectedSongs().stream()

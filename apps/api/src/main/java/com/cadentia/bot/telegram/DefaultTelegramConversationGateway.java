@@ -87,9 +87,9 @@ public class DefaultTelegramConversationGateway implements TelegramConversationG
         if (!decision.permitted()) {
             return denied(event, decision);
         }
-        facade.get(sessionId(event));
+        ConversationSessionStateResponse state = facade.get(sessionId(event));
         touch(decision, event, currentState(decision));
-        return new TelegramAdapterResponse(TelegramAdapterResponseStatus.CONTINUED, "Session status returned.", event, null);
+        return new TelegramAdapterResponse(TelegramAdapterResponseStatus.CONTINUED, statusSummary(state), event, null);
     }
 
     @Override
@@ -143,7 +143,11 @@ public class DefaultTelegramConversationGateway implements TelegramConversationG
             ConversationSessionStateResponse state = facade.confirm(sessionId(event), new ConversationConfirmRequest().accepted(true));
             SetlistProposalResponse proposal = setlistService == null ? null : setlistService.generate(state.getSlots());
             if (proposal != null) {
-                facade.recordRecommendationCorrelation(sessionId(event), proposal.getRecommendationResultId());
+                facade.recordRecommendationCorrelation(
+                        sessionId(event),
+                        proposal.getRecommendationResultId(),
+                        proposal.getExplanation() == null ? null : proposal.getExplanation().getSetlistId(),
+                        proposal.getExplanation() == null ? null : proposal.getExplanation().getSetlistVersionId());
             }
             touch(decision, event, TelegramSessionState.COMPLETED);
             return new TelegramAdapterResponse(
@@ -257,6 +261,22 @@ public class DefaultTelegramConversationGateway implements TelegramConversationG
     private String recommendationSummary(SetlistProposalResponse proposal) {
         List<String> auditMessages = proposal.getAuditMessages() == null ? List.of() : proposal.getAuditMessages();
         return "Deterministic setlist proposal generated. " + String.join(" ", auditMessages);
+    }
+
+    private String statusSummary(ConversationSessionStateResponse state) {
+        StringBuilder summary = new StringBuilder("Session state: ")
+                .append(state.getState().getValue().toLowerCase(Locale.ROOT))
+                .append(".");
+        if (state.getRecommendationResultId() != null && !state.getRecommendationResultId().isBlank()) {
+            summary.append(" Recommendation: ").append(state.getRecommendationResultId()).append(".");
+        }
+        if (state.getSetlistId() != null && !state.getSetlistId().isBlank()) {
+            summary.append(" Setlist: ").append(state.getSetlistId()).append(".");
+        }
+        if (state.getSetlistVersionId() != null && !state.getSetlistVersionId().isBlank()) {
+            summary.append(" Version: ").append(state.getSetlistVersionId()).append(".");
+        }
+        return summary.toString();
     }
 
     private TelegramSessionState currentState(TelegramAuthorizationService.TelegramAuthorizationDecision decision) {

@@ -118,6 +118,18 @@ ConversationSessionStateResponse:
       type: string
       format: date-time
       nullable: true
+    recommendationResultId:
+      type: string
+      nullable: true
+      description: Last deterministic recommendation result correlated to this session.
+    setlistId:
+      type: string
+      nullable: true
+      description: Shared setlist identifier persisted from the confirmed recommendation, when available.
+    setlistVersionId:
+      type: string
+      nullable: true
+      description: Immutable setlist version identifier persisted from the confirmed recommendation, when available.
     auditMessages:
       type: array
       items:
