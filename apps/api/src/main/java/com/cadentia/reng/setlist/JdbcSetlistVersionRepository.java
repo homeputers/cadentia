@@ -175,7 +175,9 @@ public class JdbcSetlistVersionRepository implements SetlistVersionRepository {
         List<SetlistVersionSnapshot> versions = jdbcTemplate.query(
                 """
                         SELECT id, parent_version_id, version_number, provenance_type,
-                               scoring_profile_version, engine_version, created_at, created_by
+                               scoring_profile_version, engine_version, request_payload,
+                               parsed_intent_payload, explanation_facts, created_at, created_by,
+                               commit_summary
                         FROM setlist_versions
                         WHERE setlist_id = :setlistId AND id = :versionId
                         """,
@@ -188,8 +190,12 @@ public class JdbcSetlistVersionRepository implements SetlistVersionRepository {
                         rs.getString("provenance_type"),
                         rs.getString("scoring_profile_version"),
                         rs.getString("engine_version"),
+                        rs.getString("request_payload"),
+                        rs.getString("parsed_intent_payload"),
+                        rs.getString("explanation_facts"),
                         rs.getTimestamp("created_at").toInstant(),
                         rs.getString("created_by"),
+                        rs.getString("commit_summary"),
                         findItems(uuid(rs, "id"))));
         return versions.stream().findFirst();
     }

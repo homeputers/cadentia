@@ -255,12 +255,32 @@ class SetlistControllerTest {
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().getVersion().getVersionNumber()).isEqualTo(1);
         assertThat(response.getBody().getVersion().getEngineProfileVersion()).isEqualTo("profile-v1");
+        assertThat(response.getBody().getVersion().getCreatedBy()).isEqualTo("setlist-api");
+        assertThat(response.getBody().getVersion().getCommitSummary()).isNull();
+        assertThat(response.getBody().getVersion().getRequest().getVerseText()).isEqualTo("Psalm 100");
+        assertThat(response.getBody().getVersion().getParsedIntent()).containsEntry("intent", "GENERATE_SETLIST");
+        assertThat(response.getBody().getVersion().getExplanationFacts()).containsExactly("approval:fixture");
         assertThat(response.getBody().getVersion().getItems())
                 .extracting(SetlistVersionItem::getPosition, SetlistVersionItem::getCatalogArrangementId,
                         SetlistVersionItem::getProvenance)
                 .containsExactly(tuple(1, arrangementId, SetlistProvenanceType.GENERATED_BASELINE));
         assertThat(repository.baselineCommand.requestPayload()).contains("\"verseText\":\"Psalm 100\"");
         assertThat(repository.baselineCommand.parsedIntentPayload()).contains("\"intent\":\"GENERATE_SETLIST\"");
+
+        ResponseEntity<SetlistVersionEnvelope> readResponse = controller.getSetlistVersion(
+                response.getBody().getSetlistId(), response.getBody().getVersion().getVersionId());
+
+        assertThat(readResponse.getStatusCode().value()).isEqualTo(200);
+        assertThat(readResponse.getBody()).isNotNull();
+        assertThat(readResponse.getBody().getVersion().getRequest().getVerseText()).isEqualTo("Psalm 100");
+        assertThat(readResponse.getBody().getVersion().getParsedIntent()).containsEntry("intent", "GENERATE_SETLIST");
+        assertThat(readResponse.getBody().getVersion().getExplanationFacts()).containsExactly("approval:fixture");
+        assertThat(controller.listSetlistVersions(response.getBody().getSetlistId()).getBody().getVersions())
+                .singleElement()
+                .satisfies(version -> {
+                    assertThat(version.getCreatedBy()).isEqualTo("setlist-api");
+                    assertThat(version.getCommitSummary()).isNull();
+                });
     }
 
     @Test
@@ -275,9 +295,9 @@ class SetlistControllerTest {
                 "planner",
                 "profile-v1",
                 "profile-v1",
-                "{}",
-                "{}",
-                "[]",
+                "{\"verseText\":\"Psalm 100\"}",
+                "{\"intent\":\"GENERATE_SETLIST\"}",
+                "[\"approval:fixture\"]",
                 List.of(
                         new CreateSetlistItemCommand(0, firstArrangement, null, null, null, "GENERATED", null),
                         new CreateSetlistItemCommand(1, secondArrangement, null, null, null, "GENERATED", null)),
@@ -306,6 +326,12 @@ class SetlistControllerTest {
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().getVersion().getParentVersionId()).isEqualTo(baseline.versionId());
         assertThat(response.getBody().getVersion().getVersionNumber()).isEqualTo(2);
+        assertThat(response.getBody().getVersion().getCreatedBy()).isEqualTo("leader");
+        assertThat(response.getBody().getVersion().getCommitSummary())
+                .isEqualTo("Applied 3 setlist edit operation(s).");
+        assertThat(response.getBody().getVersion().getRequest().getVerseText()).isEqualTo("Psalm 100");
+        assertThat(response.getBody().getVersion().getParsedIntent()).containsEntry("intent", "GENERATE_SETLIST");
+        assertThat(response.getBody().getVersion().getExplanationFacts()).containsExactly("approval:fixture");
         assertThat(response.getBody().getVersion().getItems())
                 .extracting(SetlistVersionItem::getPosition, SetlistVersionItem::getCatalogArrangementId,
                         SetlistVersionItem::getTransposeSemitones, SetlistVersionItem::getProvenance)
@@ -349,13 +375,34 @@ class SetlistControllerTest {
     void setlistVersionWriteEndpointsRejectInvalidRequests() {
         // Arrange
         SetlistController controller = controller(new CapturingSetlistService(), setlistVersionService(new InMemorySetlistVersionRepository()));
+        UUID arrangementId = UUID.randomUUID();
+        CreateSetlistBaselineRequest duplicatePositionRequest = new CreateSetlistBaselineRequest()
+                .request(validRequest())
+                .parsedIntent(Map.of("intent", "GENERATE_SETLIST"))
+                .engineProfileVersion("profile-v1")
+                .items(List.of(
+                        new SetlistVersionItem(UUID.randomUUID(), 1, arrangementId, SetlistProvenanceType.GENERATED_BASELINE),
+                        new SetlistVersionItem(UUID.randomUUID(), 1, UUID.randomUUID(), SetlistProvenanceType.GENERATED_BASELINE)));
+        CreateSetlistBaselineRequest gappedPositionRequest = new CreateSetlistBaselineRequest()
+                .request(validRequest())
+                .parsedIntent(Map.of("intent", "GENERATE_SETLIST"))
+                .engineProfileVersion("profile-v1")
+                .items(List.of(
+                        new SetlistVersionItem(UUID.randomUUID(), 1, arrangementId, SetlistProvenanceType.GENERATED_BASELINE),
+                        new SetlistVersionItem(UUID.randomUUID(), 3, UUID.randomUUID(), SetlistProvenanceType.GENERATED_BASELINE)));
 
         // Act
         ResponseEntity<SetlistVersionEnvelope> baselineResponse = controller.createSetlistBaselineVersion(null);
+        ResponseEntity<SetlistVersionEnvelope> duplicatePositionResponse =
+                controller.createSetlistBaselineVersion(duplicatePositionRequest);
+        ResponseEntity<SetlistVersionEnvelope> gappedPositionResponse =
+                controller.createSetlistBaselineVersion(gappedPositionRequest);
         ResponseEntity<SetlistVersionEnvelope> editResponse = controller.commitSetlistEdits(UUID.randomUUID(), null);
 
         // Assert
         assertThat(baselineResponse.getStatusCode().value()).isEqualTo(400);
+        assertThat(duplicatePositionResponse.getStatusCode().value()).isEqualTo(400);
+        assertThat(gappedPositionResponse.getStatusCode().value()).isEqualTo(400);
         assertThat(editResponse.getStatusCode().value()).isEqualTo(400);
     }
 
@@ -454,7 +501,11 @@ class SetlistControllerTest {
                     "GENERATED_BASELINE",
                     command.scoringProfileVersion(),
                     command.engineVersion(),
+                    command.requestPayload(),
+                    command.parsedIntentPayload(),
+                    command.explanationFactsPayload(),
                     command.createdBy(),
+                    null,
                     command.items());
             snapshots.put(setlistId, new ArrayList<>(List.of(snapshot)));
             return snapshot;
@@ -475,7 +526,11 @@ class SetlistControllerTest {
                     "MANUAL_EDIT",
                     command.scoringProfileVersion(),
                     command.engineVersion(),
+                    command.requestPayload(),
+                    command.parsedIntentPayload(),
+                    command.explanationFactsPayload(),
                     command.createdBy(),
+                    command.commitSummary(),
                     command.items());
             versions.add(snapshot);
             return snapshot;
@@ -500,7 +555,11 @@ class SetlistControllerTest {
                 String provenanceType,
                 String scoringProfileVersion,
                 String engineVersion,
+                String requestPayload,
+                String parsedIntentPayload,
+                String explanationFactsPayload,
                 String createdBy,
+                String commitSummary,
                 List<CreateSetlistItemCommand> items) {
             return new SetlistVersionSnapshot(
                     setlistId,
@@ -510,8 +569,12 @@ class SetlistControllerTest {
                     provenanceType,
                     scoringProfileVersion,
                     engineVersion,
+                    requestPayload,
+                    parsedIntentPayload,
+                    explanationFactsPayload,
                     Instant.now(),
                     createdBy,
+                    commitSummary,
                     items.stream()
                             .sorted(Comparator.comparing(CreateSetlistItemCommand::positionIndex))
                             .map(item -> new SetlistVersionItemSnapshot(

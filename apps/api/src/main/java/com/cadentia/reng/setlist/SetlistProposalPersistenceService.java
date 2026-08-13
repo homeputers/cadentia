@@ -2,6 +2,7 @@ package com.cadentia.reng.setlist;
 
 import com.cadentia.generated.model.GenerateSetlistRequest;
 import com.cadentia.generated.model.RecommendationExplanation;
+import com.cadentia.generated.model.RecommendationExplanationEvidence;
 import com.cadentia.generated.model.RecommendationExplanationEntry;
 import com.cadentia.generated.model.RecommendationExplanationSubject;
 import com.cadentia.generated.model.SetlistProposalResponse;
@@ -10,11 +11,13 @@ import com.cadentia.reng.setlist.SetlistVersionModels.CreateSetlistItemCommand;
 import com.cadentia.reng.setlist.SetlistVersionModels.SetlistVersionSnapshot;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Stream;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -51,10 +54,39 @@ public class SetlistProposalPersistenceService {
                         "source", "validated_request",
                         "requestId", nullToEmpty(proposal.getRequestId()),
                         "recommendationResultId", nullToEmpty(proposal.getRecommendationResultId()))),
-                json(explanation),
+                json(explanationFacts(proposal, explanation)),
                 items,
                 "LINEAR"));
         return Optional.of(snapshot);
+    }
+
+    private List<String> explanationFacts(
+            SetlistProposalResponse proposal,
+            RecommendationExplanation explanation) {
+        List<String> facts = new ArrayList<>();
+        addFact(facts, "request", proposal.getRequestId());
+        addFact(facts, "recommendation", proposal.getRecommendationResultId());
+        addFact(facts, "scoringProfile", explanation.getScoringProfileVersion());
+        addFact(facts, "catalogSnapshot", explanation.getCatalogSnapshotVersion());
+        if (explanation.getSelectedSongs() != null) {
+            explanation.getSelectedSongs().stream()
+                    .flatMap(entry -> entry.getEvidence() == null ? Stream.empty() : entry.getEvidence().stream())
+                    .map(RecommendationExplanationEvidence::getRef)
+                    .forEach(ref -> addFact(facts, ref));
+        }
+        return facts.stream().distinct().toList();
+    }
+
+    private void addFact(List<String> facts, String prefix, String value) {
+        if (value != null && !value.isBlank()) {
+            facts.add(prefix + ":" + value);
+        }
+    }
+
+    private void addFact(List<String> facts, String value) {
+        if (value != null && !value.isBlank()) {
+            facts.add(value);
+        }
     }
 
     private List<CreateSetlistItemCommand> selectedItems(RecommendationExplanation explanation) {
