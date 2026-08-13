@@ -22,6 +22,7 @@ import com.cadentia.reng.scoring.HardConstraintFilter;
 import com.cadentia.reng.scoring.HardFilterResult;
 import com.cadentia.reng.scoring.OrderedSetItem;
 import com.cadentia.reng.scoring.OrderedSetResponse;
+import com.cadentia.reng.scoring.RecommendationExplanationFact;
 import com.cadentia.reng.scoring.ScoringRequest;
 import com.cadentia.reng.scoring.ScoringRequestFactory;
 import com.cadentia.rehearsal.RehearsalWorkflowModels.RehearsalWorkflowSummaryAudience;
@@ -398,7 +399,7 @@ public class SetlistService {
                         "policy:approved_only"))));
     }
 
-    private List<com.cadentia.reng.scoring.RecommendationExplanationFact> flattenTransitionFacts(
+    private List<RecommendationExplanationFact> flattenTransitionFacts(
             OrderedSetResponse orderedSet) {
         return orderedSet.items().stream()
                 .flatMap(item -> item.explanationFacts().stream())
@@ -407,17 +408,17 @@ public class SetlistService {
     }
 
     private List<RecommendationExplanationEntry> mapFacts(
-            List<com.cadentia.reng.scoring.RecommendationExplanationFact> facts,
+            List<RecommendationExplanationFact> facts,
             RecommendationExplanationScope fallbackScope) {
         return facts.stream()
-                .sorted(Comparator.comparing(com.cadentia.reng.scoring.RecommendationExplanationFact::code)
-                        .thenComparing(com.cadentia.reng.scoring.RecommendationExplanationFact::templateKey))
+                .sorted(Comparator.comparing(RecommendationExplanationFact::code)
+                        .thenComparing(RecommendationExplanationFact::templateKey))
                 .map(fact -> mapFact(fact, fallbackScope))
                 .toList();
     }
 
     private RecommendationExplanationEntry mapFact(
-            com.cadentia.reng.scoring.RecommendationExplanationFact fact,
+            RecommendationExplanationFact fact,
             RecommendationExplanationScope fallbackScope) {
         return new RecommendationExplanationEntry(
                 explanationCode(fact.code()),
