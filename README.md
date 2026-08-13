@@ -192,7 +192,7 @@ mvn spring-boot:run
 Expose port `8080` with the current local tunnel. For Cloudflare quick tunnels:
 
 ```bash
-cloudflared tunnel --url http://localhost:8080
+cloudflared tunnel --url http://127.0.0.1:8080
 ```
 
 If using Tailscale Funnel instead, use its public HTTPS URL as
@@ -206,6 +206,86 @@ Register and verify the webhook:
 scripts/telegram-webhook.sh set
 scripts/telegram-webhook.sh info
 ```
+
+If a Cloudflare quick tunnel is restarted, copy the new public URL into
+`CADENTIA_TELEGRAM_PUBLIC_BASE_URL` and run `scripts/telegram-webhook.sh set`
+again. If Telegram reports stale `401 Unauthorized` failures from earlier
+attempts, clear the pending queue once:
+
+```bash
+set -a
+source .env
+set +a
+
+curl -sS -X POST "https://api.telegram.org/bot${CADENTIA_TELEGRAM_BOT_TOKEN}/setWebhook" \
+  -d "url=${CADENTIA_TELEGRAM_PUBLIC_BASE_URL}/telegram/webhooks/${CADENTIA_TELEGRAM_BOT_ID:-local}" \
+  -d "secret_token=${CADENTIA_TELEGRAM_WEBHOOK_SECRET}" \
+  -d "drop_pending_updates=true"
+```
+
+Verify the tunnel and webhook secret before testing from Telegram:
+
+```bash
+curl -i -X POST "${CADENTIA_TELEGRAM_PUBLIC_BASE_URL}/telegram/webhooks/${CADENTIA_TELEGRAM_BOT_ID:-local}" \
+  -H "Content-Type: application/json" \
+  -H "X-Telegram-Bot-Api-Secret-Token: ${CADENTIA_TELEGRAM_WEBHOOK_SECRET}" \
+  -d '{"update_id":1786658001,"message":{"message_id":1,"date":1786658001,"chat":{"id":12345,"type":"private"},"from":{"id":12345,"is_bot":false,"first_name":"Local"},"text":"/newsetlist"}}'
+```
+
+The expected response is `202 Accepted`. A `401` response with
+`WWW-Authenticate: Basic realm="Realm"` means Spring Security is intercepting
+the webhook route before Telegram webhook secret validation.
+
+Self-service Telegram account linking is not implemented yet. For local testing,
+seed a linked actor after your bot has received a real message and you know the
+Telegram private chat/user id:
+
+```bash
+export TELEGRAM_CHAT_ID=<your-private-chat-id>
+export TELEGRAM_USER_ID=<your-telegram-user-id>
+export HASH_SECRET="${CADENTIA_TELEGRAM_IDENTITY_HASH_SECRET:-local-dev-telegram-identity-secret}"
+export INSTANCE_ID="${CADENTIA_INSTANCE_ID:-local-development}"
+
+export TELEGRAM_CHAT_HASH="$(printf 'telegram:%s' "$TELEGRAM_CHAT_ID" | openssl dgst -sha256 -hmac "$HASH_SECRET" -binary | xxd -p -c 256)"
+export TELEGRAM_USER_HASH="$(printf 'telegram:%s' "$TELEGRAM_USER_ID" | openssl dgst -sha256 -hmac "$HASH_SECRET" -binary | xxd -p -c 256)"
+
+docker compose exec -T postgres psql -U cadentia -d cadentia <<SQL
+INSERT INTO telegram_account_link (
+    id,
+    channel,
+    chat_hash,
+    user_hash,
+    church_instance_id,
+    actor_id,
+    roles,
+    status,
+    link_confirmed_at,
+    audit_metadata
+) VALUES (
+    gen_random_uuid(),
+    'telegram',
+    '${TELEGRAM_CHAT_HASH}',
+    '${TELEGRAM_USER_HASH}',
+    '${INSTANCE_ID}',
+    gen_random_uuid(),
+    ARRAY['ROLE_ADMIN'],
+    'LINKED',
+    now(),
+    '{"source":"local_seed"}'::jsonb
+)
+ON CONFLICT (channel, chat_hash, user_hash, church_instance_id)
+DO UPDATE SET
+    roles = EXCLUDED.roles,
+    status = 'LINKED',
+    link_confirmed_at = now(),
+    updated_at = now();
+SQL
+```
+
+The seeded `church_instance_id` must match `CADENTIA_INSTANCE_ID`; otherwise the
+bot will respond that the Telegram account is not authorized for this church
+instance. `/settings` is disabled by default. To test it locally, set
+`CADENTIA_TELEGRAM_SETTINGS_ENABLED=true` and restart the API.
 
 When finished:
 
