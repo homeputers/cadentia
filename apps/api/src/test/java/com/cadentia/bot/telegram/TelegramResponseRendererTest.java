@@ -78,8 +78,17 @@ class TelegramResponseRendererTest {
     void callbackResponsesIncludeAcknowledgementBeforeMessage() {
         // Arrange
         TelegramChannelEvent event = event(TelegramEventKind.CALLBACK_QUERY);
+        RecommendationExplanationEntry selected = selectedSong(
+                "Approved <Song>",
+                List.of(new RecommendationExplanationEvidence(
+                        RecommendationExplanationEvidence.TypeEnum.CATALOG,
+                        "catalog:song-1")));
+        SetlistProposalResponse proposal = new SetlistProposalResponse()
+                .status("PROPOSED")
+                .recommendationResultId("rec-1")
+                .explanation(new RecommendationExplanation().selectedSongs(List.of(selected)));
         TelegramAdapterResponse response = new TelegramAdapterResponse(TelegramAdapterResponseStatus.COMPLETED,
-                "Proposal generated.", event, "confirmation");
+                "Proposal generated.", event, "confirmation", proposal);
 
         // Act
         List<TelegramRenderedMessage> rendered = renderer.render(response);
@@ -88,25 +97,22 @@ class TelegramResponseRendererTest {
         assertThat(rendered).hasSize(2);
         assertThat(rendered.get(0).callbackQueryId()).isEqualTo("cb-1");
         assertThat(rendered.get(0).callbackAcknowledgement()).isEqualTo("Proposal generated.");
-        assertThat(rendered.get(1).text()).contains("Setlist ready");
+        assertThat(rendered.get(1).text())
+                .contains("Setlist proposal")
+                .contains("Approved &lt;Song&gt;")
+                .contains("catalog:song-1")
+                .doesNotContain("Setlist ready");
     }
 
     @Test
     void setlistProposalRendersApprovedSongReferencesWithoutUnapprovedDetails() {
         // Arrange
-        RecommendationExplanationEntry selected = new RecommendationExplanationEntry(
-                RecommendationExplanationCode.APPROVAL_ELIGIBLE,
-                RecommendationExplanationEntry.SeverityEnum.INFO,
-                RecommendationExplanationScope.SELECTED_SONG,
-                RecommendationExplanationEntry.AudienceEnum.PUBLIC,
-                new RecommendationExplanationSubject(RecommendationExplanationSubject.TypeEnum.SONG, "song-1"),
-                "selected.approved",
-                Map.of(),
+        RecommendationExplanationEntry selected = selectedSong(
+                "Holy <Song> fits the approved thanksgiving theme.",
                 List.of(
                         new RecommendationExplanationEvidence(RecommendationExplanationEvidence.TypeEnum.CATALOG, "catalog:song-1"),
                         new RecommendationExplanationEvidence(RecommendationExplanationEvidence.TypeEnum.APPROVAL, "approval:approved-1"),
-                        new RecommendationExplanationEvidence(RecommendationExplanationEvidence.TypeEnum.SCORE, "hidden-score")))
-                .defaultText("Holy <Song> fits the approved thanksgiving theme.");
+                        new RecommendationExplanationEvidence(RecommendationExplanationEvidence.TypeEnum.SCORE, "hidden-score")));
         SetlistProposalResponse proposal = new SetlistProposalResponse()
                 .status("PROPOSED")
                 .recommendationResultId("rec-1")
@@ -128,6 +134,95 @@ class TelegramResponseRendererTest {
     }
 
     @Test
+    void setlistProposalOmitsUnsafePublicEntriesAndEvidence() {
+        // Arrange
+        RecommendationExplanationEntry publicSelection = selectedSong(
+                "Safe public song",
+                List.of(
+                        new RecommendationExplanationEvidence(RecommendationExplanationEvidence.TypeEnum.CATALOG, "catalog:safe-song"),
+                        new RecommendationExplanationEvidence(RecommendationExplanationEvidence.TypeEnum.APPROVAL, "approval:safe-approval"),
+                        new RecommendationExplanationEvidence(RecommendationExplanationEvidence.TypeEnum.CATALOG, "catalog:instance:other-tenant-song"),
+                        new RecommendationExplanationEvidence(RecommendationExplanationEvidence.TypeEnum.PROVENANCE, "lyrics_document:private")));
+        RecommendationExplanationEntry adminSelection = selectedSong(
+                "Admin-only song",
+                List.of(new RecommendationExplanationEvidence(RecommendationExplanationEvidence.TypeEnum.CATALOG, "catalog:admin-song")))
+                .audience(RecommendationExplanationEntry.AudienceEnum.ADMIN);
+        RecommendationExplanationEntry unsafeTextSelection = selectedSong(
+                "raw lyrics: private line",
+                List.of(new RecommendationExplanationEvidence(RecommendationExplanationEvidence.TypeEnum.CATALOG, "catalog:raw-lyrics-song")));
+        SetlistProposalResponse proposal = new SetlistProposalResponse()
+                .status("PROPOSED")
+                .auditMessages(List.of(
+                        "Approved-only policy applied.",
+                        "raw lyric detail should not leak.",
+                        "hidden scoring component should not leak."))
+                .explanation(new RecommendationExplanation().selectedSongs(List.of(
+                        publicSelection,
+                        adminSelection,
+                        unsafeTextSelection)));
+
+        // Act
+        String text = renderer.renderProposal("42", proposal).get(0).text();
+
+        // Assert
+        assertThat(text)
+                .contains("Safe public song")
+                .contains("catalog:safe-song")
+                .contains("approval:safe-approval")
+                .contains("Approved-only policy applied.")
+                .doesNotContain("Admin-only song")
+                .doesNotContain("raw lyrics")
+                .doesNotContain("lyrics_document")
+                .doesNotContain("other-tenant")
+                .doesNotContain("hidden scoring");
+    }
+
+    @Test
+    void emptyProposalRendersSafeNoApprovedSongsMessage() {
+        // Arrange
+        SetlistProposalResponse proposal = new SetlistProposalResponse()
+                .status("NO_APPROVED_CANDIDATES")
+                .auditMessages(List.of("No approved eligible catalog candidates matched the request; no songs were fabricated."))
+                .explanation(new RecommendationExplanation().selectedSongs(List.of()));
+
+        // Act
+        String text = renderer.renderProposal("42", proposal).get(0).text();
+
+        // Assert
+        assertThat(text)
+                .contains("No approved songs were returned yet.")
+                .contains("no songs were fabricated")
+                .doesNotContain("raw lyric");
+    }
+
+    @Test
+    void longProposalMessagesSplitWithKeyboardOnlyOnFirstChunk() {
+        // Arrange
+        List<RecommendationExplanationEntry> selectedSongs = java.util.stream.IntStream.rangeClosed(1, 260)
+                .mapToObj(index -> selectedSong(
+                        "Approved catalog selection " + index + " with a long but safe title for Telegram rendering",
+                        List.of(new RecommendationExplanationEvidence(
+                                RecommendationExplanationEvidence.TypeEnum.CATALOG,
+                                "catalog:song-" + index))))
+                .toList();
+        SetlistProposalResponse proposal = new SetlistProposalResponse()
+                .status("PROPOSED")
+                .recommendationResultId("rec-long")
+                .explanation(new RecommendationExplanation().selectedSongs(selectedSongs));
+
+        // Act
+        List<TelegramRenderedMessage> rendered = renderer.renderProposal("42", proposal);
+
+        // Assert
+        assertThat(rendered).hasSizeGreaterThan(1);
+        assertThat(rendered).allSatisfy(message ->
+                assertThat(message.text().length()).isLessThanOrEqualTo(TelegramResponseRenderer.SAFE_MESSAGE_LIMIT));
+        assertThat(rendered.get(0).inlineKeyboard()).isNotNull();
+        assertThat(rendered.subList(1, rendered.size()))
+                .allSatisfy(message -> assertThat(message.inlineKeyboard()).isNull());
+    }
+
+    @Test
     void splitsLongMessagesDeterministicallyWithinTelegramLimit() {
         // Arrange
         String longMessage = "Line\n".repeat(1000);
@@ -145,5 +240,20 @@ class TelegramResponseRendererTest {
         return new TelegramChannelEvent(10L, kind, "42", "99", 7, "/start", TelegramCommand.START,
                 kind == TelegramEventKind.CALLBACK_QUERY ? TelegramCallbackAction.CONFIRM : null,
                 "accepted", kind == TelegramEventKind.CALLBACK_QUERY ? "cb-1" : null, 7, Locale.ROOT, "corr-1");
+    }
+
+    private static RecommendationExplanationEntry selectedSong(
+            String defaultText,
+            List<RecommendationExplanationEvidence> evidence) {
+        return new RecommendationExplanationEntry(
+                RecommendationExplanationCode.APPROVAL_ELIGIBLE,
+                RecommendationExplanationEntry.SeverityEnum.INFO,
+                RecommendationExplanationScope.SELECTED_SONG,
+                RecommendationExplanationEntry.AudienceEnum.PUBLIC,
+                new RecommendationExplanationSubject(RecommendationExplanationSubject.TypeEnum.SONG, "song-1"),
+                "selected.approved",
+                Map.of(),
+                evidence)
+                .defaultText(defaultText);
     }
 }

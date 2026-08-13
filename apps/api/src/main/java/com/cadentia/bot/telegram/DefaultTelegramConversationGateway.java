@@ -147,7 +147,8 @@ public class DefaultTelegramConversationGateway implements TelegramConversationG
                     TelegramAdapterResponseStatus.COMPLETED,
                     proposal == null ? "Setlist confirmed." : recommendationSummary(proposal),
                     event,
-                    event.callbackAction().guidedField());
+                    event.callbackAction().guidedField(),
+                    proposal);
         }
         if (event.callbackAction() == TelegramCallbackAction.CANCEL) {
             return cancel(event);

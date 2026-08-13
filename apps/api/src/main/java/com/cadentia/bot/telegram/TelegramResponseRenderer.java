@@ -3,9 +3,11 @@ package com.cadentia.bot.telegram;
 import com.cadentia.generated.model.RecommendationExplanation;
 import com.cadentia.generated.model.RecommendationExplanationEntry;
 import com.cadentia.generated.model.RecommendationExplanationEvidence;
+import com.cadentia.generated.model.RecommendationExplanationScope;
 import com.cadentia.generated.model.SetlistProposalResponse;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
@@ -24,6 +26,10 @@ public class TelegramResponseRenderer {
         if (event != null && event.callbackQueryId() != null) {
             rendered.add(TelegramRenderedMessage.callbackAck(event.callbackQueryId(), callbackAcknowledgement(response)));
         }
+        if (response.status() == TelegramAdapterResponseStatus.COMPLETED && response.proposal() != null) {
+            rendered.addAll(renderProposal(event == null ? null : event.chatId(), response.proposal()));
+            return rendered;
+        }
         if (shouldSuppressMessage(response)) {
             return rendered;
         }
@@ -38,13 +44,20 @@ public class TelegramResponseRenderer {
     public List<TelegramRenderedMessage> renderProposal(String chatId, SetlistProposalResponse proposal) {
         StringBuilder body = new StringBuilder();
         body.append("<b>Setlist proposal</b>\n");
+        if (proposal == null) {
+            body.append("No approved songs were returned yet. ");
+            body.append("\nReview the proposal in Cadentia before publishing. Only approved catalog evidence is shown.");
+            return List.of(TelegramRenderedMessage.message(chatId, body.toString(), keyboardFor(TelegramAdapterResponseStatus.COMPLETED)));
+        }
         if (StringUtils.hasText(proposal.getRecommendationResultId())) {
             body.append("Result: <code>").append(escape(proposal.getRecommendationResultId())).append("</code>\n");
         }
         RecommendationExplanation explanation = proposal.getExplanation();
         List<RecommendationExplanationEntry> selected = explanation == null || explanation.getSelectedSongs() == null
                 ? List.of()
-                : explanation.getSelectedSongs();
+                : explanation.getSelectedSongs().stream()
+                        .filter(this::publicSelectedSong)
+                        .toList();
         if (selected.isEmpty()) {
             body.append("No approved songs were returned yet. ");
         } else {
@@ -166,7 +179,7 @@ public class TelegramResponseRenderer {
 
     private String summary(RecommendationExplanationEntry entry) {
         if (StringUtils.hasText(entry.getDefaultText())) {
-            return entry.getDefaultText();
+            return safeSummary(entry.getDefaultText());
         }
         if (entry.getSubject() != null && StringUtils.hasText(entry.getSubject().getId())) {
             return "Approved selection " + entry.getSubject().getId();
@@ -177,9 +190,8 @@ public class TelegramResponseRenderer {
     private List<String> conciseEvidence(RecommendationExplanationEntry entry) {
         List<RecommendationExplanationEvidence> evidence = entry.getEvidence() == null ? List.of() : entry.getEvidence();
         return evidence.stream()
-                .filter(item -> item.getType() != null && ("catalog".equals(item.getType().getValue()) || "approval".equals(item.getType().getValue())))
+                .filter(this::telegramSafeEvidence)
                 .map(RecommendationExplanationEvidence::getRef)
-                .filter(StringUtils::hasText)
                 .limit(2)
                 .toList();
     }
@@ -200,7 +212,55 @@ public class TelegramResponseRenderer {
         return !normalized.contains("unapproved candidate")
                 && !normalized.contains("hidden scoring")
                 && !normalized.contains("raw lyric")
+                && !normalized.contains("lyrics:")
                 && !normalized.contains("prompt text");
+    }
+
+    private boolean publicSelectedSong(RecommendationExplanationEntry entry) {
+        return entry != null
+                && entry.getScope() == RecommendationExplanationScope.SELECTED_SONG
+                && entry.getAudience() == RecommendationExplanationEntry.AudienceEnum.PUBLIC
+                && !unsafePublicText(entry.getDefaultText());
+    }
+
+    private boolean telegramSafeEvidence(RecommendationExplanationEvidence evidence) {
+        if (evidence == null || evidence.getType() == null || !StringUtils.hasText(evidence.getRef())) {
+            return false;
+        }
+        String type = evidence.getType().getValue();
+        String ref = evidence.getRef();
+        String normalizedRef = ref.toLowerCase(Locale.ROOT);
+        if ("catalog".equals(type)) {
+            return normalizedRef.startsWith("catalog:")
+                    && safeEvidenceRef(normalizedRef);
+        }
+        if ("approval".equals(type)) {
+            return normalizedRef.startsWith("approval:")
+                    && safeEvidenceRef(normalizedRef);
+        }
+        return false;
+    }
+
+    private boolean safeEvidenceRef(String normalizedRef) {
+        return !normalizedRef.contains("unapproved")
+                && !normalizedRef.contains("rejected")
+                && !normalizedRef.contains("raw")
+                && !normalizedRef.contains("lyrics:")
+                && !normalizedRef.contains("cross-instance")
+                && !normalizedRef.contains("instance:");
+    }
+
+    private String safeSummary(String value) {
+        return unsafePublicText(value) ? "Approved catalog selection" : value;
+    }
+
+    private boolean unsafePublicText(String value) {
+        String normalized = value == null ? "" : value.toLowerCase(Locale.ROOT);
+        return normalized.contains("raw lyric")
+                || normalized.contains("lyrics:")
+                || normalized.contains("hidden scoring")
+                || normalized.contains("unapproved candidate")
+                || normalized.contains("prompt text:");
     }
 
     private String redact(String value) {
