@@ -69,7 +69,10 @@ class JdbcConversationSessionRepositoryIntegrationTest {
                 "telegram",
                 "9103",
                 "rec-result-123",
-                Map.of("correlationId", "corr-bot-e2e"));
+                Map.of(
+                        "correlationId", "corr-bot-e2e",
+                        "setlistId", "setlist-456",
+                        "setlistVersionId", "version-789"));
 
         repository.save(record);
         ConversationSessionRecord found = repository.findById(sessionId).orElseThrow();
@@ -85,7 +88,10 @@ class JdbcConversationSessionRepositoryIntegrationTest {
         assertThat(found.channel()).isEqualTo("telegram");
         assertThat(found.channelUpdateId()).isEqualTo("9103");
         assertThat(found.recommendationResultId()).isEqualTo("rec-result-123");
-        assertThat(found.correlationMetadata()).containsEntry("correlationId", "corr-bot-e2e");
+        assertThat(found.correlationMetadata())
+                .containsEntry("correlationId", "corr-bot-e2e")
+                .containsEntry("setlistId", "setlist-456")
+                .containsEntry("setlistVersionId", "version-789");
 
         String rawStoredJson = jdbcTemplate.queryForObject(
                 "SELECT correlation_metadata_json::text FROM conversation_sessions WHERE id = :id",

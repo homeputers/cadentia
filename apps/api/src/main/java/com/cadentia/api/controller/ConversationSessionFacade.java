@@ -215,6 +215,43 @@ public class ConversationSessionFacade {
 
     public ConversationRecoveryResponse recover(UUID sessionId) {
         ConversationSessionRecord prior = currentRecord(sessionId, ConversationState.COLLECTING);
+        if (prior.state() == ConversationState.CONFIRMED) {
+            ConversationSessionStateResponse recoveredState = snapshot(
+                    sessionId,
+                    prior,
+                    List.of("Confirmed session recovered without restarting."));
+            return new ConversationRecoveryResponse(
+                    sessionId,
+                    prior.state(),
+                    recoveredState,
+                    "Session was already confirmed. Continue from the generated setlist.",
+                    false);
+        }
+        if (prior.state() == ConversationState.CANCELLED) {
+            ConversationSessionStateResponse recoveredState = snapshot(
+                    sessionId,
+                    prior,
+                    List.of("Cancelled session recovered without restarting."));
+            return new ConversationRecoveryResponse(
+                    sessionId,
+                    prior.state(),
+                    recoveredState,
+                    "Session was cancelled. Start a new /newsetlist flow to continue.",
+                    true);
+        }
+        if (prior.state() != ConversationState.EXPIRED) {
+            ConversationSessionStateResponse recoveredState = snapshot(
+                    sessionId,
+                    prior,
+                    List.of("Active session recovered without restarting."));
+            return new ConversationRecoveryResponse(
+                    sessionId,
+                    prior.state(),
+                    recoveredState,
+                    "Session is still active. Continue the current flow.",
+                    false);
+        }
+
         ConversationSessionRecord expired = transition(
                 prior,
                 ConversationState.EXPIRED,
@@ -263,24 +300,63 @@ public class ConversationSessionFacade {
                 channel,
                 channelUpdateId,
                 null,
-                Map.of("correlationId", correlationId),
+                mergedCorrelationMetadata(record.correlationMetadata(), "correlationId", correlationId),
                 OffsetDateTime.now()));
     }
 
     public void recordRecommendationCorrelation(UUID sessionId, String recommendationResultId) {
+        recordRecommendationCorrelation(sessionId, recommendationResultId, null);
+    }
+
+    public void recordRecommendationCorrelation(UUID sessionId, String recommendationResultId, String setlistId) {
+        recordRecommendationCorrelation(sessionId, recommendationResultId, setlistId, null);
+    }
+
+    public void recordRecommendationCorrelation(
+            UUID sessionId,
+            String recommendationResultId,
+            String setlistId,
+            String setlistVersionId) {
         ConversationSessionRecord record = currentRecord(sessionId, ConversationState.COLLECTING);
         repository.save(record.withCorrelation(
                 null,
                 null,
                 recommendationResultId,
-                record.correlationMetadata(),
+                mergedCorrelationMetadata(record.correlationMetadata(), Map.of(
+                        "setlistId", nullToEmpty(setlistId),
+                        "setlistVersionId", nullToEmpty(setlistVersionId))),
                 OffsetDateTime.now()));
+    }
+
+    private Map<String, String> mergedCorrelationMetadata(
+            Map<String, String> currentMetadata,
+            String key,
+            String value) {
+        return mergedCorrelationMetadata(currentMetadata, Map.of(key, nullToEmpty(value)));
+    }
+
+    private Map<String, String> mergedCorrelationMetadata(
+            Map<String, String> currentMetadata,
+            Map<String, String> nextMetadata) {
+        Map<String, String> metadata = new HashMap<>(currentMetadata);
+        nextMetadata.forEach((key, value) -> {
+            if (value != null && !value.isBlank()) {
+                metadata.put(key, value);
+            }
+        });
+        return Map.copyOf(metadata);
+    }
+
+    private String nullToEmpty(String value) {
+        return value == null ? "" : value;
     }
 
     private ConversationSessionRecord currentRecord(UUID sessionId, ConversationState defaultState) {
         ConversationSessionRecord record = repository.findById(sessionId)
                 .orElseGet(() -> repository.save(newRecord(sessionId, defaultState)));
-        if (record.state() == ConversationState.EXPIRED) {
+        if (record.state() == ConversationState.EXPIRED
+                || record.state() == ConversationState.CONFIRMED
+                || record.state() == ConversationState.CANCELLED) {
             return record;
         }
         if (isExpired(record)) {
@@ -344,7 +420,10 @@ public class ConversationSessionFacade {
                 new ArrayList<>(record.revisionHistory()),
                 expiresAt,
                 messages)
-                .confirmedAt(record.confirmedAt());
+                .confirmedAt(record.confirmedAt())
+                .recommendationResultId(record.recommendationResultId())
+                .setlistId(record.correlationMetadata().get("setlistId"))
+                .setlistVersionId(record.correlationMetadata().get("setlistVersionId"));
     }
 
     private Map<String, ConversationSessionSourceStamp> mergedSources(

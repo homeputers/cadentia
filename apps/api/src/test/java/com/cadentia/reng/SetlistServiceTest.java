@@ -105,6 +105,7 @@ class SetlistServiceTest {
 
         // Assert
         assertThat(response.getExplanation().getSetlistId()).isEqualTo(repository.snapshot.setlistId().toString());
+        assertThat(response.getExplanation().getSetlistVersionId()).isEqualTo(repository.snapshot.versionId().toString());
         assertThat(repository.baselineCommand.scoringProfileVersion()).isEqualTo("test-recommendation-profile");
         assertThat(repository.baselineCommand.engineVersion()).isEqualTo("RecommendationEngine:recommendation_explanation.v1");
         assertThat(repository.baselineCommand.requestPayload()).contains("\"verseText\":\"Psalm 100\"");

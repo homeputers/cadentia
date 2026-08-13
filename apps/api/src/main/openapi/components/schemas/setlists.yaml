@@ -337,6 +337,10 @@ RecommendationExplanation:
       type: string
       minLength: 1
       maxLength: 120
+    setlistVersionId:
+      type: string
+      minLength: 1
+      maxLength: 120
     scoringProfileVersion:
       type: string
       minLength: 1

@@ -86,7 +86,10 @@ class TelegramResponseRendererTest {
         SetlistProposalResponse proposal = new SetlistProposalResponse()
                 .status("PROPOSED")
                 .recommendationResultId("rec-1")
-                .explanation(new RecommendationExplanation().selectedSongs(List.of(selected)));
+                .explanation(new RecommendationExplanation()
+                        .setlistId("setlist-123")
+                        .setlistVersionId("version-123")
+                        .selectedSongs(List.of(selected)));
         TelegramAdapterResponse response = new TelegramAdapterResponse(TelegramAdapterResponseStatus.COMPLETED,
                 "Proposal generated.", event, "confirmation", proposal);
 
@@ -99,6 +102,8 @@ class TelegramResponseRendererTest {
         assertThat(rendered.get(0).callbackAcknowledgement()).isEqualTo("Proposal generated.");
         assertThat(rendered.get(1).text())
                 .contains("Setlist proposal")
+                .contains("setlist-123")
+                .contains("version-123")
                 .contains("Approved &lt;Song&gt;")
                 .contains("catalog:song-1")
                 .doesNotContain("Setlist ready");
