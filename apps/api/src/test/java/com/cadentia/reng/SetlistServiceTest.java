@@ -2,6 +2,8 @@ package com.cadentia.reng;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.groups.Tuple.tuple;
+
 import com.cadentia.catalog.model.ApprovalStatus;
 import com.cadentia.catalog.model.KeyMode;
 import com.cadentia.catalog.model.TagType;
@@ -20,12 +22,22 @@ import com.cadentia.reng.scoring.HardConstraintFilter;
 import com.cadentia.reng.scoring.ScoringRequestFactory;
 import com.cadentia.reng.scoring.ScoringProfile;
 import com.cadentia.reng.scoring.ScoringProfileLifecycle;
+import com.cadentia.reng.setlist.SetlistProposalPersistenceService;
+import com.cadentia.reng.setlist.SetlistVersionModels.CreateSetlistBaselineCommand;
+import com.cadentia.reng.setlist.SetlistVersionModels.CreateSetlistVersionCommand;
+import com.cadentia.reng.setlist.SetlistVersionModels.SetlistVersionItemSnapshot;
+import com.cadentia.reng.setlist.SetlistVersionModels.SetlistVersionSnapshot;
+import com.cadentia.reng.setlist.SetlistVersionRepository;
+import com.cadentia.reng.setlist.SetlistVersionService;
 import com.cadentia.runtime.InstanceConfiguration;
 import com.cadentia.runtime.RuntimeModuleAccessException;
 import com.cadentia.runtime.StaticInstanceConfigurationProvider;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
@@ -74,6 +86,35 @@ class SetlistServiceTest {
                         "catalog:arrangement:" + id("arrangement-1"),
                         "approval:approval_gate_summary");
         assertThat(response.getExplanation().getWarnings()).isEmpty();
+    }
+
+    @Test
+    void generatePersistsGeneratedBaselineWhenPersistenceBoundaryIsConfigured() {
+        // Arrange
+        CapturingCandidateRetriever retriever = new CapturingCandidateRetriever(List.of(
+                candidate("1", "Living Thanksgiving", "praise", 82, "thanksgiving", "psalm-100"),
+                candidate("2", "Quiet Response", "worship", 68, "gratitude", "psalm-100")));
+        CapturingSetlistVersionRepository repository = new CapturingSetlistVersionRepository();
+        SetlistProposalPersistenceService persistenceService = new SetlistProposalPersistenceService(
+                new SetlistVersionService(repository),
+                new ObjectMapper());
+        SetlistService service = service(retriever, null, persistenceService);
+
+        // Act
+        SetlistProposalResponse response = service.generate(validRequest().counts(new SetlistCounts(1, 1)));
+
+        // Assert
+        assertThat(response.getExplanation().getSetlistId()).isEqualTo(repository.snapshot.setlistId().toString());
+        assertThat(repository.baselineCommand.scoringProfileVersion()).isEqualTo("test-recommendation-profile");
+        assertThat(repository.baselineCommand.engineVersion()).isEqualTo("RecommendationEngine:recommendation_explanation.v1");
+        assertThat(repository.baselineCommand.requestPayload()).contains("\"verseText\":\"Psalm 100\"");
+        assertThat(repository.baselineCommand.parsedIntentPayload()).contains("\"intent\":\"GENERATE_SETLIST\"");
+        assertThat(repository.baselineCommand.explanationFactsPayload()).contains("\"recommendationResultId\":\"");
+        assertThat(repository.baselineCommand.items())
+                .extracting(item -> item.positionIndex(), item -> item.catalogArrangementId(), item -> item.itemProvenance())
+                .containsExactly(
+                        tuple(0, id("arrangement-1"), "GENERATED"),
+                        tuple(1, id("arrangement-2"), "GENERATED"));
     }
 
     @Test
@@ -173,6 +214,13 @@ class SetlistServiceTest {
     private SetlistService service(
             CandidateRetriever retriever,
             RehearsalWorkflowSummaryProvider workflowSummaryProvider) {
+        return service(retriever, workflowSummaryProvider, null);
+    }
+
+    private SetlistService service(
+            CandidateRetriever retriever,
+            RehearsalWorkflowSummaryProvider workflowSummaryProvider,
+            SetlistProposalPersistenceService persistenceService) {
         return new SetlistService(
                 configurationProvider,
                 new ScoringRequestFactory(configurationProvider),
@@ -180,7 +228,8 @@ class SetlistServiceTest {
                 new HardConstraintFilter(),
                 new CandidateFeatureScorer(),
                 new DeterministicSetOrderer(),
-                workflowSummaryProvider);
+                workflowSummaryProvider,
+                persistenceService);
     }
 
     private InstanceConfiguration recommendationConfiguration() {
@@ -261,6 +310,54 @@ class SetlistServiceTest {
         public List<RecommendableArrangement> findCandidates(CandidateSearchCriteria criteria) {
             lastCriteria = criteria;
             return candidates;
+        }
+    }
+
+    private static class CapturingSetlistVersionRepository implements SetlistVersionRepository {
+        private CreateSetlistBaselineCommand baselineCommand;
+        private SetlistVersionSnapshot snapshot;
+
+        @Override
+        public SetlistVersionSnapshot createBaseline(CreateSetlistBaselineCommand command) {
+            baselineCommand = command;
+            UUID setlistId = UUID.randomUUID();
+            snapshot = new SetlistVersionSnapshot(
+                    setlistId,
+                    UUID.randomUUID(),
+                    null,
+                    1,
+                    "GENERATED_BASELINE",
+                    command.scoringProfileVersion(),
+                    command.engineVersion(),
+                    Instant.now(),
+                    command.createdBy(),
+                    command.items().stream()
+                            .map(item -> new SetlistVersionItemSnapshot(
+                                    UUID.randomUUID(),
+                                    item.positionIndex(),
+                                    item.catalogArrangementId(),
+                                    item.transposedKey(),
+                                    item.transposedMode(),
+                                    item.sourceItemId(),
+                                    item.itemProvenance(),
+                                    item.notes()))
+                            .toList());
+            return snapshot;
+        }
+
+        @Override
+        public SetlistVersionSnapshot createEditedVersion(CreateSetlistVersionCommand command) {
+            throw new UnsupportedOperationException("Edits are not used by this test.");
+        }
+
+        @Override
+        public Optional<SetlistVersionSnapshot> findVersion(UUID setlistId, UUID versionId) {
+            return Optional.empty();
+        }
+
+        @Override
+        public List<SetlistVersionSnapshot> findVersions(UUID setlistId) {
+            return List.of();
         }
     }
 }
