@@ -23,6 +23,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -44,6 +45,7 @@ public class ScoringRequestFactory {
                 List.of("local.development.audit-events", "local.development.recommendation-events"))));
     }
 
+    @Autowired
     public ScoringRequestFactory(InstanceConfigurationProvider configurationProvider) {
         this.configurationProvider = configurationProvider;
     }

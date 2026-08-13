@@ -88,19 +88,13 @@ public class SetlistService {
 
     @Autowired
     public SetlistService(
+            InstanceConfigurationProvider configurationProvider,
+            ScoringRequestFactory scoringRequestFactory,
             CandidateRetriever candidateRetriever,
             RehearsalWorkflowSummaryProvider workflowSummaryService,
             ObjectProvider<SetlistProposalPersistenceService> proposalPersistenceServiceProvider) {
-        this(new StaticInstanceConfigurationProvider(InstanceConfiguration.localDevelopment(
-                "local-development",
-                "local",
-                "cadentia-local-assets",
-                "local-development",
-                "env:CADENTIA_LOCAL_ASSET_KEY_REF",
-                "cadentia:local:development",
-                "local.development",
-                List.of("local.development.audit-events", "local.development.recommendation-events"))),
-                new ScoringRequestFactory(),
+        this(configurationProvider,
+                scoringRequestFactory,
                 candidateRetriever,
                 new HardConstraintFilter(),
                 new CandidateFeatureScorer(),
