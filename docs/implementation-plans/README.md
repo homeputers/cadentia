@@ -59,6 +59,7 @@ includes:
 - [ADR-033 Implementation Plan: Arrangement Compatibility and Instrumentation Modeling](./ADR-033-arrangement-compatibility-and-instrumentation-modeling-plan.md)
 - [ADR-034 Implementation Plan: Congregational Familiarity Model](./ADR-034-congregational-familiarity-model-plan.md)
 - [ADR-035 Implementation Plan: Telegram Bot E2E Integration and Operations](./ADR-035-telegram-bot-e2e-integration-and-operations-plan.md)
+- [Telegram New Setlist Gap Closure Batch Plan](./telegram-newsetlist-gap-closure-batch-plan.md)
 - [ADR-036 Implementation Plan: Administrative Web Interface](./ADR-036-administrative-web-interface-plan.md)
 - [ADR-037 Implementation Plan: Ollama LLM Integration](./ADR-037-ollama-llm-integration-plan.md)
 

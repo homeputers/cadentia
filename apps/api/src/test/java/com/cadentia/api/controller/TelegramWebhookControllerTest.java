@@ -5,6 +5,21 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.cadentia.bot.telegram.InMemoryTelegramOutboundRepository;
+import com.cadentia.bot.telegram.TelegramAdapterResponse;
+import com.cadentia.bot.telegram.TelegramAdapterResponseStatus;
+import com.cadentia.bot.telegram.TelegramBotAdapter;
+import com.cadentia.bot.telegram.TelegramChannelEvent;
+import com.cadentia.bot.telegram.TelegramClientException;
+import com.cadentia.bot.telegram.TelegramEventKind;
+import com.cadentia.bot.telegram.TelegramIdentifierHasher;
+import com.cadentia.bot.telegram.TelegramOutboundClient;
+import com.cadentia.bot.telegram.TelegramOutboundModels.OutboundStatus;
+import com.cadentia.bot.telegram.TelegramOutboundModels.TelegramSendResult;
+import com.cadentia.bot.telegram.TelegramOutboundRepository;
+import com.cadentia.bot.telegram.TelegramOutboundSendService;
+import com.cadentia.bot.telegram.TelegramRenderedMessage;
+import com.cadentia.bot.telegram.TelegramResponseRenderer;
 import com.cadentia.bot.telegram.TelegramSecretResolver;
 import com.cadentia.bot.telegram.TelegramWebhookAuthenticationFilter;
 import com.cadentia.bot.telegram.TelegramWebhookIdempotencyStore;
@@ -14,6 +29,9 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.mock.env.MockEnvironment;
@@ -92,6 +110,78 @@ class TelegramWebhookControllerTest {
     }
 
     @Test
+    void acceptedUpdateRoutesThroughAdapterRendererAndOutboundSendService() throws Exception {
+        // Arrange
+        CapturingIdempotencyStore store = new CapturingIdempotencyStore();
+        CapturingBotAdapter adapter = new CapturingBotAdapter();
+        CapturingRenderer renderer = new CapturingRenderer();
+        ScriptedOutboundClient client = new ScriptedOutboundClient();
+        TelegramOutboundRepository outboundRepository = new InMemoryTelegramOutboundRepository();
+        TelegramOutboundSendService outbound = outbound(outboundRepository, client);
+        MockMvc mockMvc = mockMvc(store, adapter, renderer, outbound);
+
+        // Act / Assert
+        mockMvc.perform(validRequest(109, "current-secret"))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.status").value("ACCEPTED"));
+
+        assertThat(adapter.updateJson).contains("\"update_id\":109");
+        assertThat(adapter.correlationId).isEqualTo("corr-1");
+        assertThat(renderer.responses).containsExactly(adapter.response);
+        assertThat(client.sent).hasSize(1);
+        assertThat(client.sent.get(0).text()).contains("rendered response");
+        assertThat(outboundRepository.findByIdempotencyKey(client.lastIdempotencyKey)).isPresent()
+                .get()
+                .extracting(record -> record.status())
+                .isEqualTo(OutboundStatus.SENT);
+    }
+
+    @Test
+    void duplicateUpdateDoesNotRouteAdapterRendererOrOutboundAgain() throws Exception {
+        // Arrange
+        CapturingIdempotencyStore store = new CapturingIdempotencyStore();
+        CapturingBotAdapter adapter = new CapturingBotAdapter();
+        CapturingRenderer renderer = new CapturingRenderer();
+        ScriptedOutboundClient client = new ScriptedOutboundClient();
+        MockMvc mockMvc = mockMvc(store, adapter, renderer, outbound(new InMemoryTelegramOutboundRepository(), client));
+
+        // Act / Assert
+        mockMvc.perform(validRequest(110, "current-secret"))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.status").value("ACCEPTED"));
+        mockMvc.perform(validRequest(110, "current-secret"))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.status").value("DUPLICATE_ACCEPTED"));
+
+        assertThat(adapter.invocations).isEqualTo(1);
+        assertThat(renderer.responses).hasSize(1);
+        assertThat(client.sent).hasSize(1);
+    }
+
+    @Test
+    void outboundRetryResultDoesNotPreventWebhookAcknowledgement() throws Exception {
+        // Arrange
+        CapturingIdempotencyStore store = new CapturingIdempotencyStore();
+        CapturingBotAdapter adapter = new CapturingBotAdapter();
+        CapturingRenderer renderer = new CapturingRenderer();
+        ScriptedOutboundClient client = new ScriptedOutboundClient();
+        client.failures.add(new TelegramClientException(502, "Telegram unavailable token=secret"));
+        TelegramOutboundRepository outboundRepository = new InMemoryTelegramOutboundRepository();
+        MockMvc mockMvc = mockMvc(store, adapter, renderer, outbound(outboundRepository, client));
+
+        // Act / Assert
+        mockMvc.perform(validRequest(111, "current-secret"))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.status").value("ACCEPTED"));
+
+        assertThat(client.sent).isEmpty();
+        assertThat(outboundRepository.findByIdempotencyKey(client.lastIdempotencyKey)).isPresent()
+                .get()
+                .extracting(record -> record.status())
+                .isEqualTo(OutboundStatus.RETRY_SCHEDULED);
+    }
+
+    @Test
     void malformedUnsupportedAndStalePayloadsReturnStructuredValidationResponses() throws Exception {
         // Arrange
         CapturingIdempotencyStore store = new CapturingIdempotencyStore();
@@ -128,6 +218,23 @@ class TelegramWebhookControllerTest {
     }
 
     private MockMvc mockMvc(CapturingIdempotencyStore store, boolean includeBotToken) {
+        return mockMvc(store, includeBotToken, null, null, null);
+    }
+
+    private MockMvc mockMvc(
+            CapturingIdempotencyStore store,
+            TelegramBotAdapter adapter,
+            TelegramResponseRenderer renderer,
+            TelegramOutboundSendService outbound) {
+        return mockMvc(store, true, adapter, renderer, outbound);
+    }
+
+    private MockMvc mockMvc(
+            CapturingIdempotencyStore store,
+            boolean includeBotToken,
+            TelegramBotAdapter adapter,
+            TelegramResponseRenderer renderer,
+            TelegramOutboundSendService outbound) {
         TelegramWebhookProperties properties = properties();
         MockEnvironment environment = new MockEnvironment()
                 .withProperty("CURRENT_TELEGRAM_SECRET", "current-secret")
@@ -137,13 +244,20 @@ class TelegramWebhookControllerTest {
         }
         TelegramWebhookProblemFactory problemFactory = new TelegramWebhookProblemFactory();
         TelegramSecretResolver secretResolver = new TelegramSecretResolver(environment);
-        TelegramWebhookController controller = new TelegramWebhookController(properties, store, problemFactory, CLOCK);
+        TelegramWebhookController controller = new TelegramWebhookController(
+                properties, store, problemFactory, CLOCK, adapter, renderer, outbound, OBJECT_MAPPER);
         TelegramWebhookAuthenticationFilter filter = new TelegramWebhookAuthenticationFilter(
                 properties, secretResolver, problemFactory, OBJECT_MAPPER);
         return MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new TelegramWebhookExceptionHandler())
                 .addFilters(filter)
                 .build();
+    }
+
+    private TelegramOutboundSendService outbound(
+            TelegramOutboundRepository repository,
+            ScriptedOutboundClient client) {
+        return new TelegramOutboundSendService(repository, client, new TelegramIdentifierHasher("hash-secret"));
     }
 
     private TelegramWebhookProperties properties() {
@@ -200,6 +314,83 @@ class TelegramWebhookControllerTest {
                 return IdempotencyResult.ACCEPTED;
             }
             return IdempotencyResult.DUPLICATE_ACCEPTED;
+        }
+    }
+
+    private static class CapturingBotAdapter extends TelegramBotAdapter {
+        private int invocations;
+        private String updateJson;
+        private String correlationId;
+        private final TelegramAdapterResponse response = new TelegramAdapterResponse(
+                TelegramAdapterResponseStatus.CONTINUED,
+                "Adapter response.",
+                new TelegramChannelEvent(
+                        109L,
+                        TelegramEventKind.MESSAGE,
+                        "42",
+                        "99",
+                        5,
+                        "sanitized",
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        Locale.ROOT,
+                        "corr-1"),
+                null);
+
+        private CapturingBotAdapter() {
+            super(OBJECT_MAPPER, null, false, Duration.ofMinutes(30), null, null);
+        }
+
+        @Override
+        public TelegramAdapterResponse handleUpdate(String updateJson, String correlationId) {
+            invocations++;
+            this.updateJson = updateJson;
+            this.correlationId = correlationId;
+            return response;
+        }
+    }
+
+    private static class CapturingRenderer extends TelegramResponseRenderer {
+        private final List<TelegramAdapterResponse> responses = new ArrayList<>();
+
+        @Override
+        public List<TelegramRenderedMessage> render(TelegramAdapterResponse response) {
+            responses.add(response);
+            return List.of(TelegramRenderedMessage.message("42", "rendered response", null));
+        }
+    }
+
+    private static class ScriptedOutboundClient implements TelegramOutboundClient {
+        private final List<RuntimeException> failures = new ArrayList<>();
+        private final List<TelegramRenderedMessage> sent = new ArrayList<>();
+        private String lastIdempotencyKey;
+
+        @Override
+        public TelegramSendResult send(TelegramRenderedMessage message) {
+            lastIdempotencyKey = outboundIdempotencyKey(message);
+            if (!failures.isEmpty()) {
+                throw failures.remove(0);
+            }
+            sent.add(message);
+            return TelegramSendResult.delivered("telegram-message-" + sent.size());
+        }
+
+        private String outboundIdempotencyKey(TelegramRenderedMessage message) {
+            String basis = "corr-1:telegram_webhook_continued:"
+                    + (message.chatId() == null ? "" : message.chatId())
+                    + ":"
+                    + (message.callbackQueryId() == null ? "" : message.callbackQueryId())
+                    + ":"
+                    + (message.text() == null ? "" : message.text());
+            try {
+                return java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256")
+                        .digest(basis.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+            } catch (Exception ex) {
+                throw new IllegalStateException(ex);
+            }
         }
     }
 }

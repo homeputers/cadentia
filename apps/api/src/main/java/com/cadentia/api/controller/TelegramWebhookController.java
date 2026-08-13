@@ -3,6 +3,11 @@ package com.cadentia.api.controller;
 import com.cadentia.bot.telegram.TelegramWebhookIdempotencyStore;
 import com.cadentia.bot.telegram.TelegramWebhookIdempotencyStore.IdempotencyResult;
 import com.cadentia.bot.telegram.TelegramWebhookProperties;
+import com.cadentia.bot.telegram.TelegramAdapterResponse;
+import com.cadentia.bot.telegram.TelegramBotAdapter;
+import com.cadentia.bot.telegram.TelegramOutboundSendService;
+import com.cadentia.bot.telegram.TelegramRenderedMessage;
+import com.cadentia.bot.telegram.TelegramResponseRenderer;
 import com.cadentia.generated.api.TelegramApi;
 import com.cadentia.generated.model.TelegramCallbackQuery;
 import com.cadentia.generated.model.TelegramChat;
@@ -10,6 +15,8 @@ import com.cadentia.generated.model.TelegramMessage;
 import com.cadentia.generated.model.TelegramUpdate;
 import com.cadentia.generated.model.TelegramValidationError;
 import com.cadentia.generated.model.TelegramWebhookAcceptedResponse;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.OffsetDateTime;
@@ -40,14 +47,31 @@ public class TelegramWebhookController implements TelegramApi {
     private final TelegramWebhookProblemFactory problemFactory;
     private final Clock clock;
     private final ObjectProvider<NativeWebRequest> nativeWebRequestProvider;
+    private final TelegramBotAdapter botAdapter;
+    private final TelegramResponseRenderer responseRenderer;
+    private final TelegramOutboundSendService outboundSendService;
+    private final ObjectMapper objectMapper;
 
     @Autowired
     public TelegramWebhookController(
             TelegramWebhookProperties properties,
             TelegramWebhookIdempotencyStore idempotencyStore,
             TelegramWebhookProblemFactory problemFactory,
-            ObjectProvider<NativeWebRequest> nativeWebRequestProvider) {
-        this(properties, idempotencyStore, problemFactory, Clock.systemUTC(), nativeWebRequestProvider);
+            ObjectProvider<NativeWebRequest> nativeWebRequestProvider,
+            ObjectProvider<TelegramBotAdapter> botAdapterProvider,
+            ObjectProvider<TelegramResponseRenderer> responseRendererProvider,
+            ObjectProvider<TelegramOutboundSendService> outboundSendServiceProvider,
+            ObjectMapper objectMapper) {
+        this(
+                properties,
+                idempotencyStore,
+                problemFactory,
+                Clock.systemUTC(),
+                nativeWebRequestProvider,
+                botAdapterProvider.getIfAvailable(),
+                responseRendererProvider.getIfAvailable(),
+                outboundSendServiceProvider.getIfAvailable(),
+                objectMapper);
     }
 
     TelegramWebhookController(
@@ -55,7 +79,7 @@ public class TelegramWebhookController implements TelegramApi {
             TelegramWebhookIdempotencyStore idempotencyStore,
             TelegramWebhookProblemFactory problemFactory,
             Clock clock) {
-        this(properties, idempotencyStore, problemFactory, clock, null);
+        this(properties, idempotencyStore, problemFactory, clock, null, null, null, null, null);
     }
 
     TelegramWebhookController(
@@ -64,11 +88,41 @@ public class TelegramWebhookController implements TelegramApi {
             TelegramWebhookProblemFactory problemFactory,
             Clock clock,
             ObjectProvider<NativeWebRequest> nativeWebRequestProvider) {
+        this(properties, idempotencyStore, problemFactory, clock, nativeWebRequestProvider, null, null, null, null);
+    }
+
+    TelegramWebhookController(
+            TelegramWebhookProperties properties,
+            TelegramWebhookIdempotencyStore idempotencyStore,
+            TelegramWebhookProblemFactory problemFactory,
+            Clock clock,
+            TelegramBotAdapter botAdapter,
+            TelegramResponseRenderer responseRenderer,
+            TelegramOutboundSendService outboundSendService,
+            ObjectMapper objectMapper) {
+        this(properties, idempotencyStore, problemFactory, clock, null, botAdapter, responseRenderer,
+                outboundSendService, objectMapper);
+    }
+
+    TelegramWebhookController(
+            TelegramWebhookProperties properties,
+            TelegramWebhookIdempotencyStore idempotencyStore,
+            TelegramWebhookProblemFactory problemFactory,
+            Clock clock,
+            ObjectProvider<NativeWebRequest> nativeWebRequestProvider,
+            TelegramBotAdapter botAdapter,
+            TelegramResponseRenderer responseRenderer,
+            TelegramOutboundSendService outboundSendService,
+            ObjectMapper objectMapper) {
         this.properties = properties;
         this.idempotencyStore = idempotencyStore;
         this.problemFactory = problemFactory;
         this.clock = clock;
         this.nativeWebRequestProvider = nativeWebRequestProvider;
+        this.botAdapter = botAdapter;
+        this.responseRenderer = responseRenderer;
+        this.outboundSendService = outboundSendService;
+        this.objectMapper = objectMapper == null ? new ObjectMapper() : objectMapper;
     }
 
     @Override
@@ -101,7 +155,45 @@ public class TelegramWebhookController implements TelegramApi {
         LOGGER.info(
                 "telegram_webhook outcome={} updateId={} requestId={} correlationId={} botId={} channelId={} failureCategory={}",
                 result.name(), updateId, metadata.requestId(), metadata.correlationId(), botId, channelId, "NONE");
+        if (result == IdempotencyResult.ACCEPTED) {
+            processAcceptedUpdate(telegramUpdate, metadata, botId, channelId, updateId);
+        }
         return ResponseEntity.accepted().body(accepted(result, updateId, botId, channelId));
+    }
+
+    private void processAcceptedUpdate(
+            TelegramUpdate update,
+            RequestMetadata metadata,
+            String botId,
+            String channelId,
+            long updateId) {
+        if (botAdapter == null || responseRenderer == null || outboundSendService == null) {
+            LOGGER.debug(
+                    "telegram_webhook_processing skipped updateId={} requestId={} correlationId={} botId={} channelId={} reason=unconfigured",
+                    updateId, metadata.requestId(), metadata.correlationId(), botId, channelId);
+            return;
+        }
+        TelegramAdapterResponse adapterResponse = botAdapter.handleUpdate(toJson(update), metadata.correlationId());
+        List<TelegramRenderedMessage> renderedMessages = responseRenderer.render(adapterResponse);
+        for (TelegramRenderedMessage message : renderedMessages) {
+            outboundSendService.send(message, metadata.correlationId(), outboundOperation(adapterResponse));
+        }
+        LOGGER.info(
+                "telegram_webhook_processing outcome=PROCESSED updateId={} requestId={} correlationId={} botId={} channelId={} renderedMessages={}",
+                updateId, metadata.requestId(), metadata.correlationId(), botId, channelId, renderedMessages.size());
+    }
+
+    private String toJson(TelegramUpdate update) {
+        try {
+            return objectMapper.writeValueAsString(update);
+        } catch (JsonProcessingException ex) {
+            throw new IllegalArgumentException("Validated Telegram update could not be serialized for processing.", ex);
+        }
+    }
+
+    private String outboundOperation(TelegramAdapterResponse response) {
+        String status = response == null || response.status() == null ? "unknown" : response.status().name().toLowerCase();
+        return "telegram_webhook_" + status;
     }
 
     private List<TelegramValidationError> validate(TelegramUpdate update) {
