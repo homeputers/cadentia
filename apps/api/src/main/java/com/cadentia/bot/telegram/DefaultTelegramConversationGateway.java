@@ -3,6 +3,7 @@ package com.cadentia.bot.telegram;
 import com.cadentia.api.controller.ConversationSessionFacade;
 import com.cadentia.generated.model.ConversationConfirmRequest;
 import com.cadentia.generated.model.ConversationSessionStateResponse;
+import com.cadentia.generated.model.ConversationState;
 import com.cadentia.generated.model.ConversationSlotUpdateRequest;
 import com.cadentia.generated.model.ConversationSlotUpdateRequestSlotPatch;
 import com.cadentia.generated.model.SetlistProposalResponse;
@@ -113,6 +114,15 @@ public class DefaultTelegramConversationGateway implements TelegramConversationG
             return denied(event, decision);
         }
         if (event.callbackAction() == TelegramCallbackAction.CONFIRM) {
+            ConversationSessionStateResponse current = facade.get(sessionId(event));
+            if (current.getState() != ConversationState.READY_TO_CONFIRM) {
+                touch(decision, event, toTelegramState(current));
+                return new TelegramAdapterResponse(
+                        TelegramAdapterResponseStatus.CONTINUED,
+                        "Session is not ready to confirm. Reply with scripture, theme, or setlist details first.",
+                        event,
+                        event.callbackAction().guidedField());
+            }
             ConversationSessionStateResponse state = facade.confirm(sessionId(event), new ConversationConfirmRequest().accepted(true));
             SetlistProposalResponse proposal = setlistService == null ? null : setlistService.generate(state.getSlots());
             touch(decision, event, TelegramSessionState.COMPLETED);
