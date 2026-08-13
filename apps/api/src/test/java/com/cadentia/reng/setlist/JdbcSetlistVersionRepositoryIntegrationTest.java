@@ -91,6 +91,9 @@ class JdbcSetlistVersionRepositoryIntegrationTest {
 
         assertThat(edited.parentVersionId()).isEqualTo(baseline.versionId());
         assertThat(edited.versionNumber()).isEqualTo(2);
+        assertThat(edited.requestPayload()).contains("\"request\"").contains("\"edited\"");
+        assertThat(edited.parsedIntentPayload()).contains("\"intent\"").contains("\"GENERATE_SETLIST\"");
+        assertThat(edited.explanationFactsPayload()).contains("\"fact\"").contains("\"manual-edit\"");
         assertThat(edited.items()).singleElement().satisfies(item -> {
             assertThat(item.catalogArrangementId()).isEqualTo(arrangementB.id());
             assertThat(item.itemProvenance()).isEqualTo("MANUAL");

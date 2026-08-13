@@ -61,8 +61,12 @@ public final class SetlistVersionModels {
             String provenanceType,
             String scoringProfileVersion,
             String engineVersion,
+            String requestPayload,
+            String parsedIntentPayload,
+            String explanationFactsPayload,
             Instant createdAt,
             String createdBy,
+            String commitSummary,
             List<SetlistVersionItemSnapshot> items,
             OperationalReadinessSummary readinessSummary) {
 
@@ -78,7 +82,47 @@ public final class SetlistVersionModels {
                 String createdBy,
                 List<SetlistVersionItemSnapshot> items) {
             this(setlistId, versionId, parentVersionId, versionNumber, provenanceType, scoringProfileVersion,
-                    engineVersion, createdAt, createdBy, items, OperationalReadinessSummary.unknown());
+                    engineVersion, "{}", "{}", "[]", createdAt, createdBy, null, items,
+                    OperationalReadinessSummary.unknown());
+        }
+
+        public SetlistVersionSnapshot(
+                UUID setlistId,
+                UUID versionId,
+                UUID parentVersionId,
+                int versionNumber,
+                String provenanceType,
+                String scoringProfileVersion,
+                String engineVersion,
+                String requestPayload,
+                String parsedIntentPayload,
+                String explanationFactsPayload,
+                Instant createdAt,
+                String createdBy,
+                List<SetlistVersionItemSnapshot> items) {
+            this(setlistId, versionId, parentVersionId, versionNumber, provenanceType, scoringProfileVersion,
+                    engineVersion, requestPayload, parsedIntentPayload, explanationFactsPayload, createdAt,
+                    createdBy, null, items, OperationalReadinessSummary.unknown());
+        }
+
+        public SetlistVersionSnapshot(
+                UUID setlistId,
+                UUID versionId,
+                UUID parentVersionId,
+                int versionNumber,
+                String provenanceType,
+                String scoringProfileVersion,
+                String engineVersion,
+                String requestPayload,
+                String parsedIntentPayload,
+                String explanationFactsPayload,
+                Instant createdAt,
+                String createdBy,
+                String commitSummary,
+                List<SetlistVersionItemSnapshot> items) {
+            this(setlistId, versionId, parentVersionId, versionNumber, provenanceType, scoringProfileVersion,
+                    engineVersion, requestPayload, parsedIntentPayload, explanationFactsPayload, createdAt,
+                    createdBy, commitSummary, items, OperationalReadinessSummary.unknown());
         }
     }
 

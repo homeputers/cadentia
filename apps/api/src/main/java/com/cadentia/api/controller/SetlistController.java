@@ -39,6 +39,8 @@ import com.cadentia.reng.setlist.SetlistVersionModels.SetlistVersionItemSnapshot
 import com.cadentia.reng.setlist.SetlistVersionModels.SetlistVersionSnapshot;
 import com.cadentia.reng.setlist.SetlistVersionService;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
@@ -58,6 +60,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class SetlistController implements SetlistsApi {
     private static final ObjectMapper JSON = new ObjectMapper().findAndRegisterModules();
+    private static final TypeReference<Map<String, Object>> MAP_TYPE = new TypeReference<>() {};
     private static final String GENERATED_ITEM_PROVENANCE = "GENERATED";
     private static final String MANUAL_ITEM_PROVENANCE = "MANUAL";
 
@@ -152,7 +155,9 @@ public class SetlistController implements SetlistsApi {
         List<SetlistVersionSummary> versions = setlistVersionService.listVersions(setlistId).stream()
                 .map(v -> new SetlistVersionSummary(v.versionId(), v.versionNumber(), SetlistProvenanceType.fromValue(v.provenanceType()), SetlistVersionStatus.DRAFT)
                         .parentVersionId(v.parentVersionId())
-                        .createdAt(v.createdAt().atOffset(ZoneOffset.UTC)))
+                        .createdAt(v.createdAt().atOffset(ZoneOffset.UTC))
+                        .createdBy(v.createdBy())
+                        .commitSummary(v.commitSummary()))
                 .toList();
         return ResponseEntity.ok(new SetlistVersionListResponse(setlistId, versions));
     }
@@ -200,10 +205,7 @@ public class SetlistController implements SetlistsApi {
                     json(createSetlistBaselineRequest.getExplanationFacts() == null
                             ? List.of()
                             : createSetlistBaselineRequest.getExplanationFacts()),
-                    createSetlistBaselineRequest.getItems().stream()
-                            .sorted(Comparator.comparing(item -> requiredPosition(item.getPosition())))
-                            .map(this::baselineItem)
-                            .toList(),
+                    baselineItems(createSetlistBaselineRequest.getItems()),
                     "LINEAR"));
             return ResponseEntity.status(201).body(new SetlistVersionEnvelope(snapshot.setlistId(), toApiVersion(snapshot)));
         } catch (IllegalArgumentException ex) {
@@ -238,9 +240,9 @@ public class SetlistController implements SetlistsApi {
                     currentActor(commitSetlistEditsRequest.getActorId()),
                     base.get().scoringProfileVersion(),
                     base.get().engineVersion(),
-                    "{}",
-                    "{}",
-                    "[]",
+                    base.get().requestPayload(),
+                    base.get().parsedIntentPayload(),
+                    base.get().explanationFactsPayload(),
                     "Applied " + commitSetlistEditsRequest.getOperations().size() + " setlist edit operation(s).",
                     editedItems.stream().map(EditableSetlistItem::toCommand).toList(),
                     editEvents(commitSetlistEditsRequest.getOperations())));
@@ -303,8 +305,11 @@ public class SetlistController implements SetlistsApi {
                 snapshot.scoringProfileVersion(), items)
                 .parentVersionId(snapshot.parentVersionId())
                 .createdAt(snapshot.createdAt().atOffset(ZoneOffset.UTC))
-                .parsedIntent(Collections.emptyMap())
-                .explanationFacts(List.of())
+                .createdBy(snapshot.createdBy())
+                .commitSummary(snapshot.commitSummary())
+                .request(readGenerateSetlistRequest(snapshot.requestPayload()))
+                .parsedIntent(readMap(snapshot.parsedIntentPayload()))
+                .explanationFacts(readStringList(snapshot.explanationFactsPayload()))
                 .readinessSummary(snapshot.readinessSummary() == null
                         ? null
                         : snapshot.readinessSummary().toReadinessSummary());
@@ -312,13 +317,28 @@ public class SetlistController implements SetlistsApi {
 
     private CreateSetlistItemCommand baselineItem(SetlistVersionItem item) {
         return new CreateSetlistItemCommand(
-                item.getPosition() - 1,
+                requiredPosition(item.getPosition()) - 1,
                 item.getCatalogArrangementId(),
                 transposedKey(item.getTransposeSemitones()),
                 null,
                 null,
                 storageItemProvenance(item.getProvenance()),
                 null);
+    }
+
+    private List<CreateSetlistItemCommand> baselineItems(List<SetlistVersionItem> items) {
+        List<SetlistVersionItem> sortedItems = items.stream()
+                .sorted(Comparator.comparing(item -> requiredPosition(item.getPosition())))
+                .toList();
+        for (int index = 0; index < sortedItems.size(); index++) {
+            int expectedPosition = index + 1;
+            if (requiredPosition(sortedItems.get(index).getPosition()) != expectedPosition) {
+                throw new IllegalArgumentException("Setlist item positions must be contiguous and unique.");
+            }
+        }
+        return sortedItems.stream()
+                .map(this::baselineItem)
+                .toList();
     }
 
     private boolean isLatestVersion(UUID setlistId, SetlistVersionSnapshot base) {
@@ -465,6 +485,47 @@ public class SetlistController implements SetlistsApi {
             return JSON.writeValueAsString(value);
         } catch (JsonProcessingException ex) {
             throw new IllegalArgumentException("Payload could not be serialized.", ex);
+        }
+    }
+
+    private GenerateSetlistRequest readGenerateSetlistRequest(String payload) {
+        if (payload == null || payload.isBlank()) {
+            return null;
+        }
+        try {
+            return JSON.readValue(payload, GenerateSetlistRequest.class);
+        } catch (JsonProcessingException ex) {
+            return null;
+        }
+    }
+
+    private Map<String, Object> readMap(String payload) {
+        if (payload == null || payload.isBlank()) {
+            return Collections.emptyMap();
+        }
+        try {
+            return JSON.readValue(payload, MAP_TYPE);
+        } catch (JsonProcessingException ex) {
+            return Collections.emptyMap();
+        }
+    }
+
+    private List<String> readStringList(String payload) {
+        if (payload == null || payload.isBlank()) {
+            return List.of();
+        }
+        try {
+            JsonNode node = JSON.readTree(payload);
+            if (!node.isArray()) {
+                return List.of(JSON.writeValueAsString(node));
+            }
+            List<String> values = new ArrayList<>();
+            for (JsonNode item : node) {
+                values.add(item.isTextual() ? item.asText() : JSON.writeValueAsString(item));
+            }
+            return List.copyOf(values);
+        } catch (JsonProcessingException ex) {
+            return List.of();
         }
     }
 

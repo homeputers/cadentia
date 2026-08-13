@@ -109,7 +109,11 @@ class SetlistServiceTest {
         assertThat(repository.baselineCommand.engineVersion()).isEqualTo("RecommendationEngine:recommendation_explanation.v1");
         assertThat(repository.baselineCommand.requestPayload()).contains("\"verseText\":\"Psalm 100\"");
         assertThat(repository.baselineCommand.parsedIntentPayload()).contains("\"intent\":\"GENERATE_SETLIST\"");
-        assertThat(repository.baselineCommand.explanationFactsPayload()).contains("\"recommendationResultId\":\"");
+        assertThat(repository.baselineCommand.explanationFactsPayload())
+                .contains("\"recommendation:rec-")
+                .contains("\"scoringProfile:test-recommendation-profile\"")
+                .contains("\"catalog:arrangement:" + id("arrangement-1") + "\"")
+                .contains("\"approval:approval_gate_summary\"");
         assertThat(repository.baselineCommand.items())
                 .extracting(item -> item.positionIndex(), item -> item.catalogArrangementId(), item -> item.itemProvenance())
                 .containsExactly(

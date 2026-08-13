@@ -765,6 +765,13 @@ SetlistVersionSummary:
     createdAt:
       type: string
       format: date-time
+    createdBy:
+      type: string
+      description: Actor that created this immutable version.
+    commitSummary:
+      type: string
+      nullable: true
+      description: Human-readable summary for manual edit versions.
 SetlistVersionEnvelope:
   type: object
   additionalProperties: false
