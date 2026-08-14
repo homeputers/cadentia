@@ -35,6 +35,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -103,6 +104,33 @@ public class ConversationSessionFacade {
         return snapshot(sessionId, record, List.of("Session state emitted."));
     }
 
+    public ConversationSessionStateResponse startNew(UUID sessionId) {
+        Optional<ConversationSessionRecord> prior = repository.findById(sessionId);
+        OffsetDateTime now = OffsetDateTime.now();
+        List<ConversationRevisionEvent> history = prior.map(ConversationSessionRecord::revisionHistory).orElse(List.of());
+        if (prior.isPresent()) {
+            history = appendRevisions(history, revision(
+                    ConversationRevisionEvent.EventTypeEnum.CANCEL,
+                    SlotValueSource.USER_EDIT,
+                    "Prior session discarded for new setlist flow."));
+        }
+        ConversationSessionRecord fresh = new ConversationSessionRecord(
+                sessionId,
+                ConversationState.COLLECTING,
+                empty(),
+                defaultSlotSources(now),
+                history,
+                now,
+                now,
+                null,
+                ChannelType.MIXED.getValue(),
+                null,
+                null,
+                Map.of());
+        repository.save(fresh);
+        return snapshot(sessionId, fresh, List.of("New setlist flow started."));
+    }
+
     public ConversationSessionStateResponse clarify(UUID sessionId, ConversationClarificationRequest request) {
         ConversationSessionRecord record = transition(
                 currentRecord(sessionId, ConversationState.COLLECTING),
@@ -141,6 +169,23 @@ public class ConversationSessionFacade {
                         "Session cancelled."));
         repository.save(record);
         return snapshot(sessionId, record, List.of("Session cancelled."));
+    }
+
+    public ConversationSessionStateResponse revise(UUID sessionId) {
+        ConversationSessionRecord baseline = currentRecord(sessionId, ConversationState.COLLECTING);
+        OffsetDateTime now = OffsetDateTime.now();
+        Map<String, ConversationSessionSourceStamp> resetSources = defaultSlotSources(now);
+        ConversationSessionRecord revised = baseline.withSlots(
+                ConversationState.COLLECTING,
+                baseline.slots(),
+                resetSources,
+                appendRevisions(baseline.revisionHistory(), revision(
+                        ConversationRevisionEvent.EventTypeEnum.SLOT_UPDATE,
+                        SlotValueSource.USER_EDIT,
+                        "Session revised for reconfiguration.")),
+                now);
+        repository.save(revised);
+        return snapshot(sessionId, revised, List.of("Session revised. Reconfigure your setlist constraints."));
     }
 
     public ConversationSessionStateResponse update(UUID sessionId, ConversationSlotUpdateRequest request) {
