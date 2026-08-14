@@ -393,7 +393,7 @@ public class IntentValidationService {
             int maximum,
             List<IntentValidationError> errors,
             int defaultValue) {
-        if (node == null) {
+        if (node == null || node.isNull()) {
             return defaultValue;
         }
         if (!node.isInt()) {
@@ -410,7 +410,7 @@ public class IntentValidationService {
 
     private static boolean readOptionalBoolean(
             JsonNode node, String path, List<IntentValidationError> errors, boolean defaultValue) {
-        if (node == null) {
+        if (node == null || node.isNull()) {
             return defaultValue;
         }
         if (!node.isBoolean()) {

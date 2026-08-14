@@ -24,4 +24,11 @@ public record IntentParseResult(
     public static IntentParseResult safeFailure(ValidatedIntent intent, List<IntentValidationError> errors) {
         return new IntentParseResult(IntentParseStatus.SAFE_FAILURE, intent, true, errors);
     }
+
+    public static IntentParseResult safeFailure(
+            ValidatedIntent intent,
+            boolean retryAttempted,
+            List<IntentValidationError> errors) {
+        return new IntentParseResult(IntentParseStatus.SAFE_FAILURE, intent, retryAttempted, errors);
+    }
 }

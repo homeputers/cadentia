@@ -14,14 +14,52 @@ operator setup, smoke testing, and disablement.
 
 ## Status
 
-Overall status: Planned.
+Overall status: Partially implemented; revised gap focus.
 
-- Subtask 1: Planned - define internal LLM client boundary and configuration.
-- Subtask 2: Planned - implement Ollama adapter and typed provider errors.
-- Subtask 3: Planned - wire ADR-012 prompt, validation, retry, and orchestration.
-- Subtask 4: Planned - add deterministic fake client and contract fixtures.
-- Subtask 5: Planned - add observability, redaction, and provider health checks.
-- Subtask 6: Planned - document local setup, smoke tests, operations, and rollback.
+Current implementation already includes an ADR-012 intent pipeline:
+
+- `LlmClient` is now a typed request/response boundary with prompt metadata,
+  user text, correlation metadata, generation options, raw response content, and
+  safe provider metadata.
+- `DefaultIntentService` loads the versioned prompt, calls the LLM boundary,
+  validates model output, attempts one repair retry, and returns safe failure for
+  validation and provider failures.
+- `IntentValidationService` applies the v1 schema/defaulting rules and rejects
+  unsupported fields and boundary violations.
+- The natural-language setlist endpoint invokes recommendation only after a
+  validated `GENERATE_SETLIST` intent.
+- Deterministic tests and fixtures cover much of the ADR-012 prompt,
+  validation, retry, and recommendation non-invocation behavior.
+- `OllamaLlmClient` is implemented behind the internal boundary and posts to the
+  Ollama chat API when `cadentia.llm.enabled=true`.
+- `DisabledLlmClient` is the default when LLM support is disabled.
+
+Remaining gaps are therefore not "build intent resolution from scratch"; they
+are the operations and observability gaps needed for production rollout.
+
+- Subtask 1: Implemented - revise the internal LLM client boundary and
+  configuration from string-only completion to provider-aware intent completion.
+- Subtask 2: Implemented - replace the current `OpenRouterClient` placeholder with
+  an Ollama adapter and typed provider errors.
+- Subtask 3: Implemented - harden the existing ADR-012 orchestration around the
+  provider-aware client, disabled-provider behavior, and typed outcome mapping.
+- Subtask 4: Implemented for current scope - keep existing deterministic intent tests
+  and add provider-error/fake-client coverage for the revised boundary.
+- Subtask 5: Planned - add provider observability, redaction tests, and health
+  checks.
+- Subtask 6: Planned - document Ollama setup, smoke tests, operations, and
+  rollback.
+
+## Gap Summary
+
+The next implementation batch should close these concrete rollout gaps:
+
+1. Add low-cardinality metrics/logs/health checks that do not expose raw prompt,
+   raw user text, or raw model output.
+2. Add an Ollama runbook covering local setup, optional live smoke testing,
+   expected disabled behavior, troubleshooting, and rollback.
+3. Add optional live smoke-test documentation or scripts that operators can run
+   against a local Ollama daemon without making CI depend on a live model.
 
 ## Guiding Principles
 
@@ -54,7 +92,7 @@ capabilities and typed provider failures.
 - API configuration resources under `apps/api/src/main/resources/`
 - Existing prompt artifact at
   `apps/api/src/main/resources/prompts/intent/intent-v1-system-prompt.md`
-- Intent contract package under `packages/intent-contract/`
+- Intent contract package under `packages/intent-contracts/`
 - ADR-012 plan in
   `docs/implementation-plans/ADR-012-llm-intent-extraction-contract-plan.md`
 - Security and observability plans in
@@ -74,14 +112,16 @@ capabilities and typed provider failures.
 
 ### Prompt
 
-Create the backend internal LLM client interface, request/response value objects,
-provider error taxonomy, and externalized configuration properties for the
-Ollama-backed intent extraction path. Include an enabled flag, provider name,
-base URL, model, timeout, and conservative generation options.
+Revise the existing `LlmClient` interface so it is provider-aware without
+leaking Ollama wire details. Add request/response value objects, provider error
+taxonomy, and externalized configuration properties for the Ollama-backed intent
+extraction path. Include an enabled flag, provider name, base URL, model,
+timeout, and conservative generation options.
 
 ### Acceptance criteria
 
-- A narrow internal LLM client interface exists for intent extraction calls.
+- A narrow internal LLM client interface exists for intent extraction calls and
+  no longer accepts an undifferentiated prompt string as its only input.
 - Request objects include prompt version, schema version, system prompt, user
   text, correlation metadata, and generation options derived from configuration.
 - Response objects carry raw model text plus safe provider metadata.
@@ -90,6 +130,8 @@ base URL, model, timeout, and conservative generation options.
 - Configuration is externalized and can disable LLM calls without changing code.
 - No provider credentials, production hostnames, tenant IDs, or church-instance
   identifiers are hard-coded.
+- Existing ADR-012 validation, prompt registry, and setlist endpoint behavior
+  continue to compile against the revised boundary.
 
 ### Restrictions
 
@@ -97,6 +139,7 @@ base URL, model, timeout, and conservative generation options.
   write methods to the LLM client interface.
 - Do not expose provider-specific HTTP classes outside the adapter package.
 - Do not place model names or provider settings into prompt templates.
+- Do not move schema validation or repair prompting into the provider adapter.
 
 ## Subtask 2: Implement the Ollama provider adapter
 
@@ -155,10 +198,10 @@ model, non-2xx status, malformed response, and empty content.
 
 ### Context
 
-ADR-012 already defines prompt versioning, JSON validation, deterministic
-defaults, one allowed repair retry, and hard boundaries before recommendation
-execution. ADR-037 adds the concrete Ollama-backed client that feeds raw model
-output into that pipeline.
+ADR-012 prompt versioning, JSON validation, deterministic defaults, one allowed
+repair retry, and hard recommendation boundaries are already represented in the
+current backend. ADR-037 now needs to harden that path around the provider-aware
+client and safe provider-failure outcomes.
 
 **Codebase anchors**
 
@@ -167,7 +210,7 @@ output into that pipeline.
 - Split OpenAPI contract under `apps/api/src/main/openapi/`
 - Intent prompt artifact under
   `apps/api/src/main/resources/prompts/intent/intent-v1-system-prompt.md`
-- Intent contract package and fixtures under `packages/intent-contract/`
+- Intent contract package and fixtures under `packages/intent-contracts/`
 - ADR-012 implementation plan in
   `docs/implementation-plans/ADR-012-llm-intent-extraction-contract-plan.md`
 - ADR-015 conversational-flow plan in
@@ -191,15 +234,15 @@ output into that pipeline.
 
 ### Prompt
 
-Connect the natural-language setlist request path to the internal LLM client,
-ADR-012 prompt registry, schema validator, defaulting service, retry policy, and
-safe outcome mapping. Ensure recommendation execution is invoked only after a
-validated `GENERATE_SETLIST` result.
+Adapt the existing natural-language setlist request path to the revised internal
+LLM client, preserving ADR-012 prompt loading, schema validation, defaulting,
+repair retry, and recommendation gating. Add safe outcome mapping for disabled
+provider and typed provider failures.
 
 ### Acceptance criteria
 
 - The orchestration path loads the configured intent prompt version and schema
-  version.
+  version and passes them through the typed LLM request object.
 - First-pass model output is parsed and validated through the ADR-012 pipeline.
 - Malformed or schema-invalid output triggers at most one strict repair retry
   when eligible.
@@ -209,6 +252,8 @@ validated `GENERATE_SETLIST` result.
   not invoke the Recommendation Engine.
 - Existing deterministic setlist flows remain usable when LLM integration is
   disabled.
+- Provider failures are represented distinctly from schema failures in logs,
+  metrics, and API-safe outcomes.
 
 ### Restrictions
 
@@ -229,7 +274,7 @@ controlled raw outputs and failures.
 
 - Backend tests under `apps/api/src/test/`
 - Test resources under `apps/api/src/test/resources/`
-- Intent contract package tests and fixtures under `packages/intent-contract/`
+- Intent contract package tests and fixtures under `packages/intent-contracts/`
 - Existing prompt artifact under
   `apps/api/src/main/resources/prompts/intent/intent-v1-system-prompt.md`
 - ADR-012 contract fixture guidance in
