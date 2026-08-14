@@ -8,6 +8,7 @@ import com.cadentia.intent.ValidatedIntent;
 import com.cadentia.llm.prompt.IntentPromptRegistry;
 import com.cadentia.llm.prompt.IntentPromptTemplate;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,18 +21,24 @@ public class DefaultIntentService implements IntentService {
     private static final String SAFE_FAILURE_REASON_CODE = "UNSUPPORTED_INTENT";
     private static final String SAFE_FAILURE_MESSAGE = "I could not safely understand that request. "
             + "Please rephrase it with a scripture, theme, or setlist constraint.";
+    private static final String PROVIDER_FAILURE_REASON_CODE = "LLM_PROVIDER_UNAVAILABLE";
+    private static final String PROVIDER_FAILURE_MESSAGE = "Natural-language interpretation is unavailable right now. "
+            + "Please try again later or use structured setlist constraints.";
 
     private final LlmClient llmClient;
+    private final LlmProperties llmProperties;
     private final IntentValidationService validationService;
     private final IntentPromptRegistry promptRegistry;
     private final IntentOrchestrationObserver orchestrationObserver;
 
     public DefaultIntentService(
             LlmClient llmClient,
+            LlmProperties llmProperties,
             IntentValidationService validationService,
             IntentPromptRegistry promptRegistry,
             IntentOrchestrationObserver orchestrationObserver) {
         this.llmClient = llmClient;
+        this.llmProperties = llmProperties;
         this.validationService = validationService;
         this.promptRegistry = promptRegistry;
         this.orchestrationObserver = orchestrationObserver;
@@ -40,7 +47,13 @@ public class DefaultIntentService implements IntentService {
     @Override
     public IntentParseResult parse(String input) {
         IntentPromptTemplate template = promptRegistry.get(IntentPromptRegistry.INTENT_V1_PROMPT_VERSION);
-        String firstResponse = llmClient.complete(buildInitialPrompt(template, input));
+        String correlationId = UUID.randomUUID().toString();
+        String firstResponse;
+        try {
+            firstResponse = llmClient.complete(buildInitialRequest(template, input, correlationId)).content();
+        } catch (LlmProviderException exception) {
+            return providerFailure(exception, false);
+        }
         IntentValidationResult firstValidation = validationService.validate(firstResponse);
         if (firstValidation.isAccepted()) {
             IntentParseResult result = IntentParseResult.accepted(firstValidation.intent(), false);
@@ -51,7 +64,12 @@ public class DefaultIntentService implements IntentService {
         orchestrationObserver.recordFirstPassFailure(template.promptVersion(), template.schemaVersion(), firstValidation.errors());
         orchestrationObserver.recordRetryAttempt(template.promptVersion(), template.schemaVersion(), firstValidation.errors());
         logRetry(template, firstValidation.errors());
-        String repairResponse = llmClient.complete(buildRepairPrompt(template, input, firstValidation.errors()));
+        String repairResponse;
+        try {
+            repairResponse = llmClient.complete(buildRepairRequest(template, input, correlationId, firstValidation.errors())).content();
+        } catch (LlmProviderException exception) {
+            return providerFailure(exception, true);
+        }
         IntentValidationResult repairValidation = validationService.validate(repairResponse);
         if (repairValidation.isAccepted()) {
             orchestrationObserver.recordRetryOutcome(template.promptVersion(), template.schemaVersion(), true, List.of());
@@ -71,23 +89,49 @@ public class DefaultIntentService implements IntentService {
         return result;
     }
 
-    private String buildInitialPrompt(IntentPromptTemplate template, String input) {
-        return template.systemPrompt()
-                + "\n\nUser request to extract into JSON:\n"
-                + input;
+    private LlmRequest buildInitialRequest(IntentPromptTemplate template, String input, String correlationId) {
+        return new LlmRequest(
+                template.promptVersion(),
+                template.schemaVersion(),
+                template.systemPrompt(),
+                input,
+                "",
+                correlationId,
+                llmProperties.generationOptions());
     }
 
-    private String buildRepairPrompt(
+    private LlmRequest buildRepairRequest(
             IntentPromptTemplate template,
             String input,
+            String correlationId,
             List<IntentValidationError> errors) {
-        return template.systemPrompt()
-                + "\n\nStrict repair retry. The previous response failed backend validation with error codes: "
+        String repairInstruction = "Strict repair retry. The previous response failed backend validation with error codes: "
                 + summarizeErrorCodes(errors)
                 + ". Return one valid JSON object only. Do not include prose, Markdown, code fences, or unsupported fields. "
-                + "Do not select songs, invent songs, or make catalog claims.\n\n"
-                + "User request to extract into JSON:\n"
-                + input;
+                + "Do not select songs, invent songs, or make catalog claims.";
+        return new LlmRequest(
+                template.promptVersion(),
+                template.schemaVersion(),
+                template.systemPrompt(),
+                input,
+                repairInstruction,
+                correlationId,
+                llmProperties.generationOptions());
+    }
+
+    private IntentParseResult providerFailure(LlmProviderException exception, boolean retryAttempted) {
+        LOGGER.warn(
+                "Intent extraction provider failure errorCode={} retryAttempted={} reason={}",
+                exception.errorCode(),
+                retryAttempted,
+                exception.getMessage());
+        UnsupportedRequestIntent safeFailureIntent = new UnsupportedRequestIntent(
+                IntentValidationService.CONTRACT_VERSION,
+                PROVIDER_FAILURE_REASON_CODE,
+                PROVIDER_FAILURE_MESSAGE);
+        IntentParseResult result = IntentParseResult.safeFailure(safeFailureIntent, retryAttempted, List.of());
+        orchestrationObserver.recordTerminalOutcome(result.status(), result.intent().intentType(), result.retryAttempted());
+        return result;
     }
 
     private void logRetry(IntentPromptTemplate template, List<IntentValidationError> errors) {

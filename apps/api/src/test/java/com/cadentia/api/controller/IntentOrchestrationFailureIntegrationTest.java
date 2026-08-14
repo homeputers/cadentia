@@ -1,7 +1,6 @@
 package com.cadentia.api.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.when;
 
 import com.cadentia.generated.model.GenerateSetlistRequest;
 import com.cadentia.generated.model.NaturalLanguageSetlistRequest;
@@ -11,6 +10,8 @@ import com.cadentia.llm.IntentOrchestrationObserver;
 import com.cadentia.llm.IntentParseResult;
 import com.cadentia.llm.IntentParseStatus;
 import com.cadentia.llm.LlmClient;
+import com.cadentia.llm.LlmProperties;
+import com.cadentia.llm.LlmResponse;
 import com.cadentia.llm.prompt.IntentPromptRegistry;
 import com.cadentia.reng.SetlistService;
 import com.cadentia.reng.setlist.SetlistVersionDiffService;
@@ -22,9 +23,10 @@ import com.cadentia.intent.IntentValidationError;
 import com.cadentia.intent.IntentValidationService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Duration;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 import org.springframework.http.ResponseEntity;
 
 class IntentOrchestrationFailureIntegrationTest {
@@ -77,14 +79,16 @@ class IntentOrchestrationFailureIntegrationTest {
     }
 
     private void assertNoRecommendationInvocation(String firstReply, String secondReply, String expectedStatus) {
-        LlmClient llmClient = Mockito.mock(LlmClient.class);
+        FakeLlmClient llmClient = new FakeLlmClient();
+        llmClient.enqueue(response(firstReply));
         if (secondReply == null) {
-            when(llmClient.complete(Mockito.anyString())).thenReturn(firstReply);
+            // no retry expected
         } else {
-            when(llmClient.complete(Mockito.anyString())).thenReturn(firstReply, secondReply);
+            llmClient.enqueue(response(secondReply));
         }
         DefaultIntentService intentService = new DefaultIntentService(
                 llmClient,
+                new LlmProperties(),
                 new IntentValidationService(new ObjectMapper()),
                 new IntentPromptRegistry(),
                 new NoopObserver());
@@ -101,6 +105,26 @@ class IntentOrchestrationFailureIntegrationTest {
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().getStatus()).isEqualTo(expectedStatus);
         assertThat(setlistService.invocationCount).isZero();
+        assertThat(llmClient.requests).hasSize(secondReply == null ? 1 : 2);
+    }
+
+    private static LlmResponse response(String content) {
+        return new LlmResponse(content, "test", "fake", java.util.Map.of());
+    }
+
+    private static final class FakeLlmClient implements LlmClient {
+        private final ArrayDeque<LlmResponse> replies = new ArrayDeque<>();
+        private final List<com.cadentia.llm.LlmRequest> requests = new ArrayList<>();
+
+        private void enqueue(LlmResponse response) {
+            replies.add(response);
+        }
+
+        @Override
+        public LlmResponse complete(com.cadentia.llm.LlmRequest request) {
+            requests.add(request);
+            return replies.removeFirst();
+        }
     }
 
 

@@ -1,9 +1,6 @@
 package com.cadentia.llm;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoMoreInteractions;
-import static org.mockito.Mockito.when;
 
 import com.cadentia.intent.ClarifyRequestIntent;
 import com.cadentia.intent.Counts;
@@ -14,31 +11,25 @@ import com.cadentia.intent.IntentValidationService;
 import com.cadentia.intent.UnsupportedRequestIntent;
 import com.cadentia.llm.prompt.IntentPromptRegistry;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Captor;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
 
-@ExtendWith(MockitoExtension.class)
 class DefaultIntentServiceTest {
 
-    @Mock
-    private LlmClient llmClient;
-
-    @Captor
-    private ArgumentCaptor<String> promptCaptor;
-
+    private FakeLlmClient llmClient;
     private DefaultIntentService intentService;
     private RecordingObserver observer;
 
     @BeforeEach
     void setUp() {
+        llmClient = new FakeLlmClient();
         observer = new RecordingObserver();
         intentService = new DefaultIntentService(
                 llmClient,
+                new LlmProperties(),
                 new IntentValidationService(new ObjectMapper()),
                 new IntentPromptRegistry(),
                 observer);
@@ -47,7 +38,7 @@ class DefaultIntentServiceTest {
     @Test
     void parseReturnsFirstPassSuccessWithoutRetry() {
         // Arrange
-        when(llmClient.complete(promptCaptor.capture())).thenReturn("""
+        llmClient.enqueue(response("""
                 {
                   "intent": "GENERATE_SETLIST",
                   "slots": {
@@ -55,7 +46,7 @@ class DefaultIntentServiceTest {
                     "counts": { "praise": 3, "worship": 2 }
                   }
                 }
-                """);
+                """));
 
         // Act
         IntentParseResult result = intentService.parse("Build a short joyful setlist.");
@@ -69,21 +60,23 @@ class DefaultIntentServiceTest {
             assertThat(intent.slots().themeHints()).containsExactly("joy");
             assertThat(intent.slots().counts()).isEqualTo(new Counts(3, 2));
         });
-        assertThat(promptCaptor.getValue())
+        assertThat(llmClient.requests.get(0).systemPrompt())
                 .contains("Return JSON only")
+                .doesNotContain("Build a short joyful setlist.");
+        assertThat(llmClient.requests.get(0).userMessage())
                 .contains("User request to extract into JSON")
                 .contains("Build a short joyful setlist.");
-        verify(llmClient).complete(promptCaptor.getValue());
-        verifyNoMoreInteractions(llmClient);
+        assertThat(llmClient.requests.get(0).promptVersion()).isEqualTo("intent-v1");
+        assertThat(llmClient.requests.get(0).schemaVersion()).isEqualTo("v1");
+        assertThat(llmClient.requests).hasSize(1);
         assertThat(observer.terminalOutcomes).containsExactly("ACCEPTED:GENERATE_SETLIST:false");
     }
 
     @Test
     void parseRetriesExactlyOnceAfterMalformedJsonAndReturnsRetrySuccess() {
         // Arrange
-        when(llmClient.complete(promptCaptor.capture()))
-                .thenReturn("Here is the JSON: { bad")
-                .thenReturn("""
+        llmClient.enqueue(response("Here is the JSON: { bad"));
+        llmClient.enqueue(response("""
                         {
                           "intent": "GENERATE_SETLIST",
                           "slots": {
@@ -91,7 +84,7 @@ class DefaultIntentServiceTest {
                             "themeHints": ["thanksgiving"]
                           }
                         }
-                        """);
+                        """));
 
         // Act
         IntentParseResult result = intentService.parse("Psalm 100 thanksgiving set.");
@@ -103,12 +96,13 @@ class DefaultIntentServiceTest {
             assertThat(intent.slots().scriptureReferences()).containsExactly("Psalm 100");
             assertThat(intent.slots().themeHints()).containsExactly("thanksgiving");
         });
-        assertThat(promptCaptor.getAllValues()).hasSize(2);
-        assertThat(promptCaptor.getAllValues().get(1))
+        assertThat(llmClient.requests).hasSize(2);
+        assertThat(llmClient.requests.get(1).userMessage())
                 .contains("Strict repair retry")
                 .contains("MALFORMED_JSON")
                 .contains("Return one valid JSON object only");
-        verifyNoMoreInteractions(llmClient);
+        assertThat(llmClient.requests.get(1).correlationId())
+                .isEqualTo(llmClient.requests.get(0).correlationId());
         assertThat(observer.firstPassFailures).containsExactly("MALFORMED_JSON");
         assertThat(observer.retryOutcomes).containsExactly("true:");
         assertThat(observer.terminalOutcomes).containsExactly("ACCEPTED:GENERATE_SETLIST:true");
@@ -117,16 +111,15 @@ class DefaultIntentServiceTest {
     @Test
     void parseRetriesExactlyOnceAfterSchemaViolationAndReturnsSafeFailureWhenRepairIsInvalid() {
         // Arrange
-        when(llmClient.complete(promptCaptor.capture()))
-                .thenReturn("""
+        llmClient.enqueue(response("""
                         {
                           "intent": "GENERATE_SETLIST",
                           "slots": {
                             "selectedSongs": ["Invented Song"]
                           }
                         }
-                        """)
-                .thenReturn("still not json");
+                        """));
+        llmClient.enqueue(response("still not json"));
 
         // Act
         IntentParseResult result = intentService.parse("Give me Invented Song as the opener.");
@@ -142,11 +135,10 @@ class DefaultIntentServiceTest {
         assertThat(result.errors())
                 .singleElement()
                 .satisfies(error -> assertThat(error.code()).isEqualTo(IntentValidationErrorCode.MALFORMED_JSON));
-        assertThat(promptCaptor.getAllValues()).hasSize(2);
-        assertThat(promptCaptor.getAllValues().get(1))
+        assertThat(llmClient.requests).hasSize(2);
+        assertThat(llmClient.requests.get(1).userMessage())
                 .contains("UNSUPPORTED_FIELD")
                 .doesNotContain("selectedSongs");
-        verifyNoMoreInteractions(llmClient);
         assertThat(observer.retryOutcomes).containsExactly("false:MALFORMED_JSON");
         assertThat(observer.terminalOutcomes).containsExactly("SAFE_FAILURE:UNSUPPORTED_REQUEST:true");
     }
@@ -154,14 +146,14 @@ class DefaultIntentServiceTest {
     @Test
     void parseReturnsStructuredClarifyOutcome() {
         // Arrange
-        when(llmClient.complete(promptCaptor.capture())).thenReturn("""
+        llmClient.enqueue(response("""
                 {
                   "intent": "CLARIFY_REQUEST",
                   "reasonCode": "MISSING_REQUIRED_INFORMATION",
                   "clarificationQuestion": "Which scripture or theme should the setlist focus on?",
                   "missingSlots": ["verseText", "scriptureReferences"]
                 }
-                """);
+                """));
 
         // Act
         IntentParseResult result = intentService.parse("Make me a setlist.");
@@ -174,20 +166,20 @@ class DefaultIntentServiceTest {
             assertThat(intent.reasonCode()).isEqualTo("MISSING_REQUIRED_INFORMATION");
             assertThat(intent.missingSlots()).containsExactly("verseText", "scriptureReferences");
         });
-        verifyNoMoreInteractions(llmClient);
+        assertThat(llmClient.requests).hasSize(1);
         assertThat(observer.terminalOutcomes).containsExactly("ACCEPTED:CLARIFY_REQUEST:false");
     }
 
     @Test
     void parseReturnsStructuredUnsupportedOutcome() {
         // Arrange
-        when(llmClient.complete(promptCaptor.capture())).thenReturn("""
+        llmClient.enqueue(response("""
                 {
                   "intent": "UNSUPPORTED_REQUEST",
                   "reasonCode": "UNSUPPORTED_ACTION",
                   "safeMessage": "I cannot approve songs or update catalog records."
                 }
-                """);
+                """));
 
         // Act
         IntentParseResult result = intentService.parse("Approve this new catalog song.");
@@ -200,8 +192,56 @@ class DefaultIntentServiceTest {
             assertThat(intent.reasonCode()).isEqualTo("UNSUPPORTED_ACTION");
             assertThat(intent.safeMessage()).contains("cannot approve songs");
         });
-        verifyNoMoreInteractions(llmClient);
+        assertThat(llmClient.requests).hasSize(1);
         assertThat(observer.terminalOutcomes).containsExactly("ACCEPTED:UNSUPPORTED_REQUEST:false");
+    }
+
+    @Test
+    void parseReturnsSafeFailureWhenProviderIsDisabled() {
+        // Arrange
+        llmClient.enqueue(new LlmProviderException(LlmProviderErrorCode.DISABLED, "disabled"));
+
+        // Act
+        IntentParseResult result = intentService.parse("Build a setlist from Psalm 23.");
+
+        // Assert
+        assertThat(result.status()).isEqualTo(IntentParseStatus.SAFE_FAILURE);
+        assertThat(result.retryAttempted()).isFalse();
+        assertThat(result.errors()).isEmpty();
+        assertThat(result.intent()).isInstanceOfSatisfying(UnsupportedRequestIntent.class, intent -> {
+            assertThat(intent.intentType()).isEqualTo(IntentType.UNSUPPORTED_REQUEST);
+            assertThat(intent.reasonCode()).isEqualTo("LLM_PROVIDER_UNAVAILABLE");
+            assertThat(intent.safeMessage()).contains("Natural-language interpretation is unavailable");
+        });
+        assertThat(llmClient.requests).hasSize(1);
+        assertThat(observer.terminalOutcomes).containsExactly("SAFE_FAILURE:UNSUPPORTED_REQUEST:false");
+    }
+
+    private LlmResponse response(String content) {
+        return new LlmResponse(content, "test", "fake", java.util.Map.of());
+    }
+
+    private static final class FakeLlmClient implements LlmClient {
+        private final ArrayDeque<Object> replies = new ArrayDeque<>();
+        private final List<LlmRequest> requests = new ArrayList<>();
+
+        private void enqueue(LlmResponse response) {
+            replies.add(response);
+        }
+
+        private void enqueue(LlmProviderException exception) {
+            replies.add(exception);
+        }
+
+        @Override
+        public LlmResponse complete(LlmRequest request) {
+            requests.add(request);
+            Object reply = replies.removeFirst();
+            if (reply instanceof LlmProviderException exception) {
+                throw exception;
+            }
+            return (LlmResponse) reply;
+        }
     }
 
     private static final class RecordingObserver implements IntentOrchestrationObserver {

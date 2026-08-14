@@ -41,3 +41,14 @@ Extraction rules:
 - Return CLARIFY_REQUEST when required information is missing or ambiguous.
 - Return UNSUPPORTED_REQUEST when the user asks for actions outside this contract.
 - Named songs in the user request may only be represented as preferences or exclusions when supported by allowed slots; never represent them as recommendations.
+
+Examples of valid JSON outputs:
+
+GENERATE_SETLIST example:
+{"intent":"GENERATE_SETLIST","slots":{"verseText":"","scriptureReferences":["Ephesians 6:11"],"themeHints":["spiritual warfare"],"counts":{"praise":10,"worship":5},"keyPolicy":{"preferSameKey":true,"allowRelativeMajorMinor":true,"maxKeyCenters":2},"tempoPolicy":{"maxJumpBpm":12},"language":null,"energyArc":null,"excludedSongs":[],"serviceMoment":null}}
+
+CLARIFY_REQUEST example:
+{"intent":"CLARIFY_REQUEST","reasonCode":"MISSING_REQUIRED_INFORMATION","clarificationQuestion":"Which scripture or theme should the setlist focus on?","missingSlots":["verseText","scriptureReferences"]}
+
+UNSUPPORTED_REQUEST example:
+{"intent":"UNSUPPORTED_REQUEST","reasonCode":"UNSUPPORTED_ACTION","safeMessage":"I cannot approve songs or update catalog records."}

@@ -25,6 +25,16 @@ cadentia:
       absolute-lifetime: ${CADENTIA_CONVERSATION_ABSOLUTE_LIFETIME:PT4H}
   application:
     version: ${CADENTIA_APPLICATION_VERSION:0.1.0}
+  llm:
+    enabled: ${CADENTIA_LLM_ENABLED:false}
+    provider: ${CADENTIA_LLM_PROVIDER:ollama}
+    ollama:
+      base-url: ${CADENTIA_LLM_OLLAMA_BASE_URL:http://localhost:11434}
+      model: ${CADENTIA_LLM_OLLAMA_MODEL:llama3.1:8b}
+      timeout: ${CADENTIA_LLM_OLLAMA_TIMEOUT:PT20S}
+      temperature: ${CADENTIA_LLM_OLLAMA_TEMPERATURE:0.0}
+      top-p: ${CADENTIA_LLM_OLLAMA_TOP_P:0.9}
+      max-output-tokens: ${CADENTIA_LLM_OLLAMA_MAX_OUTPUT_TOKENS:800}
   church-config:
     path: ${CADENTIA_CHURCH_CONFIG_PATH:}
 
