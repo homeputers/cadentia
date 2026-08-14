@@ -1,7 +1,9 @@
 package com.cadentia.bot.telegram;
 
+import com.cadentia.generated.model.ConversationSlotSource;
 import com.cadentia.generated.model.GenerateSetlistRequest;
 import com.cadentia.generated.model.KeyPolicy;
+import com.cadentia.generated.model.SlotValueSource;
 import com.cadentia.generated.model.RecommendationExplanation;
 import com.cadentia.generated.model.RecommendationExplanationEntry;
 import com.cadentia.generated.model.RecommendationExplanationEvidence;
@@ -144,9 +146,11 @@ public class TelegramResponseRenderer {
             case UNSUPPORTED -> "<b>Unsupported Telegram action</b>\nUse /help for supported commands.";
             case STALE_CALLBACK -> "<b>Expired action</b>\nThat button is no longer active. Use /status or /newsetlist.";
         });
-        String selectionSummary = selectionSummary(response.currentSlots());
-        if (!selectionSummary.isBlank()) {
-            body.append("\n\n<b>Selected so far:</b>\n").append(selectionSummary);
+        if (response.status() != TelegramAdapterResponseStatus.STARTED) {
+            String selectionSummary = selectionSummary(response.currentSlots());
+            if (!selectionSummary.isBlank()) {
+                body.append("\n\n<b>Selected so far:</b>\n").append(selectionSummary);
+            }
         }
         if (response.status() == TelegramAdapterResponseStatus.STARTED) {
             body.append("\nSend your Scripture focus or use /newsetlist.");
@@ -240,7 +244,7 @@ public class TelegramResponseRenderer {
             return null;
         }
         GenerateSetlistRequest slots = response.currentSlots();
-        GuidedStage stage = determineStage(slots);
+        GuidedStage stage = determineStage(slots, response.slotSources());
         List<List<TelegramRenderedMessage.TelegramInlineKeyboardButton>> rows = new ArrayList<>();
         switch (stage) {
             case COUNTS -> rows.add(List.of(
@@ -273,8 +277,8 @@ public class TelegramResponseRenderer {
         return rows.isEmpty() ? null : new TelegramRenderedMessage.TelegramInlineKeyboard(rows);
     }
 
-    private GuidedStage determineStage(GenerateSetlistRequest slots) {
-        if (slots == null || countsAbsent(slots.getCounts())) {
+    private GuidedStage determineStage(GenerateSetlistRequest slots, List<ConversationSlotSource> slotSources) {
+        if (slots == null || countsAbsent(slots.getCounts()) || sourceIsDefault(slotSources, "counts")) {
             return GuidedStage.COUNTS;
         }
         if (!StringUtils.hasText(slots.getLanguage())) {
@@ -286,13 +290,22 @@ public class TelegramResponseRenderer {
         if (slots.getServiceMoment() == null) {
             return GuidedStage.SERVICE_MOMENT;
         }
-        if (slots.getKeyPolicy() == null) {
+        if (slots.getKeyPolicy() == null || sourceIsDefault(slotSources, "keyPolicy")) {
             return GuidedStage.KEY_POLICY;
         }
-        if (slots.getTempoPolicy() == null) {
+        if (slots.getTempoPolicy() == null || sourceIsDefault(slotSources, "tempoPolicy")) {
             return GuidedStage.TEMPO_POLICY;
         }
         return GuidedStage.CONFIRM;
+    }
+
+    private boolean sourceIsDefault(List<ConversationSlotSource> slotSources, String slotName) {
+        if (slotSources == null) {
+            return false;
+        }
+        return slotSources.stream()
+                .anyMatch(s -> s.getSlot().getValue().equals(slotName)
+                        && s.getSource() == SlotValueSource.DEFAULT);
     }
 
     private boolean countsAbsent(SetlistCounts counts) {

@@ -310,6 +310,52 @@ class ConversationSessionFacadeTest {
                 intentService);
     }
 
+    @Test
+    void startNewDiscardsPriorSessionAndReturnsFreshDefaults() {
+        InMemoryConversationSessionRepository repository = new InMemoryConversationSessionRepository();
+        ConversationSessionFacade facade = facade(repository, null);
+        UUID sessionId = UUID.randomUUID();
+
+        facade.update(sessionId, new ConversationSlotUpdateRequest()
+                .source(SlotValueSource.MENU)
+                .slotPatch(new ConversationSlotUpdateRequestSlotPatch()
+                        .counts(new SetlistCounts(3, 2))
+                        .language("es")));
+        ConversationSessionStateResponse prior = facade.get(sessionId);
+        assertThat(prior.getSlots().getCounts().getPraise()).isEqualTo(3);
+        assertThat(prior.getSlots().getLanguage()).isEqualTo("es");
+
+        ConversationSessionStateResponse fresh = facade.startNew(sessionId);
+
+        assertThat(fresh.getState()).isEqualTo(ConversationState.COLLECTING);
+        assertThat(fresh.getSlots().getCounts().getPraise()).isEqualTo(10);
+        assertThat(fresh.getSlots().getCounts().getWorship()).isEqualTo(5);
+        assertThat(fresh.getSlots().getLanguage()).isNull();
+        assertThat(fresh.getSlots().getVerseText()).isEmpty();
+        assertThat(fresh.getAuditMessages()).contains("New setlist flow started.");
+        assertThat(fresh.getRevisionHistory())
+                .extracting(event -> event.getEventType().getValue())
+                .contains("cancel");
+
+        ConversationSessionRecord record = repository.findById(sessionId).orElseThrow();
+        assertThat(record.slots().language()).isNull();
+        assertThat(record.state()).isEqualTo(ConversationState.COLLECTING);
+    }
+
+    @Test
+    void startNewCreatesFreshSessionWhenNoPriorExists() {
+        ConversationSessionFacade facade = facade(null);
+        UUID sessionId = UUID.randomUUID();
+
+        ConversationSessionStateResponse fresh = facade.startNew(sessionId);
+
+        assertThat(fresh.getState()).isEqualTo(ConversationState.COLLECTING);
+        assertThat(fresh.getSlots().getCounts().getPraise()).isEqualTo(10);
+        assertThat(fresh.getSlots().getCounts().getWorship()).isEqualTo(5);
+        assertThat(fresh.getAuditMessages()).contains("New setlist flow started.");
+        assertThat(fresh.getRevisionHistory()).isEmpty();
+    }
+
     private static GenerateSetlistIntent normalizedIntent() {
         return new GenerateSetlistIntent("v1", new GenerateSetlistSlots(
                 "Psalm 100",

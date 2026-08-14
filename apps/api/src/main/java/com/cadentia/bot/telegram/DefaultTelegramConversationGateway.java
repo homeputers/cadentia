@@ -76,14 +76,15 @@ public class DefaultTelegramConversationGateway implements TelegramConversationG
         if (!decision.permitted()) {
             return denied(event, decision);
         }
-        ConversationSessionStateResponse state = facade.update(sessionId(event), new ConversationSlotUpdateRequest().source(SlotValueSource.MENU));
+        ConversationSessionStateResponse state = facade.startNew(sessionId(event));
         touch(decision, event, TelegramSessionState.NEW_SETLIST_ACTIVE);
         return new TelegramAdapterResponse(
                 TelegramAdapterResponseStatus.STARTED,
                 "New setlist flow started.",
                 event,
                 null,
-                state.getSlots());
+                state.getSlots(),
+                state.getSlotSources());
     }
 
     @Override
@@ -131,7 +132,8 @@ public class DefaultTelegramConversationGateway implements TelegramConversationG
                 String.join(" ", state.getAuditMessages()),
                 event,
                 null,
-                state.getSlots());
+                state.getSlots(),
+                state.getSlotSources());
     }
 
     @Override
@@ -149,7 +151,8 @@ public class DefaultTelegramConversationGateway implements TelegramConversationG
                         "Session is not ready to confirm. Reply with scripture, theme, or setlist details first.",
                         event,
                         event.callbackAction().guidedField(),
-                        current.getSlots());
+                        current.getSlots(),
+                        current.getSlotSources());
             }
             ConversationSessionStateResponse state = facade.confirm(sessionId(event), new ConversationConfirmRequest().accepted(true));
             SetlistProposalResponse proposal = setlistService == null ? null : setlistService.generate(state.getSlots());
@@ -167,20 +170,22 @@ public class DefaultTelegramConversationGateway implements TelegramConversationG
                     event,
                     event.callbackAction().guidedField(),
                     state.getSlots(),
+                    state.getSlotSources(),
                     proposal);
         }
         if (event.callbackAction() == TelegramCallbackAction.CANCEL) {
             return cancel(event);
         }
         if (event.callbackAction() == TelegramCallbackAction.REVISE) {
-            ConversationSessionStateResponse state = facade.update(sessionId(event), new ConversationSlotUpdateRequest().source(SlotValueSource.USER_EDIT));
+            ConversationSessionStateResponse state = facade.revise(sessionId(event));
             touch(decision, event, TelegramSessionState.NEW_SETLIST_ACTIVE);
             return new TelegramAdapterResponse(
                     TelegramAdapterResponseStatus.CONTINUED,
                     String.join(" ", state.getAuditMessages()),
                     event,
                     event.callbackAction().guidedField(),
-                    state.getSlots());
+                    state.getSlots(),
+                    state.getSlotSources());
         }
         ConversationSlotUpdateRequest request = menuPatch(event);
         if (request == null) {
@@ -198,7 +203,8 @@ public class DefaultTelegramConversationGateway implements TelegramConversationG
                 String.join(" ", state.getAuditMessages()),
                 event,
                 event.callbackAction().guidedField(),
-                state.getSlots());
+                state.getSlots(),
+                state.getSlotSources());
     }
 
     private ConversationSlotUpdateRequest menuPatch(TelegramChannelEvent event) {
