@@ -1,13 +1,18 @@
 package com.cadentia.bot.telegram;
 
+import com.cadentia.generated.model.GenerateSetlistRequest;
+import com.cadentia.generated.model.KeyPolicy;
 import com.cadentia.generated.model.RecommendationExplanation;
 import com.cadentia.generated.model.RecommendationExplanationEntry;
 import com.cadentia.generated.model.RecommendationExplanationEvidence;
 import com.cadentia.generated.model.RecommendationExplanationScope;
+import com.cadentia.generated.model.SetlistCounts;
 import com.cadentia.generated.model.SetlistProposalResponse;
+import com.cadentia.generated.model.TempoPolicy;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
@@ -16,6 +21,14 @@ public class TelegramResponseRenderer {
     static final int TELEGRAM_MESSAGE_LIMIT = 4096;
     static final int SAFE_MESSAGE_LIMIT = 3900;
     private static final int CALLBACK_LIMIT = 180;
+
+    private static final Map<String, String> LANGUAGE_LABELS = Map.of("en", "English", "es", "Spanish", "pt", "Portuguese");
+    private static final Map<String, String> ENERGY_ARC_LABELS = Map.of(
+            "rising", "Rising", "steady", "Steady", "falling", "Falling", "low_to_high", "Low to high", "high_to_low", "High to low");
+    private static final Map<String, String> SERVICE_MOMENT_LABELS = Map.of(
+            "opening", "Opening", "communion", "Communion", "response", "Response", "altar_call", "Altar call", "sending", "Sending", "other", "Other");
+    private static final Map<String, String> KEY_POLICY_LABELS = Map.of("minimal", "Tight keys", "same", "Same key", "flex", "Flexible keys");
+    private static final Map<String, String> TEMPO_POLICY_LABELS = Map.of("tight", "Tight tempo", "smooth", "Smooth tempo", "open", "Open tempo");
 
     public List<TelegramRenderedMessage> render(TelegramAdapterResponse response) {
         if (response == null) {
@@ -33,7 +46,7 @@ public class TelegramResponseRenderer {
         if (shouldSuppressMessage(response)) {
             return rendered;
         }
-        TelegramRenderedMessage.TelegramInlineKeyboard keyboard = keyboardFor(response.status());
+        TelegramRenderedMessage.TelegramInlineKeyboard keyboard = keyboardFor(response);
         for (String chunk : split(renderBody(response))) {
             rendered.add(TelegramRenderedMessage.message(event == null ? null : event.chatId(), chunk, keyboard));
             keyboard = null;
@@ -47,7 +60,7 @@ public class TelegramResponseRenderer {
         if (proposal == null) {
             body.append("No approved songs were returned yet. ");
             body.append("\nReview the proposal in Cadentia before publishing. Only approved catalog evidence is shown.");
-            return List.of(TelegramRenderedMessage.message(chatId, body.toString(), keyboardFor(TelegramAdapterResponseStatus.COMPLETED)));
+            return List.of(TelegramRenderedMessage.message(chatId, body.toString(), completedKeyboard()));
         }
         if (StringUtils.hasText(proposal.getRecommendationResultId())) {
             body.append("Result: <code>").append(escape(proposal.getRecommendationResultId())).append("</code>\n");
@@ -77,7 +90,7 @@ public class TelegramResponseRenderer {
         appendAuditMessages(body, proposal.getAuditMessages());
         body.append("\nReview the proposal in Cadentia before publishing. Only approved catalog evidence is shown.");
         List<TelegramRenderedMessage> messages = new ArrayList<>();
-        TelegramRenderedMessage.TelegramInlineKeyboard keyboard = keyboardFor(TelegramAdapterResponseStatus.COMPLETED);
+        TelegramRenderedMessage.TelegramInlineKeyboard keyboard = completedKeyboard();
         for (String chunk : split(body.toString())) {
             messages.add(TelegramRenderedMessage.message(chatId, chunk, keyboard));
             keyboard = null;
@@ -119,9 +132,10 @@ public class TelegramResponseRenderer {
     }
 
     private String renderBody(TelegramAdapterResponse response) {
-        return switch (response.status()) {
-            case STARTED -> "<b>Cadentia</b>\n" + escape(response.message()) + "\nSend your Scripture focus or use /newsetlist.";
-            case CONTINUED, ALREADY_ACTIVE -> "<b>Cadentia update</b>\n" + escape(response.message()) + "\nUse the buttons or reply with concise details.";
+        StringBuilder body = new StringBuilder();
+        body.append(switch (response.status()) {
+            case STARTED -> "<b>Cadentia</b>\n" + escape(response.message());
+            case CONTINUED, ALREADY_ACTIVE -> "<b>Cadentia update</b>\n" + escape(response.message());
             case CANCELLED -> "<b>Cancelled</b>\n" + escape(response.message()) + " You can start again with /newsetlist.";
             case COMPLETED -> "<b>Setlist ready</b>\n" + escape(response.message()) + "\nOpen Cadentia to review approved references before publishing.";
             case UNAUTHORIZED -> "<b>Access needed</b>\n" + escape(response.message());
@@ -129,39 +143,168 @@ public class TelegramResponseRenderer {
             case INVALID -> "<b>Could not process that Telegram update</b>\nPlease retry or use /help.";
             case UNSUPPORTED -> "<b>Unsupported Telegram action</b>\nUse /help for supported commands.";
             case STALE_CALLBACK -> "<b>Expired action</b>\nThat button is no longer active. Use /status or /newsetlist.";
-        };
+        });
+        String selectionSummary = selectionSummary(response.currentSlots());
+        if (!selectionSummary.isBlank()) {
+            body.append("\n\n<b>Selected so far:</b>\n").append(selectionSummary);
+        }
+        if (response.status() == TelegramAdapterResponseStatus.STARTED) {
+            body.append("\nSend your Scripture focus or use /newsetlist.");
+        }
+        return body.toString();
     }
 
-    private TelegramRenderedMessage.TelegramInlineKeyboard keyboardFor(TelegramAdapterResponseStatus status) {
-        return switch (status) {
-            case STARTED, CONTINUED, ALREADY_ACTIVE -> new TelegramRenderedMessage.TelegramInlineKeyboard(List.of(
-                    List.of(
-                            button("3+2", TelegramCallbackAction.SHAPE_COUNTS, "3p2w"),
-                            button("4+2", TelegramCallbackAction.SHAPE_COUNTS, "4p2w"),
-                            button("10+5", TelegramCallbackAction.SHAPE_COUNTS, "10p5w")),
-                    List.of(
-                            button("English", TelegramCallbackAction.LANGUAGE, "en"),
-                            button("Spanish", TelegramCallbackAction.LANGUAGE, "es"),
-                            button("Portuguese", TelegramCallbackAction.LANGUAGE, "pt")),
-                    List.of(
-                            button("Rising", TelegramCallbackAction.ENERGY_ARC, "rising"),
-                            button("Steady", TelegramCallbackAction.ENERGY_ARC, "steady"),
-                            button("Falling", TelegramCallbackAction.ENERGY_ARC, "falling")),
-                    List.of(
-                            button("Opening", TelegramCallbackAction.SERVICE_MOMENT, "opening"),
-                            button("Response", TelegramCallbackAction.SERVICE_MOMENT, "response"),
-                            button("Sending", TelegramCallbackAction.SERVICE_MOMENT, "sending")),
-                    List.of(
-                            button("Tight keys", TelegramCallbackAction.KEY_POLICY, "minimal"),
-                            button("Flexible keys", TelegramCallbackAction.KEY_POLICY, "flex")),
-                    List.of(
-                            button("Smooth tempo", TelegramCallbackAction.TEMPO_POLICY, "smooth"),
-                            button("Open tempo", TelegramCallbackAction.TEMPO_POLICY, "open")),
-                    List.of(button("Confirm", TelegramCallbackAction.CONFIRM), button("Revise", TelegramCallbackAction.REVISE)),
-                    List.of(button("Cancel", TelegramCallbackAction.CANCEL))));
-            case COMPLETED -> new TelegramRenderedMessage.TelegramInlineKeyboard(List.of(List.of(button("Revise", TelegramCallbackAction.REVISE))));
-            default -> null;
-        };
+    private String selectionSummary(GenerateSetlistRequest slots) {
+        if (slots == null) {
+            return "";
+        }
+        StringBuilder summary = new StringBuilder();
+        appendIfPresent(summary, "Structure", formatCounts(slots.getCounts()));
+        appendIfPresent(summary, "Language", lookupLabel(LANGUAGE_LABELS, slots.getLanguage()));
+        appendIfPresent(summary, "Energy arc", lookupLabel(ENERGY_ARC_LABELS, enumValue(slots.getEnergyArc())));
+        appendIfPresent(summary, "Service moment", lookupLabel(SERVICE_MOMENT_LABELS, enumValue(slots.getServiceMoment())));
+        appendIfPresent(summary, "Key policy", formatKeyPolicy(slots.getKeyPolicy()));
+        appendIfPresent(summary, "Tempo policy", formatTempoPolicy(slots.getTempoPolicy()));
+        appendIfPresent(summary, "Scripture", slots.getVerseText());
+        return summary.toString();
+    }
+
+    private String lookupLabel(Map<String, String> labels, String key) {
+        if (key == null) {
+            return null;
+        }
+        return labels.getOrDefault(key, key);
+    }
+
+    @SuppressWarnings("unchecked")
+    private String enumValue(Object value) {
+        if (value == null) {
+            return null;
+        }
+        try {
+            return (String) value.getClass().getMethod("getValue").invoke(value);
+        } catch (Exception e) {
+            return value.toString();
+        }
+    }
+
+    private void appendIfPresent(StringBuilder builder, String label, String value) {
+        if (StringUtils.hasText(value)) {
+            builder.append("  • ").append(label).append(": ").append(escape(value)).append("\n");
+        }
+    }
+
+    private String formatCounts(SetlistCounts counts) {
+        if (counts == null) {
+            return null;
+        }
+        return counts.getPraise() + " praise + " + counts.getWorship() + " worship";
+    }
+
+    private String formatKeyPolicy(KeyPolicy policy) {
+        if (policy == null) {
+            return null;
+        }
+        String key;
+        if (policy.getPreferSameKey() && policy.getAllowRelativeMajorMinor() && policy.getMaxKeyCenters() == 2) {
+            key = "minimal";
+        } else if (policy.getPreferSameKey() && !policy.getAllowRelativeMajorMinor() && policy.getMaxKeyCenters() == 1) {
+            key = "same";
+        } else if (!policy.getPreferSameKey() && policy.getAllowRelativeMajorMinor() && policy.getMaxKeyCenters() == 4) {
+            key = "flex";
+        } else {
+            key = null;
+        }
+        if (key != null) {
+            return KEY_POLICY_LABELS.get(key);
+        }
+        return (policy.getPreferSameKey() ? "Same key" : "Flexible") + "/" + policy.getMaxKeyCenters();
+    }
+
+    private String formatTempoPolicy(TempoPolicy policy) {
+        if (policy == null) {
+            return null;
+        }
+        String key = policy.getMaxJumpBpm() <= 8 ? "tight" : policy.getMaxJumpBpm() <= 12 ? "smooth" : "open";
+        return TEMPO_POLICY_LABELS.getOrDefault(key, policy.getMaxJumpBpm() + " BPM max jump");
+    }
+
+    private TelegramRenderedMessage.TelegramInlineKeyboard keyboardFor(TelegramAdapterResponse response) {
+        TelegramAdapterResponseStatus status = response.status();
+        if (status == TelegramAdapterResponseStatus.COMPLETED) {
+            return new TelegramRenderedMessage.TelegramInlineKeyboard(List.of(List.of(button("Revise", TelegramCallbackAction.REVISE))));
+        }
+        if (status != TelegramAdapterResponseStatus.STARTED
+                && status != TelegramAdapterResponseStatus.CONTINUED
+                && status != TelegramAdapterResponseStatus.ALREADY_ACTIVE) {
+            return null;
+        }
+        GenerateSetlistRequest slots = response.currentSlots();
+        GuidedStage stage = determineStage(slots);
+        List<List<TelegramRenderedMessage.TelegramInlineKeyboardButton>> rows = new ArrayList<>();
+        switch (stage) {
+            case COUNTS -> rows.add(List.of(
+                    button("3+2", TelegramCallbackAction.SHAPE_COUNTS, "3p2w"),
+                    button("4+2", TelegramCallbackAction.SHAPE_COUNTS, "4p2w"),
+                    button("10+5", TelegramCallbackAction.SHAPE_COUNTS, "10p5w")));
+            case LANGUAGE -> rows.add(List.of(
+                    button("English", TelegramCallbackAction.LANGUAGE, "en"),
+                    button("Spanish", TelegramCallbackAction.LANGUAGE, "es"),
+                    button("Portuguese", TelegramCallbackAction.LANGUAGE, "pt")));
+            case ENERGY_ARC -> rows.add(List.of(
+                    button("Rising", TelegramCallbackAction.ENERGY_ARC, "rising"),
+                    button("Steady", TelegramCallbackAction.ENERGY_ARC, "steady"),
+                    button("Falling", TelegramCallbackAction.ENERGY_ARC, "falling")));
+            case SERVICE_MOMENT -> rows.add(List.of(
+                    button("Opening", TelegramCallbackAction.SERVICE_MOMENT, "opening"),
+                    button("Response", TelegramCallbackAction.SERVICE_MOMENT, "response"),
+                    button("Sending", TelegramCallbackAction.SERVICE_MOMENT, "sending")));
+            case KEY_POLICY -> rows.add(List.of(
+                    button("Tight keys", TelegramCallbackAction.KEY_POLICY, "minimal"),
+                    button("Flexible keys", TelegramCallbackAction.KEY_POLICY, "flex")));
+            case TEMPO_POLICY -> rows.add(List.of(
+                    button("Smooth tempo", TelegramCallbackAction.TEMPO_POLICY, "smooth"),
+                    button("Open tempo", TelegramCallbackAction.TEMPO_POLICY, "open")));
+            case CONFIRM -> {
+                rows.add(List.of(button("Confirm", TelegramCallbackAction.CONFIRM), button("Revise", TelegramCallbackAction.REVISE)));
+                rows.add(List.of(button("Cancel", TelegramCallbackAction.CANCEL)));
+            }
+        }
+        return rows.isEmpty() ? null : new TelegramRenderedMessage.TelegramInlineKeyboard(rows);
+    }
+
+    private GuidedStage determineStage(GenerateSetlistRequest slots) {
+        if (slots == null || countsAbsent(slots.getCounts())) {
+            return GuidedStage.COUNTS;
+        }
+        if (!StringUtils.hasText(slots.getLanguage())) {
+            return GuidedStage.LANGUAGE;
+        }
+        if (slots.getEnergyArc() == null) {
+            return GuidedStage.ENERGY_ARC;
+        }
+        if (slots.getServiceMoment() == null) {
+            return GuidedStage.SERVICE_MOMENT;
+        }
+        if (slots.getKeyPolicy() == null) {
+            return GuidedStage.KEY_POLICY;
+        }
+        if (slots.getTempoPolicy() == null) {
+            return GuidedStage.TEMPO_POLICY;
+        }
+        return GuidedStage.CONFIRM;
+    }
+
+    private boolean countsAbsent(SetlistCounts counts) {
+        if (counts == null) {
+            return true;
+        }
+        return counts.getPraise() == null || counts.getWorship() == null
+                || (counts.getPraise() == 0 && counts.getWorship() == 0);
+    }
+
+    private TelegramRenderedMessage.TelegramInlineKeyboard completedKeyboard() {
+        return new TelegramRenderedMessage.TelegramInlineKeyboard(List.of(List.of(button("Revise", TelegramCallbackAction.REVISE))));
     }
 
     private TelegramRenderedMessage.TelegramInlineKeyboardButton button(String label, TelegramCallbackAction action) {
@@ -290,5 +433,9 @@ public class TelegramResponseRenderer {
         return value.replaceAll("(?i)(bot)?token[=: ][^\\s]+", "$1token=[redacted]")
                 .replaceAll("(?i)(secret|webhook)[=: ][^\\s]+", "$1=[redacted]")
                 .replaceAll("(?i)prompt text:[\\s\\S]*", "prompt text:[redacted]");
+    }
+
+    private enum GuidedStage {
+        COUNTS, LANGUAGE, ENERGY_ARC, SERVICE_MOMENT, KEY_POLICY, TEMPO_POLICY, CONFIRM
     }
 }

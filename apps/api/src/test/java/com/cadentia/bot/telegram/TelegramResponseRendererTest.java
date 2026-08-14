@@ -36,9 +36,8 @@ class TelegramResponseRendererTest {
                 .contains("token=[redacted]")
                 .contains("secret=[redacted]")
                 .contains("/newsetlist");
-        assertThat(rendered.get(0).inlineKeyboard().rows()).hasSizeGreaterThan(2);
-        assertThat(rendered.get(0).inlineKeyboard().rows())
-                .flatExtracting(row -> row)
+        assertThat(rendered.get(0).inlineKeyboard().rows()).hasSize(1);
+        assertThat(rendered.get(0).inlineKeyboard().rows().get(0))
                 .extracting(TelegramRenderedMessage.TelegramInlineKeyboardButton::callbackData)
                 .allSatisfy(callbackData -> {
                     assertThat(callbackData).startsWith("cad:v1:");
@@ -46,12 +45,80 @@ class TelegramResponseRendererTest {
                 })
                 .contains(
                         "cad:v1:shape_counts:3p2w",
-                        "cad:v1:language:es",
-                        "cad:v1:key_policy:minimal",
-                        "cad:v1:tempo_policy:smooth",
-                        "cad:v1:energy_arc:rising",
-                        "cad:v1:service_moment:opening",
-                        "cad:v1:confirm");
+                        "cad:v1:shape_counts:4p2w",
+                        "cad:v1:shape_counts:10p5w");
+    }
+
+    @Test
+    void stagesKeyboardProgressivelyAsSlotsAreFilled() {
+        // Arrange: no slots -> counts stage
+        TelegramAdapterResponse empty = new TelegramAdapterResponse(
+                TelegramAdapterResponseStatus.CONTINUED, "Step 1.", event(TelegramEventKind.MESSAGE), null,
+                new com.cadentia.generated.model.GenerateSetlistRequest());
+
+        // Act / Assert: counts stage only
+        List<TelegramRenderedMessage> renderedEmpty = renderer.render(empty);
+        assertThat(renderedEmpty.get(0).inlineKeyboard().rows()).hasSize(1);
+        assertThat(renderedEmpty.get(0).inlineKeyboard().rows().get(0).get(0).text()).isEqualTo("3+2");
+
+        // Arrange: counts filled -> language stage
+        TelegramAdapterResponse withCounts = new TelegramAdapterResponse(
+                TelegramAdapterResponseStatus.CONTINUED, "Step 2.", event(TelegramEventKind.MESSAGE), null,
+                new com.cadentia.generated.model.GenerateSetlistRequest().counts(new com.cadentia.generated.model.SetlistCounts().praise(3).worship(2)));
+
+        // Act / Assert: language stage only
+        List<TelegramRenderedMessage> renderedCounts = renderer.render(withCounts);
+        assertThat(renderedCounts.get(0).inlineKeyboard().rows()).hasSize(1);
+        assertThat(renderedCounts.get(0).inlineKeyboard().rows().get(0).get(0).text()).isEqualTo("English");
+        assertThat(renderedCounts.get(0).text()).contains("Selected so far:").contains("Structure: 3 praise + 2 worship");
+
+        // Arrange: counts + language + energyArc + serviceMoment + keyPolicy filled -> tempo stage
+        TelegramAdapterResponse withKey = new TelegramAdapterResponse(
+                TelegramAdapterResponseStatus.CONTINUED, "Step 5.", event(TelegramEventKind.MESSAGE), null,
+                new com.cadentia.generated.model.GenerateSetlistRequest()
+                        .counts(new com.cadentia.generated.model.SetlistCounts().praise(4).worship(2))
+                        .language("es")
+                        .energyArc(com.cadentia.generated.model.GenerateSetlistRequest.EnergyArcEnum.RISING)
+                        .serviceMoment(com.cadentia.generated.model.GenerateSetlistRequest.ServiceMomentEnum.OPENING)
+                        .keyPolicy(new com.cadentia.generated.model.KeyPolicy(true, true, 2)));
+
+        // Act / Assert: tempo stage only
+        List<TelegramRenderedMessage> renderedKey = renderer.render(withKey);
+        assertThat(renderedKey.get(0).inlineKeyboard().rows()).hasSize(1);
+        assertThat(renderedKey.get(0).inlineKeyboard().rows().get(0).get(0).text()).isEqualTo("Smooth tempo");
+        assertThat(renderedKey.get(0).text())
+                .contains("Selected so far:")
+                .contains("Structure: 4 praise + 2 worship")
+                .contains("Language: Spanish")
+                .contains("Energy arc: Rising")
+                .contains("Service moment: Opening")
+                .contains("Key policy: Tight keys");
+
+        // Arrange: all slots filled -> confirm stage
+        TelegramAdapterResponse ready = new TelegramAdapterResponse(
+                TelegramAdapterResponseStatus.CONTINUED, "Ready.", event(TelegramEventKind.MESSAGE), null,
+                new com.cadentia.generated.model.GenerateSetlistRequest()
+                        .counts(new com.cadentia.generated.model.SetlistCounts().praise(10).worship(5))
+                        .language("en")
+                        .energyArc(com.cadentia.generated.model.GenerateSetlistRequest.EnergyArcEnum.STEADY)
+                        .serviceMoment(com.cadentia.generated.model.GenerateSetlistRequest.ServiceMomentEnum.RESPONSE)
+                        .keyPolicy(new com.cadentia.generated.model.KeyPolicy(false, true, 4))
+                        .tempoPolicy(new com.cadentia.generated.model.TempoPolicy(20)));
+
+        // Act / Assert: confirm buttons shown
+        List<TelegramRenderedMessage> renderedReady = renderer.render(ready);
+        assertThat(renderedReady.get(0).inlineKeyboard().rows()).hasSize(2);
+        assertThat(renderedReady.get(0).inlineKeyboard().rows().get(0))
+                .extracting(TelegramRenderedMessage.TelegramInlineKeyboardButton::text)
+                .contains("Confirm", "Revise");
+        assertThat(renderedReady.get(0).text())
+                .contains("Selected so far:")
+                .contains("Structure: 10 praise + 5 worship")
+                .contains("Language: English")
+                .contains("Energy arc: Steady")
+                .contains("Service moment: Response")
+                .contains("Key policy: Flexible keys")
+                .contains("Tempo policy: Open tempo");
     }
 
     @Test
@@ -91,7 +158,7 @@ class TelegramResponseRendererTest {
                         .setlistVersionId("version-123")
                         .selectedSongs(List.of(selected)));
         TelegramAdapterResponse response = new TelegramAdapterResponse(TelegramAdapterResponseStatus.COMPLETED,
-                "Proposal generated.", event, "confirmation", proposal);
+                "Proposal generated.", event, "confirmation", null, proposal);
 
         // Act
         List<TelegramRenderedMessage> rendered = renderer.render(response);
