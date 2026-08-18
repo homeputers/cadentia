@@ -43,8 +43,11 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "export JAVA_HOME=/nix/store/z8k0md5rbj2m415705kpb4fihp8kcd11-openjdk-headless-21.0.7+6/lib/openjdk && cd apps/api && mvn spring-boot:run"
+args = "export JAVA_HOME=$(dirname $(dirname $(readlink -f $(which java)))) && cd apps/api && mvn spring-boot:run"
 waitForPort = 8080
+
+[workflows.workflow.metadata]
+outputType = "console"
 
 [[workflows.workflow]]
 name = "Admin Web (Vite)"
