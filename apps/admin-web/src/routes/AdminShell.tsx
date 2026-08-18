@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { adminEnvironment, missingRequiredEnvironment } from '../config/environment';
-import { bootstrapAdminSession, type PermissionState } from '../auth/session';
+import { bootstrapAdminSession, type AdminSession, type PermissionState } from '../auth/session';
 import { canAccessRoute, canRenderAction, visibleRoutes } from '../auth/permissions';
 import { defaultImportCandidateFilters, listImportCandidates, type ImportCandidateQueueResponse } from '../import-candidates';
 import { ImportCandidateQueue } from './ImportCandidateQueue';
@@ -14,6 +14,25 @@ import { InstanceSettings } from './InstanceSettings';
 import { ActionBadge, AuditReferenceLink, Badge, Breadcrumbs, DataTable, PageHeader, RoleBadge, StatePanel, SupportDebugPanel, redactSensitiveError } from './admin-ui';
 import { createAdminApiClient, type AdminApiClient, type AdminApiError } from '../generated/cadentia-api/client';
 import './admin-shell.css';
+
+const TopNav = ({ session, routes }: { session: AdminSession; routes: Array<{ href: string; label: string }> }) => (
+    <header className="admin-topnav">
+        <a className="admin-topnav__brand" href="/admin">Cadentia Admin</a>
+        <nav aria-label="Admin sections">
+            <ul className="admin-topnav__links">
+                {routes.map((route) => (
+                    <li key={route.href}>
+                        <a href={route.href} aria-current={window.location.pathname === route.href || window.location.pathname.startsWith(`${route.href}/`) ? 'page' : undefined}>{route.label}</a>
+                    </li>
+                ))}
+            </ul>
+        </nav>
+        <div className="admin-topnav__user">
+            <span className="admin-topnav__name">Signed in as {session.displayName}</span>
+            {session.roles.map((role) => <RoleBadge key={role} role={role} />)}
+        </div>
+    </header>
+);
 
 const renderPermissionState = (state: PermissionState) => {
     switch (state.kind) {
@@ -96,38 +115,40 @@ export const AdminShell = () => {
     const routes = useMemo(() => (session ? visibleRoutes(session, adminEnvironment.featureFlags) : []), [session]);
     const blockedDirectRoute = session && !canAccessRoute(session, adminEnvironment.featureFlags, window.location.pathname);
 
+    const withNav = (page: JSX.Element) => session ? <>{<TopNav session={session} routes={routes} />}{page}</> : page;
+
     if (blockedDirectRoute) {
-        return <main className="admin-shell"><Breadcrumbs items={[{ label: 'Admin', href: '/admin' }, { label: 'Access denied' }]} /><StatePanel state="forbidden" title="Access denied">This admin route is not available for the current session capabilities.</StatePanel></main>;
+        return withNav(<main className="admin-shell"><Breadcrumbs items={[{ label: 'Admin', href: '/admin' }, { label: 'Access denied' }]} /><StatePanel state="forbidden" title="Access denied">This admin route is not available for the current session capabilities.</StatePanel></main>);
     }
 
     if (session && window.location.pathname === '/admin/imports') {
-        return <ImportCandidateQueue session={session} />;
+        return withNav(<ImportCandidateQueue session={session} />);
     }
     if (session && window.location.pathname === '/admin/song-imports') {
-        return <SongImport session={session} />;
+        return withNav(<SongImport session={session} />);
     }
     if (session && window.location.pathname === '/admin/songs') {
-        return <SongReviewQueue session={session} />;
+        return withNav(<SongReviewQueue session={session} />);
     }
     if (session && window.location.pathname === '/admin/audit') {
-        return <AuditRollback session={session} />;
+        return withNav(<AuditRollback session={session} />);
     }
     if (session && window.location.pathname === '/admin/diagnostics') {
-        return <Diagnostics session={session} />;
+        return withNav(<Diagnostics session={session} />);
     }
     if (session && window.location.pathname === '/admin/settings') {
-        return <InstanceSettings session={session} />;
+        return withNav(<InstanceSettings session={session} />);
     }
     const detailMatch = window.location.pathname.match(/^\/admin\/imports\/([^/]+)$/);
     if (session && detailMatch) {
-        return <ImportCandidateDetail session={session} candidateId={decodeURIComponent(detailMatch[1])} />;
+        return withNav(<ImportCandidateDetail session={session} candidateId={decodeURIComponent(detailMatch[1])} />);
     }
     const songDetailMatch = window.location.pathname.match(/^\/admin\/songs\/([^/]+)$/);
     if (session && songDetailMatch) {
-        return <SongReviewDetail session={session} songId={decodeURIComponent(songDetailMatch[1])} />;
+        return withNav(<SongReviewDetail session={session} songId={decodeURIComponent(songDetailMatch[1])} />);
     }
 
-    return (
+    return withNav(
         <main className="admin-shell" aria-labelledby="admin-shell-title">
             <Breadcrumbs items={[{ label: 'Admin', href: '/admin' }, { label: 'Shell foundations' }]} />
             <PageHeader
@@ -143,31 +164,32 @@ export const AdminShell = () => {
                     {renderPermissionState(permissionState)}
                 </section>
             ) : (
-                <>
-                    <section aria-labelledby="admin-nav-title" className="admin-shell__panel">
-                        <h2 id="admin-nav-title">Protected route groups</h2>
-                        <p>Signed in as {session!.displayName}. Only routes matching current capabilities are shown.</p>
-                        <nav aria-label="Admin sections"><ul>{routes.map((route) => <li key={route.href}><a href={route.href}>{route.label}</a></li>)}</ul></nav>
-                        <p>{session!.roles.map((role) => <RoleBadge key={role} role={role} />)}</p>
-                    </section>
-
-                    <section aria-labelledby="admin-capabilities-title" className="admin-shell__panel">
-                        <h2 id="admin-capabilities-title">Granted capabilities</h2>
-                        <p>These badges show what the backend session allows. Action controls appear inside each admin section when the matching workflow is available.</p>
-                        {canRenderAction(session!, 'REVIEW_CATALOG') && <ActionBadge capability="REVIEW_CATALOG" />}
-                        {canRenderAction(session!, 'EXECUTE_ROLLBACK') && <ActionBadge capability="EXECUTE_ROLLBACK" />}
-                        {!canRenderAction(session!, 'REVIEW_CATALOG') && !canRenderAction(session!, 'EXECUTE_ROLLBACK') && <p>Read-only access. Mutating action controls are hidden as a usability aid.</p>}
-                    </section>
-                </>
+                <section aria-labelledby="admin-nav-title" className="admin-shell__panel">
+                    <h2 id="admin-nav-title">Protected route groups</h2>
+                    <p>Signed in as {session!.displayName}. Only routes matching current capabilities are shown in the navigation bar above.</p>
+                    <p>{session!.roles.map((role) => <RoleBadge key={role} role={role} />)}</p>
+                </section>
             )}
 
             {session && <ImportCandidateSummary />}
 
-            <section aria-labelledby="admin-config-title" className="admin-shell__panel">
-                <h2 id="admin-config-title">Deployment smoke metadata</h2>
-                <SupportDebugPanel environment={adminEnvironment} />
-                {missingEnvironment.length > 0 && <p role="status" className="admin-shell__warning">Missing runtime configuration: {missingEnvironment.join(', ')}</p>}
-            </section>
+            <div className="admin-card-grid">
+                {session && (
+                    <section aria-labelledby="admin-capabilities-title" className="admin-shell__panel">
+                        <h2 id="admin-capabilities-title">Granted capabilities</h2>
+                        <p>These badges show what the backend session allows. Action controls appear inside each admin section when the matching workflow is available.</p>
+                        {canRenderAction(session, 'REVIEW_CATALOG') && <ActionBadge capability="REVIEW_CATALOG" />}
+                        {canRenderAction(session, 'EXECUTE_ROLLBACK') && <ActionBadge capability="EXECUTE_ROLLBACK" />}
+                        {!canRenderAction(session, 'REVIEW_CATALOG') && !canRenderAction(session, 'EXECUTE_ROLLBACK') && <p>Read-only access. Mutating action controls are hidden as a usability aid.</p>}
+                    </section>
+                )}
+
+                <section aria-labelledby="admin-config-title" className="admin-shell__panel">
+                    <h2 id="admin-config-title">Deployment smoke metadata</h2>
+                    <SupportDebugPanel environment={adminEnvironment} />
+                    {missingEnvironment.length > 0 && <p role="status" className="admin-shell__warning">Missing runtime configuration: {missingEnvironment.join(', ')}</p>}
+                </section>
+            </div>
         </main>
     );
 };

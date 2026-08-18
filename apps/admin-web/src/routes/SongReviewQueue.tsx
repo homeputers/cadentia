@@ -75,7 +75,7 @@ export const SongReviewQueue = ({ session, apiClient = createAdminApiClient({ en
             <p role="status">Shareable song review URL state: <code>{`/admin/songs${serializeSongReviewFilters(appliedFilters) ? `?${serializeSongReviewFilters(appliedFilters)}` : ''}`}</code></p>
             <StatePanel state={state} title="Reviewed songs" onRetry={() => void load(appliedFilters, true)}>{error && <p>{error}</p>}</StatePanel>
             {queue && rows.length > 0 && <><p>{queue.totalItems} catalog songs. Page {queue.page} of {queue.totalPages || 1}.</p><DataTable caption="Reviewed catalog songs" columns={['Song', 'Status', 'Catalog metadata', 'Arrangements', 'Access']} rows={rows} /></>}
-            {queue && (appliedFilters.page > 1 || appliedFilters.page < queue.totalPages) && <nav aria-label="Pagination"><button disabled={appliedFilters.page <= 1} onClick={() => changePage(appliedFilters.page - 1)}>Previous</button><button disabled={appliedFilters.page >= queue.totalPages} onClick={() => changePage(appliedFilters.page + 1)}>Next</button></nav>}
+            {queue && (appliedFilters.page > 1 || appliedFilters.page < queue.totalPages) && <nav aria-label="Pagination"><button className="secondary" disabled={appliedFilters.page <= 1} onClick={() => changePage(appliedFilters.page - 1)}>Previous</button><button className="secondary" disabled={appliedFilters.page >= queue.totalPages} onClick={() => changePage(appliedFilters.page + 1)}>Next</button></nav>}
         </main>
     );
 };

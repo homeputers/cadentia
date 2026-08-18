@@ -31,8 +31,8 @@ export const Breadcrumbs = ({ items }: { items: Array<{ label: string; href?: st
 
 export const PageHeader = ({ eyebrow, title, description, actions, titleId }: { eyebrow?: string; title: string; description?: string; actions?: ReactNode; titleId?: string }) => (
     <header className="admin-page-header">
-        {eyebrow && <p className="admin-shell__eyebrow">{eyebrow}</p>}
-        <div>
+        <div className="admin-page-header__body">
+            {eyebrow && <p className="admin-shell__eyebrow">{eyebrow}</p>}
             <h1 id={titleId}>{title}</h1>
             {description && <p>{description}</p>}
         </div>
@@ -50,7 +50,7 @@ export const FilterPanel = ({ title, children, onSubmit }: { title: string; chil
         <form className="admin-filter-panel" aria-labelledby={headingId} onSubmit={handleSubmit}>
             <h2 id={headingId}>{title}</h2>
             <div className="admin-filter-panel__fields">{children}</div>
-            <button type="submit">Apply filters</button>
+            <div className="admin-filter-panel__actions"><button type="submit">Apply filters</button></div>
         </form>
     );
 };
@@ -107,7 +107,7 @@ export const StatePanel = ({ state, title, children, onRetry }: { state: LoadSta
             <h2 id={`${title}-state-title`}>{title}</h2>
             {state === 'loading' && <div className="admin-skeleton" aria-hidden="true" />}
             <p>{copy[state]}</p>
-            {onRetry && ['partial-failure', 'stale', 'error'].includes(state) && <button type="button" onClick={onRetry}>Retry</button>}
+            {onRetry && ['partial-failure', 'stale', 'error'].includes(state) && <button type="button" className="secondary" onClick={onRetry}>Retry</button>}
         </section>
     );
 };
@@ -126,7 +126,7 @@ export const ConfirmationDialog = ({ open, title, acknowledgement, facts, auditA
                 <ul>{facts.map((fact) => <li key={fact}>{fact}</li>)}</ul>
                 <p>Audit actor: {auditActor}</p>
                 <p>Concurrency/version: {versionContext}</p>
-                <div className="admin-dialog__actions"><button type="button" onClick={onCancel}>Cancel</button><button type="button" className="danger" onClick={onConfirm}>I understand, continue</button></div>
+                <div className="admin-dialog__actions"><button type="button" className="secondary" onClick={onCancel}>Cancel</button><button type="button" className="danger" onClick={onConfirm}>I understand, continue</button></div>
             </section>
         </div>
     );
