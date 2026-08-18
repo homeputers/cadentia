@@ -128,7 +128,7 @@ paths:
   "/admin/import-candidates/{candidateId}/moderation-flags":
     "$ref": "./paths/admin-review.yaml#/~1admin~1import-candidates~1{candidateId}~1moderation-flags"
   "/admin/import-candidates:bulk-actions":
-    "$ref": "./paths/admin-review.yaml#/~1admin~1import-candidates%3Abulk-actions"
+    "$ref": "./paths/admin-review.yaml#/~1admin~1import-candidates:bulk-actions"
   "/admin/moderation-flags/{flagId}/assign":
     "$ref": "./paths/admin-review.yaml#/~1admin~1moderation-flags~1{flagId}~1assign"
   "/admin/moderation-flags/{flagId}/resolve":

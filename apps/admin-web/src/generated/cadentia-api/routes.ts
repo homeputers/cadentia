@@ -8,6 +8,7 @@ export type CadentiaApiRoute =
     | '/admin/feature-flags/{flagKey}:confirm'
     | '/admin/feature-flags/{flagKey}:preview'
     | '/admin/import-candidates'
+    | '/admin/import-candidates:bulk-actions'
     | '/admin/import-candidates/{candidateId}'
     | '/admin/import-candidates/{candidateId}/approval-actions'
     | '/admin/import-candidates/{candidateId}/audit-history'
@@ -106,6 +107,7 @@ export type CadentiaApiOperationId =
     | 'assignAdminModerationFlag'
     | 'attachSetlistVersionToServicePlan'
     | 'autocompleteCatalog'
+    | 'bulkActionAdminImportCandidates'
     | 'cancelConversationSession'
     | 'cancelTelegramSession'
     | 'commitAdminImportCandidateMerge'
@@ -223,6 +225,7 @@ export const cadentiaApiRoutes = [
     '/admin/feature-flags/{flagKey}:confirm',
     '/admin/feature-flags/{flagKey}:preview',
     '/admin/import-candidates',
+    '/admin/import-candidates:bulk-actions',
     '/admin/import-candidates/{candidateId}',
     '/admin/import-candidates/{candidateId}/approval-actions',
     '/admin/import-candidates/{candidateId}/audit-history',
@@ -319,6 +322,7 @@ export const cadentiaApiRouteRefs: Record<CadentiaApiRoute, string> = {
     '/admin/feature-flags/{flagKey}:confirm': './paths/admin-operations.yaml#/~1admin~1feature-flags~1{flagKey}:confirm',
     '/admin/feature-flags/{flagKey}:preview': './paths/admin-operations.yaml#/~1admin~1feature-flags~1{flagKey}:preview',
     '/admin/import-candidates': './paths/admin-review.yaml#/~1admin~1import-candidates',
+    '/admin/import-candidates:bulk-actions': './paths/admin-review.yaml#/~1admin~1import-candidates:bulk-actions',
     '/admin/import-candidates/{candidateId}': './paths/admin-review.yaml#/~1admin~1import-candidates~1{candidateId}',
     '/admin/import-candidates/{candidateId}/approval-actions': './paths/admin-review.yaml#/~1admin~1import-candidates~1{candidateId}~1approval-actions',
     '/admin/import-candidates/{candidateId}/audit-history': './paths/admin-review.yaml#/~1admin~1import-candidates~1{candidateId}~1audit-history',
@@ -418,6 +422,7 @@ export const cadentiaApiOperations = [
     { operationId: 'assignAdminModerationFlag', method: 'POST', path: '/admin/moderation-flags/{flagId}/assign', ref: './paths/admin-review.yaml#/~1admin~1moderation-flags~1{flagId}~1assign' },
     { operationId: 'attachSetlistVersionToServicePlan', method: 'POST', path: '/service-plans/{servicePlanId}/setlist-attachments', ref: './paths/service-plans.yaml#/~1service-plans~1{servicePlanId}~1setlist-attachments' },
     { operationId: 'autocompleteCatalog', method: 'POST', path: '/catalog/autocomplete', ref: './paths/search.yaml#/~1catalog~1autocomplete' },
+    { operationId: 'bulkActionAdminImportCandidates', method: 'POST', path: '/admin/import-candidates:bulk-actions', ref: './paths/admin-review.yaml#/~1admin~1import-candidates:bulk-actions' },
     { operationId: 'cancelConversationSession', method: 'POST', path: '/conversation-sessions/{sessionId}/cancel', ref: './paths/conversation-sessions.yaml#/~1conversation-sessions~1{sessionId}~1cancel' },
     { operationId: 'cancelTelegramSession', method: 'POST', path: '/telegram/sessions/{sessionId}:cancel', ref: './paths/telegram.yaml#/~1telegram~1sessions~1{sessionId}:cancel' },
     { operationId: 'commitAdminImportCandidateMerge', method: 'POST', path: '/admin/import-candidates/{candidateId}/commit-merge', ref: './paths/admin-review.yaml#/~1admin~1import-candidates~1{candidateId}~1commit-merge' },
