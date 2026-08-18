@@ -43,13 +43,13 @@ args = "Admin Web (Vite)"
 name = "API (Spring Boot)"
 author = "agent"
 
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "export JAVA_HOME=$(dirname $(dirname $(readlink -f $(which java)))) && cd apps/api && mvn spring-boot:run"
-waitForPort = 8080
-
 [workflows.workflow.metadata]
 outputType = "console"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "bash apps/api/start.sh"
+waitForPort = 8080
 
 [[workflows.workflow]]
 name = "Admin Web (Vite)"
