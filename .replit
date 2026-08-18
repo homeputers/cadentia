@@ -1,7 +1,64 @@
-modules = ["java-graalvm22.3", "nodejs-20", "web"]
+modules = ["java-graalvm22.3", "nodejs-20", "web", "postgresql-16"]
 
 [nix]
 channel = "stable-25_05"
+packages = ["jdk21_headless"]
 
 [agent]
 expertMode = true
+
+[userenv]
+
+[userenv.shared]
+CADENTIA_ASSET_STORAGE_PROVIDER = "local"
+CADENTIA_AUTH_PROVIDER = "local"
+CADENTIA_DB_PASSWORD = "password"
+CADENTIA_DB_URL = "jdbc:postgresql://helium/heliumdb?sslmode=disable"
+CADENTIA_DB_USERNAME = "postgres"
+CADENTIA_INSTANCE_ID = "replit-dev"
+CADENTIA_LLM_ENABLED = "false"
+CADENTIA_LOCAL_ADMIN_PASSWORD = "cadentia"
+CADENTIA_LOCAL_ADMIN_USERNAME = "admin"
+PORT = "8080"
+
+[workflows]
+runButton = "Project"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "API (Spring Boot)"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Admin Web (Vite)"
+
+[[workflows.workflow]]
+name = "API (Spring Boot)"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "export JAVA_HOME=/nix/store/z8k0md5rbj2m415705kpb4fihp8kcd11-openjdk-headless-21.0.7+6/lib/openjdk && cd apps/api && mvn spring-boot:run"
+waitForPort = 8080
+
+[[workflows.workflow]]
+name = "Admin Web (Vite)"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd apps/admin-web && npm run dev"
+waitForPort = 5173
+
+[[ports]]
+localPort = 5173
+externalPort = 5173
+
+[[ports]]
+localPort = 8080
+externalPort = 80
