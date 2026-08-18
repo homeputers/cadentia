@@ -43,7 +43,7 @@ cadentia:
   auth:
     provider: ${CADENTIA_AUTH_PROVIDER:local}
   local-admin:
-    username: ${CADENTIA_LOCAL_ADMIN_USERNAME:user}
+    username: ${CADENTIA_LOCAL_ADMIN_USERNAME:admin}
     password: ${CADENTIA_LOCAL_ADMIN_PASSWORD:cadentia}
   telegram:
     outbound:
