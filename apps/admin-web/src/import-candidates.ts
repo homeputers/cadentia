@@ -101,5 +101,42 @@ export const buildImportCandidateQueuePath = (filters: ImportCandidateFilterStat
 export const listImportCandidates = (client: AdminApiClient, filters: ImportCandidateFilterState) =>
     client.request<ImportCandidateQueueResponse>(buildImportCandidateQueuePath(filters));
 
+export type BulkActionType = 'ASSIGN_REVIEWER' | 'REJECT_DUPLICATE' | 'REJECT_NOT_PERMITTED' | 'OPEN_MODERATION_FLAG' | 'DEFER';
+
+export type BulkActionResult = {
+    candidateId: string;
+    success: boolean;
+    errorMessage?: string | null;
+    auditReferenceId?: string | null;
+};
+
+export type BulkActionResponse = {
+    actionType: string;
+    processedCount: number;
+    successCount: number;
+    failureCount: number;
+    results: BulkActionResult[];
+    auditReferenceId?: string | null;
+};
+
+export type BulkActionRequest = {
+    actionType: BulkActionType;
+    candidateIds: string[];
+    actor: string;
+    assignedReviewerId?: string | null;
+    flagType?: string | null;
+    flagScope?: string | null;
+    flagReason?: string | null;
+    flagPolicy?: string | null;
+    rationale?: string | null;
+};
+
+export const submitBulkAction = (client: AdminApiClient, request: BulkActionRequest) =>
+    client.request<BulkActionResponse>('/admin/import-candidates:bulk-actions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(request),
+    });
+
 export const isBlockedCandidate = (candidate: ImportCandidateQueueItem): boolean =>
     candidate.approvalReadiness === 'BLOCKED' || candidate.moderationState === 'BLOCKED' || candidate.provenanceStatus === 'BLOCKED';

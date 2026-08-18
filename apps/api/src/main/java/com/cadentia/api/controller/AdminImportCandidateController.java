@@ -56,6 +56,12 @@ import com.cadentia.generated.model.AdminSongImportValidationError;
 import com.cadentia.generated.model.AdminSongLicenseType;
 import com.cadentia.generated.model.AdminSongResource;
 import com.cadentia.generated.model.AllowedImportCandidateAction;
+import com.cadentia.generated.model.BulkActionRequest;
+import com.cadentia.generated.model.BulkActionResponse;
+import com.cadentia.generated.model.BulkActionResult;
+import com.cadentia.generated.model.BulkActionType;
+import com.cadentia.scraperadmin.ModerationFlagSeverity;
+import com.cadentia.scraperadmin.ModerationFlagType;
 import com.cadentia.generated.model.ApprovalActionRequest;
 import com.cadentia.generated.model.ApprovalReadiness;
 import com.cadentia.generated.model.AssignModerationFlagRequest;
@@ -601,6 +607,53 @@ public class AdminImportCandidateController implements AdminReviewApi {
                 .rollbackRequestId(result.rollbackRequestId())
                 .action(result.action())
                 .auditEventId(result.auditEventId()));
+    }
+
+    @Override
+    @PreAuthorize("hasAnyAuthority(T(com.cadentia.api.security.RbacAuthorities).ROLE_CATALOG_EDITOR, T(com.cadentia.api.security.RbacAuthorities).ROLE_ADMIN)")
+    public ResponseEntity<BulkActionResponse> bulkActionAdminImportCandidates(
+            @RequestBody BulkActionRequest request) {
+        List<BulkActionResult> results = new ArrayList<>();
+        int successCount = 0;
+        int failureCount = 0;
+        for (UUID candidateId : request.getCandidateIds()) {
+            try {
+                switch (request.getActionType()) {
+                    case ASSIGN_REVIEWER -> reviewService.assignReviewer(candidateId, request.getAssignedReviewerId());
+                    case REJECT_DUPLICATE -> reviewService.rejectDuplicate(candidateId, request.getActor(), request.getRationale());
+                    case REJECT_NOT_PERMITTED -> reviewService.rejectNotPermitted(candidateId, request.getActor(), request.getRationale());
+                    case DEFER -> reviewService.deferCandidate(candidateId, request.getActor(), request.getRationale());
+                    case OPEN_MODERATION_FLAG -> reviewService.openModerationFlag(
+                            candidateId,
+                            ModerationFlagType.valueOf(request.getFlagType()),
+                            request.getFlagPolicy() != null && request.getFlagPolicy().equals("BLOCK_UNTIL_RESOLVED")
+                                    ? ModerationFlagSeverity.HIGH
+                                    : ModerationFlagSeverity.WARNING,
+                            request.getActor(),
+                            request.getFlagReason());
+                    default -> throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
+                            "Unsupported bulk action type: " + request.getActionType());
+                }
+                results.add(new BulkActionResult()
+                        .candidateId(candidateId)
+                        .success(true));
+                successCount++;
+            } catch (Exception ex) {
+                String message = ex instanceof ResponseStatusException rs ? rs.getReason() : ex.getMessage();
+                results.add(new BulkActionResult()
+                        .candidateId(candidateId)
+                        .success(false)
+                        .errorMessage(message));
+                failureCount++;
+            }
+        }
+        BulkActionResponse response = new BulkActionResponse()
+                .actionType(request.getActionType())
+                .processedCount(results.size())
+                .successCount(successCount)
+                .failureCount(failureCount)
+                .results(results);
+        return ResponseEntity.ok(response);
     }
 
     private static String readCsvFile(MultipartFile file) {

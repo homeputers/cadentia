@@ -501,6 +501,49 @@ public class AdminImportReviewService {
     }
 
     @Transactional
+    public void assignReviewer(UUID importCandidateId, String assignedReviewerId) {
+        ImportCandidate candidate = requireCandidate(importCandidateId);
+        addAuditEvent(importCandidateId, "IMPORT_CANDIDATE", "REVIEWER_ASSIGNED",
+                assignedReviewerId != null ? assignedReviewerId : "system",
+                "Bulk reviewer assignment",
+                Map.of("assignedReviewerId", String.valueOf(candidate.id())),
+                Map.of("assignedReviewerId", String.valueOf(assignedReviewerId)));
+    }
+
+    @Transactional
+    public void rejectDuplicate(UUID importCandidateId, String actor, String rationale) {
+        ImportCandidate candidate = requireCandidate(importCandidateId);
+        recordReview(new CreateImportCandidateReviewCommand(
+                candidate.id(),
+                null,
+                ImportCandidateReviewDecision.REJECT_CANDIDATE,
+                actor,
+                toJson(Map.of("decision", "REJECT_DUPLICATE", "rationale", rationale))));
+    }
+
+    @Transactional
+    public void rejectNotPermitted(UUID importCandidateId, String actor, String rationale) {
+        ImportCandidate candidate = requireCandidate(importCandidateId);
+        recordReview(new CreateImportCandidateReviewCommand(
+                candidate.id(),
+                null,
+                ImportCandidateReviewDecision.REJECT_CANDIDATE,
+                actor,
+                toJson(Map.of("decision", "REJECT_NOT_PERMITTED", "rationale", rationale))));
+    }
+
+    @Transactional
+    public void deferCandidate(UUID importCandidateId, String actor, String rationale) {
+        ImportCandidate candidate = requireCandidate(importCandidateId);
+        recordReview(new CreateImportCandidateReviewCommand(
+                candidate.id(),
+                null,
+                ImportCandidateReviewDecision.NEEDS_MORE_INFO,
+                actor,
+                toJson(Map.of("decision", "DEFER", "rationale", rationale))));
+    }
+
+    @Transactional
     public AdminMergeResult mergeIntoExistingSong(MergeIntoExistingSongCommand command) {
         requireAuthorized("MERGE_CANDIDATE", command.reviewer(), command.importCandidateId(), "IMPORT_CANDIDATE");
         ImportCandidate candidate = requireCandidate(command.importCandidateId());

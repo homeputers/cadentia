@@ -1591,3 +1591,99 @@ AdminAuditEventSearchResponse:
       type: integer
     totalPages:
       type: integer
+BulkActionType:
+  type: string
+  enum:
+  - ASSIGN_REVIEWER
+  - REJECT_DUPLICATE
+  - REJECT_NOT_PERMITTED
+  - OPEN_MODERATION_FLAG
+  - DEFER
+BulkActionRequest:
+  type: object
+  required:
+  - actionType
+  - candidateIds
+  - actor
+  properties:
+    actionType:
+      "$ref": "#/BulkActionType"
+    candidateIds:
+      type: array
+      items:
+        type: string
+        format: uuid
+      minItems: 1
+      maxItems: 100
+      description: Candidate IDs to apply the bulk action to.
+    actor:
+      type: string
+      description: Attributed actor ID for audit records.
+    assignedReviewerId:
+      type: string
+      nullable: true
+      description: Required when actionType is ASSIGN_REVIEWER.
+    flagType:
+      type: string
+      nullable: true
+      description: Required when actionType is OPEN_MODERATION_FLAG.
+    flagScope:
+      type: string
+      nullable: true
+      description: Required when actionType is OPEN_MODERATION_FLAG.
+    flagReason:
+      type: string
+      nullable: true
+      description: Required when actionType is OPEN_MODERATION_FLAG.
+    flagPolicy:
+      type: string
+      nullable: true
+      description: Required when actionType is OPEN_MODERATION_FLAG.
+    rationale:
+      type: string
+      nullable: true
+      description: Required for REJECT_DUPLICATE, REJECT_NOT_PERMITTED, and DEFER.
+BulkActionResult:
+  type: object
+  required:
+  - candidateId
+  - success
+  properties:
+    candidateId:
+      type: string
+      format: uuid
+    success:
+      type: boolean
+    errorMessage:
+      type: string
+      nullable: true
+    auditReferenceId:
+      type: string
+      nullable: true
+BulkActionResponse:
+  type: object
+  required:
+  - actionType
+  - processedCount
+  - successCount
+  - failureCount
+  - results
+  properties:
+    actionType:
+      "$ref": "#/BulkActionType"
+    processedCount:
+      type: integer
+      minimum: 0
+    successCount:
+      type: integer
+      minimum: 0
+    failureCount:
+      type: integer
+      minimum: 0
+    results:
+      type: array
+      items:
+        "$ref": "#/BulkActionResult"
+    auditReferenceId:
+      type: string
+      nullable: true

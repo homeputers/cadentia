@@ -793,3 +793,40 @@
           application/json:
             schema:
               "$ref": "../components/schemas/admin-review.yaml#/AdminAuditEventSearchResponse"
+"/admin/import-candidates:bulk-actions":
+  post:
+    tags:
+    - AdminReview
+    operationId: bulkActionAdminImportCandidates
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - CATALOG_EDITOR
+    - ADMIN
+    summary: Apply a bulk action to multiple import candidates
+    description: |
+      Executes a single action type across many candidates. Each candidate is processed
+      independently; partial failures are returned so the caller can retry or review.
+      Not all actions supported by individual candidate endpoints are available in bulk.
+      Approval actions and commit-merge are intentionally excluded from bulk.
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            "$ref": "../components/schemas/admin-review.yaml#/BulkActionRequest"
+    responses:
+      '200':
+        description: Bulk action results with per-candidate outcomes.
+        content:
+          application/json:
+            schema:
+              "$ref": "../components/schemas/admin-review.yaml#/BulkActionResponse"
+      '400':
+        "$ref": "../components/shared/responses.yaml#/ValidationError"
+      '401':
+        "$ref": "../components/shared/responses.yaml#/Unauthorized"
+      '403':
+        "$ref": "../components/shared/responses.yaml#/Forbidden"
+      '422':
+        "$ref": "../components/shared/responses.yaml#/ValidationError"
