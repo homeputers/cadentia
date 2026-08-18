@@ -15,6 +15,15 @@ Three env vars are required for the admin console to work in local dev. All set 
 
 **How to apply:** If admin console regresses to "Missing church instance" or "Admin shell unavailable", check these three vars first. Do not write .env files (Replit blocks them); use setEnvVars instead.
 
+## Additional required VITE vars (added in UI overhaul)
+- `VITE_CADENTIA_AUTH_ISSUER_URL=http://localhost/auth` — placeholder; required by missingRequiredEnvironment() check even in local-auth mode
+- `VITE_CADENTIA_IDP_CLIENT_ID=cadentia-admin-web` — same; not actually called in local-auth mode
+
+**Why:** The admin web's startup check treats authIssuerUrl and identityProviderClientId as required regardless of auth provider. Without them the UI shows "Missing runtime configuration" and blocks.
+
+## Vite allowedHosts (Replit-specific)
+`apps/admin-web/vite.config.ts` must have `server.allowedHosts: true`. Without it, Replit's proxied preview domain is rejected with "Blocked request. This host is not allowed."
+
 ## LocalDevelopmentBypassSecurityConfig
 Added at `apps/api/src/main/java/com/cadentia/api/config/LocalDevelopmentBypassSecurityConfig.java`.
 Active only when `cadentia.instance.id=local-development`. Permits all requests with @Order(1) (higher priority than SecurityConfig). Without it, the admin web fetch gets 401 but has no login UI to use it.
