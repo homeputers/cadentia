@@ -1,0 +1,1 @@
+- [Local development setup](local-dev-setup.md) — Three env vars + bypass security config needed for admin console to work locally

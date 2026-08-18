@@ -1,0 +1,77 @@
+modules = ["java-graalvm22.3", "nodejs-20", "web", "postgresql-16", "python-base-3.13"]
+
+[nix]
+channel = "stable-25_05"
+packages = ["jdk21_headless"]
+
+[agent]
+expertMode = true
+
+[userenv]
+
+[userenv.shared]
+CADENTIA_ASSET_STORAGE_PROVIDER = "local"
+CADENTIA_AUTH_PROVIDER = "local"
+CADENTIA_DB_PASSWORD = "password"
+CADENTIA_DB_URL = "jdbc:postgresql://helium/heliumdb?sslmode=disable"
+CADENTIA_DB_USERNAME = "postgres"
+CADENTIA_INSTANCE_ID = "local-development"
+CADENTIA_LLM_ENABLED = "false"
+CADENTIA_LOCAL_ADMIN_PASSWORD = "cadentia"
+CADENTIA_LOCAL_ADMIN_USERNAME = "admin"
+PORT = "8080"
+VITE_CADENTIA_CHURCH_INSTANCE_ID = "local-development"
+VITE_CADENTIA_API_BASE_URL = "/api"
+
+[workflows]
+runButton = "Project"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "API (Spring Boot)"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Admin Web (Vite)"
+
+[[workflows.workflow]]
+name = "API (Spring Boot)"
+author = "agent"
+
+[workflows.workflow.metadata]
+outputType = "console"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "bash apps/api/start.sh"
+waitForPort = 8080
+
+[[workflows.workflow]]
+name = "Admin Web (Vite)"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd apps/admin-web && npm run dev"
+waitForPort = 5173
+
+[[ports]]
+localPort = 5173
+externalPort = 5173
+
+[[ports]]
+localPort = 5174
+externalPort = 3000
+
+[[ports]]
+localPort = 8080
+externalPort = 80
+
+[postMerge]
+path = "scripts/post-merge.sh"
+timeoutMs = 60000
