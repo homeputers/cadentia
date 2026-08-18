@@ -3,7 +3,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { act } from 'react-dom/test-utils';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ImportCandidateQueue } from '../src/routes/ImportCandidateQueue';
-import { buildImportCandidateQueuePath, parseImportCandidateFilters, serializeImportCandidateFilters, type ImportCandidateQueueResponse } from '../src/import-candidates';
+import { buildImportCandidateQueuePath, parseImportCandidateFilters, serializeImportCandidateFilters, type BulkActionResponse, type ImportCandidateQueueResponse } from '../src/import-candidates';
 import type { AdminApiClient } from '../src/generated/cadentia-api/client';
 import type { AdminSession } from '../src/auth/session';
 
@@ -67,5 +67,95 @@ describe('import candidate queue', () => {
         container = document.createElement('div'); document.body.appendChild(container);
         await act(async () => { root = createRoot(container); root.render(<ImportCandidateQueue session={viewer} apiClient={{ getAdminSession: vi.fn(), request: vi.fn().mockResolvedValue(queue) }} />); });
         expect(container.textContent).toContain('Detail view only');
+    });
+
+    it('renders bulk action section only when user has REVIEW_CATALOG capability', async () => {
+        const node = await render({ getAdminSession: vi.fn(), request: vi.fn().mockResolvedValue(queue) });
+        expect(node.textContent).toContain('Bulk actions');
+        const viewer: AdminSession = { ...session, capabilities: ['VIEW_IMPORT_QUEUE'] };
+        container = document.createElement('div'); document.body.appendChild(container);
+        await act(async () => { root = createRoot(container); root.render(<ImportCandidateQueue session={viewer} apiClient={{ getAdminSession: vi.fn(), request: vi.fn().mockResolvedValue(queue) }} />); });
+        expect(container.textContent).not.toContain('Bulk actions');
+    });
+
+    it('shows bulk action disabled when no candidates are selected', async () => {
+        const node = await render({ getAdminSession: vi.fn(), request: vi.fn().mockResolvedValue(queue) });
+        expect(node.textContent).toContain('Select at least one candidate');
+        const button = node.querySelector('button[aria-describedby="bulk-disabled-reason"]') as HTMLButtonElement;
+        expect(button).not.toBeNull();
+        expect(button.disabled).toBe(true);
+    });
+
+    it('allows selecting candidates and submitting a bulk action', async () => {
+        const bulkResponse: BulkActionResponse = {
+            actionType: 'REJECT_DUPLICATE',
+            processedCount: 1,
+            successCount: 1,
+            failureCount: 0,
+            results: [{ candidateId: '11111111-1111-1111-1111-111111111111', success: true }],
+            auditReferenceId: 'bulk-audit-1',
+        };
+        const request = vi.fn()
+            .mockResolvedValueOnce(queue)
+            .mockResolvedValueOnce(bulkResponse)
+            .mockResolvedValueOnce(queue);
+        const node = await render({ getAdminSession: vi.fn(), request });
+        const checkbox = node.querySelector('input[type="checkbox"][aria-label*="Select candidate"]') as HTMLInputElement;
+        expect(checkbox).not.toBeNull();
+        await act(async () => { checkbox.click(); });
+        expect(node.textContent).toContain('1 selected');
+        const openBulkButton = Array.from(node.querySelectorAll('button')).find((b) => b.textContent?.includes('Open bulk action')) as HTMLButtonElement;
+        expect(openBulkButton).not.toBeUndefined();
+        await act(async () => { openBulkButton.click(); });
+        expect(node.textContent).toContain('Configure bulk action');
+        const dialog = node.querySelector('[aria-labelledby="bulk-dialog-title"]') as HTMLElement;
+        expect(dialog).not.toBeNull();
+        const select = dialog.querySelector('select') as HTMLSelectElement;
+        await act(async () => { select.value = 'REJECT_DUPLICATE'; select.dispatchEvent(new Event('change', { bubbles: true })); });
+        const rationale = dialog.querySelector('textarea') as HTMLTextAreaElement;
+        await act(async () => { rationale.value = 'Bulk reject for duplicate review'; rationale.dispatchEvent(new Event('change', { bubbles: true })); });
+        const submitButton = Array.from(dialog.querySelectorAll('button')).find((b) => b.textContent?.includes('Submit bulk action'));
+        expect(submitButton).not.toBeUndefined();
+        await act(async () => { submitButton!.click(); });
+        expect(request).toHaveBeenCalledWith('/admin/import-candidates:bulk-actions', expect.objectContaining({ method: 'POST' }));
+        expect(node.textContent).toContain('1 succeeded');
+    });
+
+    it('disables bulk actions and shows error when backend rejects', async () => {
+        const request = vi.fn()
+            .mockResolvedValueOnce(queue)
+            .mockRejectedValueOnce(new Error('Backend validation failed'));
+        const node = await render({ getAdminSession: vi.fn(), request });
+        const checkbox = node.querySelector('input[type="checkbox"]') as HTMLInputElement;
+        expect(checkbox).not.toBeNull();
+        await act(async () => { checkbox.click(); });
+        const openBulkButton = Array.from(node.querySelectorAll('button')).find((b) => b.textContent?.includes('Open bulk action'));
+        await act(async () => { openBulkButton?.click(); });
+        const submitButton = Array.from(node.querySelectorAll('button')).find((b) => b.textContent?.includes('Submit bulk action'));
+        await act(async () => { submitButton?.click(); });
+        expect(node.textContent).toContain('Bulk action failed');
+    });
+
+    it('resets selection when queue reloads after bulk action', async () => {
+        const bulkResponse: BulkActionResponse = {
+            actionType: 'DEFER',
+            processedCount: 1,
+            successCount: 1,
+            failureCount: 0,
+            results: [{ candidateId: '11111111-1111-1111-1111-111111111111', success: true }],
+        };
+        const request = vi.fn()
+            .mockResolvedValueOnce(queue)
+            .mockResolvedValueOnce(bulkResponse)
+            .mockResolvedValueOnce(queue);
+        const node = await render({ getAdminSession: vi.fn(), request });
+        const checkbox = node.querySelector('input[type="checkbox"]') as HTMLInputElement;
+        await act(async () => { checkbox.click(); });
+        expect(node.textContent).toContain('1 selected');
+        const openBulkButton = Array.from(node.querySelectorAll('button')).find((b) => b.textContent?.includes('Open bulk action'));
+        await act(async () => { openBulkButton?.click(); });
+        const submitButton = Array.from(node.querySelectorAll('button')).find((b) => b.textContent?.includes('Submit bulk action'));
+        await act(async () => { submitButton?.click(); });
+        expect(node.textContent).not.toContain('1 selected');
     });
 });
