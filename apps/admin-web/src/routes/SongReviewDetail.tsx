@@ -267,7 +267,7 @@ const SongMetadataForm = ({ draft, canEdit, onSaveSongMetadata, onSaveArrangemen
         <section className="admin-form-grid__wide admin-shell__subsection" aria-labelledby="arrangement-metadata-title">
             <div className="admin-arrangement-header">
                 <h3 id="arrangement-metadata-title">Arrangements</h3>
-                <button type="button" disabled={!canEdit} onClick={onAddArrangement}>Add arrangement</button>
+                <button type="button" className="secondary" disabled={!canEdit} onClick={onAddArrangement}>Add arrangement</button>
             </div>
         </section>
         <div className="admin-form-grid__wide admin-arrangement-table" role="table" aria-label="Arrangement metadata">
@@ -302,7 +302,7 @@ const SongMetadataForm = ({ draft, canEdit, onSaveSongMetadata, onSaveArrangemen
                     <div role="cell">
                         {arrangement.active
                             ? <button type="button" className="danger" disabled={!canEdit || !arrangement.arrangementId} onClick={() => onRemoveArrangement(arrangement.arrangementId ?? '')}>Remove</button>
-                            : <button type="button" disabled={!canEdit || !arrangement.arrangementId} onClick={() => onArrangementChange(arrangement.arrangementId ?? '', 'active', true)}>Restore</button>}
+                            : <button type="button" className="secondary" disabled={!canEdit || !arrangement.arrangementId} onClick={() => onArrangementChange(arrangement.arrangementId ?? '', 'active', true)}>Restore</button>}
                     </div>
                 </div>;
             })}

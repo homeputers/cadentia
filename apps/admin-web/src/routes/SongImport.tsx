@@ -149,7 +149,7 @@ export const SongImport = ({ session, apiClient = createAdminApiClient({ environ
                             <Field label="Resource URL">{({ inputId }) => <input id={inputId} name="url" value={resourceDraft.url ?? ''} onChange={updateResource} />}</Field>
                             <Field label="Asset ID">{({ inputId }) => <input id={inputId} name="assetId" value={resourceDraft.assetId ?? ''} onChange={updateResource} />}</Field>
                         </div>
-                        <button type="button" onClick={addResource}>Add resource</button>
+                        <button type="button" className="secondary" onClick={addResource}>Add resource</button>
                         {manualDraft.resources.length > 0 && <p>{manualDraft.resources.length} resources staged with this song.</p>}
                     </section>
                     <button type="submit">Stage manual song</button>
