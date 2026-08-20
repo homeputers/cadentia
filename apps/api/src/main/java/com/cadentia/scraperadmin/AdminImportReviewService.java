@@ -7,6 +7,7 @@ import com.cadentia.catalog.entity.ImportCandidateReview;
 import com.cadentia.catalog.entity.ProposedDuplicateMatch;
 import com.cadentia.catalog.entity.ProvenanceRecord;
 import com.cadentia.catalog.entity.Song;
+import com.cadentia.catalog.entity.Tag;
 import com.cadentia.api.security.RbacAuthorities;
 import com.cadentia.catalog.model.ApprovalStatus;
 
@@ -17,7 +18,12 @@ import com.cadentia.catalog.model.ArrangementSourceType;
 import com.cadentia.catalog.model.CreateApprovalRecordCommand;
 import com.cadentia.catalog.model.CreateArrangementCommand;
 import com.cadentia.catalog.model.CreateImportCandidateReviewCommand;
+import com.cadentia.catalog.model.CreateLyricsDocumentCommand;
 import com.cadentia.catalog.model.CreateProvenanceRecordCommand;
+import com.cadentia.catalog.model.CreateTagCommand;
+import com.cadentia.catalog.model.KeyMode;
+import com.cadentia.catalog.model.LyricsFormat;
+import com.cadentia.catalog.model.TagType;
 import com.cadentia.catalog.model.CreateSongCommand;
 import com.cadentia.catalog.model.DuplicateMatchStatus;
 import com.cadentia.catalog.model.ImportCandidateReviewDecision;
@@ -32,7 +38,11 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
+import java.util.HexFormat;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -657,6 +667,60 @@ public class AdminImportReviewService {
                 command.reviewer(),
                 "Reviewed import provenance captured; licensing approval remains pending."));
 
+        if (command.lyrics() != null && !command.lyrics().isBlank()) {
+            LyricsFormat lyricsFormat = LyricsFormat.PLAIN_TEXT;
+            if (command.lyricsFormat() != null && !command.lyricsFormat().isBlank()) {
+                try {
+                    lyricsFormat = LyricsFormat.fromDeclaredValue(command.lyricsFormat());
+                } catch (IllegalArgumentException ignored) {
+                    // Fall back to plain_text for unsupported formats
+                }
+            }
+            songRepository.createLyricsDocument(new CreateLyricsDocumentCommand(
+                    arrangement.id(),
+                    lyricsFormat,
+                    command.lyrics(),
+                    sha256(command.lyrics()),
+                    1,
+                    true,
+                    command.chordChart() != null && !command.chordChart().isBlank(),
+                    false,
+                    command.sourceUri() != null ? command.sourceUri() : "admin-import",
+                    command.reviewer()));
+        }
+
+        for (String theme : command.themes()) {
+            String slug = toSlug(theme);
+            if (slug.isBlank()) {
+                continue;
+            }
+            Tag tag = songRepository.findTagByTypeAndSlug(TagType.THEME, slug)
+                    .orElseGet(() -> songRepository.createTag(new CreateTagCommand(
+                            TagType.THEME,
+                            theme.trim(),
+                            slug,
+                            "Theme tag created from import",
+                            true)));
+            songRepository.addTagToSong(song.id(), tag.id());
+            songRepository.addTagToArrangement(arrangement.id(), tag.id());
+        }
+
+        for (String scripture : command.scriptureReferences()) {
+            String slug = toSlug(scripture);
+            if (slug.isBlank()) {
+                continue;
+            }
+            Tag tag = songRepository.findTagByTypeAndSlug(TagType.SCRIPTURE, slug)
+                    .orElseGet(() -> songRepository.createTag(new CreateTagCommand(
+                            TagType.SCRIPTURE,
+                            scripture.trim(),
+                            slug,
+                            "Scripture reference created from import",
+                            true)));
+            songRepository.addTagToSong(song.id(), tag.id());
+            songRepository.addTagToArrangement(arrangement.id(), tag.id());
+        }
+
         songRepository.markImportCandidateMerged(candidate.id(), song.id())
                 .orElseThrow(() -> new IllegalStateException("Import candidate disappeared during create-new merge"));
         return new AdminMergeResult(song, arrangement, List.of(songProvenanceRecord, arrangementProvenanceRecord),
@@ -679,6 +743,8 @@ public class AdminImportReviewService {
             String rationale) {
         Map<String, Object> payload = parseJsonObject(candidate.sourcePayloadJson());
         Map<String, Object> metadata = nestedMap(payload, "metadata");
+        Map<String, Object> suggestionDetails = nestedMap(payload, "suggestionDetails");
+        Map<String, Object> songDetails = nestedMap(payload, "songDetails");
         String title = firstText(metadata.get("title"), payload.get("title"), candidate.rawTitle(), candidate.normalizedTitle());
         String language = firstText(metadata.get("language"), payload.get("language"), "en");
         String artist = firstText(metadata.get("artist"), metadata.get("author"), candidate.sourceArtistName());
@@ -700,7 +766,20 @@ public class AdminImportReviewService {
                 "Admin reviewed import",
                 licenseTypeFor(ccliNumber),
                 rationale,
-                ImportMethod.SCRAPER_REVIEWED);
+                ImportMethod.SCRAPER_REVIEWED,
+                firstText(suggestionDetails.get("key")),
+                keyModeOrNull(suggestionDetails.get("keyMode")),
+                integerOrNull(suggestionDetails.get("bpm")),
+                firstText(suggestionDetails.get("timeSignature")),
+                integerOrNull(suggestionDetails.get("durationSeconds")),
+                integerOrNull(suggestionDetails.get("energy")),
+                integerOrNull(suggestionDetails.get("difficulty")),
+                firstText(songDetails.get("lyrics")),
+                firstText(songDetails.get("lyricsFormat")),
+                firstText(songDetails.get("chordChart")),
+                firstText(songDetails.get("arrangementNotes")),
+                stringList(suggestionDetails.get("themes")),
+                stringList(suggestionDetails.get("scriptureReferences")));
     }
 
     private MergeIntoExistingSongCommand mergeIntoExistingSongCommand(
@@ -780,13 +859,13 @@ public class AdminImportReviewService {
                         normalizedArrangementName,
                         ArrangementSourceType.UNKNOWN,
                         command.primaryLanguage(),
-                        null,
-                        null,
-                        null,
-                        null,
-                        null,
-                        null,
-                        null,
+                        command.musicalKey(),
+                        command.keyMode(),
+                        command.tempoBpm(),
+                        command.timeSignature(),
+                        command.durationSeconds(),
+                        command.energyLevel(),
+                        command.difficultyLevel(),
                         true,
                         true)));
     }
@@ -1006,6 +1085,37 @@ public class AdminImportReviewService {
         } catch (NumberFormatException ignored) {
             return null;
         }
+    }
+
+    private static KeyMode keyModeOrNull(Object value) {
+        String text = firstText(value);
+        if (text == null) {
+            return null;
+        }
+        try {
+            return KeyMode.valueOf(text.toUpperCase());
+        } catch (IllegalArgumentException ignored) {
+            return null;
+        }
+    }
+
+    private static String sha256(String content) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            return HexFormat.of().formatHex(digest.digest(content.getBytes(StandardCharsets.UTF_8)));
+        } catch (NoSuchAlgorithmException exception) {
+            throw new IllegalStateException("SHA-256 is unavailable", exception);
+        }
+    }
+
+    private static String toSlug(String value) {
+        if (value == null || value.isBlank()) {
+            return "";
+        }
+        return value.trim().toLowerCase(java.util.Locale.ROOT)
+                .replaceAll("[^a-z0-9-]+", "-")
+                .replaceAll("^-+|-+$", "")
+                .replaceAll("-+", "-");
     }
 
     private static LicenseType licenseTypeFor(String ccliNumber) {

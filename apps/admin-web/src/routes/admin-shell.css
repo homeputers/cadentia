@@ -178,7 +178,15 @@ button.danger:disabled { background: #ead1d7; border-color: #d8a8b4; color: #7a3
 .admin-arrangement-row--head { background: var(--surface-subtle); color: var(--muted); font-size: 0.8rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
 .admin-arrangement-row--inactive { background: var(--surface-subtle); color: var(--muted); }
 .admin-arrangement-row input, .admin-arrangement-row select { width: 100%; }
+.admin-tag-group { margin-block-end: var(--space-3); }
+.admin-tag-group h3 { font-size: 0.85rem; font-weight: 600; margin-block: 0 var(--space-2); text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+.admin-tag-list { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 .admin-chip-list { display: flex; flex-wrap: wrap; gap: 0.45rem; }
 .admin-chip-list code { background: var(--surface-subtle); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); font-size: 0.85rem; padding: 0.25rem 0.45rem; }
+.admin-lyrics-header { display: flex; justify-content: space-between; align-items: center; margin-block-end: var(--space-3); }
+.admin-lyrics-header h3 { margin: 0; }
+.admin-lyrics-header button.small { padding: 0.25rem 0.5rem; font-size: 0.8rem; }
+.admin-add-lyrics-row { display: flex; gap: var(--space-2); align-items: center; }
+.admin-add-lyrics-row select { flex: 1; }
 .sr-only { clip: rect(0 0 0 0); clip-path: inset(50%); height: 1px; overflow: hidden; position: absolute; white-space: nowrap; width: 1px; }
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }

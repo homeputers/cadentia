@@ -148,7 +148,7 @@ export type SongMetadataDraft = {
 export type ArrangementMetadataDraft = Omit<CatalogArrangement, 'arrangementId' | 'songId' | 'updatedAt' | 'lyricsDocuments'> & {
     arrangementId?: string | null;
 };
-export type LyricsMetadataDraft = Pick<CatalogLyricsDocument, 'lyricsDocumentId' | 'format' | 'content' | 'containsChords' | 'containsSections' | 'sourceReference'>;
+export type LyricsMetadataDraft = Pick<CatalogLyricsDocument, 'lyricsDocumentId' | 'format' | 'content' | 'containsChords' | 'containsSections' | 'sourceReference' | 'arrangementId'>;
 
 export type AttachmentDraft = {
     targetType: 'song' | 'arrangement';
@@ -370,6 +370,7 @@ export const toMetadataDraft = (detail: SongReviewDetail, actor: string): SongMe
     })),
     lyricsDocuments: detail.arrangements.flatMap((arrangement) => arrangement.lyricsDocuments.filter((lyrics) => lyrics.current).map((lyrics) => ({
         lyricsDocumentId: lyrics.lyricsDocumentId,
+        arrangementId: lyrics.arrangementId,
         format: lyrics.format,
         content: lyrics.content ?? '',
         containsChords: lyrics.containsChords,
@@ -389,6 +390,12 @@ export const updateReviewSong = (client: AdminApiClient, songId: string, draft: 
             }
             const { arrangementId: _arrangementId, ...newArrangement } = arrangement;
             return newArrangement;
+        }),
+        lyricsDocuments: draft.lyricsDocuments.map((lyrics) => {
+            if (!lyrics.lyricsDocumentId?.startsWith('new-')) {
+                return lyrics;
+            }
+            return { ...lyrics, lyricsDocumentId: null };
         }),
     }),
 });

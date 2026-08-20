@@ -13,6 +13,7 @@ import com.cadentia.catalog.model.ApprovalStatus;
 import com.cadentia.catalog.model.ApprovalType;
 import com.cadentia.catalog.model.ArrangementSourceType;
 import com.cadentia.catalog.model.CreateArrangementCommand;
+import com.cadentia.catalog.model.CreateLyricsDocumentCommand;
 import com.cadentia.catalog.model.ImportCandidateReviewDecision;
 import com.cadentia.catalog.model.ImportCandidateStatus;
 import com.cadentia.catalog.model.KeyMode;
@@ -339,20 +340,40 @@ public class AdminImportCandidateController implements AdminReviewApi {
         }
 
         for (AdminCatalogLyricsUpdateRequest lyrics : emptyIfNull(request.getLyricsDocuments())) {
-            LyricsDocument existingLyrics = songRepository.findLyricsDocumentById(lyrics.getLyricsDocumentId())
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Lyrics document not found"));
-            songRepository.findArrangementById(existingLyrics.arrangementId())
-                    .filter(candidate -> candidate.songId().equals(songId))
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Lyrics arrangement not found"));
-            songRepository.updateLyricsDocument(existingLyrics.id(), new UpdateLyricsDocumentCommand(
-                            LyricsFormat.fromDeclaredValue(lyrics.getFormat().getValue()),
-                            lyrics.getContent(),
-                            sha256(lyrics.getContent()),
-                            Boolean.TRUE.equals(lyrics.getContainsChords()),
-                            Boolean.TRUE.equals(lyrics.getContainsSections()),
-                            lyrics.getSourceReference(),
-                            request.getActor()))
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Lyrics document not found"));
+            if (lyrics.getLyricsDocumentId() == null) {
+                if (lyrics.getArrangementId() == null) {
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "arrangementId is required when creating a new lyrics document");
+                }
+                songRepository.findArrangementById(lyrics.getArrangementId())
+                        .filter(candidate -> candidate.songId().equals(songId))
+                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Arrangement not found for song"));
+                songRepository.createLyricsDocument(new CreateLyricsDocumentCommand(
+                        lyrics.getArrangementId(),
+                        LyricsFormat.fromDeclaredValue(lyrics.getFormat().getValue()),
+                        lyrics.getContent(),
+                        sha256(lyrics.getContent()),
+                        1,
+                        true,
+                        Boolean.TRUE.equals(lyrics.getContainsChords()),
+                        Boolean.TRUE.equals(lyrics.getContainsSections()),
+                        lyrics.getSourceReference(),
+                        request.getActor()));
+            } else {
+                LyricsDocument existingLyrics = songRepository.findLyricsDocumentById(lyrics.getLyricsDocumentId())
+                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Lyrics document not found"));
+                songRepository.findArrangementById(existingLyrics.arrangementId())
+                        .filter(candidate -> candidate.songId().equals(songId))
+                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Lyrics arrangement not found"));
+                songRepository.updateLyricsDocument(existingLyrics.id(), new UpdateLyricsDocumentCommand(
+                                LyricsFormat.fromDeclaredValue(lyrics.getFormat().getValue()),
+                                lyrics.getContent(),
+                                sha256(lyrics.getContent()),
+                                Boolean.TRUE.equals(lyrics.getContainsChords()),
+                                Boolean.TRUE.equals(lyrics.getContainsSections()),
+                                lyrics.getSourceReference(),
+                                request.getActor()))
+                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Lyrics document not found"));
+            }
         }
 
         songRepository.appendPrivilegedActionAuditEvent(new AdminAuditEvent(

@@ -605,7 +605,6 @@ AdminCatalogLyricsUpdateRequest:
   type: object
   additionalProperties: false
   required:
-  - lyricsDocumentId
   - format
   - content
   - sourceReference
@@ -613,6 +612,13 @@ AdminCatalogLyricsUpdateRequest:
     lyricsDocumentId:
       type: string
       format: uuid
+      nullable: true
+      description: Existing lyrics document identifier. Omit to create a new lyrics document for the specified arrangement.
+    arrangementId:
+      type: string
+      format: uuid
+      nullable: true
+      description: Required when lyricsDocumentId is omitted. Identifies which arrangement the new lyrics document belongs to.
     format:
       type: string
       enum:

@@ -238,7 +238,20 @@ class AdminImportReviewServiceTest {
                 "Fixture CSV row 2",
                 LicenseType.UNKNOWN,
                 "metadata-only import",
-                ImportMethod.CSV_IMPORT));
+                ImportMethod.CSV_IMPORT,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                List.of(),
+                List.of()));
 
         // Assert
         assertThat(result.song()).isEqualTo(song);
