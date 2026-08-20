@@ -76,7 +76,7 @@ public class TelegramAuthorizationService {
                 .map(existing -> expireIfNeeded(existing).orElse(existing))
                 .filter(existing -> existing.state() != TelegramSessionState.EXPIRED)
                 .orElseGet(() -> newSession(event, linked, chatHash, userHash));
-        return TelegramAuthorizationDecision.allow(linked, session);
+        return TelegramAuthorizationDecision.allow(linked, session, message("authorized"));
     }
 
     public TelegramBotSession touch(TelegramAuthorizationDecision decision, TelegramChannelEvent event, TelegramSessionState nextState) {
@@ -133,8 +133,8 @@ public class TelegramAuthorizationService {
             String safeResponse,
             TelegramLinkedActor actor,
             TelegramBotSession session) {
-        static TelegramAuthorizationDecision allow(TelegramLinkedActor actor, TelegramBotSession session) {
-            return new TelegramAuthorizationDecision(true, TelegramIdentityStatus.LINKED, "Authorized.", actor, session);
+        static TelegramAuthorizationDecision allow(TelegramLinkedActor actor, TelegramBotSession session, String safeResponse) {
+            return new TelegramAuthorizationDecision(true, TelegramIdentityStatus.LINKED, safeResponse, actor, session);
         }
 
         static TelegramAuthorizationDecision deny(TelegramIdentityStatus status, String safeResponse) {

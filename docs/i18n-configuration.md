@@ -87,6 +87,13 @@ with English fallback for unsupported languages. Telegram's incoming
 church configuration, so all users of a church instance receive consistent
 system copy.
 
+Telegram system copy is stored in the API resource bundles
+`apps/api/src/main/resources/telegram/messages.properties`,
+`messages_es.properties`, and `messages_pt.properties`. Add or update message
+keys in those resource files rather than hardcoding localized text in Java
+classes. Dynamic catalog data, identifiers, and audit references remain data
+values and are not added to the bundles.
+
 Core bot prompts, authorization messages, command acknowledgements, buttons,
 and proposal labels are translated where catalog entries exist. Dynamic text
 from backend data, such as catalog titles or audit references, can remain in

@@ -330,7 +330,8 @@ public class DefaultTelegramConversationGateway implements TelegramConversationG
 
     private TelegramAuthorizationService.TelegramAuthorizationDecision authorize(TelegramChannelEvent event, TelegramProtectedAction action) {
         if (authorizationService == null) {
-            return new TelegramAuthorizationService.TelegramAuthorizationDecision(true, TelegramIdentityStatus.LINKED, "Authorized.", null, null);
+            return new TelegramAuthorizationService.TelegramAuthorizationDecision(true, TelegramIdentityStatus.LINKED,
+                    TelegramI18n.text("authorized", locale()), null, null);
         }
         return authorizationService.authorize(event, action);
     }

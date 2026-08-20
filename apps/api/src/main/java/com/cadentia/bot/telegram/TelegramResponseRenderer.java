@@ -15,7 +15,6 @@ import com.cadentia.runtime.InstanceConfigurationProvider;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -26,13 +25,6 @@ public class TelegramResponseRenderer {
     static final int SAFE_MESSAGE_LIMIT = 3900;
     private static final int CALLBACK_LIMIT = 180;
 
-    private static final Map<String, String> LANGUAGE_LABELS = Map.of("en", "English", "es", "Spanish", "pt", "Portuguese");
-    private static final Map<String, String> ENERGY_ARC_LABELS = Map.of(
-            "rising", "Rising", "steady", "Steady", "falling", "Falling", "low_to_high", "Low to high", "high_to_low", "High to low");
-    private static final Map<String, String> SERVICE_MOMENT_LABELS = Map.of(
-            "opening", "Opening", "communion", "Communion", "response", "Response", "altar_call", "Altar call", "sending", "Sending", "other", "Other");
-    private static final Map<String, String> KEY_POLICY_LABELS = Map.of("minimal", "Tight keys", "same", "Same key", "flex", "Flexible keys");
-    private static final Map<String, String> TEMPO_POLICY_LABELS = Map.of("tight", "Tight tempo", "smooth", "Smooth tempo", "open", "Open tempo");
     private final InstanceConfigurationProvider configurationProvider;
 
     public TelegramResponseRenderer() {
@@ -176,50 +168,13 @@ public class TelegramResponseRenderer {
         }
         StringBuilder summary = new StringBuilder();
         appendIfPresent(summary, TelegramI18n.text("structure", locale()), formatCounts(slots.getCounts()));
-        appendIfPresent(summary, TelegramI18n.text("language", locale()), lookupLabel(LANGUAGE_LABELS, slots.getLanguage()));
-        appendIfPresent(summary, TelegramI18n.text("energyArc", locale()), lookupLabel(ENERGY_ARC_LABELS, enumValue(slots.getEnergyArc())));
-        appendIfPresent(summary, TelegramI18n.text("serviceMoment", locale()), lookupLabel(SERVICE_MOMENT_LABELS, enumValue(slots.getServiceMoment())));
+        appendIfPresent(summary, TelegramI18n.text("language", locale()), TelegramI18n.label("language", slots.getLanguage(), locale()));
+        appendIfPresent(summary, TelegramI18n.text("energyArc", locale()), TelegramI18n.label("energyArc", enumValue(slots.getEnergyArc()), locale()));
+        appendIfPresent(summary, TelegramI18n.text("serviceMoment", locale()), TelegramI18n.label("serviceMoment", enumValue(slots.getServiceMoment()), locale()));
         appendIfPresent(summary, TelegramI18n.text("keyPolicy", locale()), formatKeyPolicy(slots.getKeyPolicy()));
         appendIfPresent(summary, TelegramI18n.text("tempoPolicy", locale()), formatTempoPolicy(slots.getTempoPolicy()));
-        appendIfPresent(summary, "Scripture", slots.getVerseText());
+        appendIfPresent(summary, TelegramI18n.text("scripture", locale()), slots.getVerseText());
         return summary.toString();
-    }
-
-    private String lookupLabel(Map<String, String> labels, String key) {
-        if (key == null) {
-            return null;
-        }
-        if (labels == LANGUAGE_LABELS) {
-            return switch (key) {
-                case "en", "en-US" -> TelegramI18n.text("english", locale());
-                case "es", "es-ES" -> TelegramI18n.text("spanish", locale());
-                case "pt", "pt-BR" -> TelegramI18n.text("portuguese", locale());
-                default -> key;
-            };
-        }
-        if (labels == ENERGY_ARC_LABELS) {
-            return TelegramI18n.text(key, locale());
-        }
-        if (labels == SERVICE_MOMENT_LABELS) {
-            return TelegramI18n.text(key, locale());
-        }
-        if (labels == KEY_POLICY_LABELS) {
-            return switch (key) {
-                case "minimal" -> TelegramI18n.text("tightKeys", locale());
-                case "same" -> TelegramI18n.text("sameKey", locale());
-                case "flex" -> TelegramI18n.text("flexibleKeys", locale());
-                default -> key;
-            };
-        }
-        if (labels == TEMPO_POLICY_LABELS) {
-            return switch (key) {
-                case "tight" -> TelegramI18n.text("tightTempo", locale());
-                case "smooth" -> TelegramI18n.text("smoothTempo", locale());
-                case "open" -> TelegramI18n.text("openTempo", locale());
-                default -> key;
-            };
-        }
-        return labels.getOrDefault(key, key);
     }
 
     @SuppressWarnings("unchecked")
@@ -263,7 +218,7 @@ public class TelegramResponseRenderer {
             key = null;
         }
         if (key != null) {
-            return lookupLabel(KEY_POLICY_LABELS, key);
+            return TelegramI18n.label("keyPolicy", key, locale());
         }
         return (policy.getPreferSameKey() ? TelegramI18n.text("sameKey", locale()) : TelegramI18n.text("flexibleKeys", locale()))
                 + "/" + policy.getMaxKeyCenters();
@@ -274,13 +229,13 @@ public class TelegramResponseRenderer {
             return null;
         }
         String key = policy.getMaxJumpBpm() <= 8 ? "tight" : policy.getMaxJumpBpm() <= 12 ? "smooth" : "open";
-        return lookupLabel(TEMPO_POLICY_LABELS, key);
+        return TelegramI18n.label("tempoPolicy", key, locale());
     }
 
     private TelegramRenderedMessage.TelegramInlineKeyboard keyboardFor(TelegramAdapterResponse response) {
         TelegramAdapterResponseStatus status = response.status();
         if (status == TelegramAdapterResponseStatus.COMPLETED) {
-            return new TelegramRenderedMessage.TelegramInlineKeyboard(List.of(List.of(button("Revise", TelegramCallbackAction.REVISE))));
+            return new TelegramRenderedMessage.TelegramInlineKeyboard(List.of(List.of(button(TelegramI18n.text("revise", locale()), TelegramCallbackAction.REVISE))));
         }
         if (status != TelegramAdapterResponseStatus.STARTED
                 && status != TelegramAdapterResponseStatus.CONTINUED
@@ -474,7 +429,7 @@ public class TelegramResponseRenderer {
     }
 
     private String safeSummary(String value) {
-        return unsafePublicText(value) ? "Approved catalog selection" : value;
+        return unsafePublicText(value) ? TelegramI18n.text("approvedCatalogSelection", locale()) : value;
     }
 
     private boolean unsafePublicText(String value) {
