@@ -4,6 +4,7 @@ import type { AdminSession } from '../auth/session';
 import { adminEnvironment } from '../config/environment';
 import { createAdminApiClient, type AdminApiClient, type AdminApiError } from '../generated/cadentia-api/client';
 import { buildSongReviewQueuePath, listReviewSongs, parseSongReviewFilters, serializeSongReviewFilters, type CatalogSongSummary, type SongReviewFilterState, type SongReviewQueueResponse } from '../song-review';
+import { LocalizedView } from '../i18n';
 import { ActionBadge, Badge, Breadcrumbs, DataTable, Field, FilterPanel, PageHeader, StatePanel, redactSensitiveError } from './admin-ui';
 
 const options = {
@@ -15,7 +16,7 @@ const label = (value?: string | null) => value ? value.replaceAll('_', ' ').toLo
 const severityFor = (value?: string | null) => value === 'APPROVED' ? 'success' : value === 'REJECTED' || value === 'ARCHIVED' ? 'danger' : 'neutral';
 
 const SelectField = ({ name, labelText, value, onChange }: { name: keyof typeof options; labelText: string; value: string; onChange: (name: string, value: string) => void }) => (
-    <Field label={labelText}>{({ inputId }) => <select id={inputId} value={value} onChange={(event) => onChange(name, event.target.value)}>{options[name].map((option) => <option key={option} value={option}>{option ? label(option) : 'Any'}</option>)}</select>}</Field>
+    <LocalizedView><Field label={labelText}>{({ inputId }) => <select id={inputId} value={value} onChange={(event) => onChange(name, event.target.value)}>{options[name].map((option) => <option key={option} value={option}>{option ? label(option) : 'Any'}</option>)}</select>}</Field></LocalizedView>
 );
 
 export const SongReviewQueue = ({ session, apiClient = createAdminApiClient({ environment: adminEnvironment, getAccessToken: async () => null }), initialSearch = window.location.search }: { session: AdminSession; apiClient?: AdminApiClient; initialSearch?: string }) => {
@@ -64,7 +65,7 @@ export const SongReviewQueue = ({ session, apiClient = createAdminApiClient({ en
     const rows = (queue?.items ?? []).map((song) => renderRow(song, canReview));
 
     return (
-        <main className="admin-shell" aria-labelledby="song-review-title">
+        <LocalizedView><main className="admin-shell" aria-labelledby="song-review-title">
             <Breadcrumbs items={[{ label: 'Admin', href: '/admin' }, { label: 'Songs' }]} />
             <PageHeader eyebrow="Catalog review" title="Reviewed songs" titleId="song-review-title" description="Reviewed and approved catalog songs with editable metadata and resource attachment management." />
             <FilterPanel title="Catalog search" onSubmit={applyUrl}>
@@ -76,7 +77,7 @@ export const SongReviewQueue = ({ session, apiClient = createAdminApiClient({ en
             <StatePanel state={state} title="Reviewed songs" onRetry={() => void load(appliedFilters, true)}>{error && <p>{error}</p>}</StatePanel>
             {queue && rows.length > 0 && <><p>{queue.totalItems} catalog songs. Page {queue.page} of {queue.totalPages || 1}.</p><DataTable caption="Reviewed catalog songs" columns={['Song', 'Status', 'Catalog metadata', 'Arrangements', 'Access']} rows={rows} /></>}
             {queue && (appliedFilters.page > 1 || appliedFilters.page < queue.totalPages) && <nav aria-label="Pagination"><button className="secondary" disabled={appliedFilters.page <= 1} onClick={() => changePage(appliedFilters.page - 1)}>Previous</button><button className="secondary" disabled={appliedFilters.page >= queue.totalPages} onClick={() => changePage(appliedFilters.page + 1)}>Next</button></nav>}
-        </main>
+        </main></LocalizedView>
     );
 };
 

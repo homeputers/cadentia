@@ -142,6 +142,7 @@ class AdminOperationsControllerTest {
 
         // Assert
         assertThat(configuration).isNotNull();
+        assertThat(configuration.getDefaultLocale()).isEqualTo("en-US");
         assertThat(configuration.getAllowedActions()).extracting(Enum::name).contains("VIEW", "UPDATE");
         assertThat(configuration.getConcurrency().getVersion()).isEqualTo(1L);
         assertThat(configuration.getScoringProfiles()).extracting(profile -> profile.getProfileKey())

@@ -13,43 +13,45 @@ import { Diagnostics } from './Diagnostics';
 import { InstanceSettings } from './InstanceSettings';
 import { ActionBadge, AuditReferenceLink, Badge, Breadcrumbs, DataTable, PageHeader, RoleBadge, StatePanel, SupportDebugPanel, redactSensitiveError } from './admin-ui';
 import { createAdminApiClient, type AdminApiClient, type AdminApiError } from '../generated/cadentia-api/client';
+import { I18nProvider, LocalizedView, routeLabel, translate, useI18n, type TranslationKey } from '../i18n';
 import './admin-shell.css';
 
-const TopNav = ({ session, routes }: { session: AdminSession; routes: Array<{ href: string; label: string }> }) => (
-    <header className="admin-topnav">
-        <a className="admin-topnav__brand" href="/admin">Cadentia Admin</a>
-        <nav aria-label="Admin sections">
+const TopNav = ({ session, routes }: { session: AdminSession; routes: Array<{ href: string; label: string }> }) => {
+    const { t } = useI18n();
+    return <header className="admin-topnav">
+        <a className="admin-topnav__brand" href="/admin">{t('brand')}</a>
+        <nav aria-label={t('sections')}>
             <ul className="admin-topnav__links">
                 {routes.map((route) => (
                     <li key={route.href}>
-                        <a href={route.href} aria-current={window.location.pathname === route.href || window.location.pathname.startsWith(`${route.href}/`) ? 'page' : undefined}>{route.label}</a>
+                        <a href={route.href} aria-current={window.location.pathname === route.href || window.location.pathname.startsWith(`${route.href}/`) ? 'page' : undefined}>{routeLabel(session.locale, route.label)}</a>
                     </li>
                 ))}
             </ul>
         </nav>
         <div className="admin-topnav__user">
-            <span className="admin-topnav__name">Signed in as {session.displayName}</span>
+            <span className="admin-topnav__name">{t('signedInAs')} {session.displayName}</span>
             {session.roles.map((role) => <RoleBadge key={role} role={role} />)}
         </div>
-    </header>
-);
+    </header>;
+};
 
-const renderPermissionState = (state: PermissionState) => {
+const renderPermissionState = (state: PermissionState, t: (key: TranslationKey) => string) => {
     switch (state.kind) {
         case 'loading':
             return <StatePanel state="loading" title="Session loading" />;
         case 'missing-church-instance':
-            return <StatePanel state="error" title="Missing church instance">Admin console is missing required church-instance context.</StatePanel>;
+            return <StatePanel state="error" title={t('missingInstance')}>{t('missingInstanceCopy')}</StatePanel>;
         case 'unauthenticated':
-            return <a className="admin-shell__button" href={state.signInUrl}>Sign in to Cadentia admin</a>;
+            return <a className="admin-shell__button" href={state.signInUrl}>{t('signIn')}</a>;
         case 'expired-session':
-            return <a className="admin-shell__button" href={state.signInUrl}>Session expired. Sign in again.</a>;
+            return <a className="admin-shell__button" href={state.signInUrl}>{t('sessionExpired')}</a>;
         case 'forbidden':
-            return <StatePanel state="forbidden" title="Access denied" />;
+            return <StatePanel state="forbidden" title={t('accessDenied')} />;
         case 'disabled-feature':
-            return <StatePanel state="empty" title="Feature disabled" />;
+            return <StatePanel state="empty" title={t('capabilityDenied')} />;
         case 'failure':
-            return <StatePanel state="error" title="Admin shell unavailable" />;
+            return <StatePanel state="error" title={t('shellUnavailable')} />;
         case 'authenticated':
             return null;
     }
@@ -90,16 +92,17 @@ const ImportCandidateSummary = ({ apiClient = createAdminApiClient({ environment
     ]);
 
     return (
-        <section aria-labelledby="import-summary-title" className="admin-shell__panel">
+        <LocalizedView><section aria-labelledby="import-summary-title" className="admin-shell__panel">
             <h2 id="import-summary-title">Import review snapshot</h2>
             <StatePanel state={state} title="Import candidates" onRetry={() => void load()}>{error && <p>{error}</p>}</StatePanel>
             {queue && rows.length > 0 && <><p>{queue.totalItems} server-matched candidates. Showing up to 5.</p><DataTable caption="Latest import candidates" columns={['Candidate', 'Status', 'Reviewer', 'Audit']} rows={rows} /></>}
             <p><a href="/admin/imports">Open full import review queue</a></p>
-        </section>
+        </section></LocalizedView>
     );
 };
 
 export const AdminShell = () => {
+    const { t: defaultT } = useI18n();
     const [permissionState, setPermissionState] = useState<PermissionState>({ kind: 'loading' });
     const missingEnvironment = missingRequiredEnvironment(adminEnvironment);
 
@@ -115,10 +118,13 @@ export const AdminShell = () => {
     const routes = useMemo(() => (session ? visibleRoutes(session, adminEnvironment.featureFlags) : []), [session]);
     const blockedDirectRoute = session && !canAccessRoute(session, adminEnvironment.featureFlags, window.location.pathname);
 
-    const withNav = (page: JSX.Element) => session ? <>{<TopNav session={session} routes={routes} />}{page}</> : page;
+    const t = (key: TranslationKey) => session ? translate(session.locale, key) : defaultT(key);
+    const withNav = (page: JSX.Element) => session
+        ? <I18nProvider locale={session.locale}><TopNav session={session} routes={routes} />{page}</I18nProvider>
+        : page;
 
     if (blockedDirectRoute) {
-        return withNav(<main className="admin-shell"><Breadcrumbs items={[{ label: 'Admin', href: '/admin' }, { label: 'Access denied' }]} /><StatePanel state="forbidden" title="Access denied">This admin route is not available for the current session capabilities.</StatePanel></main>);
+        return withNav(<main className="admin-shell"><Breadcrumbs items={[{ label: t('admin'), href: '/admin' }, { label: t('accessDenied') }]} /><StatePanel state="forbidden" title={t('accessDenied')}>{t('forbidden')}</StatePanel></main>);
     }
 
     if (session && window.location.pathname === '/admin/imports') {
@@ -149,24 +155,24 @@ export const AdminShell = () => {
     }
 
     return withNav(
-        <main className="admin-shell" aria-labelledby="admin-shell-title">
-            <Breadcrumbs items={[{ label: 'Admin', href: '/admin' }, { label: 'Shell foundations' }]} />
+        <LocalizedView><main className="admin-shell" aria-labelledby="admin-shell-title">
+            <Breadcrumbs items={[{ label: t('admin'), href: '/admin' }, { label: t('shell') }]} />
             <PageHeader
-                eyebrow="Cadentia administrative console"
-                title="Shared admin route shell"
+                eyebrow={t('brand')}
+                title={t('shell')}
                 titleId="admin-shell-title"
-                description="Reusable layout, data state, confirmation, audit, validation, table, and safe diagnostics patterns for later ADR-036 screens."
+                description={t('capabilityCopy')}
             />
 
             {permissionState.kind !== 'authenticated' ? (
                 <section aria-labelledby="admin-permission-title" className="admin-shell__panel">
-                    <h2 id="admin-permission-title">Permission state</h2>
-                    {renderPermissionState(permissionState)}
+                    <h2 id="admin-permission-title">{t('accessDenied')}</h2>
+                    {renderPermissionState(permissionState, t)}
                 </section>
             ) : (
                 <section aria-labelledby="admin-nav-title" className="admin-shell__panel">
-                    <h2 id="admin-nav-title">Protected route groups</h2>
-                    <p>Signed in as {session!.displayName}. Only routes matching current capabilities are shown in the navigation bar above.</p>
+                    <h2 id="admin-nav-title">{t('protectedRoutes')}</h2>
+                    <p>{t('signedInAs')} {session!.displayName}. {t('routeCopy')}</p>
                     <p>{session!.roles.map((role) => <RoleBadge key={role} role={role} />)}</p>
                 </section>
             )}
@@ -176,20 +182,20 @@ export const AdminShell = () => {
             <div className="admin-card-grid">
                 {session && (
                     <section aria-labelledby="admin-capabilities-title" className="admin-shell__panel">
-                        <h2 id="admin-capabilities-title">Granted capabilities</h2>
-                        <p>These badges show what the backend session allows. Action controls appear inside each admin section when the matching workflow is available.</p>
+                        <h2 id="admin-capabilities-title">{t('grantedCapabilities')}</h2>
+                        <p>{t('capabilityCopy')}</p>
                         {canRenderAction(session, 'REVIEW_CATALOG') && <ActionBadge capability="REVIEW_CATALOG" />}
                         {canRenderAction(session, 'EXECUTE_ROLLBACK') && <ActionBadge capability="EXECUTE_ROLLBACK" />}
-                        {!canRenderAction(session, 'REVIEW_CATALOG') && !canRenderAction(session, 'EXECUTE_ROLLBACK') && <p>Read-only access. Mutating action controls are hidden as a usability aid.</p>}
+                        {!canRenderAction(session, 'REVIEW_CATALOG') && !canRenderAction(session, 'EXECUTE_ROLLBACK') && <p>{t('readOnly')}</p>}
                     </section>
                 )}
 
                 <section aria-labelledby="admin-config-title" className="admin-shell__panel">
-                    <h2 id="admin-config-title">Deployment smoke metadata</h2>
+                    <h2 id="admin-config-title">{t('deploymentMetadata')}</h2>
                     <SupportDebugPanel environment={adminEnvironment} />
-                    {missingEnvironment.length > 0 && <p role="status" className="admin-shell__warning">Missing runtime configuration: {missingEnvironment.join(', ')}</p>}
+                    {missingEnvironment.length > 0 && <p role="status" className="admin-shell__warning">{t('missingRuntime')}: {missingEnvironment.join(', ')}</p>}
                 </section>
             </div>
-        </main>
+        </main></LocalizedView>
     );
 };

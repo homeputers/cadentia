@@ -1,6 +1,7 @@
 package com.cadentia.bot.telegram;
 
 import com.cadentia.bot.BotAdapter;
+import com.cadentia.runtime.InstanceConfigurationProvider;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Clock;
@@ -24,6 +25,7 @@ public class TelegramBotAdapter implements BotAdapter {
     private final Clock clock;
     private final TelegramObservabilityRecorder observabilityRecorder;
     private final TelegramOperationalControlService controlService;
+    private final InstanceConfigurationProvider configurationProvider;
 
     @Autowired
     public TelegramBotAdapter(
@@ -32,8 +34,9 @@ public class TelegramBotAdapter implements BotAdapter {
             @Value("${cadentia.telegram.settings-enabled:false}") boolean settingsEnabled,
             @Value("${cadentia.telegram.callback-ttl:PT30M}") Duration callbackTtl,
             TelegramObservabilityRecorder observabilityRecorder,
-            TelegramOperationalControlService controlService) {
-        this(objectMapper, conversationGateway, settingsEnabled, callbackTtl, Clock.systemUTC(), observabilityRecorder, controlService);
+            TelegramOperationalControlService controlService,
+            InstanceConfigurationProvider configurationProvider) {
+        this(objectMapper, conversationGateway, settingsEnabled, callbackTtl, Clock.systemUTC(), observabilityRecorder, controlService, configurationProvider);
     }
 
     TelegramBotAdapter(
@@ -42,7 +45,17 @@ public class TelegramBotAdapter implements BotAdapter {
             @Value("${cadentia.telegram.settings-enabled:false}") boolean settingsEnabled,
             @Value("${cadentia.telegram.callback-ttl:PT30M}") Duration callbackTtl,
             Clock clock) {
-        this(objectMapper, conversationGateway, settingsEnabled, callbackTtl, clock, null, null);
+        this(objectMapper, conversationGateway, settingsEnabled, callbackTtl, clock, null, null, null);
+    }
+
+    public TelegramBotAdapter(
+            ObjectMapper objectMapper,
+            TelegramConversationGateway conversationGateway,
+            boolean settingsEnabled,
+            Duration callbackTtl,
+            TelegramObservabilityRecorder observabilityRecorder,
+            TelegramOperationalControlService controlService) {
+        this(objectMapper, conversationGateway, settingsEnabled, callbackTtl, Clock.systemUTC(), observabilityRecorder, controlService, null);
     }
 
     TelegramBotAdapter(
@@ -53,6 +66,18 @@ public class TelegramBotAdapter implements BotAdapter {
             Clock clock,
             TelegramObservabilityRecorder observabilityRecorder,
             TelegramOperationalControlService controlService) {
+        this(objectMapper, conversationGateway, settingsEnabled, callbackTtl, clock, observabilityRecorder, controlService, null);
+    }
+
+    TelegramBotAdapter(
+            ObjectMapper objectMapper,
+            TelegramConversationGateway conversationGateway,
+            boolean settingsEnabled,
+            Duration callbackTtl,
+            Clock clock,
+            TelegramObservabilityRecorder observabilityRecorder,
+            TelegramOperationalControlService controlService,
+            InstanceConfigurationProvider configurationProvider) {
         this.objectMapper = objectMapper;
         this.conversationGateway = conversationGateway;
         this.settingsEnabled = settingsEnabled;
@@ -60,6 +85,7 @@ public class TelegramBotAdapter implements BotAdapter {
         this.clock = clock;
         this.observabilityRecorder = observabilityRecorder;
         this.controlService = controlService;
+        this.configurationProvider = configurationProvider;
     }
 
     @Override
@@ -139,11 +165,11 @@ public class TelegramBotAdapter implements BotAdapter {
         Instant startedAt = clock.instant();
         if (controlService != null && !controlService.acceptsInbound(null)) {
             record("channel_disablement", "disabled", startedAt, 0, "none", "disabled_channel", null, null);
-            return new TelegramAdapterResponse(TelegramAdapterResponseStatus.DISABLED, "Telegram channel is disabled.", event, null);
+            return new TelegramAdapterResponse(TelegramAdapterResponseStatus.DISABLED, message("channelDisabled"), event, null);
         }
         if (event.kind() == TelegramEventKind.UNSUPPORTED) {
             record("update_normalization", "unsupported", startedAt, 0, "none", "unsupported_update", null, null);
-            return new TelegramAdapterResponse(TelegramAdapterResponseStatus.UNSUPPORTED, "Unsupported Telegram update type acknowledged.", event, null);
+            return new TelegramAdapterResponse(TelegramAdapterResponseStatus.UNSUPPORTED, message("unsupportedUpdate"), event, null);
         }
         if (event.kind() == TelegramEventKind.CALLBACK_QUERY) {
             record("callback_routing", "routed", startedAt, 0, "active", "none", null, event.userId());
@@ -152,11 +178,11 @@ public class TelegramBotAdapter implements BotAdapter {
         if (event.command() == null) {
             if (event.text() != null && event.text().startsWith("/")) {
                 record("command_routing", "unsupported", startedAt, 0, "none", "unsupported_command", null, event.userId());
-                return new TelegramAdapterResponse(TelegramAdapterResponseStatus.UNSUPPORTED, "Unsupported Telegram command acknowledged.", event, null);
+                return new TelegramAdapterResponse(TelegramAdapterResponseStatus.UNSUPPORTED, message("unsupportedCommand"), event, null);
             }
             if (event.text() == null) {
                 record("command_routing", "unsupported", startedAt, 0, "none", "unsupported_message", null, event.userId());
-                return new TelegramAdapterResponse(TelegramAdapterResponseStatus.UNSUPPORTED, "Unsupported Telegram message acknowledged.", event, null);
+                return new TelegramAdapterResponse(TelegramAdapterResponseStatus.UNSUPPORTED, message("unsupportedMessage"), event, null);
             }
             record("command_routing", "text", startedAt, 0, "active", "none", null, event.userId());
             return conversationGateway.text(event);
@@ -170,7 +196,7 @@ public class TelegramBotAdapter implements BotAdapter {
             case CANCEL -> conversationGateway.cancel(event);
             case SETTINGS -> settingsEnabled
                     ? conversationGateway.settings(event)
-                    : new TelegramAdapterResponse(TelegramAdapterResponseStatus.DISABLED, "Settings are disabled for this bot.", event, null);
+                    : new TelegramAdapterResponse(TelegramAdapterResponseStatus.DISABLED, message("settingsDisabled"), event, null);
         };
     }
 
@@ -186,6 +212,13 @@ public class TelegramBotAdapter implements BotAdapter {
             throw new IllegalArgumentException("Invalid Telegram callback value.");
         }
         return new TelegramCallbackPayload(action, value);
+    }
+
+    private String message(String key) {
+        Locale configuredLocale = configurationProvider == null
+                ? Locale.US
+                : TelegramI18n.locale(configurationProvider.current().locale());
+        return TelegramI18n.text(key, configuredLocale);
     }
 
     private void record(String operation, String outcome, Instant startedAt, int retryCount, String sessionState,

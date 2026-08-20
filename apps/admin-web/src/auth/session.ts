@@ -7,7 +7,8 @@ export type AdminRole =
     | 'CATALOG_EDITOR'
     | 'DOCTRINAL_REVIEWER'
     | 'MUSICAL_REVIEWER'
-    | 'ADMIN';
+    | 'ADMIN'
+    | (string & {});
 
 export type AdminCapability =
     | 'VIEW_IMPORT_QUEUE'
@@ -25,6 +26,7 @@ export type AdminSession = {
     actorId: string;
     displayName: string;
     churchInstanceId: string;
+    locale?: string;
     roles: AdminRole[];
     capabilities: AdminCapability[];
 };
