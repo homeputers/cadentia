@@ -59,7 +59,7 @@ public class TelegramAuthorizationService {
         String userHash = hasher.hash(CHANNEL, event.userId());
         Optional<TelegramLinkedActor> actor = identityRepository.findByTelegramHashes(CHANNEL, chatHash, userHash);
         if (actor.isEmpty()) {
-            return TelegramAuthorizationDecision.deny(TelegramIdentityStatus.UNLINKED, "Please link your Cadentia account before using this bot.");
+            return TelegramAuthorizationDecision.deny(TelegramIdentityStatus.UNLINKED, message("linkAccount"));
         }
         TelegramLinkedActor linked = actor.get();
         if (linked.status() != TelegramIdentityStatus.LINKED) {
@@ -67,10 +67,10 @@ public class TelegramAuthorizationService {
         }
         String currentInstance = configurationProvider.current().instanceId();
         if (!currentInstance.equals(linked.churchInstanceId())) {
-            return TelegramAuthorizationDecision.deny(TelegramIdentityStatus.UNAUTHORIZED, "This Telegram account is not authorized for this church instance.");
+            return TelegramAuthorizationDecision.deny(TelegramIdentityStatus.UNAUTHORIZED, message("notAuthorizedInstance"));
         }
         if (!rolePermits(linked, action)) {
-            return TelegramAuthorizationDecision.deny(TelegramIdentityStatus.UNAUTHORIZED, "Your Cadentia role cannot perform this action from Telegram.");
+            return TelegramAuthorizationDecision.deny(TelegramIdentityStatus.UNAUTHORIZED, message("notAuthorizedAction"));
         }
         TelegramBotSession session = sessionRepository.findActive(CHANNEL, chatHash, userHash)
                 .map(existing -> expireIfNeeded(existing).orElse(existing))
@@ -115,12 +115,16 @@ public class TelegramAuthorizationService {
 
     private String safeMessage(TelegramIdentityStatus status) {
         return switch (status) {
-            case REVOKED -> "Telegram access has been revoked. Please contact your Cadentia administrator.";
-            case DISABLED -> "Telegram access is disabled for this church instance.";
-            case UNAUTHORIZED -> "This Telegram account is not authorized for that action.";
-            case UNLINKED -> "Please link your Cadentia account before using this bot.";
-            case LINKED -> "Authorized.";
+            case REVOKED -> message("accessRevoked");
+            case DISABLED -> message("accessDisabled");
+            case UNAUTHORIZED -> message("notAuthorized");
+            case UNLINKED -> message("linkAccount");
+            case LINKED -> message("authorized");
         };
+    }
+
+    private String message(String key) {
+        return TelegramI18n.text(key, TelegramI18n.locale(configurationProvider.current().locale()));
     }
 
     public record TelegramAuthorizationDecision(

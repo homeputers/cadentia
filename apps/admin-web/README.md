@@ -29,6 +29,14 @@ All values are supplied per church instance by deployment tooling. Do not commit
 - `VITE_CADENTIA_ADMIN_BUILD_COMMIT` - source revision for smoke tests and rollback.
 - `VITE_CADENTIA_ADMIN_BUILD_TIMESTAMP` - reproducible build timestamp supplied by CI.
 
+## Internationalization
+
+The admin web reads the effective locale from the authenticated `/admin/session`
+response. That value is sourced from the church configuration package's
+`instance.locale`; there is no separate browser locale setting. See
+[`docs/i18n-configuration.md`](../../docs/i18n-configuration.md) for supported
+catalogs, deployment steps, and fallback behavior.
+
 ## Deployment contract
 
 The v1 artifact is a static SPA in `dist/`. The preferred ADR-036/ADR-022-compatible hosting model is separately hosted static assets behind the same identity provider and church-instance deployment boundary as the API. Operators may reverse-proxy the assets under the API origin later, but the UI must continue to consume only documented OpenAPI routes through `VITE_CADENTIA_API_BASE_URL`.

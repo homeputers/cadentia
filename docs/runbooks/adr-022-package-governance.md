@@ -19,6 +19,12 @@ acceptable implementation path. The backend Recommendation Engine must evaluate
 only the local approved catalog and local instance configuration for the isolated
 deployment.
 
+Internationalization follows the same source-of-truth model: set the required
+`instance.locale` value in the reviewed package. The API exposes that effective
+locale to the admin web and uses it for Telegram system copy. See
+[Internationalization configuration](../i18n-configuration.md) for supported
+catalogs, validation, deployment, and fallback behavior.
+
 ## Package authoring guidance
 
 Use a reviewed package directory instead of hand-editing production runtime
@@ -221,4 +227,3 @@ Minimum coverage expectations:
 - Recommendation tests prove each instance uses only its local approved catalog,
   local policies, local scoring profile, and local service context.
 - Seed import tests prove seeded but unapproved content is not recommendable.
-

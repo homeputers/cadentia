@@ -4,6 +4,11 @@
 
 This runbook defines deployment, smoke-test, incident, and rollback procedures for the Cadentia administrative web interface. The admin UI is **not production-ready** until both the successful and failure-path checks below have been run against the implemented configuration, route names, telemetry names, and rollback controls for the target environment.
 
+The admin web's locale is sourced from the church configuration package's
+`instance.locale` through the authenticated `/admin/session` response. See
+[Internationalization configuration](../i18n-configuration.md) for package
+changes, supported catalogs, fallback behavior, and verification steps.
+
 ## Artifact and Deployment Model
 
 - Artifact location: `apps/admin-web/dist/` after `npm run build -w @cadentia/admin-web`.

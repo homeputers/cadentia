@@ -12,6 +12,7 @@ import com.cadentia.generated.model.SetlistProposalResponse;
 import com.cadentia.generated.model.SlotValueSource;
 import com.cadentia.generated.model.TempoPolicy;
 import com.cadentia.reng.SetlistService;
+import com.cadentia.runtime.InstanceConfigurationProvider;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Locale;
@@ -37,21 +38,32 @@ public class DefaultTelegramConversationGateway implements TelegramConversationG
     private final ConversationSessionFacade facade;
     private final TelegramAuthorizationService authorizationService;
     private final SetlistService setlistService;
+    private final InstanceConfigurationProvider configurationProvider;
 
     @Autowired
     public DefaultTelegramConversationGateway(
             ConversationSessionFacade facade,
             TelegramAuthorizationService authorizationService,
-            SetlistService setlistService) {
+            SetlistService setlistService,
+            InstanceConfigurationProvider configurationProvider) {
         this.facade = facade;
         this.authorizationService = authorizationService;
         this.setlistService = setlistService;
+        this.configurationProvider = configurationProvider;
+    }
+
+    public DefaultTelegramConversationGateway(
+            ConversationSessionFacade facade,
+            TelegramAuthorizationService authorizationService,
+            SetlistService setlistService) {
+        this(facade, authorizationService, setlistService, null);
     }
 
     DefaultTelegramConversationGateway(ConversationSessionFacade facade) {
         this.facade = facade;
         this.authorizationService = null;
         this.setlistService = null;
+        this.configurationProvider = null;
     }
 
     @Override
@@ -62,12 +74,12 @@ public class DefaultTelegramConversationGateway implements TelegramConversationG
         }
         facade.get(sessionId(event));
         touch(decision, event, TelegramSessionState.IDLE);
-        return new TelegramAdapterResponse(TelegramAdapterResponseStatus.STARTED, "Welcome to Cadentia.", event, null);
+        return new TelegramAdapterResponse(TelegramAdapterResponseStatus.STARTED, message("welcome"), event, null);
     }
 
     @Override
     public TelegramAdapterResponse help(TelegramChannelEvent event) {
-        return new TelegramAdapterResponse(TelegramAdapterResponseStatus.CONTINUED, "Use /newsetlist to begin.", event, null);
+        return new TelegramAdapterResponse(TelegramAdapterResponseStatus.CONTINUED, message("help"), event, null);
     }
 
     @Override
@@ -80,7 +92,7 @@ public class DefaultTelegramConversationGateway implements TelegramConversationG
         touch(decision, event, TelegramSessionState.NEW_SETLIST_ACTIVE);
         return new TelegramAdapterResponse(
                 TelegramAdapterResponseStatus.STARTED,
-                "New setlist flow started.",
+                message("newSetlist"),
                 event,
                 null,
                 state.getSlots(),
@@ -106,7 +118,7 @@ public class DefaultTelegramConversationGateway implements TelegramConversationG
         }
         facade.cancel(sessionId(event));
         touch(decision, event, TelegramSessionState.CANCELLED);
-        return new TelegramAdapterResponse(TelegramAdapterResponseStatus.CANCELLED, "Session cancelled.", event, null);
+        return new TelegramAdapterResponse(TelegramAdapterResponseStatus.CANCELLED, message("cancelled"), event, null);
     }
 
     @Override
@@ -116,7 +128,7 @@ public class DefaultTelegramConversationGateway implements TelegramConversationG
             return denied(event, decision);
         }
         touch(decision, event, currentState(decision));
-        return new TelegramAdapterResponse(TelegramAdapterResponseStatus.CONTINUED, "Settings opened.", event, null);
+        return new TelegramAdapterResponse(TelegramAdapterResponseStatus.CONTINUED, message("settings"), event, null);
     }
 
     @Override
@@ -148,7 +160,7 @@ public class DefaultTelegramConversationGateway implements TelegramConversationG
                 touch(decision, event, toTelegramState(current));
                 return new TelegramAdapterResponse(
                         TelegramAdapterResponseStatus.CONTINUED,
-                        "Session is not ready to confirm. Reply with scripture, theme, or setlist details first.",
+                        message("confirmNotReady"),
                         event,
                         event.callbackAction().guidedField(),
                         current.getSlots(),
@@ -166,7 +178,7 @@ public class DefaultTelegramConversationGateway implements TelegramConversationG
             touch(decision, event, TelegramSessionState.COMPLETED);
             return new TelegramAdapterResponse(
                     TelegramAdapterResponseStatus.COMPLETED,
-                    proposal == null ? "Setlist confirmed." : recommendationSummary(proposal),
+                    proposal == null ? message("setlistConfirmed") : recommendationSummary(proposal),
                     event,
                     event.callbackAction().guidedField(),
                     state.getSlots(),
@@ -192,7 +204,7 @@ public class DefaultTelegramConversationGateway implements TelegramConversationG
             touch(decision, event, currentState(decision));
             return new TelegramAdapterResponse(
                     TelegramAdapterResponseStatus.INVALID,
-                    "Unsupported guided menu selection.",
+                    message("unsupportedSelection"),
                     event,
                     event.callbackAction().guidedField());
         }
@@ -284,21 +296,19 @@ public class DefaultTelegramConversationGateway implements TelegramConversationG
 
     private String recommendationSummary(SetlistProposalResponse proposal) {
         List<String> auditMessages = proposal.getAuditMessages() == null ? List.of() : proposal.getAuditMessages();
-        return "Deterministic setlist proposal generated. " + String.join(" ", auditMessages);
+        return TelegramI18n.format("proposalGenerated", locale(), String.join(" ", auditMessages));
     }
 
     private String statusSummary(ConversationSessionStateResponse state) {
-        StringBuilder summary = new StringBuilder("Session state: ")
-                .append(state.getState().getValue().toLowerCase(Locale.ROOT))
-                .append(".");
+        StringBuilder summary = new StringBuilder(TelegramI18n.format("sessionState", locale(), state.getState().getValue().toLowerCase(Locale.ROOT)));
         if (state.getRecommendationResultId() != null && !state.getRecommendationResultId().isBlank()) {
-            summary.append(" Recommendation: ").append(state.getRecommendationResultId()).append(".");
+            summary.append(TelegramI18n.format("recommendation", locale(), state.getRecommendationResultId()));
         }
         if (state.getSetlistId() != null && !state.getSetlistId().isBlank()) {
-            summary.append(" Setlist: ").append(state.getSetlistId()).append(".");
+            summary.append(TelegramI18n.format("setlist", locale(), state.getSetlistId()));
         }
         if (state.getSetlistVersionId() != null && !state.getSetlistVersionId().isBlank()) {
-            summary.append(" Version: ").append(state.getSetlistVersionId()).append(".");
+            summary.append(TelegramI18n.format("version", locale(), state.getSetlistVersionId()));
         }
         return summary.toString();
     }
@@ -323,6 +333,16 @@ public class DefaultTelegramConversationGateway implements TelegramConversationG
             return new TelegramAuthorizationService.TelegramAuthorizationDecision(true, TelegramIdentityStatus.LINKED, "Authorized.", null, null);
         }
         return authorizationService.authorize(event, action);
+    }
+
+    private String message(String key) {
+        return TelegramI18n.text(key, locale());
+    }
+
+    private Locale locale() {
+        return configurationProvider == null
+                ? Locale.US
+                : TelegramI18n.locale(configurationProvider.current().locale());
     }
 
     private TelegramAdapterResponse denied(TelegramChannelEvent event, TelegramAuthorizationService.TelegramAuthorizationDecision decision) {

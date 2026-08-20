@@ -38,6 +38,7 @@ class InstanceRuntimeConfigurationTest {
 
         // Assert
         assertThat(configuration.instanceId()).isEqualTo("river-city-worship");
+        assertThat(configuration.locale()).isEqualTo("en-US");
         assertThat(configuration.modules().recommendation()).isTrue();
         assertThat(configuration.recommendationPolicy().praiseCount()).isEqualTo(10);
         assertThat(configuration.scoringProfile().version()).isEqualTo("balanced-default");

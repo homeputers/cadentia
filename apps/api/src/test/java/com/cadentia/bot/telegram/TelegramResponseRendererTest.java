@@ -9,6 +9,11 @@ import com.cadentia.generated.model.RecommendationExplanationEvidence;
 import com.cadentia.generated.model.RecommendationExplanationScope;
 import com.cadentia.generated.model.RecommendationExplanationSubject;
 import com.cadentia.generated.model.SetlistProposalResponse;
+import com.cadentia.runtime.InstanceConfiguration;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -47,6 +52,21 @@ class TelegramResponseRendererTest {
                         "cad:v1:shape_counts:3p2w",
                         "cad:v1:shape_counts:4p2w",
                         "cad:v1:shape_counts:10p5w");
+    }
+
+    @Test
+    void rendersConfiguredChurchLocaleInsteadOfTelegramUserLocale() throws Exception {
+        ObjectNode packageRoot = (ObjectNode) new ObjectMapper().readTree(Files.readString(Path.of(
+                "..", "..", "packages", "intent-contracts", "fixtures", "church-config", "v1", "valid", "complete-package.json")));
+        packageRoot.with("instance").put("locale", "es-MX");
+        InstanceConfiguration configuration = InstanceConfiguration.fromPackage(packageRoot);
+        TelegramResponseRenderer configuredRenderer = new TelegramResponseRenderer(() -> configuration);
+
+        List<TelegramRenderedMessage> rendered = configuredRenderer.render(new TelegramAdapterResponse(
+                TelegramAdapterResponseStatus.STARTED, "Hola", event(TelegramEventKind.MESSAGE), null));
+
+        assertThat(rendered.get(0).text()).contains("Cadentia").contains("Envía tu enfoque bíblico");
+        assertThat(rendered.get(0).inlineKeyboard().rows().get(0).get(0).text()).isEqualTo("3+2");
     }
 
     @Test

@@ -4,6 +4,11 @@
 
 This runbook defines the operational procedures required before the Telegram bot channel can be considered production-ready. It covers local development, deployment rollout, smoke testing, troubleshooting, credential rotation, rollback, channel disablement, dead-letter handling, and user-support escalation for the `/newsetlist` flow.
 
+The bot's system-message locale is configured by the church package's required
+`instance.locale` setting. It is not selected from each Telegram user's
+`language_code`. See [Internationalization configuration](../i18n-configuration.md)
+when changing or verifying the instance locale.
+
 ## Production Readiness Gate
 
 Do **not** mark Telegram production-ready until all of the following are complete in the target environment:

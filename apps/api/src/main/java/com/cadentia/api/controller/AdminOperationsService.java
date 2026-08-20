@@ -88,7 +88,7 @@ public class AdminOperationsService {
         InstanceConfiguration configuration = configurationProvider.current();
         LocalConfigurationOverride override = localConfigurationOverride;
         String displayName = override == null ? configuration.instanceId() : override.displayName();
-        String defaultLocale = override == null ? "en-US" : override.defaultLocale();
+        String defaultLocale = override == null ? configuration.locale() : override.defaultLocale();
         String timeZone = override == null ? "UTC" : override.timeZone();
         boolean diagnosticsEnabled = override == null || override.diagnosticsEnabled();
         boolean botChannelsEnabled = override == null ? configuration.modules().externalMessaging() : override.botChannelsEnabled();
@@ -111,6 +111,10 @@ public class AdminOperationsService {
                 .concurrency(new AdminOptimisticConcurrency()
                         .version(version)
                         .etag("instance-config-" + configuration.instanceId() + "-" + version));
+    }
+
+    public String locale() {
+        return configurationProvider.current().locale();
     }
 
     public AdminInstanceConfigurationResponse updateInstanceConfiguration(

@@ -73,6 +73,7 @@ public class AdminOperationsController implements AdminOperationsApi {
                 .actorId(effectiveActorId)
                 .displayName(effectiveActorId)
                 .churchInstanceId(instanceId)
+                .locale(adminOperationsService.locale())
                 .roles(roles)
                 .capabilities(capabilities);
 

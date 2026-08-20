@@ -4,6 +4,7 @@ import type { AdminSession } from '../auth/session';
 import { adminEnvironment } from '../config/environment';
 import { createAdminApiClient, type AdminApiClient, type AdminApiError } from '../generated/cadentia-api/client';
 import { assignModerationFlag, commitCandidateMerge, createCandidateReviewNote, escalateModerationFlag, getCandidateAuditHistory, getCandidateDetail, hasVisibleWarnings, openModerationFlag, resolveModerationFlag, safeParserEvidence, submitApprovalAction, submitMergeDecision, type AuditHistoryItem, type CandidateDetail, type ModerationFlag } from '../candidate-detail';
+import { LocalizedView } from '../i18n';
 import { ActionBadge, AuditReferenceLink, Badge, Breadcrumbs, ConfirmationDialog, DataTable, DiffPanel, Field, PageHeader, StatePanel, redactSensitiveError } from './admin-ui';
 
 const label = (value?: string | null) => value ? value.replaceAll('_', ' ').toLowerCase().replace(/^./, (c) => c.toUpperCase()) : 'None';
@@ -205,7 +206,7 @@ export const ImportCandidateDetail = ({ session, candidateId, apiClient = create
                 : '';
 
     return (
-        <main className="admin-shell" aria-labelledby="candidate-detail-title">
+        <LocalizedView><main className="admin-shell" aria-labelledby="candidate-detail-title">
             <Breadcrumbs items={[{ label: 'Admin', href: '/admin' }, { label: 'Import review', href: '/admin/imports' }, { label: detail?.normalizedTitle ?? detail?.rawTitle ?? 'Candidate detail' }]} />
             <PageHeader eyebrow="Candidate review" title={detail?.normalizedTitle ?? detail?.rawTitle ?? 'Import candidate detail'} titleId="candidate-detail-title" description="Backend facts, imported metadata, parser evidence, reviewer notes, and audit history are separated so notes never become approved song metadata." />
             <StatePanel state={state} title="Candidate detail" onRetry={() => void load()}>{error && <p>{error}</p>}</StatePanel>
@@ -263,6 +264,6 @@ export const ImportCandidateDetail = ({ session, candidateId, apiClient = create
                 <section className="admin-shell__panel" aria-labelledby="candidate-audit-title"><h2 id="candidate-audit-title">Candidate audit history</h2><StatePanel state={auditState} title="Candidate audit history" onRetry={() => void loadAuditHistory()}>{auditError && <p>{auditError}</p>}<DataTable caption="Candidate audit events" columns={['Audit reference', 'Action', 'Actor', 'Occurred', 'Reason', 'State fields']} rows={auditHistory.map((item) => [<AuditReferenceLink auditId={item.id} />, label(item.action), item.actor, item.occurredAt, item.reason ?? 'No reason returned', `${summarizeStateKeys(item.beforeState)} → ${summarizeStateKeys(item.afterState)}`])} /></StatePanel></section>
             </>}
             <ConfirmationDialog open={Boolean(pendingAction)} title={pendingAction?.label ?? 'Confirm action'} acknowledgement="This action can affect publication or recommendation eligibility and will be audited." facts={pendingAction?.consequences.length ? pendingAction.consequences : ['Backend will validate allowed actions, blockers, actor attribution, and stale versions.']} auditActor={session.actorId} versionContext={detail ? `If-Match: ${detail.etag}; version ${detail.version}` : 'No version loaded'} onCancel={() => setPendingAction(null)} onConfirm={() => void confirmAndRun()} />
-        </main>
+        </main></LocalizedView>
     );
 };

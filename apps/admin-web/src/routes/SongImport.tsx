@@ -3,6 +3,7 @@ import type { AdminSession } from '../auth/session';
 import { adminEnvironment } from '../config/environment';
 import { createAdminApiClient, type AdminApiClient, type AdminApiError } from '../generated/cadentia-api/client';
 import { createCsvSongImport, createManualSongImport, splitEntryList, type ManualSongImportDraft, type SongImportResponse, type SongResourceDraft } from '../song-imports';
+import { LocalizedView } from '../i18n';
 import { Badge, Breadcrumbs, DataTable, Field, PageHeader, StatePanel, redactSensitiveError } from './admin-ui';
 
 const licenseTypes = ['PUBLIC_DOMAIN', 'CCLI', 'DIRECT_PERMISSION', 'NOT_APPLICABLE'];
@@ -114,7 +115,7 @@ export const SongImport = ({ session, apiClient = createAdminApiClient({ environ
     };
 
     return (
-        <main className="admin-shell" aria-labelledby="song-import-title">
+        <LocalizedView><main className="admin-shell" aria-labelledby="song-import-title">
             <Breadcrumbs items={[{ label: 'Admin', href: '/admin' }, { label: 'Song import' }]} />
             <PageHeader eyebrow="Catalog ingestion" title="Song import" titleId="song-import-title" description="Stage manually entered songs or CSV rows for duplicate review, provenance review, and approval workflows." />
             <StatePanel state={state} title="Song import request">{error && <p>{error}</p>}</StatePanel>
@@ -174,7 +175,7 @@ export const SongImport = ({ session, apiClient = createAdminApiClient({ environ
             </section>
 
             {result && <ImportResult result={result} />}
-        </main>
+        </main></LocalizedView>
     );
 };
 
@@ -195,11 +196,11 @@ export const ImportResult = ({ result }: { result: SongImportResponse }) => {
     ]);
     const errorRows = result.validationErrors.map((error) => [error.rowIdentifier, error.field, error.message]);
     return (
-        <section className="admin-shell__panel" aria-labelledby="song-import-result-title">
+        <LocalizedView><section className="admin-shell__panel" aria-labelledby="song-import-result-title">
             <h2 id="song-import-result-title">Import result</h2>
             <p>Batch <a href={`/admin/imports?batchId=${encodeURIComponent(result.importBatchId)}`}>{result.importBatchId}</a> finished as {label(result.status)} with {result.acceptedCount} accepted candidates and {result.validationErrorCount} validation errors.</p>
             {rows.length > 0 && <DataTable caption="Staged candidates" columns={['Title', 'Artist', 'Review state']} rows={rows} />}
             {errorRows.length > 0 && <DataTable caption="Validation errors" columns={['Row', 'Field', 'Message']} rows={errorRows} />}
-        </section>
+        </section></LocalizedView>
     );
 };

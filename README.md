@@ -144,6 +144,7 @@ This repository is scaffolded as a Java 21 / Spring Boot 3.1.12 backend with a T
 - `apps/api/src/main/resources/db/migration` - Flyway migrations
 - `apps/api/src/test/resources/db/fixtures` - test-scoped catalog fixtures; see `docs/seed-data.md`
 - `packages/intent-contracts` - TypeScript schema for the LLM JSON contract
+- `docs/i18n-configuration.md` - church-instance locale configuration and first-party surface behavior
 - `docker-compose.yml` - local PostgreSQL development dependency service
 - `scripts/check.sh` - combined backend and TypeScript checks
 

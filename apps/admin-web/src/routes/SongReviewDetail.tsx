@@ -4,6 +4,7 @@ import type { AdminSession } from '../auth/session';
 import { adminEnvironment } from '../config/environment';
 import { createAdminApiClient, type AdminApiClient, type AdminApiError } from '../generated/cadentia-api/client';
 import { getReviewSong, toMetadataDraft, updateReviewSong, uploadAndAttachResource, type AssetAttachment, type AttachmentDraft, type SongMetadataDraft, type SongReviewDetail as SongReviewDetailModel } from '../song-review';
+import { LocalizedView } from '../i18n';
 import { ActionBadge, Badge, Breadcrumbs, DataTable, Field, PageHeader, StatePanel, redactSensitiveError } from './admin-ui';
 
 const label = (value?: string | null) => value ? value.replaceAll('_', ' ').toLowerCase().replace(/^./, (c) => c.toUpperCase()) : 'None';
@@ -243,7 +244,7 @@ export const SongReviewDetail = ({
     };
 
     return (
-        <main className="admin-shell" aria-labelledby="song-detail-title">
+        <LocalizedView><main className="admin-shell" aria-labelledby="song-detail-title">
             <Breadcrumbs items={[{ label: 'Admin', href: '/admin' }, { label: 'Songs', href: '/admin/songs' }, { label: detail?.song.canonicalTitle ?? 'Song resources' }]} />
             <PageHeader eyebrow="Catalog song review" title={detail?.song.canonicalTitle ?? 'Song resources'} titleId="song-detail-title" description="Editable catalog metadata, current lyrics versions, provenance, approvals, and song or arrangement resources." actions={canReview && <ActionBadge capability="REVIEW_CATALOG" />} />
             {notice && <p role="status" className="admin-shell__warning">{notice}</p>}
@@ -256,7 +257,7 @@ export const SongReviewDetail = ({
                 {detail.arrangements.map((arrangement) => <AttachmentSection key={arrangement.arrangementId} title={`${arrangement.name} attachments`} caption={`${arrangement.name} asset attachments`} attachments={detail.arrangementAttachments[arrangement.arrangementId] ?? []} />)}
                 <CatalogEvidence detail={detail} />
             </>}
-        </main>
+        </main></LocalizedView>
     );
 };
 
@@ -282,7 +283,7 @@ const SongMetadataForm = ({ draft, canEdit, onSaveSongMetadata, onSaveArrangemen
 }) => {
     const existingArrangements = draft.arrangements.filter((a) => a.arrangementId && !a.arrangementId.startsWith('new-'));
     return (
-    <form className="admin-shell__panel admin-form-grid" aria-labelledby="song-metadata-title" onSubmit={(event) => event.preventDefault()}>
+    <LocalizedView><form className="admin-shell__panel admin-form-grid" aria-labelledby="song-metadata-title" onSubmit={(event) => event.preventDefault()}>
         <h2 id="song-metadata-title" className="admin-form-grid__wide">Song metadata</h2>
         <Field label="Title" required>{({ inputId }) => <input id={inputId} value={draft.canonicalTitle} disabled={!canEdit} onChange={(event) => onSongChange('canonicalTitle', event.target.value)} />}</Field>
         <Field label="Language" required>{({ inputId }) => <input id={inputId} value={draft.primaryLanguage} disabled={!canEdit} onChange={(event) => onSongChange('primaryLanguage', event.target.value)} />}</Field>
@@ -398,14 +399,14 @@ const SongMetadataForm = ({ draft, canEdit, onSaveSongMetadata, onSaveArrangemen
             </div>
         )}
         <button type="button" disabled={!canEdit} onClick={onSaveArrangementMetadata}>Save arrangements</button>
-    </form>
+    </form></LocalizedView>
     );
 };
 
 const AddLyricsSelect = ({ canEdit, arrangements, onAdd }: { canEdit: boolean; arrangements: SongMetadataDraft['arrangements']; onAdd: (arrangementId: string) => void }) => {
     const [selected, setSelected] = useState('');
     return (
-        <select value={selected as string} disabled={!canEdit} onChange={(event) => {
+        <LocalizedView><select value={selected as string} disabled={!canEdit} onChange={(event) => {
             const value = event.target.value;
             setSelected(value);
             if (value) {
@@ -417,7 +418,7 @@ const AddLyricsSelect = ({ canEdit, arrangements, onAdd }: { canEdit: boolean; a
             {arrangements.map((arr) => (
                 <option key={arr.arrangementId!} value={arr.arrangementId!}>{arr.name}</option>
             ))}
-        </select>
+        </select></LocalizedView>
     );
 };
 
@@ -438,7 +439,7 @@ const AttachmentCreateForm = ({ draft, selectedFile, arrangements, canEdit, onSu
     onInputChange: (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
     onFileChange: (event: ChangeEvent<HTMLInputElement>) => void;
 }) => (
-    <form className="admin-shell__panel admin-form-grid" aria-labelledby="add-resource-title" onSubmit={onSubmit}>
+    <LocalizedView><form className="admin-shell__panel admin-form-grid" aria-labelledby="add-resource-title" onSubmit={onSubmit}>
         <h2 id="add-resource-title" className="admin-form-grid__wide">Upload resource</h2>
         <Field label="Target">{({ inputId }) => <select id={inputId} value={`${draft.targetType}:${draft.targetId}`} disabled={!canEdit} onChange={(event) => {
             const [targetType, targetId] = event.target.value.split(':') as ['song' | 'arrangement', string];
@@ -451,11 +452,11 @@ const AttachmentCreateForm = ({ draft, selectedFile, arrangements, canEdit, onSu
         <Field label="Visibility">{({ inputId }) => <select id={inputId} name="visibilityPolicy" value={draft.visibilityPolicy} disabled={!canEdit} onChange={onInputChange}>{['public_metadata', 'catalog_reviewers', 'worship_team', 'service_participants', 'admins_only', 'local_policy'].map((policy) => <option key={policy} value={policy}>{label(policy)}</option>)}</select>}</Field>
         <Field label="Required">{({ inputId }) => <input id={inputId} name="requiredForUse" type="checkbox" checked={draft.requiredForUse} disabled={!canEdit} onChange={onInputChange} />}</Field>
         <button type="submit" disabled={!canEdit || !selectedFile || !draft.displayLabel}>Upload and attach resource</button>
-    </form>
+    </form></LocalizedView>
 );
 
 const CatalogEvidence = ({ detail }: { detail: SongReviewDetailModel }) => (
-    <section className="admin-shell__panel" aria-labelledby="catalog-evidence-title">
+    <LocalizedView><section className="admin-shell__panel" aria-labelledby="catalog-evidence-title">
         <h2 id="catalog-evidence-title">Review evidence</h2>
         <DataTable caption="Approvals" columns={['Type', 'Status', 'Reviewer', 'Reviewed']} rows={detail.approvals.map((approval) => [
             approval.approvalType,
@@ -469,7 +470,7 @@ const CatalogEvidence = ({ detail }: { detail: SongReviewDetailModel }) => (
             record.importMethod,
             record.capturedAt,
         ])} />
-    </section>
+    </section></LocalizedView>
 );
 
 const TagsSection = ({ tags }: { tags: SongReviewDetailModel['tags'] }) => {
@@ -481,7 +482,7 @@ const TagsSection = ({ tags }: { tags: SongReviewDetailModel['tags'] }) => {
     }, {});
     const tagTypes = Object.keys(byType).sort();
     return (
-        <section className="admin-shell__panel" aria-labelledby="tags-title">
+        <LocalizedView><section className="admin-shell__panel" aria-labelledby="tags-title">
             <h2 id="tags-title">Tags</h2>
             {tagTypes.length
                 ? tagTypes.map((tagType) => (
@@ -495,12 +496,12 @@ const TagsSection = ({ tags }: { tags: SongReviewDetailModel['tags'] }) => {
                     </div>
                 ))
                 : <p>No tags assigned.</p>}
-        </section>
+        </section></LocalizedView>
     );
 };
 
 const AttachmentSection = ({ title, caption, attachments, emptyCopy = 'No attachments returned.' }: { title: string; caption: string; attachments: AssetAttachment[]; emptyCopy?: string }) => (
-    <section className="admin-shell__panel" aria-labelledby={`${caption.replace(/\W+/g, '-').toLowerCase()}-title`}>
+    <LocalizedView><section className="admin-shell__panel" aria-labelledby={`${caption.replace(/\W+/g, '-').toLowerCase()}-title`}>
         <h2 id={`${caption.replace(/\W+/g, '-').toLowerCase()}-title`}>{title}</h2>
         {attachments.length
             ? <DataTable caption={caption} columns={['Label', 'Type', 'Purpose', 'Asset version', 'Required', 'Visibility', 'Created']} rows={attachments.map((attachment) => [
@@ -513,5 +514,5 @@ const AttachmentSection = ({ title, caption, attachments, emptyCopy = 'No attach
                 attachment.createdAt,
             ])} />
             : <p>{emptyCopy}</p>}
-    </section>
+    </section></LocalizedView>
 );

@@ -4,6 +4,7 @@ import type { AdminSession } from '../auth/session';
 import { adminEnvironment } from '../config/environment';
 import { createAdminApiClient, type AdminApiClient, type AdminApiError } from '../generated/cadentia-api/client';
 import { buildImportCandidateQueuePath, isBlockedCandidate, listImportCandidates, parseImportCandidateFilters, serializeImportCandidateFilters, submitBulkAction, type BulkActionRequest, type BulkActionResponse, type BulkActionType, type ImportCandidateFilterState, type ImportCandidateQueueItem, type ImportCandidateQueueResponse } from '../import-candidates';
+import { LocalizedView } from '../i18n';
 import { ActionBadge, AuditReferenceLink, Badge, Breadcrumbs, ConfirmationDialog, DataTable, Field, FilterPanel, PageHeader, StatePanel, redactSensitiveError } from './admin-ui';
 
 const options = {
@@ -21,7 +22,7 @@ const severityFor = (value: string) => value === 'BLOCKED' || value === 'ERROR' 
 const pct = (value?: number | null) => typeof value === 'number' ? `${Math.round(value * 100)}%` : 'n/a';
 
 const SelectField = ({ name, labelText, value, onChange }: { name: keyof typeof options; labelText: string; value: string; onChange: (name: string, value: string) => void }) => (
-    <Field label={labelText}>{({ inputId }) => <select id={inputId} value={value} onChange={(event) => onChange(name, event.target.value)}>{options[name].map((option) => <option key={option} value={option}>{option ? label(option) : 'Any'}</option>)}</select>}</Field>
+    <LocalizedView><Field label={labelText}>{({ inputId }) => <select id={inputId} value={value} onChange={(event) => onChange(name, event.target.value)}>{options[name].map((option) => <option key={option} value={option}>{option ? label(option) : 'Any'}</option>)}</select>}</Field></LocalizedView>
 );
 
 export const ImportCandidateQueue = ({ session, apiClient = createAdminApiClient({ environment: adminEnvironment, getAccessToken: async () => null }), initialSearch = window.location.search }: { session: AdminSession; apiClient?: AdminApiClient; initialSearch?: string }) => {
@@ -146,7 +147,7 @@ export const ImportCandidateQueue = ({ session, apiClient = createAdminApiClient
             : '';
 
     return (
-        <main className="admin-shell" aria-labelledby="import-queue-title">
+        <LocalizedView><main className="admin-shell" aria-labelledby="import-queue-title">
             <Breadcrumbs items={[{ label: 'Admin', href: '/admin' }, { label: 'Import review' }]} />
             <PageHeader eyebrow="Admin review" title="Import candidate queue" titleId="import-queue-title" description="Triage candidates with server-backed filters, safe summaries, duplicate and provenance signals, and audit links without exposing lyrics or raw connector payloads." />
             <FilterPanel title="Queue filters" onSubmit={applyUrl}>
@@ -196,7 +197,7 @@ export const ImportCandidateQueue = ({ session, apiClient = createAdminApiClient
                     </section>
                 </div>
             )}
-        </main>
+        </main></LocalizedView>
     );
 };
 

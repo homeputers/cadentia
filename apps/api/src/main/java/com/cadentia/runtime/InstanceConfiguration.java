@@ -16,6 +16,7 @@ import java.util.stream.StreamSupport;
 
 public record InstanceConfiguration(
         String instanceId,
+        String locale,
         String packageVersion,
         Modules modules,
         RecommendationPolicy recommendationPolicy,
@@ -25,6 +26,21 @@ public record InstanceConfiguration(
         AssetStorage assetStorage,
         RuntimeNamespaces namespaces,
         TelemetryExport telemetryExport) {
+
+    public InstanceConfiguration(
+            String instanceId,
+            String packageVersion,
+            Modules modules,
+            RecommendationPolicy recommendationPolicy,
+            ScoringProfile scoringProfile,
+            List<IntegrationProvider> integrations,
+            List<PluginDefinition> plugins,
+            AssetStorage assetStorage,
+            RuntimeNamespaces namespaces,
+            TelemetryExport telemetryExport) {
+        this(instanceId, "en-US", packageVersion, modules, recommendationPolicy, scoringProfile, integrations,
+                plugins, assetStorage, namespaces, telemetryExport);
+    }
 
     public InstanceConfiguration {
         integrations = integrations == null ? List.of() : List.copyOf(integrations);
@@ -42,6 +58,7 @@ public record InstanceConfiguration(
             List<String> eventStreams) {
         return new InstanceConfiguration(
                 instanceId,
+                "en-US",
                 "local-development",
                 new Modules(true, false, false, false, false, false),
                 new RecommendationPolicy(
@@ -75,6 +92,7 @@ public record InstanceConfiguration(
         JsonNode observability = root.path("observability");
         return new InstanceConfiguration(
                 root.path("instance").path("instanceId").asText(),
+                root.path("instance").path("locale").asText("en-US"),
                 root.path("package").path("packageVersion").asText(),
                 modules(root.path("modules")),
                 new RecommendationPolicy(
