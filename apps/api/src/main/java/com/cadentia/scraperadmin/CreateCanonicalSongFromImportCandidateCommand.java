@@ -1,7 +1,9 @@
 package com.cadentia.scraperadmin;
 
 import com.cadentia.catalog.model.ImportMethod;
+import com.cadentia.catalog.model.KeyMode;
 import com.cadentia.catalog.model.LicenseType;
+import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -21,7 +23,20 @@ public record CreateCanonicalSongFromImportCandidateCommand(
         String sourceLabel,
         LicenseType licenseType,
         String licenseNotes,
-        ImportMethod importMethod) {
+        ImportMethod importMethod,
+        String musicalKey,
+        KeyMode keyMode,
+        Integer tempoBpm,
+        String timeSignature,
+        Integer durationSeconds,
+        Integer energyLevel,
+        Integer difficultyLevel,
+        String lyrics,
+        String lyricsFormat,
+        String chordChart,
+        String arrangementNotes,
+        List<String> themes,
+        List<String> scriptureReferences) {
 
     public CreateCanonicalSongFromImportCandidateCommand {
         importCandidateId = Objects.requireNonNull(importCandidateId, "importCandidateId is required");
@@ -35,6 +50,8 @@ public record CreateCanonicalSongFromImportCandidateCommand(
         if (arrangementName != null && arrangementName.isBlank()) {
             throw new IllegalArgumentException("arrangementName must not be blank when provided");
         }
+        themes = List.copyOf(themes == null ? List.of() : themes);
+        scriptureReferences = List.copyOf(scriptureReferences == null ? List.of() : scriptureReferences);
     }
 
     private static String requireText(String value, String fieldName) {

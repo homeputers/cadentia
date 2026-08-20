@@ -178,6 +178,31 @@ export const SongReviewDetail = ({
         } : current);
     };
 
+    const addLyricsDocument = (arrangementId: string) => {
+        setDraft((current) => current ? {
+            ...current,
+            lyricsDocuments: [
+                ...current.lyricsDocuments,
+                {
+                    lyricsDocumentId: `new-${crypto.randomUUID()}`,
+                    arrangementId,
+                    format: 'plain_text',
+                    content: '',
+                    containsChords: false,
+                    containsSections: false,
+                    sourceReference: '',
+                },
+            ],
+        } : current);
+    };
+
+    const removeLyricsDocument = (lyricsDocumentId: string) => {
+        setDraft((current) => current ? {
+            ...current,
+            lyricsDocuments: current.lyricsDocuments.filter((lyrics) => lyrics.lyricsDocumentId !== lyricsDocumentId),
+        } : current);
+    };
+
     const updateAttachmentTarget = (targetType: 'song' | 'arrangement', targetId: string) => {
         setAttachmentDraft((current) => ({ ...current, targetType, targetId }));
     };
@@ -224,7 +249,8 @@ export const SongReviewDetail = ({
             {notice && <p role="status" className="admin-shell__warning">{notice}</p>}
             <StatePanel state={state} title="Song resources" onRetry={() => void load()}>{error && <p>{error}</p>}</StatePanel>
             {detail && draft && <>
-                <SongMetadataForm draft={draft} canEdit={canEdit} onSaveSongMetadata={saveSongMetadata} onSaveArrangementMetadata={saveArrangementMetadata} onSongChange={updateDraft} onArrangementChange={updateArrangement} onAddArrangement={addArrangement} onRemoveArrangement={removeArrangement} onLyricsChange={updateLyrics} />
+                <SongMetadataForm draft={draft} canEdit={canEdit} onSaveSongMetadata={saveSongMetadata} onSaveArrangementMetadata={saveArrangementMetadata} onSongChange={updateDraft} onArrangementChange={updateArrangement} onAddArrangement={addArrangement} onRemoveArrangement={removeArrangement} onLyricsChange={updateLyrics} onAddLyricsDocument={addLyricsDocument} onRemoveLyricsDocument={removeLyricsDocument} />
+                <TagsSection tags={detail.tags} />
                 <AttachmentCreateForm draft={attachmentDraft} selectedFile={attachmentFile} arrangements={arrangementOptions} canEdit={canEdit} onSubmit={addAttachment} onTargetChange={updateAttachmentTarget} onInputChange={updateAttachmentInput} onFileChange={updateAttachmentFile} />
                 <AttachmentSection title="Song attachments" caption="Song asset attachments" attachments={detail.songAttachments} />
                 {detail.arrangements.map((arrangement) => <AttachmentSection key={arrangement.arrangementId} title={`${arrangement.name} attachments`} caption={`${arrangement.name} asset attachments`} attachments={detail.arrangementAttachments[arrangement.arrangementId] ?? []} />)}
@@ -241,7 +267,7 @@ const assetTypeForFile = (file: File, fallback: string) => {
     return fallback;
 };
 
-const SongMetadataForm = ({ draft, canEdit, onSaveSongMetadata, onSaveArrangementMetadata, onSongChange, onArrangementChange, onAddArrangement, onRemoveArrangement, onLyricsChange }: {
+const SongMetadataForm = ({ draft, canEdit, onSaveSongMetadata, onSaveArrangementMetadata, onSongChange, onArrangementChange, onAddArrangement, onRemoveArrangement, onLyricsChange, onAddLyricsDocument, onRemoveLyricsDocument }: {
     draft: SongMetadataDraft;
     canEdit: boolean;
     onSaveSongMetadata: (event: FormEvent) => void;
@@ -251,7 +277,10 @@ const SongMetadataForm = ({ draft, canEdit, onSaveSongMetadata, onSaveArrangemen
     onAddArrangement: () => void;
     onRemoveArrangement: (arrangementId: string) => void;
     onLyricsChange: (lyricsDocumentId: string, name: string, value: string | boolean) => void;
+    onAddLyricsDocument: (arrangementId: string) => void;
+    onRemoveLyricsDocument: (lyricsDocumentId: string) => void;
 }) => {
+    const existingArrangements = draft.arrangements.filter((a) => a.arrangementId && !a.arrangementId.startsWith('new-'));
     return (
     <form className="admin-shell__panel admin-form-grid" aria-labelledby="song-metadata-title" onSubmit={(event) => event.preventDefault()}>
         <h2 id="song-metadata-title" className="admin-form-grid__wide">Song metadata</h2>
@@ -275,7 +304,12 @@ const SongMetadataForm = ({ draft, canEdit, onSaveSongMetadata, onSaveArrangemen
                 <span role="columnheader">Arrangement</span>
                 <span role="columnheader">Source</span>
                 <span role="columnheader">Key</span>
+                <span role="columnheader">Mode</span>
                 <span role="columnheader">Tempo</span>
+                <span role="columnheader">Time</span>
+                <span role="columnheader">Duration</span>
+                <span role="columnheader">Energy</span>
+                <span role="columnheader">Difficulty</span>
                 <span role="columnheader">Status</span>
                 <span role="columnheader">Action</span>
             </div>
@@ -295,8 +329,28 @@ const SongMetadataForm = ({ draft, canEdit, onSaveSongMetadata, onSaveArrangemen
                         <input id={`${rowId}-key`} value={arrangement.musicalKey ?? ''} disabled={!canEdit} onChange={(event) => onArrangementChange(arrangement.arrangementId ?? '', 'musicalKey', event.target.value)} />
                     </div>
                     <div role="cell">
+                        <label className="sr-only" htmlFor={`${rowId}-keyMode`}>Key mode</label>
+                        <select id={`${rowId}-keyMode`} value={arrangement.keyMode ?? ''} disabled={!canEdit} onChange={(event) => onArrangementChange(arrangement.arrangementId ?? '', 'keyMode', event.target.value || null)}><option value="">—</option>{['MAJOR', 'MINOR', 'MODAL', 'UNKNOWN'].map((mode) => <option key={mode} value={mode}>{label(mode)}</option>)}</select>
+                    </div>
+                    <div role="cell">
                         <label className="sr-only" htmlFor={`${rowId}-tempo`}>Tempo BPM</label>
-                        <input id={`${rowId}-tempo`} type="number" value={arrangement.tempoBpm ?? ''} disabled={!canEdit} onChange={(event) => onArrangementChange(arrangement.arrangementId ?? '', 'tempoBpm', event.target.value ? Number(event.target.value) : null)} />
+                        <input id={`${rowId}-tempo`} type="number" min={30} max={260} value={arrangement.tempoBpm ?? ''} disabled={!canEdit} onChange={(event) => onArrangementChange(arrangement.arrangementId ?? '', 'tempoBpm', event.target.value ? Number(event.target.value) : null)} />
+                    </div>
+                    <div role="cell">
+                        <label className="sr-only" htmlFor={`${rowId}-timeSignature`}>Time signature</label>
+                        <input id={`${rowId}-timeSignature`} value={arrangement.timeSignature ?? ''} disabled={!canEdit} onChange={(event) => onArrangementChange(arrangement.arrangementId ?? '', 'timeSignature', event.target.value || null)} placeholder="4/4" />
+                    </div>
+                    <div role="cell">
+                        <label className="sr-only" htmlFor={`${rowId}-duration`}>Duration seconds</label>
+                        <input id={`${rowId}-duration`} type="number" min={1} value={arrangement.durationSeconds ?? ''} disabled={!canEdit} onChange={(event) => onArrangementChange(arrangement.arrangementId ?? '', 'durationSeconds', event.target.value ? Number(event.target.value) : null)} />
+                    </div>
+                    <div role="cell">
+                        <label className="sr-only" htmlFor={`${rowId}-energy`}>Energy level</label>
+                        <select id={`${rowId}-energy`} value={arrangement.energyLevel ?? ''} disabled={!canEdit} onChange={(event) => onArrangementChange(arrangement.arrangementId ?? '', 'energyLevel', event.target.value ? Number(event.target.value) : null)}><option value="">—</option>{[1, 2, 3, 4, 5].map((level) => <option key={level} value={level}>{level}</option>)}</select>
+                    </div>
+                    <div role="cell">
+                        <label className="sr-only" htmlFor={`${rowId}-difficulty`}>Difficulty level</label>
+                        <select id={`${rowId}-difficulty`} value={arrangement.difficultyLevel ?? ''} disabled={!canEdit} onChange={(event) => onArrangementChange(arrangement.arrangementId ?? '', 'difficultyLevel', event.target.value ? Number(event.target.value) : null)}><option value="">—</option>{[1, 2, 3, 4, 5].map((level) => <option key={level} value={level}>{level}</option>)}</select>
                     </div>
                     <div role="cell"><Badge severity={arrangement.active ? 'success' : 'neutral'}>{arrangement.active ? 'Active' : 'Inactive'}</Badge></div>
                     <div role="cell">
@@ -307,17 +361,63 @@ const SongMetadataForm = ({ draft, canEdit, onSaveSongMetadata, onSaveArrangemen
                 </div>;
             })}
         </div>
-        {draft.lyricsDocuments.map((lyrics) => <section key={lyrics.lyricsDocumentId} className="admin-form-grid__wide admin-shell__subsection" aria-label="Current lyrics metadata">
-            <h3>Current lyrics</h3>
-            <div className="admin-form-grid">
-                <Field label="Format">{({ inputId }) => <select id={inputId} value={lyrics.format} disabled={!canEdit} onChange={(event) => onLyricsChange(lyrics.lyricsDocumentId, 'format', event.target.value)}>{['plain_text', 'chordpro', 'onsong', 'markdown'].map((format) => <option key={format} value={format}>{label(format)}</option>)}</select>}</Field>
-                <Field label="Source reference">{({ inputId }) => <input id={inputId} value={lyrics.sourceReference} disabled={!canEdit} onChange={(event) => onLyricsChange(lyrics.lyricsDocumentId, 'sourceReference', event.target.value)} />}</Field>
-                <Field label="Contains chords">{({ inputId }) => <input id={inputId} type="checkbox" checked={lyrics.containsChords} disabled={!canEdit} onChange={(event) => onLyricsChange(lyrics.lyricsDocumentId, 'containsChords', event.target.checked)} />}</Field>
-                <Field label="Lyrics content">{({ inputId }) => <textarea id={inputId} className="admin-form-grid__monospace" value={lyrics.content ?? ''} disabled={!canEdit} onChange={(event) => onLyricsChange(lyrics.lyricsDocumentId, 'content', event.target.value)} />}</Field>
+        {draft.lyricsDocuments.map((lyrics) => {
+            const isNew = lyrics.lyricsDocumentId.startsWith('new-');
+            return <section key={lyrics.lyricsDocumentId} className="admin-form-grid__wide admin-shell__subsection" aria-label={isNew ? 'New lyrics document' : 'Current lyrics metadata'}>
+                <div className="admin-lyrics-header">
+                    <h3>{isNew ? 'New lyrics document' : 'Current lyrics'}</h3>
+                    {isNew && <button type="button" className="danger small" disabled={!canEdit} onClick={() => onRemoveLyricsDocument(lyrics.lyricsDocumentId)}>Remove</button>}
+                </div>
+                <div className="admin-form-grid">
+                    {isNew && (
+                        <Field label="Arrangement" required>{({ inputId }) => {
+                            const arrangementValue = (lyrics.arrangementId ?? '') as string;
+                            return (
+                            <select id={inputId} value={arrangementValue} disabled={!canEdit} onChange={(event) => onLyricsChange(lyrics.lyricsDocumentId, 'arrangementId', event.target.value)}>
+                                <option value="">Select arrangement...</option>
+                                {existingArrangements.map((arr) => (
+                                    <option key={arr.arrangementId!} value={arr.arrangementId!}>{arr.name}</option>
+                                ))}
+                            </select>
+                            );
+                        }}</Field>
+                    )}
+                    <Field label="Format">{({ inputId }) => <select id={inputId} value={lyrics.format} disabled={!canEdit} onChange={(event) => onLyricsChange(lyrics.lyricsDocumentId, 'format', event.target.value)}>{['plain_text', 'chordpro', 'onsong', 'markdown'].map((format) => <option key={format} value={format}>{label(format)}</option>)}</select>}</Field>
+                    <Field label="Source reference">{({ inputId }) => <input id={inputId} value={lyrics.sourceReference} disabled={!canEdit} onChange={(event) => onLyricsChange(lyrics.lyricsDocumentId, 'sourceReference', event.target.value)} />}</Field>
+                    <Field label="Contains chords">{({ inputId }) => <input id={inputId} type="checkbox" checked={lyrics.containsChords} disabled={!canEdit} onChange={(event) => onLyricsChange(lyrics.lyricsDocumentId, 'containsChords', event.target.checked)} />}</Field>
+                    <Field label="Lyrics content">{({ inputId }) => <textarea id={inputId} className="admin-form-grid__monospace" value={lyrics.content ?? ''} disabled={!canEdit} onChange={(event) => onLyricsChange(lyrics.lyricsDocumentId, 'content', event.target.value)} />}</Field>
+                </div>
+            </section>;
+        })}
+        {existingArrangements.length > 0 && (
+            <div className="admin-form-grid__wide admin-shell__subsection">
+                <h3>Add lyrics document</h3>
+                <div className="admin-add-lyrics-row">
+                    <AddLyricsSelect canEdit={canEdit} arrangements={existingArrangements} onAdd={onAddLyricsDocument} />
+                </div>
             </div>
-        </section>)}
+        )}
         <button type="button" disabled={!canEdit} onClick={onSaveArrangementMetadata}>Save arrangements</button>
     </form>
+    );
+};
+
+const AddLyricsSelect = ({ canEdit, arrangements, onAdd }: { canEdit: boolean; arrangements: SongMetadataDraft['arrangements']; onAdd: (arrangementId: string) => void }) => {
+    const [selected, setSelected] = useState('');
+    return (
+        <select value={selected as string} disabled={!canEdit} onChange={(event) => {
+            const value = event.target.value;
+            setSelected(value);
+            if (value) {
+                onAdd(value);
+                setSelected('');
+            }
+        }}>
+            <option value="">Select arrangement to add lyrics...</option>
+            {arrangements.map((arr) => (
+                <option key={arr.arrangementId!} value={arr.arrangementId!}>{arr.name}</option>
+            ))}
+        </select>
     );
 };
 
@@ -371,6 +471,33 @@ const CatalogEvidence = ({ detail }: { detail: SongReviewDetailModel }) => (
         ])} />
     </section>
 );
+
+const TagsSection = ({ tags }: { tags: SongReviewDetailModel['tags'] }) => {
+    const byType = tags.reduce<Record<string, typeof tags>>((acc, tag) => {
+        const group = acc[tag.tagType] ?? [];
+        group.push(tag);
+        acc[tag.tagType] = group;
+        return acc;
+    }, {});
+    const tagTypes = Object.keys(byType).sort();
+    return (
+        <section className="admin-shell__panel" aria-labelledby="tags-title">
+            <h2 id="tags-title">Tags</h2>
+            {tagTypes.length
+                ? tagTypes.map((tagType) => (
+                    <div key={tagType} className="admin-tag-group">
+                        <h3>{label(tagType)}</h3>
+                        <div className="admin-tag-list">
+                            {byType[tagType].map((tag) => (
+                                <Badge key={tag.tagId} severity="neutral">{tag.name}</Badge>
+                            ))}
+                        </div>
+                    </div>
+                ))
+                : <p>No tags assigned.</p>}
+        </section>
+    );
+};
 
 const AttachmentSection = ({ title, caption, attachments, emptyCopy = 'No attachments returned.' }: { title: string; caption: string; attachments: AssetAttachment[]; emptyCopy?: string }) => (
     <section className="admin-shell__panel" aria-labelledby={`${caption.replace(/\W+/g, '-').toLowerCase()}-title`}>

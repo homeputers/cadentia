@@ -137,4 +137,49 @@ describe('song review API adapter', () => {
         expect(body.arrangements[0].arrangementId).toBeUndefined();
         expect(body.arrangements[0].name).toBe('Acoustic');
     });
+
+    it('includes all arrangement fields in update payload', async () => {
+        const request = vi.fn().mockResolvedValue({});
+
+        await updateReviewSong({ getAdminSession: vi.fn(), request } as unknown as AdminApiClient, 'song-1', {
+            actor: 'editor-1',
+            canonicalTitle: 'Song',
+            primaryLanguage: 'en',
+            songStatus: 'APPROVED',
+            arrangements: [{
+                arrangementId: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
+                name: 'Full Band',
+                normalizedName: 'full band',
+                sourceType: 'STUDIO',
+                language: 'en',
+                musicalKey: 'D',
+                keyMode: 'MAJOR',
+                tempoBpm: 128,
+                timeSignature: '4/4',
+                durationSeconds: 245,
+                energyLevel: 4,
+                difficultyLevel: 3,
+                defaultForSong: true,
+                active: true,
+            }],
+            lyricsDocuments: [],
+        });
+
+        const body = JSON.parse(String(request.mock.calls[0][1].body));
+        expect(body.arrangements[0]).toMatchObject({
+            arrangementId: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
+            name: 'Full Band',
+            sourceType: 'STUDIO',
+            language: 'en',
+            musicalKey: 'D',
+            keyMode: 'MAJOR',
+            tempoBpm: 128,
+            timeSignature: '4/4',
+            durationSeconds: 245,
+            energyLevel: 4,
+            difficultyLevel: 3,
+            defaultForSong: true,
+            active: true,
+        });
+    });
 });
