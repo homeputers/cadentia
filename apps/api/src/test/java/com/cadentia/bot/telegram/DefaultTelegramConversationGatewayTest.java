@@ -175,6 +175,45 @@ class DefaultTelegramConversationGatewayTest {
         assertThat(setlistService.lastRequest).isNull();
     }
 
+    @Test
+    void requestAccessCallbackBypassesAuthorizationForUnlinkedUsers() {
+        // Arrange
+        ConversationSessionFacade facade = facade(input -> IntentParseResult.accepted(normalizedIntent(), false));
+        TelegramIdentifierHasher hasher = new TelegramIdentifierHasher("test-secret");
+        InMemoryAccessRequestRepository accessRequestRepository = new InMemoryAccessRequestRepository();
+        TelegramAccessRequestService accessRequestService = new TelegramAccessRequestService(
+                hasher,
+                new EmptyIdentityRepository(),
+                accessRequestRepository,
+                () -> com.cadentia.runtime.InstanceConfiguration.localDevelopment(
+                        "church-a", "local", "bucket", "assets", "key", "cache", "events", List.of("cadentia")),
+                null,
+                null);
+        TelegramAuthorizationService denyingAuthorization = new TelegramAuthorizationService(
+                hasher,
+                new EmptyIdentityRepository(),
+                new NoopSessionRepository(),
+                () -> com.cadentia.runtime.InstanceConfiguration.localDevelopment(
+                        "church-a", "local", "bucket", "assets", "key", "cache", "events", List.of("cadentia")),
+                Duration.ofMinutes(30),
+                Duration.ofHours(4));
+        DefaultTelegramConversationGateway gateway = new DefaultTelegramConversationGateway(
+                facade, denyingAuthorization, new CapturingSetlistService(), null, accessRequestService);
+
+        // Act
+        TelegramAdapterResponse callbackResponse = gateway.menuSelection(event(null, null, TelegramCallbackAction.REQUEST_ACCESS));
+        TelegramAdapterResponse deniedResponse = gateway.newSetlist(event("/newsetlist", TelegramCommand.NEW_SETLIST, null));
+        TelegramAdapterResponse repeatResponse = gateway.requestAccess(event("/requestaccess", TelegramCommand.REQUEST_ACCESS, null));
+
+        // Assert
+        assertThat(callbackResponse.status()).isEqualTo(TelegramAdapterResponseStatus.CONTINUED);
+        assertThat(callbackResponse.message()).contains("Access request received");
+        assertThat(deniedResponse.status()).isEqualTo(TelegramAdapterResponseStatus.UNAUTHORIZED);
+        assertThat(repeatResponse.message()).contains("already pending");
+        assertThat(accessRequestRepository.rows).hasSize(1);
+        assertThat(accessRequestRepository.rows.values().iterator().next().chatId()).isEqualTo("42");
+    }
+
     private static GenerateSetlistIntent normalizedIntent() {
         return new GenerateSetlistIntent("v1", new GenerateSetlistSlots(
                 "Psalm 100",
@@ -215,6 +254,75 @@ class DefaultTelegramConversationGatewayTest {
         @Override
         public IntentParseResult parse(String input) {
             return IntentParseResult.accepted(intent, false);
+        }
+    }
+
+    private static class EmptyIdentityRepository implements TelegramIdentityRepository {
+        @Override
+        public Optional<TelegramLinkedActor> findByTelegramHashes(String channel, String chatHash, String userHash) {
+            return Optional.empty();
+        }
+
+        @Override
+        public TelegramLinkedActor saveLink(String channel, String chatHash, String userHash, String churchInstanceId, java.util.Set<String> roles) {
+            return new TelegramLinkedActor(UUID.randomUUID(), churchInstanceId, roles, TelegramIdentityStatus.LINKED);
+        }
+    }
+
+    private static class NoopSessionRepository implements TelegramBotSessionRepository {
+        @Override
+        public Optional<TelegramBotSession> findActive(String channel, String chatHash, String userHash) {
+            return Optional.empty();
+        }
+
+        @Override
+        public TelegramBotSession save(TelegramBotSession session) {
+            return session;
+        }
+
+        @Override
+        public void transition(UUID sessionId, TelegramSessionState state) {}
+    }
+
+    private static class InMemoryAccessRequestRepository implements TelegramAccessRequestRepository {
+        private final Map<UUID, TelegramAccessRequest> rows = new HashMap<>();
+
+        @Override
+        public TelegramAccessRequest save(TelegramAccessRequest request) {
+            rows.put(request.id(), request);
+            return request;
+        }
+
+        @Override
+        public Optional<TelegramAccessRequest> findPending(String channel, String chatHash, String userHash, String churchInstanceId) {
+            return rows.values().stream()
+                    .filter(request -> request.chatHash().equals(chatHash) && request.userHash().equals(userHash)
+                            && request.status() == TelegramAccessRequestStatus.PENDING)
+                    .findFirst();
+        }
+
+        @Override
+        public Optional<TelegramAccessRequest> findById(UUID id) {
+            return Optional.ofNullable(rows.get(id));
+        }
+
+        @Override
+        public List<TelegramAccessRequest> findByInstanceAndStatus(String churchInstanceId, TelegramAccessRequestStatus status) {
+            return rows.values().stream().filter(request -> request.status() == status).toList();
+        }
+
+        @Override
+        public Optional<TelegramAccessRequest> decide(
+                UUID id, TelegramAccessRequestStatus decision, String decidedBy, String decisionReason, java.time.Instant decidedAt) {
+            TelegramAccessRequest current = rows.get(id);
+            if (current == null || current.status() != TelegramAccessRequestStatus.PENDING) {
+                return Optional.empty();
+            }
+            TelegramAccessRequest updated = new TelegramAccessRequest(current.id(), current.channel(), current.chatHash(),
+                    current.userHash(), null, current.churchInstanceId(), decision, current.requestedAt(), decidedAt,
+                    decidedBy, decisionReason);
+            rows.put(id, updated);
+            return Optional.of(updated);
         }
     }
 

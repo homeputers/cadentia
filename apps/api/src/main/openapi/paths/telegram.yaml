@@ -340,3 +340,119 @@
         description: Caller is not authorized.
       '404':
         description: Dead letter was not found.
+"/admin/telegram/access-requests":
+  get:
+    tags:
+    - AdminTelegramAccess
+    operationId: listTelegramAccessRequests
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - ADMIN
+    summary: List self-service Telegram access requests for the current church instance
+    description: Returns pseudonymous access requests only; raw Telegram chat and user identifiers are never exposed.
+    parameters:
+    - "$ref": ../components/shared/parameters.yaml#/ChurchInstanceIdHeader
+    - in: query
+      name: status
+      required: false
+      schema:
+        type: string
+        enum:
+        - PENDING
+        - APPROVED
+        - REJECTED
+        default: PENDING
+    responses:
+      '200':
+        description: Access requests scoped to the requested church instance.
+        content:
+          application/json:
+            schema:
+              $ref: ../components/schemas/telegram.yaml#/TelegramAccessRequestListResponse
+      '400':
+        description: Invalid status filter.
+      '401':
+        description: Authentication is required.
+      '403':
+        description: Caller is not authorized for the requested church instance.
+"/admin/telegram/access-requests/{requestId}:approve":
+  post:
+    tags:
+    - AdminTelegramAccess
+    operationId: approveTelegramAccessRequest
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - ADMIN
+    summary: Approve a pending Telegram access request and notify the requester
+    description: Creates or re-activates the Telegram account link with the default role set and pushes an approval notification to the requester. Approval succeeds even if the notification cannot be delivered.
+    parameters:
+    - "$ref": ../components/shared/parameters.yaml#/ChurchInstanceIdHeader
+    - in: path
+      name: requestId
+      required: true
+      schema:
+        type: string
+        format: uuid
+    requestBody:
+      required: false
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/telegram.yaml#/TelegramAccessRequestDecisionRequest
+    responses:
+      '200':
+        description: Approved access request.
+        content:
+          application/json:
+            schema:
+              $ref: ../components/schemas/telegram.yaml#/TelegramAccessRequestDecisionResponse
+      '401':
+        description: Authentication is required.
+      '403':
+        description: Caller is not authorized for the requested church instance.
+      '404':
+        description: Access request was not found.
+      '409':
+        description: Access request was already decided.
+"/admin/telegram/access-requests/{requestId}:reject":
+  post:
+    tags:
+    - AdminTelegramAccess
+    operationId: rejectTelegramAccessRequest
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - ADMIN
+    summary: Reject a pending Telegram access request and notify the requester
+    description: Marks the request rejected, purges the stored raw chat reference, and pushes a rejection notification to the requester. Rejection succeeds even if the notification cannot be delivered.
+    parameters:
+    - "$ref": ../components/shared/parameters.yaml#/ChurchInstanceIdHeader
+    - in: path
+      name: requestId
+      required: true
+      schema:
+        type: string
+        format: uuid
+    requestBody:
+      required: false
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/telegram.yaml#/TelegramAccessRequestDecisionRequest
+    responses:
+      '200':
+        description: Rejected access request.
+        content:
+          application/json:
+            schema:
+              $ref: ../components/schemas/telegram.yaml#/TelegramAccessRequestDecisionResponse
+      '401':
+        description: Authentication is required.
+      '403':
+        description: Caller is not authorized for the requested church instance.
+      '404':
+        description: Access request was not found.
+      '409':
+        description: Access request was already decided.

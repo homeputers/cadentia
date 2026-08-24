@@ -197,6 +197,7 @@ public class TelegramBotAdapter implements BotAdapter {
             case SETTINGS -> settingsEnabled
                     ? conversationGateway.settings(event)
                     : new TelegramAdapterResponse(TelegramAdapterResponseStatus.DISABLED, message("settingsDisabled"), event, null);
+            case REQUEST_ACCESS -> conversationGateway.requestAccess(event);
         };
     }
 

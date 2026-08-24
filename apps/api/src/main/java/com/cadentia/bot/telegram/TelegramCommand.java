@@ -9,7 +9,8 @@ public enum TelegramCommand {
     NEW_SETLIST("newsetlist"),
     STATUS("status"),
     CANCEL("cancel"),
-    SETTINGS("settings");
+    SETTINGS("settings"),
+    REQUEST_ACCESS("requestaccess");
 
     private final String token;
 

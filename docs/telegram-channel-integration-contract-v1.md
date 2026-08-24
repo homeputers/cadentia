@@ -290,7 +290,7 @@ recommendation path and must not be accepted in production configuration.
 | Open question | v1 resolution |
 | --- | --- |
 | Should local development support Telegram long polling? | Yes, but only behind local-only configuration and feature flag. Production remains webhook-only. |
-| Which identity provider or account-linking flow maps Telegram users to Cadentia roles? | Deferred to the identity/account-linking subtask. Safe v1 default is `accountLinkingRequired=true`; protected commands return `AUTH_REQUIRED` until the identity layer resolves a Cadentia principal and church role. |
+| Which identity provider or account-linking flow maps Telegram users to Cadentia roles? | Self-service onboarding: unauthorized users request access from the bot ("Request access" button or `/requestaccess`), the request is stored PENDING in `telegram_access_request` (raw chat ID purged on decision), an administrator approves/rejects at `/admin/telegram-access` (`MANAGE_TELEGRAM_ACCESS`), and approval creates a `LINKED` identity with the default `ROLE_WORSHIP_LEADER` role and pushes the decision to the requester. Protected commands still return an authorization failure until approval completes. |
 | How much explanation payload is rendered directly in Telegram? | Use `SUMMARY_WITH_LINK`: concise backend summary in Telegram and authenticated deep link for full explanation when enabled. |
 | What are default session lifetimes? | Inactivity `PT30M`; absolute `PT24H`; expiration is explicit and recoverable but stale sessions cannot generate recommendations. |
 

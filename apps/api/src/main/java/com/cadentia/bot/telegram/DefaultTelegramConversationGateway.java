@@ -39,31 +39,31 @@ public class DefaultTelegramConversationGateway implements TelegramConversationG
     private final TelegramAuthorizationService authorizationService;
     private final SetlistService setlistService;
     private final InstanceConfigurationProvider configurationProvider;
+    private final TelegramAccessRequestService accessRequestService;
 
     @Autowired
     public DefaultTelegramConversationGateway(
             ConversationSessionFacade facade,
             TelegramAuthorizationService authorizationService,
             SetlistService setlistService,
-            InstanceConfigurationProvider configurationProvider) {
+            InstanceConfigurationProvider configurationProvider,
+            TelegramAccessRequestService accessRequestService) {
         this.facade = facade;
         this.authorizationService = authorizationService;
         this.setlistService = setlistService;
         this.configurationProvider = configurationProvider;
+        this.accessRequestService = accessRequestService;
     }
 
     public DefaultTelegramConversationGateway(
             ConversationSessionFacade facade,
             TelegramAuthorizationService authorizationService,
             SetlistService setlistService) {
-        this(facade, authorizationService, setlistService, null);
+        this(facade, authorizationService, setlistService, null, null);
     }
 
     DefaultTelegramConversationGateway(ConversationSessionFacade facade) {
-        this.facade = facade;
-        this.authorizationService = null;
-        this.setlistService = null;
-        this.configurationProvider = null;
+        this(facade, null, null, null, null);
     }
 
     @Override
@@ -149,7 +149,24 @@ public class DefaultTelegramConversationGateway implements TelegramConversationG
     }
 
     @Override
+    public TelegramAdapterResponse requestAccess(TelegramChannelEvent event) {
+        if (accessRequestService == null) {
+            return new TelegramAdapterResponse(TelegramAdapterResponseStatus.UNSUPPORTED, message("unsupportedSelection"), event, null);
+        }
+        TelegramAccessRequestService.AccessRequestResult result = accessRequestService.requestAccess(event);
+        String key = switch (result.outcome()) {
+            case ALREADY_LINKED -> "accessAlreadyLinked";
+            case ALREADY_PENDING -> "accessRequestPending";
+            case CREATED -> "accessRequestReceived";
+        };
+        return new TelegramAdapterResponse(TelegramAdapterResponseStatus.CONTINUED, message(key), event, null);
+    }
+
+    @Override
     public TelegramAdapterResponse menuSelection(TelegramChannelEvent event) {
+        if (event.callbackAction() == TelegramCallbackAction.REQUEST_ACCESS) {
+            return requestAccess(event);
+        }
         TelegramAuthorizationService.TelegramAuthorizationDecision decision = authorize(event, TelegramProtectedAction.CONVERSATION_CONTINUE);
         if (!decision.permitted()) {
             return denied(event, decision);

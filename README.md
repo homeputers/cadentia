@@ -237,8 +237,15 @@ The expected response is `202 Accepted`. A `401` response with
 `WWW-Authenticate: Basic realm="Realm"` means Spring Security is intercepting
 the webhook route before Telegram webhook secret validation.
 
-Self-service Telegram account linking is not implemented yet. For local testing,
-seed a linked actor after your bot has received a real message and you know the
+Self-service Telegram account linking is available: a new chat is told it is not
+authorized and can tap the "Request access" inline button or send
+`/requestaccess`. The request is stored as PENDING, an administrator approves or
+rejects it from the admin console at `/admin/telegram-access`, and the requester
+is notified on Telegram. Approval links the account with the default
+`ROLE_WORSHIP_LEADER` role.
+
+For local testing without the admin console, you can still seed a linked actor
+directly after your bot has received a real message and you know the
 Telegram private chat/user id:
 
 ```bash

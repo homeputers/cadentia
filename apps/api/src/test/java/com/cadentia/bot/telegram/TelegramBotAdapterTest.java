@@ -60,6 +60,29 @@ class TelegramBotAdapterTest {
     }
 
     @Test
+    void routesRequestAccessCommandAndCallbackToGateway() {
+        // Arrange
+        TelegramBotAdapter adapter = adapter(false);
+
+        // Act
+        TelegramAdapterResponse commandResponse = adapter.handleUpdate(commandPayload(26, "/requestaccess"), "corr-26");
+
+        // Assert
+        assertThat(commandResponse.status()).isEqualTo(TelegramAdapterResponseStatus.CONTINUED);
+        assertThat(commandResponse.message()).isEqualTo("requestAccess");
+        assertThat(gateway.lastMethod).isEqualTo("requestAccess");
+        assertThat(gateway.lastEvent.command()).isEqualTo(TelegramCommand.REQUEST_ACCESS);
+
+        // Act
+        TelegramAdapterResponse callbackResponse = adapter.handleUpdate(callbackPayload(27, "cad:v1:request_access:", 1781870400), "corr-27");
+
+        // Assert
+        assertThat(callbackResponse.status()).isEqualTo(TelegramAdapterResponseStatus.CONTINUED);
+        assertThat(gateway.lastMethod).isEqualTo("menuSelection");
+        assertThat(gateway.lastEvent.callbackAction()).isEqualTo(TelegramCallbackAction.REQUEST_ACCESS);
+    }
+
+    @Test
     void unsupportedCommandIsAcknowledgedWithoutInvokingFacade() {
         // Arrange
         TelegramBotAdapter adapter = adapter(false);
@@ -184,6 +207,11 @@ class TelegramBotAdapterTest {
         @Override
         public TelegramAdapterResponse menuSelection(TelegramChannelEvent event) {
             return capture("menuSelection", event, TelegramAdapterResponseStatus.CONTINUED, event.callbackAction().guidedField());
+        }
+
+        @Override
+        public TelegramAdapterResponse requestAccess(TelegramChannelEvent event) {
+            return capture("requestAccess", event, TelegramAdapterResponseStatus.CONTINUED, null);
         }
 
         private TelegramAdapterResponse capture(String method, TelegramChannelEvent event, TelegramAdapterResponseStatus status, String guidedField) {

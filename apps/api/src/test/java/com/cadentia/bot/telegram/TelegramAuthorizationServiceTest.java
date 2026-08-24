@@ -118,6 +118,13 @@ class TelegramAuthorizationServiceTest {
         public Optional<TelegramLinkedActor> findByTelegramHashes(String channel, String chatHash, String userHash) {
             return Optional.ofNullable(rows.get(chatHash + ":" + userHash));
         }
+
+        @Override
+        public TelegramLinkedActor saveLink(String channel, String chatHash, String userHash, String churchInstanceId, Set<String> roles) {
+            TelegramLinkedActor actor = new TelegramLinkedActor(UUID.randomUUID(), churchInstanceId, roles, TelegramIdentityStatus.LINKED);
+            rows.put(chatHash + ":" + userHash, actor);
+            return actor;
+        }
     }
 
     private static class InMemorySessionRepository implements TelegramBotSessionRepository {

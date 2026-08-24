@@ -34,6 +34,9 @@ export type CadentiaApiRoute =
     | '/admin/song-imports/manual'
     | '/admin/songs'
     | '/admin/songs/{songId}'
+    | '/admin/telegram/access-requests'
+    | '/admin/telegram/access-requests/{requestId}:approve'
+    | '/admin/telegram/access-requests/{requestId}:reject'
     | '/admin/telegram/bots/{botId}/status'
     | '/admin/telegram/channels/{channelId}/settings'
     | '/asset-attachments'
@@ -99,6 +102,7 @@ export type CadentiaApiRoute =
 
 export type CadentiaApiOperationId =
     | 'acceptTelegramWebhookUpdate'
+    | 'approveTelegramAccessRequest'
     | 'archiveArrangementOverride'
     | 'archiveAsset'
     | 'archiveAssetAttachment'
@@ -175,6 +179,7 @@ export type CadentiaApiOperationId =
     | 'listServicePlans'
     | 'listSetlistVersions'
     | 'listTeamAssignmentHistory'
+    | 'listTelegramAccessRequests'
     | 'listUpcomingTeamAssignmentsForMusician'
     | 'openAdminModerationFlag'
     | 'previewAdminFeatureFlagChange'
@@ -182,6 +187,7 @@ export type CadentiaApiOperationId =
     | 'recordFeedbackEvent'
     | 'recoverConversationSession'
     | 'registerPluginPackage'
+    | 'rejectTelegramAccessRequest'
     | 'removeServiceTeamAssignment'
     | 'renderEffectiveArrangement'
     | 'reorderServicePlanBlocks'
@@ -251,6 +257,9 @@ export const cadentiaApiRoutes = [
     '/admin/song-imports/manual',
     '/admin/songs',
     '/admin/songs/{songId}',
+    '/admin/telegram/access-requests',
+    '/admin/telegram/access-requests/{requestId}:approve',
+    '/admin/telegram/access-requests/{requestId}:reject',
     '/admin/telegram/bots/{botId}/status',
     '/admin/telegram/channels/{channelId}/settings',
     '/asset-attachments',
@@ -348,6 +357,9 @@ export const cadentiaApiRouteRefs: Record<CadentiaApiRoute, string> = {
     '/admin/song-imports/manual': './paths/admin-review.yaml#/~1admin~1song-imports~1manual',
     '/admin/songs': './paths/admin-review.yaml#/~1admin~1songs',
     '/admin/songs/{songId}': './paths/admin-review.yaml#/~1admin~1songs~1{songId}',
+    '/admin/telegram/access-requests': './paths/telegram.yaml#/~1admin~1telegram~1access-requests',
+    '/admin/telegram/access-requests/{requestId}:approve': './paths/telegram.yaml#/~1admin~1telegram~1access-requests~1{requestId}:approve',
+    '/admin/telegram/access-requests/{requestId}:reject': './paths/telegram.yaml#/~1admin~1telegram~1access-requests~1{requestId}:reject',
     '/admin/telegram/bots/{botId}/status': './paths/telegram.yaml#/~1admin~1telegram~1bots~1{botId}~1status',
     '/admin/telegram/channels/{channelId}/settings': './paths/telegram.yaml#/~1admin~1telegram~1channels~1{channelId}~1settings',
     '/asset-attachments': './paths/assets.yaml#/~1asset-attachments',
@@ -414,6 +426,7 @@ export const cadentiaApiRouteRefs: Record<CadentiaApiRoute, string> = {
 
 export const cadentiaApiOperations = [
     { operationId: 'acceptTelegramWebhookUpdate', method: 'POST', path: '/telegram/webhooks/{botId}', ref: './paths/telegram.yaml#/~1telegram~1webhooks~1{botId}' },
+    { operationId: 'approveTelegramAccessRequest', method: 'POST', path: '/admin/telegram/access-requests/{requestId}:approve', ref: './paths/telegram.yaml#/~1admin~1telegram~1access-requests~1{requestId}:approve' },
     { operationId: 'archiveArrangementOverride', method: 'DELETE', path: '/service-plans/{servicePlanId}/arrangement-overrides/{arrangementOverrideId}', ref: './paths/rehearsal-workflow.yaml#/~1service-plans~1{servicePlanId}~1arrangement-overrides~1{arrangementOverrideId}' },
     { operationId: 'archiveAsset', method: 'DELETE', path: '/assets/{assetId}', ref: './paths/assets.yaml#/~1assets~1{assetId}' },
     { operationId: 'archiveAssetAttachment', method: 'DELETE', path: '/asset-attachments/{attachmentId}', ref: './paths/assets.yaml#/~1asset-attachments~1{attachmentId}' },
@@ -490,6 +503,7 @@ export const cadentiaApiOperations = [
     { operationId: 'listServicePlans', method: 'GET', path: '/service-plans', ref: './paths/service-plans.yaml#/~1service-plans' },
     { operationId: 'listSetlistVersions', method: 'GET', path: '/setlists/{setlistId}/versions', ref: './paths/setlists.yaml#/~1setlists~1{setlistId}~1versions' },
     { operationId: 'listTeamAssignmentHistory', method: 'GET', path: '/team-assignments/services/{servicePlanId}/history', ref: './paths/team-assignments.yaml#/~1team-assignments~1services~1{servicePlanId}~1history' },
+    { operationId: 'listTelegramAccessRequests', method: 'GET', path: '/admin/telegram/access-requests', ref: './paths/telegram.yaml#/~1admin~1telegram~1access-requests' },
     { operationId: 'listUpcomingTeamAssignmentsForMusician', method: 'GET', path: '/team-assignments/musicians/{musicianId}/upcoming', ref: './paths/team-assignments.yaml#/~1team-assignments~1musicians~1{musicianId}~1upcoming' },
     { operationId: 'openAdminModerationFlag', method: 'POST', path: '/admin/import-candidates/{candidateId}/moderation-flags', ref: './paths/admin-review.yaml#/~1admin~1import-candidates~1{candidateId}~1moderation-flags' },
     { operationId: 'previewAdminFeatureFlagChange', method: 'POST', path: '/admin/feature-flags/{flagKey}:preview', ref: './paths/admin-operations.yaml#/~1admin~1feature-flags~1{flagKey}:preview' },
@@ -497,6 +511,7 @@ export const cadentiaApiOperations = [
     { operationId: 'recordFeedbackEvent', method: 'POST', path: '/feedback/events', ref: './paths/feedback-tuning.yaml#/~1feedback~1events' },
     { operationId: 'recoverConversationSession', method: 'POST', path: '/conversation-sessions/{sessionId}/recover', ref: './paths/conversation-sessions.yaml#/~1conversation-sessions~1{sessionId}~1recover' },
     { operationId: 'registerPluginPackage', method: 'POST', path: '/admin/plugins', ref: './paths/plugins.yaml#/~1admin~1plugins' },
+    { operationId: 'rejectTelegramAccessRequest', method: 'POST', path: '/admin/telegram/access-requests/{requestId}:reject', ref: './paths/telegram.yaml#/~1admin~1telegram~1access-requests~1{requestId}:reject' },
     { operationId: 'removeServiceTeamAssignment', method: 'DELETE', path: '/team-assignments/services/{servicePlanId}/assignments/{assignmentId}', ref: './paths/team-assignments.yaml#/~1team-assignments~1services~1{servicePlanId}~1assignments~1{assignmentId}' },
     { operationId: 'renderEffectiveArrangement', method: 'GET', path: '/service-plans/{servicePlanId}/effective-arrangements/{arrangementId}', ref: './paths/rehearsal-workflow.yaml#/~1service-plans~1{servicePlanId}~1effective-arrangements~1{arrangementId}' },
     { operationId: 'reorderServicePlanBlocks', method: 'POST', path: '/service-plans/{servicePlanId}/blocks:order', ref: './paths/service-plans.yaml#/~1service-plans~1{servicePlanId}~1blocks:order' },

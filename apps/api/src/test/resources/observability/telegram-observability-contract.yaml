@@ -15,6 +15,9 @@ auditActions:
   - telegram_bot_settings_changed
   - telegram_account_linked
   - telegram_account_unlinked
+  - telegram_access_requested
+  - telegram_access_request_approved
+  - telegram_access_request_rejected
   - telegram_channel_enabled
   - telegram_channel_disabled
   - telegram_outbound_paused

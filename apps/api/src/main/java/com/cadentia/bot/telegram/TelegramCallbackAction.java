@@ -13,7 +13,8 @@ public enum TelegramCallbackAction {
     SERVICE_MOMENT("service_moment", "serviceMoment"),
     CONFIRM("confirm", "confirmation"),
     REVISE("revise", "revision"),
-    CANCEL("cancel", "cancellation");
+    CANCEL("cancel", "cancellation"),
+    REQUEST_ACCESS("request_access", "accessRequest");
 
     private final String token;
     private final String guidedField;

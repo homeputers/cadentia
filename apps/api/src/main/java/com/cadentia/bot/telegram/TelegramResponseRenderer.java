@@ -237,6 +237,9 @@ public class TelegramResponseRenderer {
         if (status == TelegramAdapterResponseStatus.COMPLETED) {
             return new TelegramRenderedMessage.TelegramInlineKeyboard(List.of(List.of(button(TelegramI18n.text("revise", locale()), TelegramCallbackAction.REVISE))));
         }
+        if (status == TelegramAdapterResponseStatus.UNAUTHORIZED) {
+            return new TelegramRenderedMessage.TelegramInlineKeyboard(List.of(List.of(button(TelegramI18n.text("requestAccess", locale()), TelegramCallbackAction.REQUEST_ACCESS))));
+        }
         if (status != TelegramAdapterResponseStatus.STARTED
                 && status != TelegramAdapterResponseStatus.CONTINUED
                 && status != TelegramAdapterResponseStatus.ALREADY_ACTIVE) {
@@ -328,6 +331,9 @@ public class TelegramResponseRenderer {
     }
 
     private String callbackAcknowledgement(TelegramAdapterResponse response) {
+        if (response.event() != null && response.event().callbackAction() == TelegramCallbackAction.REQUEST_ACCESS) {
+            return TelegramI18n.text("requestAccessAck", locale());
+        }
         String value = switch (response.status()) {
             case COMPLETED -> TelegramI18n.text("proposalAck", locale());
             case CANCELLED -> TelegramI18n.text("cancelledAck", locale());

@@ -11,6 +11,7 @@ import { SongReviewQueue } from './SongReviewQueue';
 import { AuditRollback } from './AuditRollback';
 import { Diagnostics } from './Diagnostics';
 import { InstanceSettings } from './InstanceSettings';
+import { TelegramAccessRequests } from './TelegramAccessRequests';
 import { ActionBadge, AuditReferenceLink, Badge, Breadcrumbs, DataTable, PageHeader, RoleBadge, StatePanel, SupportDebugPanel, redactSensitiveError } from './admin-ui';
 import { createAdminApiClient, type AdminApiClient, type AdminApiError } from '../generated/cadentia-api/client';
 import { I18nProvider, LocalizedView, routeLabel, translate, useI18n, type TranslationKey } from '../i18n';
@@ -144,6 +145,9 @@ export const AdminShell = () => {
     }
     if (session && window.location.pathname === '/admin/settings') {
         return withNav(<InstanceSettings session={session} />);
+    }
+    if (session && window.location.pathname === '/admin/telegram-access') {
+        return withNav(<TelegramAccessRequests session={session} />);
     }
     const detailMatch = window.location.pathname.match(/^\/admin\/imports\/([^/]+)$/);
     if (session && detailMatch) {

@@ -461,6 +461,15 @@ class TelegramWebhookE2eEquivalenceTest {
             return Optional.ofNullable(actors.get(key(chatHash, userHash)));
         }
 
+        @Override
+        public TelegramLinkedActor saveLink(String channel, String chatHash, String userHash, String churchInstanceId, Set<String> roles) {
+            TelegramLinkedActor actor = new TelegramLinkedActor(
+                    UUID.nameUUIDFromBytes((chatHash + ":" + userHash).getBytes(java.nio.charset.StandardCharsets.UTF_8)),
+                    churchInstanceId, roles, TelegramIdentityStatus.LINKED);
+            actors.put(key(chatHash, userHash), actor);
+            return actor;
+        }
+
         private String key(String chatHash, String userHash) {
             return chatHash + ":" + userHash;
         }
