@@ -49,6 +49,14 @@ schemas:
     "$ref": "./components/schemas/telegram.yaml#/TelegramAccountLinkConfirmationRequest"
   TelegramAccountLinkConfirmationResponse:
     "$ref": "./components/schemas/telegram.yaml#/TelegramAccountLinkConfirmationResponse"
+  TelegramAccessRequest:
+    "$ref": "./components/schemas/telegram.yaml#/TelegramAccessRequest"
+  TelegramAccessRequestListResponse:
+    "$ref": "./components/schemas/telegram.yaml#/TelegramAccessRequestListResponse"
+  TelegramAccessRequestDecisionRequest:
+    "$ref": "./components/schemas/telegram.yaml#/TelegramAccessRequestDecisionRequest"
+  TelegramAccessRequestDecisionResponse:
+    "$ref": "./components/schemas/telegram.yaml#/TelegramAccessRequestDecisionResponse"
   TelegramSessionStatusResponse:
     "$ref": "./components/schemas/telegram.yaml#/TelegramSessionStatusResponse"
   TelegramSessionCancellationRequest:

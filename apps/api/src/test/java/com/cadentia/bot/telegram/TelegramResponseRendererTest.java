@@ -328,6 +328,62 @@ class TelegramResponseRendererTest {
         assertThat(String.join("\n", chunks)).contains("Line");
     }
 
+    @Test
+    void rendersRequestAccessButtonForUnauthorizedResponses() {
+        // Arrange
+        TelegramAdapterResponse response = new TelegramAdapterResponse(
+                TelegramAdapterResponseStatus.UNAUTHORIZED,
+                "Please link your Cadentia account before using this bot.",
+                event(TelegramEventKind.MESSAGE),
+                null);
+
+        // Act
+        List<TelegramRenderedMessage> rendered = renderer.render(response);
+
+        // Assert
+        assertThat(rendered).hasSize(1);
+        assertThat(rendered.get(0).text()).contains("Access needed");
+        assertThat(rendered.get(0).inlineKeyboard().rows()).hasSize(1);
+        TelegramRenderedMessage.TelegramInlineKeyboardButton button =
+                rendered.get(0).inlineKeyboard().rows().get(0).get(0);
+        assertThat(button.text()).isEqualTo("Request access");
+        assertThat(button.callbackData()).isEqualTo("cad:v1:request_access");
+        assertThat(button.callbackData().length()).isLessThanOrEqualTo(TelegramCallbackData.LIMIT);
+    }
+
+    @Test
+    void disabledResponsesDoNotOfferRequestAccessButton() {
+        // Arrange
+        TelegramAdapterResponse response = new TelegramAdapterResponse(
+                TelegramAdapterResponseStatus.DISABLED,
+                "Telegram access is disabled for this church instance.",
+                event(TelegramEventKind.MESSAGE),
+                null);
+
+        // Act
+        List<TelegramRenderedMessage> rendered = renderer.render(response);
+
+        // Assert
+        assertThat(rendered).hasSize(1);
+        assertThat(rendered.get(0).inlineKeyboard()).isNull();
+    }
+
+    @Test
+    void acknowledgesRequestAccessCallbackWithDedicatedCopy() {
+        // Arrange
+        TelegramChannelEvent callbackEvent = new TelegramChannelEvent(10L, TelegramEventKind.CALLBACK_QUERY, "42", "99", 7,
+                null, null, TelegramCallbackAction.REQUEST_ACCESS, "", "cb-1", 7, Locale.ROOT, "corr-1");
+        TelegramAdapterResponse response = new TelegramAdapterResponse(
+                TelegramAdapterResponseStatus.CONTINUED, "Access request received.", callbackEvent, null);
+
+        // Act
+        List<TelegramRenderedMessage> rendered = renderer.render(response);
+
+        // Assert
+        assertThat(rendered.get(0).callbackOnly()).isTrue();
+        assertThat(rendered.get(0).callbackAcknowledgement()).isEqualTo("Access request submitted.");
+    }
+
     private static TelegramChannelEvent event(TelegramEventKind kind) {
         return new TelegramChannelEvent(10L, kind, "42", "99", 7, "/start", TelegramCommand.START,
                 kind == TelegramEventKind.CALLBACK_QUERY ? TelegramCallbackAction.CONFIRM : null,

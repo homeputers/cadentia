@@ -28,6 +28,8 @@ tags:
   description: ADR-030 plugin registry, configuration, and lifecycle administration
 - name: Telegram
   description: Telegram webhook intake, channel-session, account-linking, and bot management operations
+- name: AdminTelegramAccess
+  description: Admin review of self-service Telegram access requests
 - name: CatalogSearch
   description: Versioned approved-catalog discovery search and autocomplete operations
 paths:
@@ -49,6 +51,12 @@ paths:
     "$ref": "./paths/telegram.yaml#/~1telegram~1sessions~1{sessionId}"
   "/telegram/sessions/{sessionId}:cancel":
     "$ref": "./paths/telegram.yaml#/~1telegram~1sessions~1{sessionId}:cancel"
+  "/admin/telegram/access-requests":
+    "$ref": "./paths/telegram.yaml#/~1admin~1telegram~1access-requests"
+  "/admin/telegram/access-requests/{requestId}:approve":
+    "$ref": "./paths/telegram.yaml#/~1admin~1telegram~1access-requests~1{requestId}:approve"
+  "/admin/telegram/access-requests/{requestId}:reject":
+    "$ref": "./paths/telegram.yaml#/~1admin~1telegram~1access-requests~1{requestId}:reject"
   "/admin/plugins":
     "$ref": "./paths/plugins.yaml#/~1admin~1plugins"
   "/admin/plugins/{pluginVersionId}/configuration-snapshots":

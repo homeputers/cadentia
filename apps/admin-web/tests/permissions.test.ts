@@ -55,6 +55,14 @@ describe('admin permission presentation helpers', () => {
         expect(canAccessRoute(admin, [], '/admin/diagnostics')).toBe(false);
     });
 
+    it('shows telegram access route only with the manage capability', () => {
+        const telegramAdmin = session(['ADMIN'], ['MANAGE_TELEGRAM_ACCESS']);
+
+        expect(visibleRoutes(telegramAdmin, []).map((route) => route.href)).toEqual(['/admin/telegram-access']);
+        expect(canAccessRoute(telegramAdmin, [], '/admin/telegram-access')).toBe(true);
+        expect(canAccessRoute(session(['CATALOG_EDITOR'], ['REVIEW_CATALOG']), [], '/admin/telegram-access')).toBe(false);
+    });
+
     it('keeps read-only viewer navigation and mutations hidden', () => {
         const viewer = session(['VIEWER'], ['VIEW_IMPORT_QUEUE']);
 

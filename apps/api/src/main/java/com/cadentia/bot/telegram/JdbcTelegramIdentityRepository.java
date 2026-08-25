@@ -30,6 +30,29 @@ public class JdbcTelegramIdentityRepository implements TelegramIdentityRepositor
                 """, Map.of("channel", channel, "chatHash", chatHash, "userHash", userHash), this::mapOptional);
     }
 
+    @Override
+    public TelegramLinkedActor saveLink(String channel, String chatHash, String userHash, String churchInstanceId, Set<String> roles) {
+        UUID actorId = jdbcTemplate.query("""
+                INSERT INTO telegram_account_link (
+                    id, channel, chat_hash, user_hash, church_instance_id, actor_id, roles, status, link_confirmed_at, audit_metadata
+                ) VALUES (
+                    gen_random_uuid(), :channel, :chatHash, :userHash, :churchInstanceId, gen_random_uuid(),
+                    string_to_array(:roles, ','), 'LINKED', now(), CAST(:auditMetadata AS jsonb)
+                )
+                ON CONFLICT (channel, chat_hash, user_hash, church_instance_id)
+                DO UPDATE SET roles = EXCLUDED.roles, status = 'LINKED', revoked_at = NULL,
+                              link_confirmed_at = now(), updated_at = now()
+                RETURNING actor_id
+                """, Map.of("channel", channel, "chatHash", chatHash, "userHash", userHash,
+                "churchInstanceId", churchInstanceId, "roles", String.join(",", roles),
+                "auditMetadata", "{\"source\":\"access_request\"}"),
+                rs -> rs.next() ? rs.getObject("actor_id", UUID.class) : null);
+        if (actorId == null) {
+            throw new IllegalStateException("Telegram account link upsert returned no actor id.");
+        }
+        return new TelegramLinkedActor(actorId, churchInstanceId, roles, TelegramIdentityStatus.LINKED);
+    }
+
     private Optional<TelegramLinkedActor> mapOptional(ResultSet rs) throws SQLException {
         if (!rs.next()) {
             return Optional.empty();

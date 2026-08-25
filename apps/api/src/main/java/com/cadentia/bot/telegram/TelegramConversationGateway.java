@@ -17,4 +17,6 @@ public interface TelegramConversationGateway {
     TelegramAdapterResponse text(TelegramChannelEvent event);
 
     TelegramAdapterResponse menuSelection(TelegramChannelEvent event);
+
+    TelegramAdapterResponse requestAccess(TelegramChannelEvent event);
 }

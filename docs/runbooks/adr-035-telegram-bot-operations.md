@@ -264,7 +264,7 @@ Expected startup or request-time validation failures:
 2. Use `correlationId` and `updateId` from structured logs. Do not request raw production Telegram payloads from users.
 3. Confirm the webhook URL and secret-token header are still registered with Telegram.
 4. Confirm `cadentia.telegram.enabled` and any instance-level channel controls are enabled.
-5. Check the linked Telegram identity state: unlinked, revoked, disabled, unauthorized role, cross-instance, or linked.
+5. Check the linked Telegram identity state: unlinked, revoked, disabled, unauthorized role, cross-instance, or linked. For unlinked users, check `telegram_access_request` for a PENDING record awaiting admin decision.
 6. Check the session state and TTLs for stuck `NEW_SETLIST_ACTIVE`, `PENDING_CONFIRMATION`, `CANCELLED`, or `EXPIRED` states.
 7. For outbound failures, inspect retry/dead-letter metadata: failure category, sanitized preview, attempt count, next attempt time, and chat hash.
 8. Confirm Cadentia API health, database connectivity, and approved catalog seed availability.
@@ -331,7 +331,9 @@ according to retention policy.
 
 Support staff should use short, sanitized scripts:
 
-- **Unlinked account:** "Please link your Telegram account from Cadentia before using the bot. We cannot complete setlist generation from Telegram until the link is active."
+- **Unlinked account:** "Send `/requestaccess` to the bot or tap the 'Request access' button on the denial message. A Cadentia administrator will review your request in the admin console and you will be notified on Telegram."
+- **Pending access request:** "Your Telegram access request is awaiting administrator review. You will be notified on Telegram once it is approved or rejected."
+- **Deciding access requests:** Administrators review pending requests at `/admin/telegram-access` (requires the `MANAGE_TELEGRAM_ACCESS` capability). Approval links the Telegram account with the default `ROLE_WORSHIP_LEADER` role and notifies the requester; rejection notifies the requester without granting access. Raw Telegram chat identifiers are stored only while a request is pending and are purged when it is decided.
 - **Unauthorized role:** "Your Cadentia role does not allow Telegram setlist generation. Ask a Cadentia administrator to review your role."
 - **Expired button:** "That Telegram button expired. Send `/status` or start again with `/newsetlist`."
 - **Cancelled session:** "Your Telegram setlist session was cancelled. Send `/newsetlist` to begin again."

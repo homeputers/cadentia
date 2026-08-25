@@ -303,6 +303,64 @@ TelegramAccountLinkConfirmationResponse:
       - LINKED
       - EXPIRED
       - REJECTED
+TelegramAccessRequest:
+  type: object
+  required:
+  - requestId
+  - churchInstanceId
+  - status
+  - requestedAt
+  - maskedReference
+  properties:
+    requestId:
+      type: string
+      format: uuid
+    churchInstanceId:
+      type: string
+    status:
+      type: string
+      enum:
+      - PENDING
+      - APPROVED
+      - REJECTED
+    requestedAt:
+      type: string
+      format: date-time
+    decidedAt:
+      type: string
+      format: date-time
+    decidedBy:
+      type: string
+    decisionReason:
+      type: string
+    maskedReference:
+      type: string
+      description: Pseudonymous truncated chat hash for operator reference. Raw Telegram chat and user identifiers are never exposed.
+TelegramAccessRequestListResponse:
+  type: object
+  required:
+  - churchInstanceId
+  - items
+  properties:
+    churchInstanceId:
+      type: string
+    items:
+      type: array
+      items:
+        $ref: "#/TelegramAccessRequest"
+TelegramAccessRequestDecisionRequest:
+  type: object
+  properties:
+    reason:
+      type: string
+      maxLength: 500
+TelegramAccessRequestDecisionResponse:
+  type: object
+  required:
+  - request
+  properties:
+    request:
+      $ref: "#/TelegramAccessRequest"
 TelegramSessionStatusResponse:
   type: object
   required:

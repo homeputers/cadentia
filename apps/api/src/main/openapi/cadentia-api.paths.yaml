@@ -16,6 +16,12 @@
   "$ref": "./paths/telegram.yaml#/~1telegram~1sessions~1{sessionId}"
 "/telegram/sessions/{sessionId}:cancel":
   "$ref": "./paths/telegram.yaml#/~1telegram~1sessions~1{sessionId}:cancel"
+"/admin/telegram/access-requests":
+  "$ref": "./paths/telegram.yaml#/~1admin~1telegram~1access-requests"
+"/admin/telegram/access-requests/{requestId}:approve":
+  "$ref": "./paths/telegram.yaml#/~1admin~1telegram~1access-requests~1{requestId}:approve"
+"/admin/telegram/access-requests/{requestId}:reject":
+  "$ref": "./paths/telegram.yaml#/~1admin~1telegram~1access-requests~1{requestId}:reject"
 "/admin/plugins":
   "$ref": "./paths/plugins.yaml#/~1admin~1plugins"
 "/admin/plugins/{pluginVersionId}/configuration-snapshots":

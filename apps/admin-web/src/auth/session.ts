@@ -20,7 +20,8 @@ export type AdminCapability =
     | 'VIEW_DIAGNOSTICS'
     | 'MANAGE_INSTANCE_CONFIGURATION'
     | 'MANAGE_FEATURE_FLAGS'
-    | 'MANAGE_BOT_CHANNELS';
+    | 'MANAGE_BOT_CHANNELS'
+    | 'MANAGE_TELEGRAM_ACCESS';
 
 export type AdminSession = {
     actorId: string;
