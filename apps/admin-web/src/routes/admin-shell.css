@@ -58,7 +58,15 @@ body { background: var(--bg-page); margin: 0; }
 .admin-topnav__links a { border-radius: var(--radius-md); color: var(--muted); display: inline-block; font-size: 0.9rem; font-weight: 600; padding: 0.4rem 0.7rem; text-decoration: none; }
 .admin-topnav__links a:hover { background: var(--surface-inset); color: var(--text); }
 .admin-topnav__links a[aria-current="page"] { background: var(--surface-inset); color: var(--primary); }
-.admin-topnav__user { align-items: center; display: flex; flex-wrap: wrap; gap: var(--space-2); margin-left: auto; }
+.admin-topnav__menu { margin-left: auto; position: relative; }
+.admin-topnav__menu summary { list-style: none; }
+.admin-topnav__menu summary::-webkit-details-marker { display: none; }
+.admin-topnav__user-button { align-items: center; background: var(--surface); border: 1px solid var(--border); border-radius: 50%; color: var(--muted); cursor: pointer; display: flex; height: 2.25rem; justify-content: center; width: 2.25rem; }
+.admin-topnav__user-button:hover { background: var(--surface-inset); color: var(--text); }
+.admin-topnav__menu[open] .admin-topnav__user-button { background: var(--surface-inset); color: var(--primary); }
+.admin-topnav__user-button:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.admin-topnav__popover { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-md); display: flex; flex-direction: column; gap: var(--space-2); min-width: 14rem; padding: var(--space-3); position: absolute; right: 0; top: calc(100% + var(--space-2)); z-index: 10; }
+.admin-topnav__roles { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 .admin-topnav__name { font-size: 0.9rem; font-weight: 600; white-space: nowrap; }
 
 /* ---------- Headers ---------- */

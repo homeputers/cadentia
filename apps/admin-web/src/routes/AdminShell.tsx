@@ -30,10 +30,20 @@ const TopNav = ({ session, routes }: { session: AdminSession; routes: Array<{ hr
                 ))}
             </ul>
         </nav>
-        <div className="admin-topnav__user">
-            <span className="admin-topnav__name">{t('signedInAs')} {session.displayName}</span>
-            {session.roles.map((role) => <RoleBadge key={role} role={role} />)}
-        </div>
+        <details className="admin-topnav__menu">
+            <summary className="admin-topnav__user-button" aria-label={`${t('signedInAs')} ${session.displayName}`}>
+                <svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="8" r="4" />
+                    <path d="M4 20c0-4 4-6 8-6s8 2 8 6" />
+                </svg>
+            </summary>
+            <div className="admin-topnav__popover" role="group" aria-label={`${t('signedInAs')} ${session.displayName}`}>
+                <span className="admin-topnav__name">{t('signedInAs')} {session.displayName}</span>
+                <div className="admin-topnav__roles">
+                    {session.roles.map((role) => <RoleBadge key={role} role={role} />)}
+                </div>
+            </div>
+        </details>
     </header>;
 };
 
