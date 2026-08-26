@@ -107,6 +107,14 @@ public class JdbcTeamPlanningRepository implements TeamPlanningRepository {
     }
 
     @Override
+    public List<MusicianRecord> listMusicians() {
+        return jdbcTemplate.query(
+                "SELECT * FROM musicians ORDER BY display_name",
+                Map.of(),
+                (rs, rowNum) -> mapMusician(rs));
+    }
+
+    @Override
     public UUID assignRole(UUID musicianId, MusicianRoleCode roleCode, SkillLevelCode skillLevelCode) {
         return jdbcTemplate.queryForObject(
                 """
@@ -403,6 +411,24 @@ public class JdbcTeamPlanningRepository implements TeamPlanningRepository {
                         .addValue("location", location),
                 UUID.class);
         return new RehearsalEventRecord(id, servicePlanId, startsAt, endsAt, location);
+    }
+
+    @Override
+    public List<RehearsalEventRecord> listRehearsalEvents(UUID servicePlanId) {
+        return jdbcTemplate.query(
+                """
+                SELECT id, service_plan_id, starts_at, ends_at, location
+                FROM rehearsal_events
+                WHERE service_plan_id = :servicePlanId
+                ORDER BY starts_at
+                """,
+                Map.of("servicePlanId", servicePlanId),
+                (rs, rowNum) -> new RehearsalEventRecord(
+                        rs.getObject("id", UUID.class),
+                        rs.getObject("service_plan_id", UUID.class),
+                        rs.getTimestamp("starts_at").toInstant(),
+                        rs.getTimestamp("ends_at").toInstant(),
+                        rs.getString("location")));
     }
 
     @Override

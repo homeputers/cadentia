@@ -74,6 +74,7 @@ public final class PersonnelAuditModels {
         AVAILABILITY_WINDOW,
         SERVICE_ASSIGNMENT,
         REHEARSAL_ASSIGNMENT,
+        REHEARSAL_EVENT,
         SONG_ASSIGNMENT_OVERRIDE,
         SERVICE_TEAM_READINESS,
         READINESS_NOTE

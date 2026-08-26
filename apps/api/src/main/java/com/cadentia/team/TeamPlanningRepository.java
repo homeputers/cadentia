@@ -34,6 +34,8 @@ public interface TeamPlanningRepository {
 
     Optional<MusicianRecord> findMusician(UUID musicianId);
 
+    List<MusicianRecord> listMusicians();
+
     UUID assignRole(UUID musicianId, MusicianRoleCode roleCode, SkillLevelCode skillLevelCode);
 
     UUID assignInstrument(UUID musicianId, InstrumentCode instrumentCode, SkillLevelCode skillLevelCode);
@@ -107,6 +109,8 @@ public interface TeamPlanningRepository {
             Instant startsAt,
             Instant endsAt,
             String location);
+
+    List<RehearsalEventRecord> listRehearsalEvents(UUID servicePlanId);
 
     RehearsalAssignmentRecord createRehearsalAssignment(
             UUID rehearsalEventId,

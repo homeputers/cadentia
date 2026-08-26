@@ -505,4 +505,70 @@ describe('admin shell integration smoke', () => {
         expect(node.textContent).toContain('secret redacted');
         expect(node.textContent).toContain('Admin diagnostics');
     });
+
+    it('shows team planning navigation and loads a direct service roster route for team schedulers', async () => {
+        const schedulerSession = {
+            ...adminSession,
+            roles: ['TEAM_SCHEDULER'],
+            capabilities: ['VIEW_TEAM_ROSTER', 'MANAGE_TEAM_ASSIGNMENTS'],
+        };
+        const fetchImpl = vi.fn().mockImplementation((input: RequestInfo | URL) => {
+            const url = String(input);
+            if (url === '/api/admin/session') return Promise.resolve(response(schedulerSession));
+            if (url === '/api/team-assignments/services/plan-1/roster') {
+                return Promise.resolve(response({
+                    servicePlanId: 'plan-1',
+                    assignments: [{
+                        assignmentId: 'assignment-1',
+                        servicePlanId: 'plan-1',
+                        musicianId: 'musician-1',
+                        roleCode: 'INSTRUMENTALIST',
+                        instrumentCode: 'PIANO',
+                        statusCode: 'ACCEPTED',
+                        assignmentOrder: 0,
+                    }],
+                    staffingGaps: ['DRUMS'],
+                    availabilityConflicts: [],
+                }));
+            }
+            if (url === '/api/team-assignments/musicians') {
+                return Promise.resolve(response([{ musicianId: 'musician-1', displayName: 'Avery Rivera', active: true }]));
+            }
+            if (url === '/api/team-assignments/services/plan-1/history') return Promise.resolve(response([]));
+            if (url === '/api/team-assignments/services/plan-1/rehearsal-events') return Promise.resolve(response([]));
+            if (url === '/api/service-plans/plan-1') {
+                return Promise.resolve(response({
+                    servicePlanId: 'plan-1',
+                    title: 'Sunday Service',
+                    serviceDateTime: '2026-06-07T10:00:00Z',
+                    status: 'draft',
+                    blocks: [],
+                    setlistAttachments: [],
+                }));
+            }
+            return Promise.resolve(response({ error: 'unexpected' }, 404));
+        });
+        vi.stubGlobal('fetch', fetchImpl);
+
+        const node = await renderShell('/admin/team-assignments/plan-1');
+
+        expect(node.textContent).toContain('Team assignments');
+        expect(node.textContent).toContain('Musicians');
+        expect(node.textContent).toContain('Avery Rivera');
+        expect(node.textContent).toContain('DRUMS');
+        expect(node.textContent).toContain('Active roster');
+    });
+
+    it('blocks direct team roster routes for sessions without roster capability', async () => {
+        const fetchImpl = vi.fn().mockImplementation((input: RequestInfo | URL) => {
+            if (String(input) === '/api/admin/session') return Promise.resolve(response(viewerSession));
+            return Promise.resolve(response({ error: 'unexpected' }, 404));
+        });
+        vi.stubGlobal('fetch', fetchImpl);
+
+        const node = await renderShell('/admin/team-assignments/plan-1');
+
+        expect(node.textContent).toContain('Access denied');
+        expect(fetchImpl).not.toHaveBeenCalledWith('/api/team-assignments/services/plan-1/roster', expect.any(Object));
+    });
 });

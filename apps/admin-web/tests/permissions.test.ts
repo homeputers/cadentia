@@ -63,6 +63,19 @@ describe('admin permission presentation helpers', () => {
         expect(canAccessRoute(session(['CATALOG_EDITOR'], ['REVIEW_CATALOG']), [], '/admin/telegram-access')).toBe(false);
     });
 
+    it('shows team assignment routes for schedulers and roster view for reporting viewers', () => {
+        const scheduler = session(['TEAM_SCHEDULER'], ['VIEW_TEAM_ROSTER', 'MANAGE_TEAM_ASSIGNMENTS']);
+
+        expect(visibleRoutes(scheduler, []).map((route) => route.href)).toEqual(['/admin/team-assignments', '/admin/musicians']);
+        expect(canAccessRoute(scheduler, [], '/admin/team-assignments/plan-1')).toBe(true);
+        expect(canAccessRoute(scheduler, [], '/admin/musicians')).toBe(true);
+
+        const reportingViewer = session(['REPORTING_VIEWER'], ['VIEW_TEAM_ROSTER']);
+        expect(visibleRoutes(reportingViewer, []).map((route) => route.href)).toEqual(['/admin/team-assignments']);
+        expect(canAccessRoute(reportingViewer, [], '/admin/musicians')).toBe(false);
+        expect(canRenderAction(reportingViewer, 'MANAGE_TEAM_ASSIGNMENTS')).toBe(false);
+    });
+
     it('keeps read-only viewer navigation and mutations hidden', () => {
         const viewer = session(['VIEWER'], ['VIEW_IMPORT_QUEUE']);
 

@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -14,12 +15,18 @@ import com.cadentia.api.security.RbacAuthorities;
 import com.cadentia.api.security.SecurityObservabilityRecorder;
 import com.cadentia.team.PersonnelAuditModels.PersonnelAuditAction;
 import com.cadentia.team.PersonnelAuditModels.PersonnelAuditEvent;
+import com.cadentia.team.PersonnelAuditModels.PersonnelAuditTargetType;
 import com.cadentia.team.TeamPlanningModels.AssignmentStatusCode;
+import com.cadentia.team.TeamPlanningModels.CreateMusicianCommand;
 import com.cadentia.team.TeamPlanningModels.InstrumentCode;
 import com.cadentia.team.TeamPlanningModels.MusicianRecord;
 import com.cadentia.team.TeamPlanningModels.MusicianRoleCode;
+import com.cadentia.team.TeamPlanningModels.RehearsalEventRecord;
 import com.cadentia.team.TeamPlanningModels.ServiceAssignmentRecord;
+import com.cadentia.team.TeamPlanningModels.ServingPreferenceCode;
+import com.cadentia.team.TeamPlanningModels.VocalRangeCode;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -279,6 +286,159 @@ class AuthorizedTeamPlanningServiceTest {
                 .isInstanceOf(AccessDeniedException.class)
                 .hasMessage("Access denied.");
         verify(auditService, never()).record(any());
+    }
+
+    @Test
+    void rosterReaderListsMusiciansWithRedactedContactAndSkillFields() {
+        // Arrange
+        UUID musicianId = UUID.randomUUID();
+        authenticate("reporter", RbacAuthorities.ROLE_REPORTING_VIEWER);
+        when(repository.listMusicians()).thenReturn(List.of(new MusicianRecord(
+                musicianId,
+                "Avery Rivera",
+                "avery@example.test",
+                "avery@example.test",
+                "555-0100",
+                VocalRangeCode.MEDIUM,
+                48,
+                72,
+                ServingPreferenceCode.PREFERRED,
+                true)));
+
+        // Act
+        List<MusicianRecord> musicians = service.listMusiciansForRoster();
+
+        // Assert
+        assertThat(musicians).singleElement().satisfies(musician -> {
+            assertThat(musician.displayName()).isEqualTo("Avery Rivera");
+            assertThat(musician.accountPrincipal()).isNull();
+            assertThat(musician.email()).isNull();
+            assertThat(musician.phone()).isNull();
+            assertThat(musician.primaryVocalRangeCode()).isNull();
+            assertThat(musician.comfortableLowMidiNote()).isNull();
+            assertThat(musician.comfortableHighMidiNote()).isNull();
+            assertThat(musician.servingPreferenceCode()).isNull();
+            assertThat(musician.active()).isTrue();
+        });
+    }
+
+    @Test
+    void schedulerListsMusiciansWithContactAndSkillFieldsVisible() {
+        // Arrange
+        UUID musicianId = UUID.randomUUID();
+        authenticate("scheduler", RbacAuthorities.ROLE_TEAM_SCHEDULER);
+        when(repository.listMusicians()).thenReturn(List.of(musician(musicianId, "avery@example.test")));
+
+        // Act
+        List<MusicianRecord> musicians = service.listMusiciansForRoster();
+
+        // Assert
+        assertThat(musicians).singleElement().satisfies(musician ->
+                assertThat(musician.email()).isEqualTo("avery@example.test"));
+    }
+
+    @Test
+    void assignedMusicianCannotListMusicianDirectory() {
+        // Arrange
+        authenticate("avery@example.test", RbacAuthorities.ROLE_ASSIGNED_MUSICIAN);
+
+        // Act / Assert
+        assertThatThrownBy(() -> service.listMusiciansForRoster())
+                .isInstanceOf(AccessDeniedException.class)
+                .hasMessage("Access denied.");
+    }
+
+    @Test
+    void schedulerCreatesRehearsalEventAndWritesPrivilegedAudit() {
+        // Arrange
+        UUID servicePlanId = UUID.randomUUID();
+        UUID rehearsalEventId = UUID.randomUUID();
+        Instant startsAt = Instant.parse("2026-06-04T23:00:00Z");
+        Instant endsAt = Instant.parse("2026-06-05T01:00:00Z");
+        authenticate("scheduler", RbacAuthorities.ROLE_TEAM_SCHEDULER);
+        when(repository.createRehearsalEvent(servicePlanId, startsAt, endsAt, "Sanctuary"))
+                .thenReturn(new RehearsalEventRecord(rehearsalEventId, servicePlanId, startsAt, endsAt, "Sanctuary"));
+
+        // Act
+        RehearsalEventRecord result = service.createRehearsalEvent(
+                servicePlanId, startsAt, endsAt, "Sanctuary", "weekly_schedule", "req-321");
+
+        // Assert
+        assertThat(result.rehearsalEventId()).isEqualTo(rehearsalEventId);
+        verify(auditService).record(auditEventCaptor.capture());
+        PersonnelAuditEvent auditEvent = auditEventCaptor.getValue();
+        assertThat(auditEvent.action()).isEqualTo(PersonnelAuditAction.PERSONNEL_ASSIGNMENT_CHANGED);
+        assertThat(auditEvent.targetType()).isEqualTo(PersonnelAuditTargetType.REHEARSAL_EVENT);
+        assertThat(auditEvent.targetId()).isEqualTo(rehearsalEventId);
+        assertThat(auditEvent.actor()).isEqualTo("scheduler");
+        assertThat(auditEvent.reasonCode()).isEqualTo("weekly_schedule");
+        assertThat(auditEvent.afterStateRef()).contains(rehearsalEventId.toString());
+    }
+
+    @Test
+    void assignedMusicianCannotCreateRehearsalEvent() {
+        // Arrange
+        authenticate("avery@example.test", RbacAuthorities.ROLE_ASSIGNED_MUSICIAN);
+
+        // Act / Assert
+        assertThatThrownBy(() -> service.createRehearsalEvent(
+                        UUID.randomUUID(),
+                        Instant.parse("2026-06-04T23:00:00Z"),
+                        Instant.parse("2026-06-05T01:00:00Z"),
+                        "Sanctuary",
+                        "attempt",
+                        "portal"))
+                .isInstanceOf(AccessDeniedException.class)
+                .hasMessage("Access denied.");
+        verify(auditService, never()).record(any());
+    }
+
+    @Test
+    void listRehearsalEventsRequiresRosterRead() {
+        // Arrange
+        authenticate("avery@example.test", RbacAuthorities.ROLE_ASSIGNED_MUSICIAN);
+
+        // Act / Assert
+        assertThatThrownBy(() -> service.listRehearsalEvents(UUID.randomUUID()))
+                .isInstanceOf(AccessDeniedException.class)
+                .hasMessage("Access denied.");
+    }
+
+    @Test
+    void worshipLeaderCreatesMusicianDefaultingCreatorToCurrentActorWithAudit() {
+        // Arrange
+        authenticate("leader", RbacAuthorities.ROLE_WORSHIP_LEADER);
+        when(repository.createMusician(any())).thenAnswer(invocation -> {
+            CreateMusicianCommand command = invocation.getArgument(0);
+            return new MusicianRecord(
+                    UUID.randomUUID(),
+                    command.displayName(),
+                    command.accountPrincipal(),
+                    command.email(),
+                    command.phone(),
+                    command.primaryVocalRangeCode(),
+                    command.comfortableLowMidiNote(),
+                    command.comfortableHighMidiNote(),
+                    command.servingPreferenceCode(),
+                    true);
+        });
+
+        // Act
+        MusicianRecord result = service.createMusician(
+                new CreateMusicianCommand(
+                        "Jordan Lee", null, null, null, null, null, null, ServingPreferenceCode.AVAILABLE, null),
+                "roster_onboarding",
+                "req-654");
+
+        // Assert
+        assertThat(result.displayName()).isEqualTo("Jordan Lee");
+        ArgumentCaptor<CreateMusicianCommand> commandCaptor = ArgumentCaptor.forClass(CreateMusicianCommand.class);
+        verify(repository).createMusician(commandCaptor.capture());
+        assertThat(commandCaptor.getValue().createdBy()).isEqualTo("leader");
+        verify(auditService, times(2)).record(auditEventCaptor.capture());
+        assertThat(auditEventCaptor.getAllValues())
+                .extracting(PersonnelAuditEvent::targetType)
+                .containsOnly(PersonnelAuditTargetType.MUSICIAN);
     }
 
     private void authenticate(String principal, String authority) {

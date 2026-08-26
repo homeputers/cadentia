@@ -85,12 +85,17 @@ export type CadentiaApiRoute =
     | '/setlists/{setlistId}/versions/{versionId}'
     | '/setlists/proposals'
     | '/setlists/proposals/natural-language'
+    | '/team-assignments/musicians'
+    | '/team-assignments/musicians/{musicianId}'
+    | '/team-assignments/musicians/{musicianId}/availability-windows'
     | '/team-assignments/musicians/{musicianId}/upcoming'
+    | '/team-assignments/rehearsal-events'
     | '/team-assignments/rehearsals/{rehearsalEventId}'
     | '/team-assignments/services/{servicePlanId}'
     | '/team-assignments/services/{servicePlanId}/assignments/{assignmentId}'
     | '/team-assignments/services/{servicePlanId}/assignments/{assignmentId}/substitute'
     | '/team-assignments/services/{servicePlanId}/history'
+    | '/team-assignments/services/{servicePlanId}/rehearsal-events'
     | '/team-assignments/services/{servicePlanId}/reorder'
     | '/team-assignments/services/{servicePlanId}/roster'
     | '/team-assignments/services/{servicePlanId}/song-overrides'
@@ -137,6 +142,9 @@ export type CadentiaApiOperationId =
     | 'createServiceTeamAssignment'
     | 'createSetlistBaselineVersion'
     | 'createSongTeamAssignmentOverride'
+    | 'createTeamAvailabilityWindow'
+    | 'createTeamMusician'
+    | 'createTeamRehearsalEvent'
     | 'diffSetlistVersions'
     | 'disablePluginEnablement'
     | 'enablePluginForScope'
@@ -160,6 +168,7 @@ export type CadentiaApiOperationId =
     | 'getServiceTeamRoster'
     | 'getServiceWorkflowStatus'
     | 'getSetlistVersion'
+    | 'getTeamMusician'
     | 'getTelegramBotStatus'
     | 'getTelegramSessionStatus'
     | 'initiateTelegramAccountLink'
@@ -179,6 +188,8 @@ export type CadentiaApiOperationId =
     | 'listServicePlans'
     | 'listSetlistVersions'
     | 'listTeamAssignmentHistory'
+    | 'listTeamMusicians'
+    | 'listTeamRehearsalEvents'
     | 'listTelegramAccessRequests'
     | 'listUpcomingTeamAssignmentsForMusician'
     | 'openAdminModerationFlag'
@@ -308,12 +319,17 @@ export const cadentiaApiRoutes = [
     '/setlists/{setlistId}/versions/{versionId}',
     '/setlists/proposals',
     '/setlists/proposals/natural-language',
+    '/team-assignments/musicians',
+    '/team-assignments/musicians/{musicianId}',
+    '/team-assignments/musicians/{musicianId}/availability-windows',
     '/team-assignments/musicians/{musicianId}/upcoming',
+    '/team-assignments/rehearsal-events',
     '/team-assignments/rehearsals/{rehearsalEventId}',
     '/team-assignments/services/{servicePlanId}',
     '/team-assignments/services/{servicePlanId}/assignments/{assignmentId}',
     '/team-assignments/services/{servicePlanId}/assignments/{assignmentId}/substitute',
     '/team-assignments/services/{servicePlanId}/history',
+    '/team-assignments/services/{servicePlanId}/rehearsal-events',
     '/team-assignments/services/{servicePlanId}/reorder',
     '/team-assignments/services/{servicePlanId}/roster',
     '/team-assignments/services/{servicePlanId}/song-overrides',
@@ -408,12 +424,17 @@ export const cadentiaApiRouteRefs: Record<CadentiaApiRoute, string> = {
     '/setlists/{setlistId}/versions/{versionId}': './paths/setlists.yaml#/~1setlists~1{setlistId}~1versions~1{versionId}',
     '/setlists/proposals': './paths/setlists.yaml#/~1setlists~1proposals',
     '/setlists/proposals/natural-language': './paths/setlists.yaml#/~1setlists~1proposals~1natural-language',
+    '/team-assignments/musicians': './paths/team-assignments.yaml#/~1team-assignments~1musicians',
+    '/team-assignments/musicians/{musicianId}': './paths/team-assignments.yaml#/~1team-assignments~1musicians~1{musicianId}',
+    '/team-assignments/musicians/{musicianId}/availability-windows': './paths/team-assignments.yaml#/~1team-assignments~1musicians~1{musicianId}~1availability-windows',
     '/team-assignments/musicians/{musicianId}/upcoming': './paths/team-assignments.yaml#/~1team-assignments~1musicians~1{musicianId}~1upcoming',
+    '/team-assignments/rehearsal-events': './paths/team-assignments.yaml#/~1team-assignments~1rehearsal-events',
     '/team-assignments/rehearsals/{rehearsalEventId}': './paths/team-assignments.yaml#/~1team-assignments~1rehearsals~1{rehearsalEventId}',
     '/team-assignments/services/{servicePlanId}': './paths/team-assignments.yaml#/~1team-assignments~1services~1{servicePlanId}',
     '/team-assignments/services/{servicePlanId}/assignments/{assignmentId}': './paths/team-assignments.yaml#/~1team-assignments~1services~1{servicePlanId}~1assignments~1{assignmentId}',
     '/team-assignments/services/{servicePlanId}/assignments/{assignmentId}/substitute': './paths/team-assignments.yaml#/~1team-assignments~1services~1{servicePlanId}~1assignments~1{assignmentId}~1substitute',
     '/team-assignments/services/{servicePlanId}/history': './paths/team-assignments.yaml#/~1team-assignments~1services~1{servicePlanId}~1history',
+    '/team-assignments/services/{servicePlanId}/rehearsal-events': './paths/team-assignments.yaml#/~1team-assignments~1services~1{servicePlanId}~1rehearsal-events',
     '/team-assignments/services/{servicePlanId}/reorder': './paths/team-assignments.yaml#/~1team-assignments~1services~1{servicePlanId}~1reorder',
     '/team-assignments/services/{servicePlanId}/roster': './paths/team-assignments.yaml#/~1team-assignments~1services~1{servicePlanId}~1roster',
     '/team-assignments/services/{servicePlanId}/song-overrides': './paths/team-assignments.yaml#/~1team-assignments~1services~1{servicePlanId}~1song-overrides',
@@ -461,6 +482,9 @@ export const cadentiaApiOperations = [
     { operationId: 'createServiceTeamAssignment', method: 'POST', path: '/team-assignments/services/{servicePlanId}', ref: './paths/team-assignments.yaml#/~1team-assignments~1services~1{servicePlanId}' },
     { operationId: 'createSetlistBaselineVersion', method: 'POST', path: '/setlists', ref: './paths/setlists.yaml#/~1setlists' },
     { operationId: 'createSongTeamAssignmentOverride', method: 'POST', path: '/team-assignments/services/{servicePlanId}/song-overrides', ref: './paths/team-assignments.yaml#/~1team-assignments~1services~1{servicePlanId}~1song-overrides' },
+    { operationId: 'createTeamAvailabilityWindow', method: 'POST', path: '/team-assignments/musicians/{musicianId}/availability-windows', ref: './paths/team-assignments.yaml#/~1team-assignments~1musicians~1{musicianId}~1availability-windows' },
+    { operationId: 'createTeamMusician', method: 'POST', path: '/team-assignments/musicians', ref: './paths/team-assignments.yaml#/~1team-assignments~1musicians' },
+    { operationId: 'createTeamRehearsalEvent', method: 'POST', path: '/team-assignments/rehearsal-events', ref: './paths/team-assignments.yaml#/~1team-assignments~1rehearsal-events' },
     { operationId: 'diffSetlistVersions', method: 'GET', path: '/setlists/{setlistId}/versions/{fromVersionId}/diff/{toVersionId}', ref: './paths/setlists.yaml#/~1setlists~1{setlistId}~1versions~1{fromVersionId}~1diff~1{toVersionId}' },
     { operationId: 'disablePluginEnablement', method: 'POST', path: '/admin/plugin-enablements/{enablementId}:disable', ref: './paths/plugins.yaml#/~1admin~1plugin-enablements~1{enablementId}:disable' },
     { operationId: 'enablePluginForScope', method: 'POST', path: '/admin/plugins/{pluginVersionId}/enablements', ref: './paths/plugins.yaml#/~1admin~1plugins~1{pluginVersionId}~1enablements' },
@@ -484,6 +508,7 @@ export const cadentiaApiOperations = [
     { operationId: 'getServiceTeamRoster', method: 'GET', path: '/team-assignments/services/{servicePlanId}/roster', ref: './paths/team-assignments.yaml#/~1team-assignments~1services~1{servicePlanId}~1roster' },
     { operationId: 'getServiceWorkflowStatus', method: 'GET', path: '/service-plans/{servicePlanId}/workflow-status', ref: './paths/rehearsal-workflow.yaml#/~1service-plans~1{servicePlanId}~1workflow-status' },
     { operationId: 'getSetlistVersion', method: 'GET', path: '/setlists/{setlistId}/versions/{versionId}', ref: './paths/setlists.yaml#/~1setlists~1{setlistId}~1versions~1{versionId}' },
+    { operationId: 'getTeamMusician', method: 'GET', path: '/team-assignments/musicians/{musicianId}', ref: './paths/team-assignments.yaml#/~1team-assignments~1musicians~1{musicianId}' },
     { operationId: 'getTelegramBotStatus', method: 'GET', path: '/admin/telegram/bots/{botId}/status', ref: './paths/telegram.yaml#/~1admin~1telegram~1bots~1{botId}~1status' },
     { operationId: 'getTelegramSessionStatus', method: 'GET', path: '/telegram/sessions/{sessionId}', ref: './paths/telegram.yaml#/~1telegram~1sessions~1{sessionId}' },
     { operationId: 'initiateTelegramAccountLink', method: 'POST', path: '/telegram/account-links', ref: './paths/telegram.yaml#/~1telegram~1account-links' },
@@ -503,6 +528,8 @@ export const cadentiaApiOperations = [
     { operationId: 'listServicePlans', method: 'GET', path: '/service-plans', ref: './paths/service-plans.yaml#/~1service-plans' },
     { operationId: 'listSetlistVersions', method: 'GET', path: '/setlists/{setlistId}/versions', ref: './paths/setlists.yaml#/~1setlists~1{setlistId}~1versions' },
     { operationId: 'listTeamAssignmentHistory', method: 'GET', path: '/team-assignments/services/{servicePlanId}/history', ref: './paths/team-assignments.yaml#/~1team-assignments~1services~1{servicePlanId}~1history' },
+    { operationId: 'listTeamMusicians', method: 'GET', path: '/team-assignments/musicians', ref: './paths/team-assignments.yaml#/~1team-assignments~1musicians' },
+    { operationId: 'listTeamRehearsalEvents', method: 'GET', path: '/team-assignments/services/{servicePlanId}/rehearsal-events', ref: './paths/team-assignments.yaml#/~1team-assignments~1services~1{servicePlanId}~1rehearsal-events' },
     { operationId: 'listTelegramAccessRequests', method: 'GET', path: '/admin/telegram/access-requests', ref: './paths/telegram.yaml#/~1admin~1telegram~1access-requests' },
     { operationId: 'listUpcomingTeamAssignmentsForMusician', method: 'GET', path: '/team-assignments/musicians/{musicianId}/upcoming', ref: './paths/team-assignments.yaml#/~1team-assignments~1musicians~1{musicianId}~1upcoming' },
     { operationId: 'openAdminModerationFlag', method: 'POST', path: '/admin/import-candidates/{candidateId}/moderation-flags', ref: './paths/admin-review.yaml#/~1admin~1import-candidates~1{candidateId}~1moderation-flags' },

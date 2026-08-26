@@ -150,6 +150,25 @@ public class AdminOperationsController implements AdminOperationsApi {
             capabilities.add(AdminCapability.VIEW_IMPORT_QUEUE);
             capabilities.add(AdminCapability.REVIEW_CATALOG);
         }
+        if (hasAnyAuthority(
+                authorities,
+                RbacAuthorities.ROLE_WORSHIP_LEADER,
+                "ROLE_WORSHIP_LEADER",
+                RbacAuthorities.ROLE_TEAM_SCHEDULER,
+                "ROLE_TEAM_SCHEDULER")) {
+            capabilities.add(AdminCapability.VIEW_TEAM_ROSTER);
+            capabilities.add(AdminCapability.MANAGE_TEAM_ASSIGNMENTS);
+        }
+        if (hasAnyAuthority(
+                authorities,
+                RbacAuthorities.ROLE_REPORTING_VIEWER,
+                "ROLE_REPORTING_VIEWER",
+                RbacAuthorities.ROLE_DOCTRINAL_REVIEWER,
+                "ROLE_DOCTRINAL_REVIEWER",
+                RbacAuthorities.ROLE_MUSICAL_REVIEWER,
+                "ROLE_MUSICAL_REVIEWER")) {
+            capabilities.add(AdminCapability.VIEW_TEAM_ROSTER);
+        }
         return List.copyOf(capabilities);
     }
 

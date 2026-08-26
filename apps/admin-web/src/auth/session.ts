@@ -21,7 +21,9 @@ export type AdminCapability =
     | 'MANAGE_INSTANCE_CONFIGURATION'
     | 'MANAGE_FEATURE_FLAGS'
     | 'MANAGE_BOT_CHANNELS'
-    | 'MANAGE_TELEGRAM_ACCESS';
+    | 'MANAGE_TELEGRAM_ACCESS'
+    | 'VIEW_TEAM_ROSTER'
+    | 'MANAGE_TEAM_ASSIGNMENTS';
 
 export type AdminSession = {
     actorId: string;

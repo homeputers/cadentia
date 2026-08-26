@@ -244,6 +244,53 @@ class JdbcTeamPlanningRepositoryIntegrationTest {
                 .isInstanceOf(DataAccessException.class);
     }
 
+    @Test
+    void listMusiciansReturnsCreatedMusiciansOrderedByDisplayName() {
+        // Arrange
+        MusicianRecord second = createMusician("Zoe Park");
+        MusicianRecord first = createMusician("Avery Rivera");
+
+        // Act
+        var musicians = repository.listMusicians();
+
+        // Assert
+        assertThat(musicians)
+                .extracting(MusicianRecord::musicianId)
+                .containsExactly(first.musicianId(), second.musicianId());
+    }
+
+    @Test
+    void listRehearsalEventsReturnsOnlyEventsForServicePlanOrderedByStartsAt() {
+        // Arrange
+        UUID servicePlanId = insertServicePlan();
+        UUID otherServicePlanId = insertServicePlan();
+        RehearsalEventRecord later = repository.createRehearsalEvent(
+                servicePlanId,
+                Instant.parse("2026-06-05T23:00:00Z"),
+                Instant.parse("2026-06-06T01:00:00Z"),
+                "Sanctuary");
+        RehearsalEventRecord earlier = repository.createRehearsalEvent(
+                servicePlanId,
+                Instant.parse("2026-06-03T23:00:00Z"),
+                Instant.parse("2026-06-04T01:00:00Z"),
+                null);
+        repository.createRehearsalEvent(
+                otherServicePlanId,
+                Instant.parse("2026-06-04T23:00:00Z"),
+                Instant.parse("2026-06-05T01:00:00Z"),
+                "Hall");
+
+        // Act
+        var events = repository.listRehearsalEvents(servicePlanId);
+
+        // Assert
+        assertThat(events)
+                .extracting(RehearsalEventRecord::rehearsalEventId)
+                .containsExactly(earlier.rehearsalEventId(), later.rehearsalEventId());
+        assertThat(events.get(1).location()).isEqualTo("Sanctuary");
+        assertThat(events.get(0).location()).isNull();
+    }
+
     private MusicianRecord createMusician(String displayName) {
         return repository.createMusician(new CreateMusicianCommand(
                 displayName,

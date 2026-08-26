@@ -266,6 +266,180 @@
               type: array
               items:
                 "$ref": "../components/schemas/team-assignments.yaml#/TeamServiceAssignmentResponse"
+"/team-assignments/musicians":
+  get:
+    tags:
+    - TeamAssignments
+    operationId: listTeamMusicians
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - WORSHIP_LEADER
+    - TEAM_SCHEDULER
+    - REPORTING_VIEWER
+    - DOCTRINAL_REVIEWER
+    - MUSICAL_REVIEWER
+    - ADMIN
+    summary: List instance musicians for roster and assignment pickers
+    description: Returns privacy-aware musician records. Contact, vocal-range, and
+      serving-preference fields are omitted unless the caller role is permitted to
+      read them.
+    responses:
+      '200':
+        description: Instance musician directory.
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                "$ref": "../components/schemas/team-assignments.yaml#/TeamMusicianResponse"
+  post:
+    tags:
+    - TeamAssignments
+    operationId: createTeamMusician
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - WORSHIP_LEADER
+    - ADMIN
+    summary: Create an instance-scoped musician
+    description: Creates a musician with optional contact/account links, vocal range,
+      and serving preference. Writes privileged personnel audit records.
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            "$ref": "../components/schemas/team-assignments.yaml#/CreateTeamMusicianRequest"
+    responses:
+      '201':
+        description: Musician created.
+        content:
+          application/json:
+            schema:
+              "$ref": "../components/schemas/team-assignments.yaml#/TeamMusicianResponse"
+"/team-assignments/musicians/{musicianId}":
+  get:
+    tags:
+    - TeamAssignments
+    operationId: getTeamMusician
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - ASSIGNED_MUSICIAN
+    - WORSHIP_LEADER
+    - TEAM_SCHEDULER
+    - REPORTING_VIEWER
+    - DOCTRINAL_REVIEWER
+    - MUSICAL_REVIEWER
+    - ADMIN
+    summary: Get a privacy-aware musician profile
+    description: Assigned musicians may read their own profile. Existence is not
+      leaked to unauthorized callers.
+    parameters:
+    - in: path
+      name: musicianId
+      required: true
+      schema:
+        type: string
+        format: uuid
+    responses:
+      '200':
+        description: Musician profile.
+        content:
+          application/json:
+            schema:
+              "$ref": "../components/schemas/team-assignments.yaml#/TeamMusicianResponse"
+      '404':
+        description: Musician not found.
+"/team-assignments/musicians/{musicianId}/availability-windows":
+  post:
+    tags:
+    - TeamAssignments
+    operationId: createTeamAvailabilityWindow
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - ASSIGNED_MUSICIAN
+    - WORSHIP_LEADER
+    - TEAM_SCHEDULER
+    - ADMIN
+    summary: Record a musician availability window
+    description: Schedulers may record windows for any musician; assigned musicians
+      may record windows only for their own linked profile.
+    parameters:
+    - in: path
+      name: musicianId
+      required: true
+      schema:
+        type: string
+        format: uuid
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            "$ref": "../components/schemas/team-assignments.yaml#/TeamAvailabilityWindowRequest"
+    responses:
+      '201':
+        description: Availability window recorded.
+        content:
+          application/json:
+            schema:
+              "$ref": "../components/schemas/team-assignments.yaml#/TeamAvailabilityWindowResponse"
+"/team-assignments/rehearsal-events":
+  post:
+    tags:
+    - TeamAssignments
+    operationId: createTeamRehearsalEvent
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - WORSHIP_LEADER
+    - TEAM_SCHEDULER
+    - ADMIN
+    summary: Create a rehearsal event for a service plan
+    description: Creates a team-planning rehearsal event that rehearsal team assignments
+      can reference. Distinct from ADR-024 rehearsal workflow sessions.
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            "$ref": "../components/schemas/team-assignments.yaml#/TeamRehearsalEventRequest"
+    responses:
+      '201':
+        description: Rehearsal event created.
+        content:
+          application/json:
+            schema:
+              "$ref": "../components/schemas/team-assignments.yaml#/TeamRehearsalEventResponse"
+"/team-assignments/services/{servicePlanId}/rehearsal-events":
+  get:
+    tags:
+    - TeamAssignments
+    operationId: listTeamRehearsalEvents
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - WORSHIP_LEADER
+    - TEAM_SCHEDULER
+    - REPORTING_VIEWER
+    - DOCTRINAL_REVIEWER
+    - MUSICAL_REVIEWER
+    - ADMIN
+    summary: List rehearsal events for a service plan
+    parameters:
+    - "$ref": "../components/shared/parameters.yaml#/ServicePlanId"
+    responses:
+      '200':
+        description: Rehearsal events for the service plan.
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                "$ref": "../components/schemas/team-assignments.yaml#/TeamRehearsalEventResponse"
 "/team-assignments/services/{servicePlanId}/history":
   get:
     tags:
