@@ -6,18 +6,32 @@ import com.cadentia.generated.model.CreateTeamMusicianRequest;
 import com.cadentia.generated.model.TeamAssignmentStatusCode;
 import com.cadentia.generated.model.TeamAvailabilityWindowRequest;
 import com.cadentia.generated.model.TeamAvailabilityWindowResponse;
+import com.cadentia.generated.model.TeamInstrumentCode;
+import com.cadentia.generated.model.TeamMusicianInstrumentAssignmentRequest;
 import com.cadentia.generated.model.TeamMusicianResponse;
+import com.cadentia.generated.model.TeamMusicianRoleAssignmentRequest;
+import com.cadentia.generated.model.TeamMusicianRoleCode;
+import com.cadentia.generated.model.TeamMusicianVocalPartAssignmentRequest;
 import com.cadentia.generated.model.TeamRehearsalEventRequest;
 import com.cadentia.generated.model.TeamRehearsalEventResponse;
 import com.cadentia.generated.model.TeamServingPreferenceCode;
+import com.cadentia.generated.model.TeamSkillAssignmentDomain;
+import com.cadentia.generated.model.TeamSkillLevelCode;
+import com.cadentia.generated.model.TeamVocalPartCode;
 import com.cadentia.generated.model.TeamVocalRangeCode;
 import com.cadentia.team.AuthorizedTeamPlanningService;
 import com.cadentia.team.TeamPlanningModels.AssignmentStatusCode;
 import com.cadentia.team.TeamPlanningModels.AvailabilityWindowRecord;
 import com.cadentia.team.TeamPlanningModels.CreateMusicianCommand;
+import com.cadentia.team.TeamPlanningModels.InstrumentCode;
 import com.cadentia.team.TeamPlanningModels.MusicianRecord;
+import com.cadentia.team.TeamPlanningModels.MusicianRoleCode;
+import com.cadentia.team.TeamPlanningModels.MusicianSkillAssignmentRecord;
 import com.cadentia.team.TeamPlanningModels.RehearsalEventRecord;
 import com.cadentia.team.TeamPlanningModels.ServingPreferenceCode;
+import com.cadentia.team.TeamPlanningModels.SkillAssignmentDomain;
+import com.cadentia.team.TeamPlanningModels.SkillLevelCode;
+import com.cadentia.team.TeamPlanningModels.VocalPartCode;
 import com.cadentia.team.TeamPlanningModels.VocalRangeCode;
 import java.time.Instant;
 import java.time.OffsetDateTime;
@@ -215,6 +229,100 @@ class TeamAssignmentControllerTest {
         });
     }
 
+    @Test
+    void getTeamMusicianSkillsMapsAssignments() {
+        // Arrange
+        UUID musicianId = UUID.randomUUID();
+        UUID assignmentId = UUID.randomUUID();
+        service.skillAssignments = List.of(new MusicianSkillAssignmentRecord(
+                assignmentId, musicianId, SkillAssignmentDomain.INSTRUMENT, "KEYS", SkillLevelCode.INTERMEDIATE));
+
+        // Act
+        var response = controller.getTeamMusicianSkills(musicianId);
+
+        // Assert
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().getMusicianId()).isEqualTo(musicianId);
+        assertThat(response.getBody().getAssignments()).singleElement().satisfies(assignment -> {
+            assertThat(assignment.getAssignmentId()).isEqualTo(assignmentId);
+            assertThat(assignment.getDomain()).isEqualTo(TeamSkillAssignmentDomain.INSTRUMENT);
+            assertThat(assignment.getCode()).isEqualTo("KEYS");
+            assertThat(assignment.getSkillLevelCode()).isEqualTo(TeamSkillLevelCode.INTERMEDIATE);
+        });
+    }
+
+    @Test
+    void assignTeamMusicianRoleDelegatesAndReturnsCreated() {
+        // Arrange
+        UUID musicianId = UUID.randomUUID();
+        TeamMusicianRoleAssignmentRequest request = new TeamMusicianRoleAssignmentRequest(TeamMusicianRoleCode.VOCALIST);
+        request.setSkillLevelCode(TeamSkillLevelCode.ADVANCED);
+        request.setReasonCode("skill_review");
+
+        // Act
+        var response = controller.assignTeamMusicianRole(musicianId, request);
+
+        // Assert
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().getDomain()).isEqualTo(TeamSkillAssignmentDomain.ROLE);
+        assertThat(response.getBody().getCode()).isEqualTo("VOCALIST");
+        assertThat(response.getBody().getSkillLevelCode()).isEqualTo(TeamSkillLevelCode.ADVANCED);
+        assertThat(service.assignedRoles).singleElement().satisfies(recorded -> {
+            assertThat(recorded.musicianId()).isEqualTo(musicianId);
+            assertThat(recorded.roleCode()).isEqualTo(MusicianRoleCode.VOCALIST);
+            assertThat(recorded.skillLevelCode()).isEqualTo(SkillLevelCode.ADVANCED);
+        });
+        assertThat(service.skillReasonCodes).containsExactly("skill_review");
+    }
+
+    @Test
+    void assignTeamMusicianInstrumentDelegatesAndReturnsCreated() {
+        // Arrange
+        UUID musicianId = UUID.randomUUID();
+        TeamMusicianInstrumentAssignmentRequest request =
+                new TeamMusicianInstrumentAssignmentRequest(TeamInstrumentCode.ACOUSTIC_GUITAR);
+        request.setSkillLevelCode(TeamSkillLevelCode.INTERMEDIATE);
+
+        // Act
+        var response = controller.assignTeamMusicianInstrument(musicianId, request);
+
+        // Assert
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().getDomain()).isEqualTo(TeamSkillAssignmentDomain.INSTRUMENT);
+        assertThat(response.getBody().getCode()).isEqualTo("ACOUSTIC_GUITAR");
+        assertThat(service.assignedInstruments).singleElement().satisfies(recorded -> {
+            assertThat(recorded.musicianId()).isEqualTo(musicianId);
+            assertThat(recorded.instrumentCode()).isEqualTo(InstrumentCode.ACOUSTIC_GUITAR);
+            assertThat(recorded.skillLevelCode()).isEqualTo(SkillLevelCode.INTERMEDIATE);
+        });
+    }
+
+    @Test
+    void assignTeamMusicianVocalPartDelegatesAndReturnsCreated() {
+        // Arrange
+        UUID musicianId = UUID.randomUUID();
+        TeamMusicianVocalPartAssignmentRequest request =
+                new TeamMusicianVocalPartAssignmentRequest(TeamVocalPartCode.ALTO);
+
+        // Act
+        var response = controller.assignTeamMusicianVocalPart(musicianId, request);
+
+        // Assert
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().getDomain()).isEqualTo(TeamSkillAssignmentDomain.VOCAL_PART);
+        assertThat(response.getBody().getCode()).isEqualTo("ALTO");
+        assertThat(response.getBody().getSkillLevelCode()).isNull();
+        assertThat(service.assignedVocalParts).singleElement().satisfies(recorded -> {
+            assertThat(recorded.musicianId()).isEqualTo(musicianId);
+            assertThat(recorded.vocalPartCode()).isEqualTo(VocalPartCode.ALTO);
+            assertThat(recorded.skillLevelCode()).isNull();
+        });
+    }
+
     private record RecordedAvailabilityRequest(
             UUID musicianId,
             Instant startsAt,
@@ -234,6 +342,11 @@ class TeamAssignmentControllerTest {
         private final List<CreateMusicianCommand> createMusicianCommands = new ArrayList<>();
         private final List<String> createMusicianReasonCodes = new ArrayList<>();
         private final List<RecordedAvailabilityRequest> availabilityRequests = new ArrayList<>();
+        private List<MusicianSkillAssignmentRecord> skillAssignments = List.of();
+        private final List<RecordedRoleAssignment> assignedRoles = new ArrayList<>();
+        private final List<RecordedInstrumentAssignment> assignedInstruments = new ArrayList<>();
+        private final List<RecordedVocalPartAssignment> assignedVocalParts = new ArrayList<>();
+        private final List<String> skillReasonCodes = new ArrayList<>();
 
         private FakeTeamPlanningService() {
             super(null, null, null, null);
@@ -285,5 +398,43 @@ class TeamAssignmentControllerTest {
         public List<RehearsalEventRecord> listRehearsalEvents(UUID servicePlanId) {
             return rehearsalEvents;
         }
+
+        @Override
+        public List<MusicianSkillAssignmentRecord> listMusicianSkillAssignments(UUID musicianId) {
+            return skillAssignments;
+        }
+
+        @Override
+        public UUID assignRole(
+                UUID musicianId, MusicianRoleCode roleCode, SkillLevelCode skillLevelCode, String reasonCode, String reference) {
+            assignedRoles.add(new RecordedRoleAssignment(musicianId, roleCode, skillLevelCode));
+            skillReasonCodes.add(reasonCode);
+            return UUID.randomUUID();
+        }
+
+        @Override
+        public UUID assignInstrument(
+                UUID musicianId, InstrumentCode instrumentCode, SkillLevelCode skillLevelCode, String reasonCode, String reference) {
+            assignedInstruments.add(new RecordedInstrumentAssignment(musicianId, instrumentCode, skillLevelCode));
+            skillReasonCodes.add(reasonCode);
+            return UUID.randomUUID();
+        }
+
+        @Override
+        public UUID assignVocalPart(
+                UUID musicianId, VocalPartCode vocalPartCode, SkillLevelCode skillLevelCode, String reasonCode, String reference) {
+            assignedVocalParts.add(new RecordedVocalPartAssignment(musicianId, vocalPartCode, skillLevelCode));
+            skillReasonCodes.add(reasonCode);
+            return UUID.randomUUID();
+        }
+    }
+
+    private record RecordedRoleAssignment(UUID musicianId, MusicianRoleCode roleCode, SkillLevelCode skillLevelCode) {
+    }
+
+    private record RecordedInstrumentAssignment(UUID musicianId, InstrumentCode instrumentCode, SkillLevelCode skillLevelCode) {
+    }
+
+    private record RecordedVocalPartAssignment(UUID musicianId, VocalPartCode vocalPartCode, SkillLevelCode skillLevelCode) {
     }
 }

@@ -9,8 +9,13 @@ import com.cadentia.generated.model.TeamAssignmentType;
 import com.cadentia.generated.model.TeamAvailabilityWindowRequest;
 import com.cadentia.generated.model.TeamAvailabilityWindowResponse;
 import com.cadentia.generated.model.TeamInstrumentCode;
+import com.cadentia.generated.model.TeamMusicianInstrumentAssignmentRequest;
 import com.cadentia.generated.model.TeamMusicianResponse;
+import com.cadentia.generated.model.TeamMusicianRoleAssignmentRequest;
 import com.cadentia.generated.model.TeamMusicianRoleCode;
+import com.cadentia.generated.model.TeamMusicianSkillAssignmentResponse;
+import com.cadentia.generated.model.TeamMusicianSkillsResponse;
+import com.cadentia.generated.model.TeamMusicianVocalPartAssignmentRequest;
 import com.cadentia.generated.model.TeamRehearsalAssignmentRequest;
 import com.cadentia.generated.model.TeamRehearsalAssignmentResponse;
 import com.cadentia.generated.model.TeamRehearsalEventRequest;
@@ -23,6 +28,8 @@ import com.cadentia.generated.model.TeamSongAssignmentOverrideRequest;
 import com.cadentia.generated.model.TeamSongAssignmentOverrideResponse;
 import com.cadentia.generated.model.TeamSubstituteAssignmentRequest;
 import com.cadentia.generated.model.TeamServingPreferenceCode;
+import com.cadentia.generated.model.TeamSkillAssignmentDomain;
+import com.cadentia.generated.model.TeamSkillLevelCode;
 import com.cadentia.generated.model.TeamVocalPartCode;
 import com.cadentia.generated.model.TeamVocalRangeCode;
 import com.cadentia.team.AuthorizedTeamPlanningService;
@@ -34,11 +41,14 @@ import com.cadentia.team.TeamPlanningModels.CreateMusicianCommand;
 import com.cadentia.team.TeamPlanningModels.InstrumentCode;
 import com.cadentia.team.TeamPlanningModels.MusicianRecord;
 import com.cadentia.team.TeamPlanningModels.MusicianRoleCode;
+import com.cadentia.team.TeamPlanningModels.MusicianSkillAssignmentRecord;
+import com.cadentia.team.TeamPlanningModels.SkillAssignmentDomain;
 import com.cadentia.team.TeamPlanningModels.RehearsalAssignmentRecord;
 import com.cadentia.team.TeamPlanningModels.RehearsalEventRecord;
 import com.cadentia.team.TeamPlanningModels.ServiceAssignmentRecord;
 import com.cadentia.team.TeamPlanningModels.ServiceRoster;
 import com.cadentia.team.TeamPlanningModels.ServingPreferenceCode;
+import com.cadentia.team.TeamPlanningModels.SkillLevelCode;
 import com.cadentia.team.TeamPlanningModels.SongAssignmentOverrideRecord;
 import com.cadentia.team.TeamPlanningModels.VocalPartCode;
 import com.cadentia.team.TeamPlanningModels.VocalRangeCode;
@@ -275,6 +285,97 @@ public class TeamAssignmentController implements TeamAssignmentsApi {
         return ResponseEntity.ok(service.listRehearsalEvents(servicePlanId).stream()
                 .map(this::rehearsalEvent)
                 .toList());
+    }
+
+    @Override
+    @PreAuthorize("hasAnyAuthority(T(com.cadentia.api.security.RbacAuthorities).ROLE_ASSIGNED_MUSICIAN, T(com.cadentia.api.security.RbacAuthorities).ROLE_WORSHIP_LEADER, T(com.cadentia.api.security.RbacAuthorities).ROLE_TEAM_SCHEDULER, T(com.cadentia.api.security.RbacAuthorities).ROLE_REPORTING_VIEWER, T(com.cadentia.api.security.RbacAuthorities).ROLE_DOCTRINAL_REVIEWER, T(com.cadentia.api.security.RbacAuthorities).ROLE_MUSICAL_REVIEWER, T(com.cadentia.api.security.RbacAuthorities).ROLE_ADMIN)")
+    public ResponseEntity<TeamMusicianSkillsResponse> getTeamMusicianSkills(UUID musicianId) {
+        TeamMusicianSkillsResponse response = new TeamMusicianSkillsResponse(
+                musicianId,
+                service.listMusicianSkillAssignments(musicianId).stream()
+                        .map(this::skillAssignment)
+                        .toList());
+        return ResponseEntity.ok(response);
+    }
+
+    @Override
+    @PreAuthorize("hasAnyAuthority(T(com.cadentia.api.security.RbacAuthorities).ROLE_WORSHIP_LEADER, T(com.cadentia.api.security.RbacAuthorities).ROLE_ADMIN)")
+    public ResponseEntity<TeamMusicianSkillAssignmentResponse> assignTeamMusicianRole(
+            UUID musicianId,
+            TeamMusicianRoleAssignmentRequest request) {
+        UUID assignmentId = service.assignRole(
+                musicianId,
+                role(request.getRoleCode()),
+                skillLevel(request.getSkillLevelCode()),
+                request.getReasonCode(),
+                request.getReference());
+        return ResponseEntity.status(201).body(skillAssignment(
+                assignmentId, musicianId, SkillAssignmentDomain.ROLE, request.getRoleCode().getValue(),
+                skillLevel(request.getSkillLevelCode())));
+    }
+
+    @Override
+    @PreAuthorize("hasAnyAuthority(T(com.cadentia.api.security.RbacAuthorities).ROLE_WORSHIP_LEADER, T(com.cadentia.api.security.RbacAuthorities).ROLE_ADMIN)")
+    public ResponseEntity<TeamMusicianSkillAssignmentResponse> assignTeamMusicianInstrument(
+            UUID musicianId,
+            TeamMusicianInstrumentAssignmentRequest request) {
+        UUID assignmentId = service.assignInstrument(
+                musicianId,
+                instrument(request.getInstrumentCode()),
+                skillLevel(request.getSkillLevelCode()),
+                request.getReasonCode(),
+                request.getReference());
+        return ResponseEntity.status(201).body(skillAssignment(
+                assignmentId, musicianId, SkillAssignmentDomain.INSTRUMENT, request.getInstrumentCode().getValue(),
+                skillLevel(request.getSkillLevelCode())));
+    }
+
+    @Override
+    @PreAuthorize("hasAnyAuthority(T(com.cadentia.api.security.RbacAuthorities).ROLE_WORSHIP_LEADER, T(com.cadentia.api.security.RbacAuthorities).ROLE_ADMIN)")
+    public ResponseEntity<TeamMusicianSkillAssignmentResponse> assignTeamMusicianVocalPart(
+            UUID musicianId,
+            TeamMusicianVocalPartAssignmentRequest request) {
+        UUID assignmentId = service.assignVocalPart(
+                musicianId,
+                vocalPart(request.getVocalPartCode()),
+                skillLevel(request.getSkillLevelCode()),
+                request.getReasonCode(),
+                request.getReference());
+        return ResponseEntity.status(201).body(skillAssignment(
+                assignmentId, musicianId, SkillAssignmentDomain.VOCAL_PART, request.getVocalPartCode().getValue(),
+                skillLevel(request.getSkillLevelCode())));
+    }
+
+    private TeamMusicianSkillAssignmentResponse skillAssignment(MusicianSkillAssignmentRecord assignment) {
+        return skillAssignment(
+                assignment.assignmentId(),
+                assignment.musicianId(),
+                assignment.domain(),
+                assignment.code(),
+                assignment.skillLevelCode());
+    }
+
+    private TeamMusicianSkillAssignmentResponse skillAssignment(
+            UUID assignmentId,
+            UUID musicianId,
+            SkillAssignmentDomain domain,
+            String code,
+            SkillLevelCode skillLevelCode) {
+        TeamMusicianSkillAssignmentResponse response = new TeamMusicianSkillAssignmentResponse(
+                assignmentId,
+                musicianId,
+                TeamSkillAssignmentDomain.fromValue(domain.name()),
+                code);
+        response.setSkillLevelCode(skillLevel(skillLevelCode));
+        return response;
+    }
+
+    private SkillLevelCode skillLevel(TeamSkillLevelCode code) {
+        return code == null ? null : SkillLevelCode.valueOf(code.getValue());
+    }
+
+    private TeamSkillLevelCode skillLevel(SkillLevelCode code) {
+        return code == null ? null : TeamSkillLevelCode.fromValue(code.name());
     }
 
     private TeamMusicianResponse musician(MusicianRecord musician) {

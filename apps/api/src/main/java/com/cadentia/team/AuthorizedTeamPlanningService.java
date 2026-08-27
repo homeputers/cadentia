@@ -12,6 +12,7 @@ import com.cadentia.team.TeamPlanningModels.CreateMusicianCommand;
 import com.cadentia.team.TeamPlanningModels.InstrumentCode;
 import com.cadentia.team.TeamPlanningModels.MusicianRecord;
 import com.cadentia.team.TeamPlanningModels.MusicianRoleCode;
+import com.cadentia.team.TeamPlanningModels.MusicianSkillAssignmentRecord;
 import com.cadentia.team.TeamPlanningModels.RehearsalAssignmentRecord;
 import com.cadentia.team.TeamPlanningModels.RehearsalEventRecord;
 import com.cadentia.team.TeamPlanningModels.ServiceAssignmentRecord;
@@ -109,6 +110,16 @@ public class AuthorizedTeamPlanningService {
                 snapshotRef("musicians", musician.musicianId()),
                 "primaryVocalRange,comfortableRange");
         return redactor.redact(musician);
+    }
+
+    public List<MusicianSkillAssignmentRecord> listMusicianSkillAssignments(UUID musicianId) {
+        MusicianRecord musician = repository.findMusician(musicianId)
+                .orElseThrow(() -> new AccessDeniedException(NO_EXISTENCE_LEAK_MESSAGE));
+        authorizationPolicy.requireMusicianProfileRead(musician);
+        if (!authorizationPolicy.canReadSensitiveSkillAndRangeData(musician)) {
+            return List.of();
+        }
+        return repository.listMusicianSkillAssignments(musicianId);
     }
 
     @Transactional

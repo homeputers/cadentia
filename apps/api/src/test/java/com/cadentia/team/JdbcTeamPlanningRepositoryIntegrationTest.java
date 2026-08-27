@@ -291,6 +291,31 @@ class JdbcTeamPlanningRepositoryIntegrationTest {
         assertThat(events.get(0).location()).isNull();
     }
 
+    @Test
+    void listMusicianSkillAssignmentsReturnsActiveAssignmentsAcrossDomains() {
+        // Arrange
+        MusicianRecord musician = createMusician("Avery Rivera");
+        MusicianRecord other = createMusician("Jordan Lee");
+        repository.assignRole(musician.musicianId(), MusicianRoleCode.VOCALIST, SkillLevelCode.ADVANCED);
+        repository.assignInstrument(musician.musicianId(), InstrumentCode.KEYS, SkillLevelCode.INTERMEDIATE);
+        repository.assignVocalPart(musician.musicianId(), VocalPartCode.ALTO, null);
+        repository.assignInstrument(other.musicianId(), InstrumentCode.DRUMS, SkillLevelCode.BEGINNER);
+        UUID deactivated = repository.assignInstrument(musician.musicianId(), InstrumentCode.BASS, SkillLevelCode.BEGINNER);
+        jdbcTemplate.getJdbcTemplate().update(
+                "UPDATE musician_instrument_assignments SET active = false WHERE id = ?", deactivated);
+
+        // Act
+        var assignments = repository.listMusicianSkillAssignments(musician.musicianId());
+
+        // Assert
+        assertThat(assignments)
+                .extracting(assignment -> assignment.domain() + ":" + assignment.code())
+                .containsExactly("INSTRUMENT:KEYS", "ROLE:VOCALIST", "VOCAL_PART:ALTO");
+        assertThat(assignments.get(0).skillLevelCode()).isEqualTo(SkillLevelCode.INTERMEDIATE);
+        assertThat(assignments.get(1).skillLevelCode()).isEqualTo(SkillLevelCode.ADVANCED);
+        assertThat(assignments.get(2).skillLevelCode()).isNull();
+    }
+
     private MusicianRecord createMusician(String displayName) {
         return repository.createMusician(new CreateMusicianCommand(
                 displayName,

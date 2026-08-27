@@ -665,6 +665,15 @@ const spanishPhrases: Record<string, string> = {
     'Backend validation rejected this change. Review the assignment fields; an availability conflict requires the explicit override.': 'La validación del backend rechazó este cambio. Revisa los campos de la asignación; un conflicto de disponibilidad requiere la anulación explícita.',
     'You are not authorized to change team assignments.': 'No tienes autorización para cambiar asignaciones del equipo.',
     'This assignment or service plan is no longer available. Reload the roster.': 'Esta asignación o plan de servicio ya no está disponible. Recarga el equipo.',
+    'Musician skills': 'Habilidades del músico',
+    'Standing roles, instruments, and vocal parts with skill levels. Skill data is sensitive and appears only when your role is permitted to read it.': 'Roles, instrumentos y partes vocales permanentes con niveles de habilidad. Los datos de habilidad son sensibles y solo aparecen cuando tu rol permite leerlos.',
+    'No skill assignments returned or not permitted.': 'No se devolvieron asignaciones de habilidad o no están permitidas.',
+    'Skill assignments for ': 'Asignaciones de habilidad de ',
+    'Skill level': 'Nivel de habilidad',
+    'Assign skill': 'Asignar habilidad',
+    'Skill assignment recorded with audit attribution.': 'Asignación de habilidad registrada con atribución de auditoría.',
+    'Select code...': 'Selecciona un código…',
+    'Code': 'Código',
 };
 
 const roleTranslations: Record<string, string> = {
@@ -722,6 +731,8 @@ const codeTranslations: Record<string, string> = {
     'PREFERRED': 'Preferido', 'AVAILABLE': 'Disponible', 'LIMITED': 'Limitado', 'DO_NOT_SCHEDULE': 'No programar',
     'SERVICE': 'Servicio', 'REHEARSAL': 'Ensayo', 'SONG_OVERRIDE': 'Anulación por canción',
     'CREATE': 'Crear', 'REMOVE': 'Eliminar', 'REORDER': 'Reordenar', 'STATUS': 'Estado',
+    'BEGINNER': 'Principiante', 'INTERMEDIATE': 'Intermedio', 'ADVANCED': 'Avanzado', 'DIRECTOR': 'Director',
+    'ROLE': 'Rol', 'INSTRUMENT': 'Instrumento', 'VOCAL_PART': 'Parte vocal',
 };
 
 export const normalizeLocale = (value?: string | null): SupportedLocale => {

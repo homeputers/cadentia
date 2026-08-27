@@ -4,16 +4,30 @@ import type { AdminSession } from '../auth/session';
 import { adminEnvironment } from '../config/environment';
 import { createAdminApiClient, type AdminApiClient, type AdminApiError } from '../generated/cadentia-api/client';
 import {
+    assignTeamMusicianInstrument,
+    assignTeamMusicianRole,
+    assignTeamMusicianVocalPart,
     createTeamAvailabilityWindow,
     createTeamMusician,
+    getTeamMusicianSkills,
     listTeamMusicians,
     listUpcomingTeamAssignmentsForMusician,
     teamAssignmentStatusCodes,
+    teamInstrumentCodes,
+    teamMusicianRoleCodes,
     teamServingPreferenceCodes,
+    teamSkillLevelCodes,
+    teamVocalPartCodes,
     teamVocalRangeCodes,
     type TeamAssignmentStatusCode,
+    type TeamInstrumentCode,
     type TeamMusician,
+    type TeamMusicianRoleCode,
+    type TeamMusicianSkillAssignment,
     type TeamServingPreferenceCode,
+    type TeamSkillAssignmentDomain,
+    type TeamSkillLevelCode,
+    type TeamVocalPartCode,
     type TeamVocalRangeCode,
 } from '../team-assignments';
 import { LocalizedView } from '../i18n';
@@ -49,6 +63,13 @@ export const Musicians = ({ session, apiClient: providedApiClient }: { session: 
     const [availabilityStartsAt, setAvailabilityStartsAt] = useState('');
     const [availabilityEndsAt, setAvailabilityEndsAt] = useState('');
     const [availabilityReason, setAvailabilityReason] = useState('');
+
+    const [skillsMusicianId, setSkillsMusicianId] = useState('');
+    const [skills, setSkills] = useState<TeamMusicianSkillAssignment[] | null>(null);
+    const [skillDomain, setSkillDomain] = useState<TeamSkillAssignmentDomain>('INSTRUMENT');
+    const [skillCode, setSkillCode] = useState('');
+    const [skillLevel, setSkillLevel] = useState<TeamSkillLevelCode | ''>('');
+    const [skillReason, setSkillReason] = useState('');
 
     const [upcomingMusicianId, setUpcomingMusicianId] = useState('');
     const [upcomingFrom, setUpcomingFrom] = useState('');
@@ -115,6 +136,48 @@ export const Musicians = ({ session, apiClient: providedApiClient }: { session: 
             setAvailabilityEndsAt('');
             setAvailabilityReason('');
             setMessage('Availability window recorded. Availability conflicts now reflect this window.');
+        } catch (caught) {
+            setMessage(mutationFailureMessage((caught as AdminApiError).status));
+        } finally {
+            setPending(false);
+        }
+    };
+
+    const loadSkills = async (musicianId: string) => {
+        setSkillsMusicianId(musicianId);
+        if (!musicianId) { setSkills(null); return; }
+        setMessage('');
+        try {
+            const response = await getTeamMusicianSkills(apiClient, musicianId);
+            setSkills(response.assignments);
+        } catch (caught) {
+            setMessage(mutationFailureMessage((caught as AdminApiError).status));
+            setSkills(null);
+        }
+    };
+
+    const skillCodeOptions = skillDomain === 'ROLE' ? teamMusicianRoleCodes : skillDomain === 'INSTRUMENT' ? teamInstrumentCodes : teamVocalPartCodes;
+
+    const submitSkill = async () => {
+        if (!skillsMusicianId || !skillCode) return;
+        setMessage('');
+        setPending(true);
+        try {
+            const level = skillLevel || undefined;
+            const reason = skillReason || undefined;
+            if (skillDomain === 'ROLE') {
+                await assignTeamMusicianRole(apiClient, skillsMusicianId, skillCode as TeamMusicianRoleCode, level, session.actorId, reason);
+            } else if (skillDomain === 'INSTRUMENT') {
+                await assignTeamMusicianInstrument(apiClient, skillsMusicianId, skillCode as TeamInstrumentCode, level, session.actorId, reason);
+            } else {
+                await assignTeamMusicianVocalPart(apiClient, skillsMusicianId, skillCode as TeamVocalPartCode, level, session.actorId, reason);
+            }
+            setSkillCode('');
+            setSkillLevel('');
+            setSkillReason('');
+            const refreshed = await getTeamMusicianSkills(apiClient, skillsMusicianId);
+            setSkills(refreshed.assignments);
+            setMessage('Skill assignment recorded with audit attribution.');
         } catch (caught) {
             setMessage(mutationFailureMessage((caught as AdminApiError).status));
         } finally {
@@ -251,6 +314,64 @@ export const Musicians = ({ session, apiClient: providedApiClient }: { session: 
                     </div>
                     <button type="submit" disabled={pending || !availabilityMusicianId}>Record availability</button>
                 </form>
+            </section>
+        )}
+
+        {state === 'ready' && (
+            <section aria-labelledby="skills-title" className="admin-shell__panel">
+                <h2 id="skills-title">Musician skills</h2>
+                <p>Standing roles, instruments, and vocal parts with skill levels. Skill data is sensitive and appears only when your role is permitted to read it.</p>
+                <div>
+                    <label htmlFor="skills-musician">Musician</label>{' '}
+                    <select id="skills-musician" value={skillsMusicianId} onChange={(event) => void loadSkills(event.target.value)} disabled={pending}>
+                        <option value="">Select musician...</option>
+                        {musicianOptions}
+                    </select>
+                </div>
+                {skillsMusicianId && skills !== null && skills.length === 0 && <p>No skill assignments returned or not permitted.</p>}
+                {skills && skills.length > 0 && (
+                    <DataTable
+                        caption={`Skill assignments for ${musicianName(skillsMusicianId)}`}
+                        columns={['Type', 'Code', 'Skill level']}
+                        rows={skills.map((assignment) => [
+                            assignment.domain,
+                            assignment.code,
+                            assignment.skillLevelCode ? <Badge severity="neutral">{assignment.skillLevelCode}</Badge> : 'Not recorded',
+                        ])}
+                    />
+                )}
+                {allowed && skillsMusicianId && skills !== null && (
+                    <form onSubmit={(event) => { event.preventDefault(); void submitSkill(); }}>
+                        <h3>Assign skill</h3>
+                        <div>
+                            <label htmlFor="skill-domain">Type</label>{' '}
+                            <select id="skill-domain" value={skillDomain} onChange={(event) => { setSkillDomain(event.target.value as TeamSkillAssignmentDomain); setSkillCode(''); }} disabled={pending}>
+                                <option value="INSTRUMENT">Instrument</option>
+                                <option value="ROLE">Role</option>
+                                <option value="VOCAL_PART">Vocal part</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label htmlFor="skill-code">Code</label>{' '}
+                            <select id="skill-code" required value={skillCode} onChange={(event) => setSkillCode(event.target.value)} disabled={pending}>
+                                <option value="">Select code...</option>
+                                {skillCodeOptions.map((code) => <option key={code} value={code}>{code}</option>)}
+                            </select>
+                        </div>
+                        <div>
+                            <label htmlFor="skill-level">Skill level</label>{' '}
+                            <select id="skill-level" value={skillLevel} onChange={(event) => setSkillLevel(event.target.value as TeamSkillLevelCode | '')} disabled={pending}>
+                                <option value="">None</option>
+                                {teamSkillLevelCodes.map((code) => <option key={code} value={code}>{code}</option>)}
+                            </select>
+                        </div>
+                        <div>
+                            <label htmlFor="skill-reason">Audit reason</label>{' '}
+                            <input id="skill-reason" value={skillReason} onChange={(event) => setSkillReason(event.target.value)} disabled={pending} />
+                        </div>
+                        <button type="submit" disabled={pending || !skillCode}>Assign skill</button>
+                    </form>
+                )}
             </section>
         )}
 

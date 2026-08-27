@@ -134,6 +134,79 @@ describe('Musicians directory', () => {
         expect(node.textContent).toContain('assignment-9');
     });
 
+    it('loads and renders skill assignments for the selected musician', async () => {
+        const request = vi.fn().mockImplementation((path: string) => {
+            if (String(path).endsWith('/skills')) {
+                return Promise.resolve({
+                    musicianId: 'musician-2',
+                    assignments: [
+                        { assignmentId: 'skill-1', musicianId: 'musician-2', domain: 'INSTRUMENT', code: 'KEYS', skillLevelCode: 'INTERMEDIATE' },
+                        { assignmentId: 'skill-2', musicianId: 'musician-2', domain: 'VOCAL_PART', code: 'ALTO', skillLevelCode: null },
+                    ],
+                });
+            }
+            return Promise.resolve(directory);
+        });
+        const node = await render(<Musicians session={worshipLeader} apiClient={{ getAdminSession: vi.fn(), request } as unknown as AdminApiClient} />);
+
+        await act(async () => {
+            setSelectValue(node.querySelector('#skills-musician') as HTMLSelectElement, 'musician-2');
+        });
+
+        expect(request.mock.calls.some(([path]) => String(path) === '/team-assignments/musicians/musician-2/skills')).toBe(true);
+        expect(node.textContent).toContain('KEYS');
+        expect(node.textContent).toContain('INTERMEDIATE');
+        expect(node.textContent).toContain('ALTO');
+    });
+
+    it('assigns an instrument skill with actor attribution and reloads', async () => {
+        const request = vi.fn().mockImplementation((path: string, init?: RequestInit) => {
+            if (String(path).endsWith('/instruments') && init?.method === 'POST') {
+                return Promise.resolve({ assignmentId: 'skill-3', musicianId: 'musician-1', domain: 'INSTRUMENT', code: 'ACOUSTIC_GUITAR', skillLevelCode: 'BEGINNER' });
+            }
+            if (String(path).endsWith('/skills')) {
+                return Promise.resolve({
+                    musicianId: 'musician-1',
+                    assignments: [{ assignmentId: 'skill-3', musicianId: 'musician-1', domain: 'INSTRUMENT', code: 'ACOUSTIC_GUITAR', skillLevelCode: 'BEGINNER' }],
+                });
+            }
+            return Promise.resolve(directory);
+        });
+        const node = await render(<Musicians session={worshipLeader} apiClient={{ getAdminSession: vi.fn(), request } as unknown as AdminApiClient} />);
+
+        await act(async () => {
+            setSelectValue(node.querySelector('#skills-musician') as HTMLSelectElement, 'musician-1');
+        });
+        await act(async () => {
+            setSelectValue(node.querySelector('#skill-code') as HTMLSelectElement, 'ACOUSTIC_GUITAR');
+            setSelectValue(node.querySelector('#skill-level') as HTMLSelectElement, 'BEGINNER');
+        });
+        const assignButton = [...node.querySelectorAll('button')].find((button) => button.textContent === 'Assign skill')!;
+        await act(async () => { assignButton.closest('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); });
+
+        const assignCall = request.mock.calls.find(([path, init]) => String(path).endsWith('/instruments') && (init as RequestInit)?.method === 'POST');
+        expect(assignCall).toBeDefined();
+        expect(String(assignCall![0])).toBe('/team-assignments/musicians/musician-1/instruments');
+        expect(JSON.parse(String(assignCall![1]?.body))).toEqual({ instrumentCode: 'ACOUSTIC_GUITAR', skillLevelCode: 'BEGINNER' });
+        expect(assignCall![2]).toMatchObject({ actorId: 'leader-1' });
+        expect(node.textContent).toContain('Skill assignment recorded with audit attribution.');
+        expect(node.textContent).toContain('ACOUSTIC_GUITAR');
+    });
+
+    it('shows a redaction-safe message when skills are not returned', async () => {
+        const request = vi.fn().mockImplementation((path: string) => {
+            if (String(path).endsWith('/skills')) return Promise.resolve({ musicianId: 'musician-1', assignments: [] });
+            return Promise.resolve(directory);
+        });
+        const node = await render(<Musicians session={worshipLeader} apiClient={{ getAdminSession: vi.fn(), request } as unknown as AdminApiClient} />);
+
+        await act(async () => {
+            setSelectValue(node.querySelector('#skills-musician') as HTMLSelectElement, 'musician-1');
+        });
+
+        expect(node.textContent).toContain('No skill assignments returned or not permitted.');
+    });
+
     it('renders forbidden state without the manage capability', async () => {
         const request = vi.fn();
         const node = await render(<Musicians session={viewer} apiClient={{ getAdminSession: vi.fn(), request } as unknown as AdminApiClient} />);

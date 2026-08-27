@@ -387,6 +387,137 @@
           application/json:
             schema:
               "$ref": "../components/schemas/team-assignments.yaml#/TeamAvailabilityWindowResponse"
+"/team-assignments/musicians/{musicianId}/skills":
+  get:
+    tags:
+    - TeamAssignments
+    operationId: getTeamMusicianSkills
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - ASSIGNED_MUSICIAN
+    - WORSHIP_LEADER
+    - TEAM_SCHEDULER
+    - REPORTING_VIEWER
+    - DOCTRINAL_REVIEWER
+    - MUSICAL_REVIEWER
+    - ADMIN
+    summary: List a musician's role, instrument, and vocal-part skill assignments
+    description: Skill levels are sensitive. Callers without sensitive skill-data
+      permission receive an empty assignment list.
+    parameters:
+    - in: path
+      name: musicianId
+      required: true
+      schema:
+        type: string
+        format: uuid
+    responses:
+      '200':
+        description: Musician skill assignments.
+        content:
+          application/json:
+            schema:
+              "$ref": "../components/schemas/team-assignments.yaml#/TeamMusicianSkillsResponse"
+"/team-assignments/musicians/{musicianId}/roles":
+  post:
+    tags:
+    - TeamAssignments
+    operationId: assignTeamMusicianRole
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - WORSHIP_LEADER
+    - ADMIN
+    summary: Assign a standing role and skill level to a musician
+    description: Writes privileged personnel audit records. Duplicate active role
+      assignments are rejected.
+    parameters:
+    - in: path
+      name: musicianId
+      required: true
+      schema:
+        type: string
+        format: uuid
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            "$ref": "../components/schemas/team-assignments.yaml#/TeamMusicianRoleAssignmentRequest"
+    responses:
+      '201':
+        description: Role assignment created.
+        content:
+          application/json:
+            schema:
+              "$ref": "../components/schemas/team-assignments.yaml#/TeamMusicianSkillAssignmentResponse"
+"/team-assignments/musicians/{musicianId}/instruments":
+  post:
+    tags:
+    - TeamAssignments
+    operationId: assignTeamMusicianInstrument
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - WORSHIP_LEADER
+    - ADMIN
+    summary: Assign a standing instrument and skill level to a musician
+    description: Writes privileged personnel audit records. Duplicate active instrument
+      assignments are rejected.
+    parameters:
+    - in: path
+      name: musicianId
+      required: true
+      schema:
+        type: string
+        format: uuid
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            "$ref": "../components/schemas/team-assignments.yaml#/TeamMusicianInstrumentAssignmentRequest"
+    responses:
+      '201':
+        description: Instrument assignment created.
+        content:
+          application/json:
+            schema:
+              "$ref": "../components/schemas/team-assignments.yaml#/TeamMusicianSkillAssignmentResponse"
+"/team-assignments/musicians/{musicianId}/vocal-parts":
+  post:
+    tags:
+    - TeamAssignments
+    operationId: assignTeamMusicianVocalPart
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - WORSHIP_LEADER
+    - ADMIN
+    summary: Assign a standing vocal part and skill level to a musician
+    description: Writes privileged personnel audit records. Duplicate active vocal-part
+      assignments are rejected.
+    parameters:
+    - in: path
+      name: musicianId
+      required: true
+      schema:
+        type: string
+        format: uuid
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            "$ref": "../components/schemas/team-assignments.yaml#/TeamMusicianVocalPartAssignmentRequest"
+    responses:
+      '201':
+        description: Vocal-part assignment created.
+        content:
+          application/json:
+            schema:
+              "$ref": "../components/schemas/team-assignments.yaml#/TeamMusicianSkillAssignmentResponse"
 "/team-assignments/rehearsal-events":
   post:
     tags:

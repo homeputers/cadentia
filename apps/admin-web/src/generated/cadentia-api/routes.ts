@@ -88,7 +88,11 @@ export type CadentiaApiRoute =
     | '/team-assignments/musicians'
     | '/team-assignments/musicians/{musicianId}'
     | '/team-assignments/musicians/{musicianId}/availability-windows'
+    | '/team-assignments/musicians/{musicianId}/instruments'
+    | '/team-assignments/musicians/{musicianId}/roles'
+    | '/team-assignments/musicians/{musicianId}/skills'
     | '/team-assignments/musicians/{musicianId}/upcoming'
+    | '/team-assignments/musicians/{musicianId}/vocal-parts'
     | '/team-assignments/rehearsal-events'
     | '/team-assignments/rehearsals/{rehearsalEventId}'
     | '/team-assignments/services/{servicePlanId}'
@@ -114,6 +118,9 @@ export type CadentiaApiOperationId =
     | 'archiveAssetVersion'
     | 'archiveRehearsalSession'
     | 'assignAdminModerationFlag'
+    | 'assignTeamMusicianInstrument'
+    | 'assignTeamMusicianRole'
+    | 'assignTeamMusicianVocalPart'
     | 'attachSetlistVersionToServicePlan'
     | 'autocompleteCatalog'
     | 'bulkActionAdminImportCandidates'
@@ -169,6 +176,7 @@ export type CadentiaApiOperationId =
     | 'getServiceWorkflowStatus'
     | 'getSetlistVersion'
     | 'getTeamMusician'
+    | 'getTeamMusicianSkills'
     | 'getTelegramBotStatus'
     | 'getTelegramSessionStatus'
     | 'initiateTelegramAccountLink'
@@ -322,7 +330,11 @@ export const cadentiaApiRoutes = [
     '/team-assignments/musicians',
     '/team-assignments/musicians/{musicianId}',
     '/team-assignments/musicians/{musicianId}/availability-windows',
+    '/team-assignments/musicians/{musicianId}/instruments',
+    '/team-assignments/musicians/{musicianId}/roles',
+    '/team-assignments/musicians/{musicianId}/skills',
     '/team-assignments/musicians/{musicianId}/upcoming',
+    '/team-assignments/musicians/{musicianId}/vocal-parts',
     '/team-assignments/rehearsal-events',
     '/team-assignments/rehearsals/{rehearsalEventId}',
     '/team-assignments/services/{servicePlanId}',
@@ -427,7 +439,11 @@ export const cadentiaApiRouteRefs: Record<CadentiaApiRoute, string> = {
     '/team-assignments/musicians': './paths/team-assignments.yaml#/~1team-assignments~1musicians',
     '/team-assignments/musicians/{musicianId}': './paths/team-assignments.yaml#/~1team-assignments~1musicians~1{musicianId}',
     '/team-assignments/musicians/{musicianId}/availability-windows': './paths/team-assignments.yaml#/~1team-assignments~1musicians~1{musicianId}~1availability-windows',
+    '/team-assignments/musicians/{musicianId}/instruments': './paths/team-assignments.yaml#/~1team-assignments~1musicians~1{musicianId}~1instruments',
+    '/team-assignments/musicians/{musicianId}/roles': './paths/team-assignments.yaml#/~1team-assignments~1musicians~1{musicianId}~1roles',
+    '/team-assignments/musicians/{musicianId}/skills': './paths/team-assignments.yaml#/~1team-assignments~1musicians~1{musicianId}~1skills',
     '/team-assignments/musicians/{musicianId}/upcoming': './paths/team-assignments.yaml#/~1team-assignments~1musicians~1{musicianId}~1upcoming',
+    '/team-assignments/musicians/{musicianId}/vocal-parts': './paths/team-assignments.yaml#/~1team-assignments~1musicians~1{musicianId}~1vocal-parts',
     '/team-assignments/rehearsal-events': './paths/team-assignments.yaml#/~1team-assignments~1rehearsal-events',
     '/team-assignments/rehearsals/{rehearsalEventId}': './paths/team-assignments.yaml#/~1team-assignments~1rehearsals~1{rehearsalEventId}',
     '/team-assignments/services/{servicePlanId}': './paths/team-assignments.yaml#/~1team-assignments~1services~1{servicePlanId}',
@@ -454,6 +470,9 @@ export const cadentiaApiOperations = [
     { operationId: 'archiveAssetVersion', method: 'DELETE', path: '/assets/{assetId}/versions/{assetVersionId}', ref: './paths/assets.yaml#/~1assets~1{assetId}~1versions~1{assetVersionId}' },
     { operationId: 'archiveRehearsalSession', method: 'DELETE', path: '/service-plans/{servicePlanId}/rehearsal-sessions/{rehearsalSessionId}', ref: './paths/rehearsal-workflow.yaml#/~1service-plans~1{servicePlanId}~1rehearsal-sessions~1{rehearsalSessionId}' },
     { operationId: 'assignAdminModerationFlag', method: 'POST', path: '/admin/moderation-flags/{flagId}/assign', ref: './paths/admin-review.yaml#/~1admin~1moderation-flags~1{flagId}~1assign' },
+    { operationId: 'assignTeamMusicianInstrument', method: 'POST', path: '/team-assignments/musicians/{musicianId}/instruments', ref: './paths/team-assignments.yaml#/~1team-assignments~1musicians~1{musicianId}~1instruments' },
+    { operationId: 'assignTeamMusicianRole', method: 'POST', path: '/team-assignments/musicians/{musicianId}/roles', ref: './paths/team-assignments.yaml#/~1team-assignments~1musicians~1{musicianId}~1roles' },
+    { operationId: 'assignTeamMusicianVocalPart', method: 'POST', path: '/team-assignments/musicians/{musicianId}/vocal-parts', ref: './paths/team-assignments.yaml#/~1team-assignments~1musicians~1{musicianId}~1vocal-parts' },
     { operationId: 'attachSetlistVersionToServicePlan', method: 'POST', path: '/service-plans/{servicePlanId}/setlist-attachments', ref: './paths/service-plans.yaml#/~1service-plans~1{servicePlanId}~1setlist-attachments' },
     { operationId: 'autocompleteCatalog', method: 'POST', path: '/catalog/autocomplete', ref: './paths/search.yaml#/~1catalog~1autocomplete' },
     { operationId: 'bulkActionAdminImportCandidates', method: 'POST', path: '/admin/import-candidates:bulk-actions', ref: './paths/admin-review.yaml#/~1admin~1import-candidates:bulk-actions' },
@@ -509,6 +528,7 @@ export const cadentiaApiOperations = [
     { operationId: 'getServiceWorkflowStatus', method: 'GET', path: '/service-plans/{servicePlanId}/workflow-status', ref: './paths/rehearsal-workflow.yaml#/~1service-plans~1{servicePlanId}~1workflow-status' },
     { operationId: 'getSetlistVersion', method: 'GET', path: '/setlists/{setlistId}/versions/{versionId}', ref: './paths/setlists.yaml#/~1setlists~1{setlistId}~1versions~1{versionId}' },
     { operationId: 'getTeamMusician', method: 'GET', path: '/team-assignments/musicians/{musicianId}', ref: './paths/team-assignments.yaml#/~1team-assignments~1musicians~1{musicianId}' },
+    { operationId: 'getTeamMusicianSkills', method: 'GET', path: '/team-assignments/musicians/{musicianId}/skills', ref: './paths/team-assignments.yaml#/~1team-assignments~1musicians~1{musicianId}~1skills' },
     { operationId: 'getTelegramBotStatus', method: 'GET', path: '/admin/telegram/bots/{botId}/status', ref: './paths/telegram.yaml#/~1admin~1telegram~1bots~1{botId}~1status' },
     { operationId: 'getTelegramSessionStatus', method: 'GET', path: '/telegram/sessions/{sessionId}', ref: './paths/telegram.yaml#/~1telegram~1sessions~1{sessionId}' },
     { operationId: 'initiateTelegramAccountLink', method: 'POST', path: '/telegram/account-links', ref: './paths/telegram.yaml#/~1telegram~1account-links' },

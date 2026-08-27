@@ -21,9 +21,12 @@ import com.cadentia.team.TeamPlanningModels.CreateMusicianCommand;
 import com.cadentia.team.TeamPlanningModels.InstrumentCode;
 import com.cadentia.team.TeamPlanningModels.MusicianRecord;
 import com.cadentia.team.TeamPlanningModels.MusicianRoleCode;
+import com.cadentia.team.TeamPlanningModels.MusicianSkillAssignmentRecord;
 import com.cadentia.team.TeamPlanningModels.RehearsalEventRecord;
 import com.cadentia.team.TeamPlanningModels.ServiceAssignmentRecord;
 import com.cadentia.team.TeamPlanningModels.ServingPreferenceCode;
+import com.cadentia.team.TeamPlanningModels.SkillAssignmentDomain;
+import com.cadentia.team.TeamPlanningModels.SkillLevelCode;
 import com.cadentia.team.TeamPlanningModels.VocalRangeCode;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.Instant;
@@ -439,6 +442,66 @@ class AuthorizedTeamPlanningServiceTest {
         assertThat(auditEventCaptor.getAllValues())
                 .extracting(PersonnelAuditEvent::targetType)
                 .containsOnly(PersonnelAuditTargetType.MUSICIAN);
+    }
+
+    @Test
+    void schedulerListsMusicianSkillAssignments() {
+        // Arrange
+        UUID musicianId = UUID.randomUUID();
+        authenticate("scheduler", RbacAuthorities.ROLE_TEAM_SCHEDULER);
+        when(repository.findMusician(musicianId)).thenReturn(Optional.of(musician(musicianId, "avery@example.test")));
+        MusicianSkillAssignmentRecord assignment = new MusicianSkillAssignmentRecord(
+                UUID.randomUUID(), musicianId, SkillAssignmentDomain.INSTRUMENT, "KEYS", SkillLevelCode.INTERMEDIATE);
+        when(repository.listMusicianSkillAssignments(musicianId)).thenReturn(List.of(assignment));
+
+        // Act
+        List<MusicianSkillAssignmentRecord> assignments = service.listMusicianSkillAssignments(musicianId);
+
+        // Assert
+        assertThat(assignments).containsExactly(assignment);
+    }
+
+    @Test
+    void rosterReaderWithoutSensitiveSkillPermissionReceivesEmptySkillList() {
+        // Arrange
+        UUID musicianId = UUID.randomUUID();
+        authenticate("reporter", RbacAuthorities.ROLE_REPORTING_VIEWER);
+        when(repository.findMusician(musicianId)).thenReturn(Optional.of(musician(musicianId, "avery@example.test")));
+
+        // Act
+        List<MusicianSkillAssignmentRecord> assignments = service.listMusicianSkillAssignments(musicianId);
+
+        // Assert
+        assertThat(assignments).isEmpty();
+        verify(repository, never()).listMusicianSkillAssignments(any());
+    }
+
+    @Test
+    void assignedMusicianReadsOwnSkillAssignments() {
+        // Arrange
+        UUID musicianId = UUID.randomUUID();
+        authenticate("avery@example.test", RbacAuthorities.ROLE_ASSIGNED_MUSICIAN);
+        when(repository.findMusician(musicianId)).thenReturn(Optional.of(musician(musicianId, "avery@example.test")));
+        MusicianSkillAssignmentRecord assignment = new MusicianSkillAssignmentRecord(
+                UUID.randomUUID(), musicianId, SkillAssignmentDomain.VOCAL_PART, "ALTO", SkillLevelCode.ADVANCED);
+        when(repository.listMusicianSkillAssignments(musicianId)).thenReturn(List.of(assignment));
+
+        // Act / Assert
+        assertThat(service.listMusicianSkillAssignments(musicianId)).containsExactly(assignment);
+    }
+
+    @Test
+    void assignedMusicianCannotReadOtherMusicianSkillAssignments() {
+        // Arrange
+        UUID musicianId = UUID.randomUUID();
+        authenticate("stranger@example.test", RbacAuthorities.ROLE_ASSIGNED_MUSICIAN);
+        when(repository.findMusician(musicianId)).thenReturn(Optional.of(musician(musicianId, "avery@example.test")));
+
+        // Act / Assert
+        assertThatThrownBy(() -> service.listMusicianSkillAssignments(musicianId))
+                .isInstanceOf(AccessDeniedException.class)
+                .hasMessage("Access denied.");
+        verify(repository, never()).listMusicianSkillAssignments(any());
     }
 
     private void authenticate(String principal, String authority) {

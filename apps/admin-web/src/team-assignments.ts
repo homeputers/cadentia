@@ -9,6 +9,8 @@ export type TeamAssignmentStatusCode = 'REQUESTED' | 'TENTATIVE' | 'ACCEPTED' | 
 export type TeamAssignmentType = 'SERVICE' | 'REHEARSAL' | 'SONG_OVERRIDE';
 export type TeamVocalRangeCode = 'LOW' | 'MEDIUM' | 'HIGH' | 'UNKNOWN';
 export type TeamServingPreferenceCode = 'PREFERRED' | 'AVAILABLE' | 'LIMITED' | 'DO_NOT_SCHEDULE';
+export type TeamSkillLevelCode = 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED' | 'DIRECTOR';
+export type TeamSkillAssignmentDomain = 'ROLE' | 'INSTRUMENT' | 'VOCAL_PART';
 
 export const teamMusicianRoleCodes: TeamMusicianRoleCode[] = ['WORSHIP_LEADER', 'VOCALIST', 'INSTRUMENTALIST', 'MUSIC_DIRECTOR', 'TECH'];
 export const teamInstrumentCodes: TeamInstrumentCode[] = ['ACOUSTIC_GUITAR', 'ELECTRIC_GUITAR', 'PIANO', 'KEYS', 'BASS', 'DRUMS', 'PERCUSSION', 'BRASS', 'WINDS', 'OTHER'];
@@ -16,6 +18,7 @@ export const teamVocalPartCodes: TeamVocalPartCode[] = ['LEAD', 'ALTO', 'TENOR',
 export const teamAssignmentStatusCodes: TeamAssignmentStatusCode[] = ['REQUESTED', 'TENTATIVE', 'ACCEPTED', 'DECLINED', 'UNAVAILABLE', 'SUBSTITUTE'];
 export const teamVocalRangeCodes: TeamVocalRangeCode[] = ['LOW', 'MEDIUM', 'HIGH', 'UNKNOWN'];
 export const teamServingPreferenceCodes: TeamServingPreferenceCode[] = ['PREFERRED', 'AVAILABLE', 'LIMITED', 'DO_NOT_SCHEDULE'];
+export const teamSkillLevelCodes: TeamSkillLevelCode[] = ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'DIRECTOR'];
 
 export type TeamMusician = {
     musicianId: string;
@@ -128,6 +131,14 @@ export type TeamSongAssignmentOverride = {
     statusCode: TeamAssignmentStatusCode;
 };
 
+export type TeamMusicianSkillAssignment = {
+    assignmentId: string;
+    musicianId: string;
+    domain: TeamSkillAssignmentDomain;
+    code: string;
+    skillLevelCode?: TeamSkillLevelCode | null;
+};
+
 export type TeamAvailabilityWindow = {
     availabilityWindowId: string;
     musicianId: string;
@@ -180,6 +191,54 @@ export const getTeamMusician = (apiClient: AdminApiClient, musicianId: string) =
 
 export const createTeamMusician = (apiClient: AdminApiClient, payload: CreateTeamMusicianPayload, actorId: string) =>
     apiClient.request<TeamMusician>('/team-assignments/musicians', post(clean(payload as Record<string, unknown>)), { actorId });
+
+export const getTeamMusicianSkills = (apiClient: AdminApiClient, musicianId: string) =>
+    apiClient.request<{ musicianId: string; assignments: TeamMusicianSkillAssignment[] }>(
+        `/team-assignments/musicians/${encodeURIComponent(musicianId)}/skills`,
+    );
+
+const assignSkill = <TCode extends string>(
+    apiClient: AdminApiClient,
+    musicianId: string,
+    resource: 'roles' | 'instruments' | 'vocal-parts',
+    codeField: 'roleCode' | 'instrumentCode' | 'vocalPartCode',
+    code: TCode,
+    skillLevelCode: TeamSkillLevelCode | undefined,
+    actorId: string,
+    reasonCode?: string,
+) =>
+    apiClient.request<TeamMusicianSkillAssignment>(
+        `/team-assignments/musicians/${encodeURIComponent(musicianId)}/${resource}`,
+        post(clean({ [codeField]: code, skillLevelCode, reasonCode })),
+        { actorId },
+    );
+
+export const assignTeamMusicianRole = (
+    apiClient: AdminApiClient,
+    musicianId: string,
+    roleCode: TeamMusicianRoleCode,
+    skillLevelCode: TeamSkillLevelCode | undefined,
+    actorId: string,
+    reasonCode?: string,
+) => assignSkill(apiClient, musicianId, 'roles', 'roleCode', roleCode, skillLevelCode, actorId, reasonCode);
+
+export const assignTeamMusicianInstrument = (
+    apiClient: AdminApiClient,
+    musicianId: string,
+    instrumentCode: TeamInstrumentCode,
+    skillLevelCode: TeamSkillLevelCode | undefined,
+    actorId: string,
+    reasonCode?: string,
+) => assignSkill(apiClient, musicianId, 'instruments', 'instrumentCode', instrumentCode, skillLevelCode, actorId, reasonCode);
+
+export const assignTeamMusicianVocalPart = (
+    apiClient: AdminApiClient,
+    musicianId: string,
+    vocalPartCode: TeamVocalPartCode,
+    skillLevelCode: TeamSkillLevelCode | undefined,
+    actorId: string,
+    reasonCode?: string,
+) => assignSkill(apiClient, musicianId, 'vocal-parts', 'vocalPartCode', vocalPartCode, skillLevelCode, actorId, reasonCode);
 
 export const createTeamAvailabilityWindow = (
     apiClient: AdminApiClient,

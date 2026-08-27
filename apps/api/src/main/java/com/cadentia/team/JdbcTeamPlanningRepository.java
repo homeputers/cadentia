@@ -15,6 +15,8 @@ import com.cadentia.team.TeamPlanningModels.CreateMusicianCommand;
 import com.cadentia.team.TeamPlanningModels.InstrumentCode;
 import com.cadentia.team.TeamPlanningModels.MusicianRecord;
 import com.cadentia.team.TeamPlanningModels.MusicianRoleCode;
+import com.cadentia.team.TeamPlanningModels.MusicianSkillAssignmentRecord;
+import com.cadentia.team.TeamPlanningModels.SkillAssignmentDomain;
 import com.cadentia.team.TeamPlanningModels.RehearsalAssignmentRecord;
 import com.cadentia.team.TeamPlanningModels.RehearsalEventRecord;
 import com.cadentia.team.TeamPlanningModels.ServiceAssignmentRecord;
@@ -157,6 +159,34 @@ public class JdbcTeamPlanningRepository implements TeamPlanningRepository {
                         .addValue("vocalPartCode", enumName(vocalPartCode))
                         .addValue("skillLevelCode", enumName(skillLevelCode)),
                 UUID.class);
+    }
+
+    @Override
+    public List<MusicianSkillAssignmentRecord> listMusicianSkillAssignments(UUID musicianId) {
+        return jdbcTemplate.query(
+                """
+                SELECT id, musician_id, 'ROLE' AS domain, role_code AS code, skill_level_code
+                FROM musician_role_assignments
+                WHERE musician_id = :musicianId AND active
+                UNION ALL
+                SELECT id, musician_id, 'INSTRUMENT' AS domain, instrument_code AS code, skill_level_code
+                FROM musician_instrument_assignments
+                WHERE musician_id = :musicianId AND active
+                UNION ALL
+                SELECT id, musician_id, 'VOCAL_PART' AS domain, vocal_part_code AS code, skill_level_code
+                FROM musician_vocal_part_assignments
+                WHERE musician_id = :musicianId AND active
+                ORDER BY domain, code
+                """,
+                Map.of("musicianId", musicianId),
+                (rs, rowNum) -> new MusicianSkillAssignmentRecord(
+                        rs.getObject("id", UUID.class),
+                        rs.getObject("musician_id", UUID.class),
+                        SkillAssignmentDomain.valueOf(rs.getString("domain")),
+                        rs.getString("code"),
+                        rs.getString("skill_level_code") == null
+                                ? null
+                                : SkillLevelCode.valueOf(rs.getString("skill_level_code"))));
     }
 
     @Override
