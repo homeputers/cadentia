@@ -34,6 +34,8 @@ export type CadentiaApiRoute =
     | '/admin/song-imports/manual'
     | '/admin/songs'
     | '/admin/songs/{songId}'
+    | '/admin/songs/{songId}/tags'
+    | '/admin/songs/{songId}/tags/{tagId}'
     | '/admin/telegram/access-requests'
     | '/admin/telegram/access-requests/{requestId}:approve'
     | '/admin/telegram/access-requests/{requestId}:reject'
@@ -117,6 +119,7 @@ export type CadentiaApiOperationId =
     | 'archiveAssetAttachment'
     | 'archiveAssetVersion'
     | 'archiveRehearsalSession'
+    | 'assignAdminCatalogSongTag'
     | 'assignAdminModerationFlag'
     | 'assignTeamMusicianInstrument'
     | 'assignTeamMusicianRole'
@@ -207,6 +210,7 @@ export type CadentiaApiOperationId =
     | 'recoverConversationSession'
     | 'registerPluginPackage'
     | 'rejectTelegramAccessRequest'
+    | 'removeAdminCatalogSongTag'
     | 'removeServiceTeamAssignment'
     | 'renderEffectiveArrangement'
     | 'reorderServicePlanBlocks'
@@ -276,6 +280,8 @@ export const cadentiaApiRoutes = [
     '/admin/song-imports/manual',
     '/admin/songs',
     '/admin/songs/{songId}',
+    '/admin/songs/{songId}/tags',
+    '/admin/songs/{songId}/tags/{tagId}',
     '/admin/telegram/access-requests',
     '/admin/telegram/access-requests/{requestId}:approve',
     '/admin/telegram/access-requests/{requestId}:reject',
@@ -385,6 +391,8 @@ export const cadentiaApiRouteRefs: Record<CadentiaApiRoute, string> = {
     '/admin/song-imports/manual': './paths/admin-review.yaml#/~1admin~1song-imports~1manual',
     '/admin/songs': './paths/admin-review.yaml#/~1admin~1songs',
     '/admin/songs/{songId}': './paths/admin-review.yaml#/~1admin~1songs~1{songId}',
+    '/admin/songs/{songId}/tags': './paths/admin-review.yaml#/~1admin~1songs~1{songId}~1tags',
+    '/admin/songs/{songId}/tags/{tagId}': './paths/admin-review.yaml#/~1admin~1songs~1{songId}~1tags~1{tagId}',
     '/admin/telegram/access-requests': './paths/telegram.yaml#/~1admin~1telegram~1access-requests',
     '/admin/telegram/access-requests/{requestId}:approve': './paths/telegram.yaml#/~1admin~1telegram~1access-requests~1{requestId}:approve',
     '/admin/telegram/access-requests/{requestId}:reject': './paths/telegram.yaml#/~1admin~1telegram~1access-requests~1{requestId}:reject',
@@ -469,6 +477,7 @@ export const cadentiaApiOperations = [
     { operationId: 'archiveAssetAttachment', method: 'DELETE', path: '/asset-attachments/{attachmentId}', ref: './paths/assets.yaml#/~1asset-attachments~1{attachmentId}' },
     { operationId: 'archiveAssetVersion', method: 'DELETE', path: '/assets/{assetId}/versions/{assetVersionId}', ref: './paths/assets.yaml#/~1assets~1{assetId}~1versions~1{assetVersionId}' },
     { operationId: 'archiveRehearsalSession', method: 'DELETE', path: '/service-plans/{servicePlanId}/rehearsal-sessions/{rehearsalSessionId}', ref: './paths/rehearsal-workflow.yaml#/~1service-plans~1{servicePlanId}~1rehearsal-sessions~1{rehearsalSessionId}' },
+    { operationId: 'assignAdminCatalogSongTag', method: 'POST', path: '/admin/songs/{songId}/tags', ref: './paths/admin-review.yaml#/~1admin~1songs~1{songId}~1tags' },
     { operationId: 'assignAdminModerationFlag', method: 'POST', path: '/admin/moderation-flags/{flagId}/assign', ref: './paths/admin-review.yaml#/~1admin~1moderation-flags~1{flagId}~1assign' },
     { operationId: 'assignTeamMusicianInstrument', method: 'POST', path: '/team-assignments/musicians/{musicianId}/instruments', ref: './paths/team-assignments.yaml#/~1team-assignments~1musicians~1{musicianId}~1instruments' },
     { operationId: 'assignTeamMusicianRole', method: 'POST', path: '/team-assignments/musicians/{musicianId}/roles', ref: './paths/team-assignments.yaml#/~1team-assignments~1musicians~1{musicianId}~1roles' },
@@ -559,6 +568,7 @@ export const cadentiaApiOperations = [
     { operationId: 'recoverConversationSession', method: 'POST', path: '/conversation-sessions/{sessionId}/recover', ref: './paths/conversation-sessions.yaml#/~1conversation-sessions~1{sessionId}~1recover' },
     { operationId: 'registerPluginPackage', method: 'POST', path: '/admin/plugins', ref: './paths/plugins.yaml#/~1admin~1plugins' },
     { operationId: 'rejectTelegramAccessRequest', method: 'POST', path: '/admin/telegram/access-requests/{requestId}:reject', ref: './paths/telegram.yaml#/~1admin~1telegram~1access-requests~1{requestId}:reject' },
+    { operationId: 'removeAdminCatalogSongTag', method: 'DELETE', path: '/admin/songs/{songId}/tags/{tagId}', ref: './paths/admin-review.yaml#/~1admin~1songs~1{songId}~1tags~1{tagId}' },
     { operationId: 'removeServiceTeamAssignment', method: 'DELETE', path: '/team-assignments/services/{servicePlanId}/assignments/{assignmentId}', ref: './paths/team-assignments.yaml#/~1team-assignments~1services~1{servicePlanId}~1assignments~1{assignmentId}' },
     { operationId: 'renderEffectiveArrangement', method: 'GET', path: '/service-plans/{servicePlanId}/effective-arrangements/{arrangementId}', ref: './paths/rehearsal-workflow.yaml#/~1service-plans~1{servicePlanId}~1effective-arrangements~1{arrangementId}' },
     { operationId: 'reorderServicePlanBlocks', method: 'POST', path: '/service-plans/{servicePlanId}/blocks:order', ref: './paths/service-plans.yaml#/~1service-plans~1{servicePlanId}~1blocks:order' },
