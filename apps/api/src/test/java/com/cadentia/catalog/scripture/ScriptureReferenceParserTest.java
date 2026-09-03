@@ -65,6 +65,50 @@ class ScriptureReferenceParserTest {
     }
 
     @Test
+    void parsesSpanishBookNames() {
+        // Arrange / Act / Assert
+        assertThat(ScriptureReferenceParser.parse("Filipenses 4:13")).containsExactly(
+                new CanonicalScriptureReference("philippians", 4, 13, 13));
+        assertThat(ScriptureReferenceParser.parse("Salmos 23")).containsExactly(
+                new CanonicalScriptureReference("psalms", 23, null, null));
+        assertThat(ScriptureReferenceParser.parse("1 Corintios 13:4-7")).containsExactly(
+                new CanonicalScriptureReference("1 corinthians", 13, 4, 7));
+        assertThat(ScriptureReferenceParser.parse("Apocalipsis 21:4")).containsExactly(
+                new CanonicalScriptureReference("revelation", 21, 4, 4));
+    }
+
+    @Test
+    void parsesPortugueseBookNamesAndAbbreviations() {
+        // Arrange / Act / Assert
+        assertThat(ScriptureReferenceParser.parse("Gênesis 1:1")).containsExactly(
+                new CanonicalScriptureReference("genesis", 1, 1, 1));
+        assertThat(ScriptureReferenceParser.parse("Salmo 23")).containsExactly(
+                new CanonicalScriptureReference("psalms", 23, null, null));
+        assertThat(ScriptureReferenceParser.parse("João 3:16")).containsExactly(
+                new CanonicalScriptureReference("john", 3, 16, 16));
+        assertThat(ScriptureReferenceParser.parse("Jo 3:17")).containsExactly(
+                new CanonicalScriptureReference("john", 3, 17, 17));
+        assertThat(ScriptureReferenceParser.parse("Atos 2:42")).containsExactly(
+                new CanonicalScriptureReference("acts", 2, 42, 42));
+        assertThat(ScriptureReferenceParser.parse("2 Coríntios 5:17")).containsExactly(
+                new CanonicalScriptureReference("2 corinthians", 5, 17, 17));
+    }
+
+    @Test
+    void crossLanguageReferencesMatchTheSameCanonicalBook() {
+        // Arrange
+        CanonicalScriptureReference tag = new CanonicalScriptureReference("philippians", 4, 10, 20);
+
+        // Act / Assert
+        assertThat(ScriptureReferenceParser.parse("Fil 4:13").stream()
+                        .map(tag::matchTier))
+                .containsExactly(CanonicalScriptureReference.MatchTier.EXACT_OR_OVERLAP);
+        assertThat(ScriptureReferenceParser.parse("Filipenses 4:13").stream()
+                        .map(tag::matchTier))
+                .containsExactly(CanonicalScriptureReference.MatchTier.EXACT_OR_OVERLAP);
+    }
+
+    @Test
     void returnsEmptyForBlankUnparsableOrUnknownBooks() {
         // Arrange / Act / Assert
         assertThat(ScriptureReferenceParser.parse(null)).isEmpty();

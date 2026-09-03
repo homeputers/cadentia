@@ -64,6 +64,20 @@ class ScriptureTagMatcherTest {
     }
 
     @Test
+    void matchesPortugueseTagsAndQueriesThroughCanonicalBooks() {
+        // Arrange
+        RecommendationTag tag = scriptureTag("João 3:16-18", "joao-3-16-18");
+
+        // Act / Assert
+        assertThat(ScriptureTagMatcher.fromRawValues(List.of("Jo 3:17")).bestTier(tag))
+                .isEqualTo(MatchTier.EXACT_OR_OVERLAP);
+        assertThat(ScriptureTagMatcher.fromRawValues(List.of("Sal 23:1")).matches(
+                scriptureTag("Salmos 23", "salmos-23"))).isTrue();
+        assertThat(ScriptureTagMatcher.fromRawValues(List.of("João 3:16")).matches(tag)).isTrue();
+        assertThat(ScriptureTagMatcher.fromRawValues(List.of("Mateus 5:9")).matches(tag)).isFalse();
+    }
+
+    @Test
     void reportsNotRequestedForBlankOrMissingValues() {
         // Arrange / Act / Assert
         assertThat(ScriptureTagMatcher.fromRawValues(null).requested()).isFalse();

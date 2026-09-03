@@ -12,6 +12,22 @@ import java.util.regex.Pattern;
  * Deterministic parser that normalizes free-text scripture references (including common book
  * abbreviations, numbered books, and verse ranges) into {@link CanonicalScriptureReference}s.
  * Unparsable input yields an empty list; the parser never throws on user-provided text.
+ *
+ * <p>Book-name aliases are language-aware: English, Spanish, and Portuguese names and common
+ * abbreviations are all registered in a single table. This works because diacritics are stripped
+ * before lookup and book names across the supported languages map to disjoint keys; a handful of
+ * names normalize identically across languages (e.g. es/pt "Gálatas" and "galatas") and simply map
+ * to the same canonical book. One accepted trade-off: the Portuguese abbreviation "Jo" maps to
+ * John (João), so a Portuguese reference to Job ("Jó") parses as John; matching is against curated
+ * tags, so wrong-book collisions surface visibly in explanations rather than silently.
+ *
+ * <p><b>Adding a new language:</b> register the new language's canonical book names and common
+ * abbreviations with {@code register(aliases, ...)} in {@link #buildBookAliases()}, keyed by their
+ * diacritic-stripped, non-alphanumeric-normalized form. Numbered books need explicit prefixed keys
+ * (e.g. "1corintios") because base-name keys intentionally do not carry a numeric prefix. Add
+ * parser tests for representative references in the new language, and check for key collisions
+ * against the existing English/Spanish/Portuguese registrations (a collision changes existing
+ * matches silently).
  */
 public final class ScriptureReferenceParser {
 
@@ -158,6 +174,97 @@ public final class ScriptureReferenceParser {
         register(aliases, "3 john", "3john", "3jn");
         register(aliases, "jude", "jude");
         register(aliases, "revelation", "revelation", "rev", "re");
+        // Spanish book names (es)
+        register(aliases, "exodus", "exodo");
+        register(aliases, "leviticus", "levitico");
+        register(aliases, "numbers", "numeros");
+        register(aliases, "deuteronomy", "deuteronomio");
+        register(aliases, "joshua", "josue");
+        register(aliases, "judges", "jueces");
+        register(aliases, "1 kings", "1reyes");
+        register(aliases, "2 kings", "2reyes");
+        register(aliases, "kings", "reyes");
+        register(aliases, "1 chronicles", "1cronicas");
+        register(aliases, "2 chronicles", "2cronicas");
+        register(aliases, "chronicles", "cronicas");
+        register(aliases, "ezra", "esdras");
+        register(aliases, "nehemiah", "nehemias");
+        register(aliases, "esther", "ester");
+        register(aliases, "psalms", "salmos", "salmo", "sal", "sl");
+        register(aliases, "proverbs", "proverbios");
+        register(aliases, "ecclesiastes", "eclesiastes");
+        register(aliases, "song of solomon", "cantares", "cantar");
+        register(aliases, "isaiah", "isaias");
+        register(aliases, "jeremiah", "jeremias");
+        register(aliases, "lamentations", "lamentaciones");
+        register(aliases, "ezekiel", "ezequiel");
+        register(aliases, "hosea", "oseas");
+        register(aliases, "obadiah", "abdias");
+        register(aliases, "jonah", "jonas");
+        register(aliases, "micah", "miqueas");
+        register(aliases, "habakkuk", "habacuc");
+        register(aliases, "zephaniah", "sofonias");
+        register(aliases, "haggai", "hageo");
+        register(aliases, "zechariah", "zacarias");
+        register(aliases, "malachi", "malaquias");
+        register(aliases, "matthew", "mateo");
+        register(aliases, "mark", "marcos");
+        register(aliases, "luke", "lucas");
+        register(aliases, "john", "juan");
+        register(aliases, "acts", "hechos");
+        register(aliases, "romans", "romanos");
+        register(aliases, "1 corinthians", "1corintios", "1co");
+        register(aliases, "2 corinthians", "2corintios", "2co");
+        register(aliases, "corinthians", "corintios");
+        register(aliases, "galatians", "galatas");
+        register(aliases, "ephesians", "efesios");
+        register(aliases, "philippians", "filipenses", "fil");
+        register(aliases, "colossians", "colosenses");
+        register(aliases, "1 thessalonians", "1tesalonicenses");
+        register(aliases, "2 thessalonians", "2tesalonicenses");
+        register(aliases, "thessalonians", "tesalonicenses");
+        register(aliases, "1 timothy", "1timoteo");
+        register(aliases, "2 timothy", "2timoteo");
+        register(aliases, "timothy", "timoteo");
+        register(aliases, "titus", "tito");
+        register(aliases, "philemon", "filemon");
+        register(aliases, "hebrews", "hebreos");
+        register(aliases, "james", "santiago");
+        register(aliases, "1 peter", "1pedro");
+        register(aliases, "2 peter", "2pedro");
+        register(aliases, "peter", "pedro");
+        register(aliases, "1 john", "1juan");
+        register(aliases, "2 john", "2juan");
+        register(aliases, "3 john", "3juan");
+        register(aliases, "jude", "judas");
+        register(aliases, "revelation", "apocalipsis");
+        // Portuguese book names (pt)
+        register(aliases, "judges", "juizes");
+        register(aliases, "ruth", "rute");
+        register(aliases, "1 kings", "1reis");
+        register(aliases, "2 kings", "2reis");
+        register(aliases, "kings", "reis");
+        register(aliases, "nehemiah", "neemias");
+        register(aliases, "hosea", "oseias");
+        register(aliases, "obadiah", "obadias");
+        register(aliases, "micah", "miqueias");
+        register(aliases, "nahum", "naum");
+        register(aliases, "habakkuk", "habacuque");
+        register(aliases, "haggai", "ageu");
+        register(aliases, "matthew", "mateus");
+        register(aliases, "john", "joao", "jo");
+        register(aliases, "acts", "atos");
+        register(aliases, "colossians", "colossenses");
+        register(aliases, "1 thessalonians", "1tessalonicenses");
+        register(aliases, "2 thessalonians", "2tessalonicenses");
+        register(aliases, "thessalonians", "tessalonicenses");
+        register(aliases, "philemon", "filemom");
+        register(aliases, "hebrews", "hebreus");
+        register(aliases, "james", "tiago");
+        register(aliases, "1 john", "1joao");
+        register(aliases, "2 john", "2joao");
+        register(aliases, "3 john", "3joao");
+        register(aliases, "revelation", "apocalipse");
         return Map.copyOf(aliases);
     }
 

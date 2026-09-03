@@ -94,3 +94,22 @@ The LLM must output:
 - Follow Given/When/Then or Arrange/Act/Assert pattern for tests
 - Add captors at class level with `@Captor` annotation instead of inline in tests
 - JUnit and mockito
+
+#### Scripture reference parsing and languages
+
+Scripture matching (recommendation engine and catalog search) is canonical-book based and
+language-aware via the alias table in
+`apps/api/src/main/java/com/cadentia/catalog/scripture/ScriptureReferenceParser.java`
+(English, Spanish, and Portuguese are registered today).
+
+- When support for a new language is introduced (a new `language` slot value, locale, or catalog
+  lyrics language), the new language's canonical Bible book names and common abbreviations must be
+  added to `BOOK_ALIASES` in `ScriptureReferenceParser`, keyed by their diacritic-stripped,
+  non-alphanumeric-normalized form. Numbered books need explicit prefixed keys (e.g. `1corintios`).
+- Check new keys against existing registrations for collisions — a colliding key silently changes
+  existing matches.
+- Add parser tests with representative references in the new language (full name, common
+  abbreviation, numbered book, verse range) and ideally a `ScriptureTagMatcherTest` case showing a
+  new-language query matching an existing curated tag.
+- See the class-level Javadoc on `ScriptureReferenceParser` for the full procedure and known
+  trade-offs (e.g. pt "Jo" maps to John/João).
