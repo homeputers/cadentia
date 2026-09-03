@@ -93,4 +93,33 @@ class ScoringRequestFactoryTest {
         assertThat(scoringRequest.defaultsApplied())
                 .isEqualTo(new ScoringRequest.DefaultsApplied(false, false, false, false));
     }
+
+    @Test
+    void fromValidatedRequestCarriesScriptureReferencesIntoScoringRequest() {
+        // Arrange
+        GenerateSetlistRequest request = new GenerateSetlistRequest()
+                .verseText("Philippians 4:13")
+                .scriptureReferences(List.of("Philippians 4:13", "Isaiah 41:10"));
+
+        // Act
+        ScoringRequest scoringRequest = factory.fromValidatedRequest(request);
+
+        // Assert
+        assertThat(scoringRequest.verseText()).isEqualTo("Philippians 4:13");
+        assertThat(scoringRequest.scriptureReferences())
+                .containsExactly("Philippians 4:13", "Isaiah 41:10");
+    }
+
+    @Test
+    void fromValidatedRequestDefaultsMissingScriptureReferencesToEmptyList() {
+        // Arrange
+        GenerateSetlistRequest request = new GenerateSetlistRequest()
+                .verseText("Psalm 24");
+
+        // Act
+        ScoringRequest scoringRequest = factory.fromValidatedRequest(request);
+
+        // Assert
+        assertThat(scoringRequest.scriptureReferences()).isEmpty();
+    }
 }

@@ -63,6 +63,7 @@ public class ScoringRequestFactory {
 
         return new ScoringRequest(
                 request.getVerseText(),
+                request.getScriptureReferences() == null ? List.of() : request.getScriptureReferences(),
                 request.getThemeHints() == null ? List.of() : request.getThemeHints(),
                 countsDefaulted ? defaults.praiseCount() : counts.getPraise(),
                 countsDefaulted ? defaults.worshipCount() : counts.getWorship(),

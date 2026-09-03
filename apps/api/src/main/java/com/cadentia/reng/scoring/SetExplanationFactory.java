@@ -3,6 +3,7 @@ package com.cadentia.reng.scoring;
 import com.cadentia.catalog.model.TagType;
 import com.cadentia.reng.RecommendableArrangement;
 import com.cadentia.reng.RecommendationTag;
+import com.cadentia.reng.ScriptureTagMatcher;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -131,7 +132,7 @@ public class SetExplanationFactory {
                     null));
         }
 
-        if (request.verseText() != null && !request.verseText().isBlank()) {
+        if (!ScriptureTagMatcher.rawScriptureValues(request).isEmpty()) {
             Set<String> coveredScripture = coveredScriptureSlugs(selected);
             facts.add(new RecommendationExplanationFact(
                     "SCRIPTURE_COVERAGE",

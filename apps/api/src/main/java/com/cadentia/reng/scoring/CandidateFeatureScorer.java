@@ -1,8 +1,10 @@
 package com.cadentia.reng.scoring;
 
 import com.cadentia.catalog.model.TagType;
+import com.cadentia.catalog.scripture.CanonicalScriptureReference.MatchTier;
 import com.cadentia.reng.RecommendableArrangement;
 import com.cadentia.reng.RecommendationTag;
+import com.cadentia.reng.ScriptureTagMatcher;
 import com.cadentia.reng.scoring.RecommendationPluginContributionModels.ScoringAdjustment;
 import com.cadentia.reng.scoring.RecommendationPluginContributionModels.ValidatedPluginContributions;
 import java.util.ArrayList;
@@ -232,15 +234,26 @@ public class CandidateFeatureScorer {
     }
 
     private static double scriptureMatch(RecommendableArrangement candidate, ScoringRequest request) {
-        if (request.verseText() == null || request.verseText().isBlank()) {
+        ScriptureTagMatcher matcher = ScriptureTagMatcher.fromRequest(request);
+        if (!matcher.requested()) {
             return 0.5d;
         }
-        String verse = normalize(request.verseText());
-        boolean matched = candidate.matchedTags().stream()
+        List<RecommendationTag> scriptureTags = candidate.matchedTags().stream()
                 .filter(tag -> tag.tagType() == TagType.SCRIPTURE)
-                .map(tag -> normalize(tag.name() + " " + tag.slug()))
-                .anyMatch(value -> value.contains(verse) || verse.contains(value));
-        return matched ? 1.0d : 0.0d;
+                .toList();
+        if (matcher.hasParsedQueries()) {
+            MatchTier bestTier = scriptureTags.stream()
+                    .map(matcher::bestTier)
+                    .max(Comparator.comparingInt(Enum::ordinal))
+                    .orElse(MatchTier.NONE);
+            return switch (bestTier) {
+                case EXACT_OR_OVERLAP -> 1.0d;
+                case CHAPTER -> 0.75d;
+                case BOOK -> 0.5d;
+                case NONE -> 0.0d;
+            };
+        }
+        return scriptureTags.stream().anyMatch(matcher::matches) ? 1.0d : 0.0d;
     }
 
     private static double roleFit(RecommendableArrangement candidate) {

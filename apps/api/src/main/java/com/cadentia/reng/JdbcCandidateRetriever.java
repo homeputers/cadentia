@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -34,6 +35,8 @@ public class JdbcCandidateRetriever implements CandidateRetriever {
 
     @Override
     public List<RecommendableArrangement> findCandidates(CandidateSearchCriteria criteria) {
+        ScriptureTagMatcher scriptureMatcher = ScriptureTagMatcher.fromRawValues(criteria.scriptureReferences());
+        boolean scripturePostFilter = scriptureMatcher.requested();
         StringBuilder sql = new StringBuilder("SELECT ")
                 .append(CANDIDATE_COLUMNS)
                 .append(" FROM v_recommendable_arrangements WHERE 1 = 1");
@@ -66,7 +69,7 @@ public class JdbcCandidateRetriever implements CandidateRetriever {
         if (criteria.requiredApprovalStatus() != null) {
             appendApprovalStatusFilter(sql, params, criteria.requiredApprovalStatus());
         }
-        if (!criteria.includeAnyTags().isEmpty()) {
+        if (!criteria.includeAnyTags().isEmpty() && !scripturePostFilter) {
             appendIncludeAnyTagFilter(sql, params, criteria.includeAnyTags());
         }
         if (!criteria.includeAllTags().isEmpty()) {
@@ -75,7 +78,7 @@ public class JdbcCandidateRetriever implements CandidateRetriever {
 
         sql.append(" ORDER BY title, arrangement_id");
         List<RecommendableArrangement> candidates = jdbcTemplate.query(sql.toString(), params, candidateMapper());
-        return enrichWithControlledTags(candidates, criteria);
+        return enrichWithControlledTags(candidates, criteria, scriptureMatcher);
     }
 
     private static void appendApprovalStatusFilter(
@@ -132,7 +135,8 @@ public class JdbcCandidateRetriever implements CandidateRetriever {
 
     private List<RecommendableArrangement> enrichWithControlledTags(
             List<RecommendableArrangement> candidates,
-            CandidateSearchCriteria criteria) {
+            CandidateSearchCriteria criteria,
+            ScriptureTagMatcher scriptureMatcher) {
         if (candidates.isEmpty()) {
             return List.of();
         }
@@ -155,12 +159,35 @@ public class JdbcCandidateRetriever implements CandidateRetriever {
                 .map(candidate -> {
                     List<RecommendationTag> controlledTags = tagsByArrangementId.getOrDefault(
                             candidate.arrangementId(), List.of());
-                    List<RecommendationTag> matchedTags = controlledTags.stream()
+                    List<RecommendationTag> filterMatchedTags = controlledTags.stream()
                             .filter(tag -> requestedTagFilters.stream().anyMatch(filter -> filter.matches(tag)))
                             .toList();
-                    return candidate.withRecommendationTags(controlledTags, matchedTags);
+                    List<RecommendationTag> scriptureMatchedTags = scriptureMatcher.requested()
+                            ? controlledTags.stream()
+                                    .filter(scriptureMatcher::matches)
+                                    .filter(tag -> !filterMatchedTags.contains(tag))
+                                    .toList()
+                            : List.of();
+                    List<RecommendationTag> matchedTags = Stream.concat(
+                                    filterMatchedTags.stream(), scriptureMatchedTags.stream())
+                            .toList();
+                    boolean anyIncludeTagMatched = !criteria.includeAnyTags().isEmpty()
+                            && controlledTags.stream()
+                                    .anyMatch(tag -> criteria.includeAnyTags().stream()
+                                            .anyMatch(filter -> filter.matches(tag)));
+                    boolean survivesScripturePostFilter = !scriptureMatcher.requested()
+                            || anyIncludeTagMatched
+                            || !scriptureMatchedTags.isEmpty();
+                    return new EnrichedCandidate(
+                            candidate.withRecommendationTags(controlledTags, matchedTags),
+                            survivesScripturePostFilter);
                 })
+                .filter(EnrichedCandidate::survivesPostFilter)
+                .map(EnrichedCandidate::candidate)
                 .toList();
+    }
+
+    private record EnrichedCandidate(RecommendableArrangement candidate, boolean survivesPostFilter) {
     }
 
     private static List<TagFilter> requestedTagFilters(CandidateSearchCriteria criteria) {

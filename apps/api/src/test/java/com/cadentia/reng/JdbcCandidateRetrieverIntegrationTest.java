@@ -311,6 +311,134 @@ class JdbcCandidateRetrieverIntegrationTest {
 
 
     @Test
+    void findCandidatesMatchesScriptureRangesAndAbbreviations() {
+        // Arrange
+        CatalogContent rangeTagged = createCatalogContent("scripture-range");
+        approveAllRequiredGates(rangeTagged, ApprovalStatus.APPROVED);
+        addSongTag(rangeTagged.song(), TagType.SCRIPTURE, "Philippians 4:10-20", "philippians-4-10-20", true);
+        CatalogContent unrelated = createCatalogContent("scripture-unrelated");
+        approveAllRequiredGates(unrelated, ApprovalStatus.APPROVED);
+        addSongTag(unrelated.song(), TagType.SCRIPTURE, "Romans 8:28", "romans-8-28", true);
+        CatalogContent untagged = createCatalogContent("scripture-untagged");
+        approveAllRequiredGates(untagged, ApprovalStatus.APPROVED);
+
+        // Act
+        List<RecommendableArrangement> candidates = candidateRetriever.findCandidates(scriptureCriteria("Phil 4:13"));
+
+        // Assert
+        assertThat(candidates)
+                .extracting(RecommendableArrangement::arrangementId)
+                .contains(rangeTagged.arrangement().id())
+                .doesNotContain(unrelated.arrangement().id(), untagged.arrangement().id());
+        assertThat(candidates).singleElement().satisfies(candidate -> assertThat(candidate.matchedTags())
+                .extracting(RecommendationTag::tagType, RecommendationTag::slug)
+                .containsExactly(org.assertj.core.groups.Tuple.tuple(TagType.SCRIPTURE, "philippians-4-10-20")));
+    }
+
+    @Test
+    void findCandidatesMatchesChapterAndBookLevelScriptureTags() {
+        // Arrange
+        CatalogContent chapterTagged = createCatalogContent("scripture-chapter");
+        approveAllRequiredGates(chapterTagged, ApprovalStatus.APPROVED);
+        addSongTag(chapterTagged.song(), TagType.SCRIPTURE, "Philippians 4", "philippians-4", true);
+        CatalogContent bookTagged = createCatalogContent("scripture-book");
+        approveAllRequiredGates(bookTagged, ApprovalStatus.APPROVED);
+        addSongTag(bookTagged.song(), TagType.SCRIPTURE, "Philippians", "philippians", true);
+        CatalogContent wrongChapter = createCatalogContent("scripture-wrong-chapter");
+        approveAllRequiredGates(wrongChapter, ApprovalStatus.APPROVED);
+        addSongTag(wrongChapter.song(), TagType.SCRIPTURE, "Philippians 3", "philippians-3", true);
+
+        // Act
+        List<RecommendableArrangement> candidates = candidateRetriever.findCandidates(scriptureCriteria("Philippians 4:13"));
+
+        // Assert
+        assertThat(candidates)
+                .extracting(RecommendableArrangement::arrangementId)
+                .contains(chapterTagged.arrangement().id(), bookTagged.arrangement().id())
+                .doesNotContain(wrongChapter.arrangement().id());
+    }
+
+    @Test
+    void findCandidatesPreservesOrSemanticsBetweenThemeAndScriptureFilters() {
+        // Arrange
+        CatalogContent themeOnly = createCatalogContent("or-theme-only");
+        approveAllRequiredGates(themeOnly, ApprovalStatus.APPROVED);
+        addArrangementTag(themeOnly.arrangement(), TagType.THEME, "Repentance", "repentance", true);
+        CatalogContent scriptureOnly = createCatalogContent("or-scripture-only");
+        approveAllRequiredGates(scriptureOnly, ApprovalStatus.APPROVED);
+        addSongTag(scriptureOnly.song(), TagType.SCRIPTURE, "Psalm 51", "psalm-51", true);
+        CatalogContent neither = createCatalogContent("or-neither");
+        approveAllRequiredGates(neither, ApprovalStatus.APPROVED);
+
+        // Act
+        List<RecommendableArrangement> candidates = candidateRetriever.findCandidates(new CandidateSearchCriteria(
+                null,
+                List.of(),
+                null,
+                null,
+                null,
+                null,
+                List.of(TagFilter.bySlug(TagType.THEME, "repentance")),
+                List.of(),
+                ApprovalStatus.APPROVED,
+                List.of("Psalm 51:1")));
+
+        // Assert
+        assertThat(candidates)
+                .extracting(RecommendableArrangement::arrangementId)
+                .contains(themeOnly.arrangement().id(), scriptureOnly.arrangement().id())
+                .doesNotContain(neither.arrangement().id());
+    }
+
+    @Test
+    void findCandidatesFallsBackToSubstringMatchingForUnparsableScriptureText() {
+        // Arrange
+        CatalogContent legacyMatch = createCatalogContent("scripture-legacy-match");
+        approveAllRequiredGates(legacyMatch, ApprovalStatus.APPROVED);
+        addSongTag(legacyMatch.song(), TagType.SCRIPTURE, "Sweet Hour of Prayer", "sweet-hour-of-prayer", true);
+        CatalogContent noMatch = createCatalogContent("scripture-legacy-no-match");
+        approveAllRequiredGates(noMatch, ApprovalStatus.APPROVED);
+
+        // Act
+        List<RecommendableArrangement> candidates = candidateRetriever.findCandidates(scriptureCriteria("sweet hour of prayer"));
+
+        // Assert
+        assertThat(candidates)
+                .extracting(RecommendableArrangement::arrangementId)
+                .contains(legacyMatch.arrangement().id())
+                .doesNotContain(noMatch.arrangement().id());
+    }
+
+    @Test
+    void findCandidatesScriptureFilterStillRequiresApprovalGates() {
+        // Arrange
+        CatalogContent unapproved = createCatalogContent("scripture-unapproved");
+        addSongTag(unapproved.song(), TagType.SCRIPTURE, "Philippians 4:13", "philippians-4-13", true);
+
+        // Act
+        List<RecommendableArrangement> candidates = candidateRetriever.findCandidates(scriptureCriteria("Philippians 4:13"));
+
+        // Assert
+        assertThat(candidates)
+                .extracting(RecommendableArrangement::arrangementId)
+                .doesNotContain(unapproved.arrangement().id());
+    }
+
+    private static CandidateSearchCriteria scriptureCriteria(String... references) {
+        return new CandidateSearchCriteria(
+                null,
+                List.of(),
+                null,
+                null,
+                null,
+                null,
+                List.of(),
+                List.of(),
+                ApprovalStatus.APPROVED,
+                List.of(references));
+    }
+
+    @Test
     void findCandidatesExcludesInactiveArrangementsFromUserFacingRecommendationPath() {
         // Arrange
         CatalogContent inactive = createCatalogContent("inactive-arrangement");

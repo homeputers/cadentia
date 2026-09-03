@@ -247,7 +247,8 @@ public class SetlistService {
                 null,
                 requestedTagFilters(request),
                 List.of(),
-                ApprovalStatus.APPROVED));
+                ApprovalStatus.APPROVED,
+                ScriptureTagMatcher.rawScriptureValues(request)));
     }
 
     private List<TagFilter> requestedTagFilters(ScoringRequest request) {
@@ -257,9 +258,6 @@ public class SetlistService {
                 .filter(value -> !value.isBlank())
                 .map(slug -> TagFilter.bySlug(TagType.THEME, slug))
                 .forEach(filters::add);
-        if (request.verseText() != null && !request.verseText().isBlank()) {
-            filters.add(TagFilter.bySlug(TagType.SCRIPTURE, slug(request.verseText())));
-        }
         return filters.stream()
                 .collect(java.util.stream.Collectors.toMap(
                         filter -> filter.tagType() + ":" + filter.slug(),

@@ -5,6 +5,7 @@ import com.cadentia.catalog.model.TagType;
 import com.cadentia.reng.ApprovalGateSummary;
 import com.cadentia.reng.RecommendableArrangement;
 import com.cadentia.reng.RecommendationTag;
+import com.cadentia.reng.ScriptureTagMatcher;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -253,18 +254,14 @@ public class ItemExplanationFactory {
             RecommendableArrangement candidate,
             ScoringRequest request,
             List<ScoringComponentScore> componentScores) {
-        if (request.verseText() == null
-                || request.verseText().isBlank()
+        ScriptureTagMatcher matcher = ScriptureTagMatcher.fromRequest(request);
+        if (!matcher.requested()
                 || rawScore(componentScores, CandidateFeatureScorer.SCRIPTURE_MATCH) <= 0.0d) {
             return List.of();
         }
-        String verse = normalize(request.verseText());
         return candidate.matchedTags().stream()
                 .filter(tag -> tag.tagType() == TagType.SCRIPTURE)
-                .filter(tag -> {
-                    String tagValue = normalize(tag.name() + " " + tag.slug());
-                    return tagValue.contains(verse) || verse.contains(tagValue);
-                })
+                .filter(matcher::matches)
                 .toList();
     }
 
