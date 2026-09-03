@@ -731,6 +731,9 @@ const codeTranslations: Record<string, string> = {
     'PREFERRED': 'Preferido', 'AVAILABLE': 'Disponible', 'LIMITED': 'Limitado', 'DO_NOT_SCHEDULE': 'No programar',
     'SERVICE': 'Servicio', 'REHEARSAL': 'Ensayo', 'SONG_OVERRIDE': 'Anulación por canción',
     'CREATE': 'Crear', 'REMOVE': 'Eliminar', 'REORDER': 'Reordenar', 'STATUS': 'Estado',
+    'Tags': 'Etiquetas', 'Tag type': 'Tipo de etiqueta', 'Tag name': 'Nombre de etiqueta', 'Assign tag': 'Asignar etiqueta', 'Remove': 'Eliminar', 'Remove tag': 'Eliminar etiqueta', 'Tag assigned.': 'Etiqueta asignada.', 'Tag removed.': 'Etiqueta eliminada.',
+    'THEME': 'Tema', 'SCRIPTURE': 'Escritura', 'MOOD': 'Ánimo', 'OCCASION': 'Ocasión', 'SEASON': 'Temporada', 'MUSICAL_STYLE': 'Estilo musical', 'AUDIENCE': 'Audiencia',
+    'Theme': 'Tema', 'Scripture': 'Escritura', 'Mood': 'Ánimo', 'Occasion': 'Ocasión', 'Season': 'Temporada', 'Musical style': 'Estilo musical', 'Audience': 'Audiencia',
     'BEGINNER': 'Principiante', 'INTERMEDIATE': 'Intermedio', 'ADVANCED': 'Avanzado', 'DIRECTOR': 'Director',
     'ROLE': 'Rol', 'INSTRUMENT': 'Instrumento', 'VOCAL_PART': 'Parte vocal',
 };

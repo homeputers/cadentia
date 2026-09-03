@@ -529,7 +529,7 @@ const TagsSection = ({ tags, canEdit, tagDraft, onTagDraftChange, onAssignTag, o
                             {byType[tagType].map((tag) => (
                                 <span key={tag.tagId} className="admin-tag-item">
                                     <Badge severity="neutral">{tag.name}</Badge>
-                                    {canEdit && <button type="button" className="secondary" aria-label={`Remove tag ${tag.name}`} onClick={() => onRemoveTag(tag.tagId)}>Remove</button>}
+                                    {canEdit && <button type="button" className="secondary" aria-label="Remove tag" title={tag.name} onClick={() => onRemoveTag(tag.tagId)}>Remove</button>}
                                 </span>
                             ))}
                         </div>

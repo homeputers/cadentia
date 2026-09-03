@@ -41,4 +41,21 @@ describe('church-instance i18n', () => {
         expect(translateText('es-GT', 'DOCTRINAL, PROVENANCE')).toBe('Doctrinal, Procedencia');
         expect(translateText('es-GT', 'en')).toBe('Inglés');
     });
+
+    it('translates song tag editing controls and controlled tag type labels', () => {
+        expect(translateText('es-GT', 'Tags')).toBe('Etiquetas');
+        expect(translateText('es-GT', 'No tags assigned.')).toBe('No hay etiquetas asignadas.');
+        expect(translateText('es-GT', 'Tag type')).toBe('Tipo de etiqueta');
+        expect(translateText('es-GT', 'Tag name')).toBe('Nombre de etiqueta');
+        expect(translateText('es-GT', 'Assign tag')).toBe('Asignar etiqueta');
+        expect(translateText('es-GT', 'Remove')).toBe('Eliminar');
+        expect(translateText('es-GT', 'Remove tag')).toBe('Eliminar etiqueta');
+        expect(translateText('es-GT', 'Tag assigned.')).toBe('Etiqueta asignada.');
+        expect(translateText('es-GT', 'Tag removed.')).toBe('Etiqueta eliminada.');
+        expect(translateText('es-GT', 'THEME')).toBe('Tema');
+        expect(translateText('es-GT', 'SCRIPTURE')).toBe('Escritura');
+        expect(translateText('es-GT', 'MUSICAL_STYLE')).toBe('Estilo musical');
+        expect(translateText('es-GT', 'Musical style')).toBe('Estilo musical');
+        expect(translateText('es-GT', 'Audience')).toBe('Audiencia');
+    });
 });
