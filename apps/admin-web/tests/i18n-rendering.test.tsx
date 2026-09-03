@@ -60,6 +60,7 @@ describe('admin-web Spanish rendering', () => {
                     active: true,
                 }]}
                 canEdit={true}
+                actor="catalog-editor-1"
                 tagDraft={{ tagType: 'THEME', name: '' }}
                 onTagDraftChange={() => undefined}
                 onAssignTag={(event) => event.preventDefault()}
@@ -80,6 +81,6 @@ describe('admin-web Spanish rendering', () => {
         expect(container.textContent).toContain('Tipo de etiqueta');
         expect(container.textContent).toContain('Nombre de etiqueta');
         expect(container.textContent).toContain('Asignar etiqueta');
-        expect(container.textContent).toContain('Eliminar');
+        expect(container.querySelector('button[aria-label="Eliminar etiqueta"]')).not.toBeNull();
     });
 });

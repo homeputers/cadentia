@@ -5,7 +5,7 @@ import { adminEnvironment } from '../config/environment';
 import { createAdminApiClient, type AdminApiClient, type AdminApiError } from '../generated/cadentia-api/client';
 import { assignSongTag, CONTROLLED_TAG_TYPES, getReviewSong, removeSongTag, toMetadataDraft, updateReviewSong, uploadAndAttachResource, type AssetAttachment, type AttachmentDraft, type SongMetadataDraft, type SongReviewDetail as SongReviewDetailModel } from '../song-review';
 import { LocalizedView, translateText, useI18n } from '../i18n';
-import { ActionBadge, Badge, Breadcrumbs, DataTable, Field, PageHeader, StatePanel, redactSensitiveError } from './admin-ui';
+import { ActionBadge, Badge, Breadcrumbs, ConfirmationDialog, DataTable, Field, PageHeader, StatePanel, redactSensitiveError } from './admin-ui';
 
 const label = (value?: string | null) => value ? value.replaceAll('_', ' ').toLowerCase().replace(/^./, (c) => c.toUpperCase()) : 'None';
 const severityFor = (value?: string | null) => value === 'APPROVED' || value === 'primary_chart' || value === 'performance' ? 'success' : value === 'ARCHIVED' || value === 'REJECTED' ? 'danger' : 'neutral';
@@ -281,7 +281,7 @@ export const SongReviewDetail = ({
             <StatePanel state={state} title="Song resources" onRetry={() => void load()}>{error && <p>{error}</p>}</StatePanel>
             {detail && draft && <>
                 <SongMetadataForm draft={draft} canEdit={canEdit} onSaveSongMetadata={saveSongMetadata} onSaveArrangementMetadata={saveArrangementMetadata} onSongChange={updateDraft} onArrangementChange={updateArrangement} onAddArrangement={addArrangement} onRemoveArrangement={removeArrangement} onLyricsChange={updateLyrics} onAddLyricsDocument={addLyricsDocument} onRemoveLyricsDocument={removeLyricsDocument} />
-                <TagsSection tags={detail.tags} canEdit={canEdit} tagDraft={tagDraft} onTagDraftChange={setTagDraft} onAssignTag={assignTag} onRemoveTag={removeTag} />
+                <TagsSection tags={detail.tags} canEdit={canEdit} actor={session.actorId} tagDraft={tagDraft} onTagDraftChange={setTagDraft} onAssignTag={assignTag} onRemoveTag={removeTag} />
                 <AttachmentCreateForm draft={attachmentDraft} selectedFile={attachmentFile} arrangements={arrangementOptions} canEdit={canEdit} onSubmit={addAttachment} onTargetChange={updateAttachmentTarget} onInputChange={updateAttachmentInput} onFileChange={updateAttachmentFile} />
                 <AttachmentSection title="Song attachments" caption="Song asset attachments" attachments={detail.songAttachments} />
                 {detail.arrangements.map((arrangement) => <AttachmentSection key={arrangement.arrangementId} title={`${arrangement.name} attachments`} caption={`${arrangement.name} asset attachments`} attachments={detail.arrangementAttachments[arrangement.arrangementId] ?? []} />)}
@@ -503,15 +503,17 @@ const CatalogEvidence = ({ detail }: { detail: SongReviewDetailModel }) => (
     </section></LocalizedView>
 );
 
-export const TagsSection = ({ tags, canEdit, tagDraft, onTagDraftChange, onAssignTag, onRemoveTag }: {
+export const TagsSection = ({ tags, canEdit, actor, tagDraft, onTagDraftChange, onAssignTag, onRemoveTag }: {
     tags: SongReviewDetailModel['tags'];
     canEdit: boolean;
+    actor: string;
     tagDraft: { tagType: string; name: string };
     onTagDraftChange: (draft: { tagType: string; name: string }) => void;
     onAssignTag: (event: FormEvent) => void;
     onRemoveTag: (tagId: string) => void;
 }) => {
     const { locale } = useI18n();
+    const [pendingRemoval, setPendingRemoval] = useState<SongReviewDetailModel['tags'][number] | null>(null);
     const byType = tags.reduce<Record<string, typeof tags>>((acc, tag) => {
         const group = acc[tag.tagType] ?? [];
         group.push(tag);
@@ -522,6 +524,11 @@ export const TagsSection = ({ tags, canEdit, tagDraft, onTagDraftChange, onAssig
     return (
         <LocalizedView><section className="admin-shell__panel" aria-labelledby="tags-title">
             <h2 id="tags-title">Tags</h2>
+            <form className="admin-form-grid admin-form-grid__wide" aria-label="Assign tag" onSubmit={onAssignTag}>
+                <Field label="Tag type">{({ inputId }) => <select id={inputId} value={tagDraft.tagType} disabled={!canEdit} onChange={(event) => onTagDraftChange({ ...tagDraft, tagType: event.target.value })}>{CONTROLLED_TAG_TYPES.map((tagType) => <option key={tagType} value={tagType}>{translateText(locale, label(tagType))}</option>)}</select>}</Field>
+                <Field label="Tag name" required>{({ inputId }) => <input id={inputId} value={tagDraft.name} disabled={!canEdit} onChange={(event) => onTagDraftChange({ ...tagDraft, name: event.target.value })} />}</Field>
+                <button type="submit" disabled={!canEdit || !tagDraft.name.trim()}>Assign tag</button>
+            </form>
             {tagTypes.length
                 ? tagTypes.map((tagType) => (
                     <div key={tagType} className="admin-tag-group">
@@ -530,18 +537,25 @@ export const TagsSection = ({ tags, canEdit, tagDraft, onTagDraftChange, onAssig
                             {byType[tagType].map((tag) => (
                                 <span key={tag.tagId} className="admin-tag-item">
                                     <Badge severity="neutral">{tag.name}</Badge>
-                                    {canEdit && <button type="button" className="secondary" aria-label="Remove tag" title={tag.name} onClick={() => onRemoveTag(tag.tagId)}>Remove</button>}
+                                    {canEdit && <button type="button" className="admin-tag-remove" aria-label="Remove tag" title={tag.name} onClick={() => setPendingRemoval(tag)}>×</button>}
                                 </span>
                             ))}
                         </div>
                     </div>
                 ))
                 : <p>No tags assigned.</p>}
-            <form className="admin-form-grid admin-form-grid__wide" aria-label="Assign tag" onSubmit={onAssignTag}>
-                <Field label="Tag type">{({ inputId }) => <select id={inputId} value={tagDraft.tagType} disabled={!canEdit} onChange={(event) => onTagDraftChange({ ...tagDraft, tagType: event.target.value })}>{CONTROLLED_TAG_TYPES.map((tagType) => <option key={tagType} value={tagType}>{translateText(locale, label(tagType))}</option>)}</select>}</Field>
-                <Field label="Tag name" required>{({ inputId }) => <input id={inputId} value={tagDraft.name} disabled={!canEdit} onChange={(event) => onTagDraftChange({ ...tagDraft, name: event.target.value })} />}</Field>
-                <button type="submit" disabled={!canEdit || !tagDraft.name.trim()}>Assign tag</button>
-            </form>
+            <ConfirmationDialog
+                open={pendingRemoval != null}
+                title="Remove tag"
+                acknowledgement="This removes the tag assignment from the song."
+                facts={pendingRemoval ? [pendingRemoval.name] : []}
+                auditActor={actor}
+                onCancel={() => setPendingRemoval(null)}
+                onConfirm={() => {
+                    if (pendingRemoval) onRemoveTag(pendingRemoval.tagId);
+                    setPendingRemoval(null);
+                }}
+            />
         </section></LocalizedView>
     );
 };

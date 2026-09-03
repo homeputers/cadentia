@@ -35,6 +35,21 @@ describe('shared admin UI foundations', () => {
         expect(node.querySelector('[role="alert"]')?.textContent).toBe('Status is required');
     });
 
+    it('cancels confirmation dialogs with Escape and confirms with Enter', () => {
+        const onCancel = vi.fn();
+        const onConfirm = vi.fn();
+        const node = render(<ConfirmationDialog open title="Remove tag" acknowledgement="This removes the tag assignment from the song." facts={['Repentance']} auditActor="editor-1" onCancel={onCancel} onConfirm={onConfirm} />);
+        const backdrop = node.querySelector('.admin-dialog-backdrop')!;
+
+        act(() => { backdrop.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); });
+        expect(onCancel).toHaveBeenCalledTimes(1);
+        expect(onConfirm).not.toHaveBeenCalled();
+
+        act(() => { backdrop.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); });
+        expect(onConfirm).toHaveBeenCalledTimes(1);
+        expect(onCancel).toHaveBeenCalledTimes(1);
+    });
+
     it('focuses high-risk confirmation dialogs and renders audit/version context', () => {
         const onCancel = vi.fn();
         const node = render(<ConfirmationDialog open title="Confirm rollback" acknowledgement="Type rollback in the feature screen before continuing." facts={['2 records affected']} auditActor="operator-1" versionContext="If-Match: v7" onCancel={onCancel} onConfirm={vi.fn()} />);
