@@ -1,5 +1,6 @@
 package com.cadentia.search;
 
+import com.cadentia.catalog.scripture.ScriptureReferenceParser;
 import com.cadentia.search.ApprovedSearchModels.ApprovedSearchDocument;
 import com.cadentia.search.ApprovedSearchModels.TagFacet;
 import java.sql.ResultSet;
@@ -35,7 +36,11 @@ public class JdbcApprovedSearchDocumentProvider implements ApprovedSearchDocumen
                     arrangements.name AS arrangement_name,
                     arrangements.updated_at AS arrangement_updated_at,
                     songs.updated_at AS song_updated_at,
-                    COALESCE(string_agg(DISTINCT tags.slug, ',' ORDER BY tags.slug), '') AS tag_slugs
+                    COALESCE(string_agg(DISTINCT tags.slug, ',' ORDER BY tags.slug), '') AS tag_slugs,
+                    COALESCE(
+                        string_agg(DISTINCT CASE WHEN tags.tag_type = 'SCRIPTURE' THEN tags.name END, ';'),
+                        ''
+                    ) AS scripture_names
                 FROM songs
                 JOIN arrangements
                     ON arrangements.song_id = songs.id
@@ -70,7 +75,7 @@ public class JdbcApprovedSearchDocumentProvider implements ApprovedSearchDocumen
                 null,
                 rs.getString("canonical_title"),
                 List.of(),
-                List.of(),
+                scriptureReferences(rs.getString("scripture_names")),
                 tags(rs.getString("tag_slugs")),
                 contributors(rs.getString("original_artist_display"), rs.getString("composer_credits")),
                 rs.getString("musical_key"),
@@ -102,6 +107,20 @@ public class JdbcApprovedSearchDocumentProvider implements ApprovedSearchDocumen
         return Arrays.stream(values)
                 .filter(value -> value != null && !value.isBlank())
                 .map(String::trim)
+                .distinct()
+                .toList();
+    }
+
+    private static List<NormalizedScriptureReference> scriptureReferences(String scriptureNames) {
+        if (scriptureNames == null || scriptureNames.isBlank()) {
+            return List.of();
+        }
+        return Arrays.stream(scriptureNames.split(";"))
+                .filter(value -> !value.isBlank())
+                .flatMap(value -> ScriptureReferenceParser.parse(value).stream())
+                .filter(reference -> reference.chapter() != null)
+                .map(reference -> new NormalizedScriptureReference(
+                        reference.book(), reference.chapter(), reference.startVerse(), reference.endVerse()))
                 .distinct()
                 .toList();
     }

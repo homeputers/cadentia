@@ -99,6 +99,121 @@ class CandidateFeatureScorerTest {
                 });
     }
 
+    @Test
+    void scriptureMatchScoresRangeTierAsExactMatch() {
+        // Arrange
+        ScoringRequest request = requestWithScripture(List.of("Phil 4:13"));
+        RecommendableArrangement candidate = candidate("G", 120, "4/4", 80, List.of("praise"), List.of(
+                new RecommendationTag(UUID.randomUUID(), TagType.SCRIPTURE, "Philippians 4:10-20", "philippians-4-10-20")));
+
+        // Act
+        CandidateFeatureScorer.CandidateFeatureScore score = scorer.scoreCandidate(candidate, request, scoringProfile());
+
+        // Assert
+        assertThat(score.componentScores())
+                .filteredOn(component -> component.componentCode().equals(CandidateFeatureScorer.SCRIPTURE_MATCH))
+                .singleElement()
+                .extracting(ScoringComponentScore::rawScore)
+                .isEqualTo(1.0d);
+    }
+
+    @Test
+    void scriptureMatchScoresChapterAndBookTiersAsPartialCredit() {
+        // Arrange
+        ScoringRequest request = requestWithScripture(List.of("Philippians 4:13"));
+        RecommendableArrangement chapterTag = candidate("G", 120, "4/4", 80, List.of("praise"), List.of(
+                new RecommendationTag(UUID.randomUUID(), TagType.SCRIPTURE, "Philippians 4", "philippians-4")));
+        RecommendableArrangement bookTag = candidate("G", 120, "4/4", 80, List.of("praise"), List.of(
+                new RecommendationTag(UUID.randomUUID(), TagType.SCRIPTURE, "Philippians", "philippians")));
+        RecommendableArrangement unrelatedTag = candidate("G", 120, "4/4", 80, List.of("praise"), List.of(
+                new RecommendationTag(UUID.randomUUID(), TagType.SCRIPTURE, "Philippians 3", "philippians-3")));
+
+        // Act / Assert
+        assertThat(scorer.scoreCandidate(chapterTag, request, scoringProfile()).componentScores())
+                .filteredOn(component -> component.componentCode().equals(CandidateFeatureScorer.SCRIPTURE_MATCH))
+                .singleElement()
+                .extracting(ScoringComponentScore::rawScore)
+                .isEqualTo(0.75d);
+        assertThat(scorer.scoreCandidate(bookTag, request, scoringProfile()).componentScores())
+                .filteredOn(component -> component.componentCode().equals(CandidateFeatureScorer.SCRIPTURE_MATCH))
+                .singleElement()
+                .extracting(ScoringComponentScore::rawScore)
+                .isEqualTo(0.5d);
+        assertThat(scorer.scoreCandidate(unrelatedTag, request, scoringProfile()).componentScores())
+                .filteredOn(component -> component.componentCode().equals(CandidateFeatureScorer.SCRIPTURE_MATCH))
+                .singleElement()
+                .extracting(ScoringComponentScore::rawScore)
+                .isEqualTo(0.0d);
+    }
+
+    @Test
+    void scriptureMatchFallsBackToSubstringForUnparsableRequests() {
+        // Arrange
+        ScoringRequest request = requestWithScripture(List.of("sweet hour of prayer"));
+        RecommendableArrangement candidate = candidate("G", 120, "4/4", 80, List.of("praise"), List.of(
+                new RecommendationTag(UUID.randomUUID(), TagType.SCRIPTURE, "Sweet Hour of Prayer", "sweet-hour-of-prayer")));
+
+        // Act
+        CandidateFeatureScorer.CandidateFeatureScore score = scorer.scoreCandidate(candidate, request, scoringProfile());
+
+        // Assert
+        assertThat(score.componentScores())
+                .filteredOn(component -> component.componentCode().equals(CandidateFeatureScorer.SCRIPTURE_MATCH))
+                .singleElement()
+                .extracting(ScoringComponentScore::rawScore)
+                .isEqualTo(1.0d);
+    }
+
+    @Test
+    void scriptureMatchIsNeutralWhenNoScriptureRequested() {
+        // Arrange
+        ScoringRequest request = new ScoringRequest(
+                null,
+                List.of(),
+                List.of("holiness"),
+                10,
+                5,
+                new ScoringRequest.KeyPolicy(true, true, 2),
+                new ScoringRequest.TempoPolicy(12),
+                null,
+                "en",
+                List.of(),
+                false,
+                null,
+                null,
+                null);
+        RecommendableArrangement candidate = candidate("G", 120, "4/4", 80, List.of("praise"), List.of(
+                new RecommendationTag(UUID.randomUUID(), TagType.SCRIPTURE, "Psalm 24", "psalm-24")));
+
+        // Act
+        CandidateFeatureScorer.CandidateFeatureScore score = scorer.scoreCandidate(candidate, request, scoringProfile());
+
+        // Assert
+        assertThat(score.componentScores())
+                .filteredOn(component -> component.componentCode().equals(CandidateFeatureScorer.SCRIPTURE_MATCH))
+                .singleElement()
+                .extracting(ScoringComponentScore::rawScore)
+                .isEqualTo(0.5d);
+    }
+
+    private static ScoringRequest requestWithScripture(List<String> scriptureReferences) {
+        return new ScoringRequest(
+                null,
+                scriptureReferences,
+                List.of("holiness"),
+                10,
+                5,
+                new ScoringRequest.KeyPolicy(true, true, 2),
+                new ScoringRequest.TempoPolicy(12),
+                null,
+                "en",
+                List.of(),
+                false,
+                null,
+                null,
+                null);
+    }
+
     private static RecommendableArrangement candidateWithIds(UUID arrangementId, UUID songId) {
         return new RecommendableArrangement(
                 arrangementId,

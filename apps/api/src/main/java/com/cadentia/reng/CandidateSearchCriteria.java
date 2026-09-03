@@ -13,12 +13,14 @@ public record CandidateSearchCriteria(
         Integer maxEnergy,
         List<TagFilter> includeAnyTags,
         List<TagFilter> includeAllTags,
-        ApprovalStatus requiredApprovalStatus) {
+        ApprovalStatus requiredApprovalStatus,
+        List<String> scriptureReferences) {
 
     public CandidateSearchCriteria {
         allowedKeys = allowedKeys == null ? List.of() : List.copyOf(allowedKeys);
         includeAnyTags = includeAnyTags == null ? List.of() : List.copyOf(includeAnyTags);
         includeAllTags = includeAllTags == null ? List.of() : List.copyOf(includeAllTags);
+        scriptureReferences = scriptureReferences == null ? List.of() : List.copyOf(scriptureReferences);
     }
 
     public CandidateSearchCriteria(
@@ -37,7 +39,31 @@ public record CandidateSearchCriteria(
                 null,
                 includeAnyTags,
                 includeAllTags,
-                ApprovalStatus.APPROVED);
+                ApprovalStatus.APPROVED,
+                List.of());
+    }
+
+    public CandidateSearchCriteria(
+            String language,
+            List<String> allowedKeys,
+            Integer minBpm,
+            Integer maxBpm,
+            Integer minEnergy,
+            Integer maxEnergy,
+            List<TagFilter> includeAnyTags,
+            List<TagFilter> includeAllTags,
+            ApprovalStatus requiredApprovalStatus) {
+        this(
+                language,
+                allowedKeys,
+                minBpm,
+                maxBpm,
+                minEnergy,
+                maxEnergy,
+                includeAnyTags,
+                includeAllTags,
+                requiredApprovalStatus,
+                List.of());
     }
 
     @Deprecated(forRemoval = false)
