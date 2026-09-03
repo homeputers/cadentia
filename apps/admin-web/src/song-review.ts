@@ -379,6 +379,30 @@ export const toMetadataDraft = (detail: SongReviewDetail, actor: string): SongMe
     }))),
 });
 
+export type SongTagAssignmentDraft = {
+    actor: string;
+    tagType: string;
+    name: string;
+    description?: string | null;
+};
+
+export const CONTROLLED_TAG_TYPES = ['THEME', 'SCRIPTURE', 'MOOD', 'OCCASION', 'SEASON', 'MUSICAL_STYLE', 'AUDIENCE'] as const;
+
+export const assignSongTag = (client: AdminApiClient, songId: string, draft: SongTagAssignmentDraft): Promise<CatalogTag> => client.request<CatalogTag>(`/admin/songs/${encodeURIComponent(songId)}/tags`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+        actor: draft.actor,
+        tagType: draft.tagType,
+        name: draft.name,
+        description: draft.description ?? null,
+    }),
+});
+
+export const removeSongTag = (client: AdminApiClient, songId: string, tagId: string, actor: string): Promise<void> => client.request<void>(`/admin/songs/${encodeURIComponent(songId)}/tags/${encodeURIComponent(tagId)}?${new URLSearchParams({ actor }).toString()}`, {
+    method: 'DELETE',
+});
+
 export const updateReviewSong = (client: AdminApiClient, songId: string, draft: SongMetadataDraft): Promise<Omit<SongReviewDetail, 'songAttachments' | 'arrangementAttachments'>> => client.request<Omit<SongReviewDetail, 'songAttachments' | 'arrangementAttachments'>>(`/admin/songs/${encodeURIComponent(songId)}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { listReviewSongs, parseSongReviewFilters, serializeSongReviewFilters, updateReviewSong, uploadAndAttachResource } from '../src/song-review';
+import { assignSongTag, listReviewSongs, parseSongReviewFilters, removeSongTag, serializeSongReviewFilters, updateReviewSong, uploadAndAttachResource } from '../src/song-review';
 import type { AdminApiClient } from '../src/generated/cadentia-api/client';
 
 describe('song review API adapter', () => {
@@ -136,6 +136,43 @@ describe('song review API adapter', () => {
         const body = JSON.parse(String(request.mock.calls[0][1].body));
         expect(body.arrangements[0].arrangementId).toBeUndefined();
         expect(body.arrangements[0].name).toBe('Acoustic');
+    });
+
+    it('posts tag assignments with actor, type, and curated name', async () => {
+        const request = vi.fn().mockResolvedValue({
+            tagId: '66666666-6666-4666-8666-666666666666',
+            tagType: 'SCRIPTURE',
+            name: 'Philippians 4:13',
+            slug: 'philippians-4-13',
+            active: true,
+        });
+
+        await assignSongTag({ getAdminSession: vi.fn(), request } as unknown as AdminApiClient, 'song-1', {
+            actor: 'editor-1',
+            tagType: 'SCRIPTURE',
+            name: 'Philippians 4:13',
+        });
+
+        expect(request).toHaveBeenCalledWith('/admin/songs/song-1/tags', expect.objectContaining({
+            method: 'POST',
+        }));
+        const body = JSON.parse(String(request.mock.calls[0][1].body));
+        expect(body).toMatchObject({
+            actor: 'editor-1',
+            tagType: 'SCRIPTURE',
+            name: 'Philippians 4:13',
+            description: null,
+        });
+    });
+
+    it('deletes tag assignments with the actor audit parameter', async () => {
+        const request = vi.fn().mockResolvedValue(undefined);
+
+        await removeSongTag({ getAdminSession: vi.fn(), request } as unknown as AdminApiClient, 'song-1', 'tag-9', 'editor 1');
+
+        const [path, init] = request.mock.calls[0] as [string, RequestInit];
+        expect(path).toBe('/admin/songs/song-1/tags/tag-9?actor=editor+1');
+        expect(init.method).toBe('DELETE');
     });
 
     it('includes all arrangement fields in update payload', async () => {

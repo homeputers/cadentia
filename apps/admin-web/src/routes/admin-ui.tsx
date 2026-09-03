@@ -1,4 +1,4 @@
-import { type FormEvent, type ReactNode, useEffect, useId, useRef } from 'react';
+import { type FormEvent, type KeyboardEvent, type ReactNode, useEffect, useId, useRef } from 'react';
 import type { AdminCapability, AdminRole } from '../auth/session';
 import type { AdminEnvironment } from '../config/environment';
 import { localizedCapability, localizedRole, translateText, useI18n } from '../i18n';
@@ -124,20 +124,29 @@ export const StatePanel = ({ state, title, children, onRetry }: { state: LoadSta
 };
 
 export const ConfirmationDialog = ({ open, title, acknowledgement, facts, auditActor, versionContext, onCancel, onConfirm }: {
-    open: boolean; title: string; acknowledgement: string; facts: string[]; auditActor: string; versionContext: string; onCancel: () => void; onConfirm: () => void;
+    open: boolean; title: string; acknowledgement: string; facts: string[]; auditActor: string; versionContext?: string; onCancel: () => void; onConfirm: () => void;
 }) => {
     const { t, locale } = useI18n();
     const headingRef = useRef<HTMLHeadingElement>(null);
     useEffect(() => { if (open) headingRef.current?.focus(); }, [open]);
     if (!open) return null;
+    const onKeyDown = (event: KeyboardEvent) => {
+        if (event.key === 'Escape') {
+            event.stopPropagation();
+            onCancel();
+        } else if (event.key === 'Enter' && !(event.target instanceof HTMLButtonElement)) {
+            event.preventDefault();
+            onConfirm();
+        }
+    };
     return (
-        <div className="admin-dialog-backdrop" role="presentation">
+        <div className="admin-dialog-backdrop" role="presentation" onKeyDown={onKeyDown}>
             <section className="admin-dialog" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
                 <h2 id="confirm-title" tabIndex={-1} ref={headingRef}>{translateText(locale, title)}</h2>
                 <p><strong>{t('requiredAcknowledgement')}</strong> {translateText(locale, acknowledgement)}</p>
                 <ul>{facts.map((fact) => <li key={fact}>{translateText(locale, fact)}</li>)}</ul>
                 <p>{t('auditActor')} {auditActor}</p>
-                <p>{t('concurrency')} {versionContext}</p>
+                {versionContext && <p>{t('concurrency')} {versionContext}</p>}
                 <div className="admin-dialog__actions"><button type="button" className="secondary" onClick={onCancel}>{t('cancel')}</button><button type="button" className="danger" onClick={onConfirm}>{t('continue')}</button></div>
             </section>
         </div>

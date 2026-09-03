@@ -8,16 +8,21 @@ import com.cadentia.catalog.entity.ApprovalRecord;
 import com.cadentia.catalog.entity.ImportCandidateReview;
 import com.cadentia.catalog.entity.ProvenanceRecord;
 import com.cadentia.catalog.entity.Song;
+import com.cadentia.catalog.entity.Tag;
 import com.cadentia.catalog.model.ApprovalStatus;
 import com.cadentia.catalog.model.ApprovalType;
+import com.cadentia.catalog.model.CreateTagCommand;
 import com.cadentia.catalog.model.ImportCandidateReviewDecision;
 import com.cadentia.catalog.model.ImportCandidateStatus;
 import com.cadentia.catalog.model.ImportMethod;
 import com.cadentia.catalog.model.LicenseType;
 import com.cadentia.catalog.model.SongStatus;
+import com.cadentia.catalog.model.TagType;
 import com.cadentia.catalog.repository.InMemorySongRepository;
 import com.cadentia.catalog.repository.SongRepository;
 import com.cadentia.generated.model.AdminCatalogSongListResponse;
+import com.cadentia.generated.model.AdminCatalogSongTagAssignRequest;
+import com.cadentia.generated.model.AdminCatalogTagType;
 import com.cadentia.generated.model.AdminAuditEventSearchResponse;
 import com.cadentia.generated.model.AdminImportCandidateDetailResponse;
 import com.cadentia.generated.model.AdminManualSongImportRequest;
@@ -735,6 +740,179 @@ class AdminImportCandidateControllerTest {
                 null,
                 Instant.EPOCH,
                 Instant.EPOCH);
+    }
+
+    @Test
+    void assignSongTagCreatesMissingTagAssignsItAndRecordsAuditEvent() {
+        // Arrange
+        Song song = song("Amazing Grace", SongStatus.APPROVED);
+        FakeTagSongRepository repository = new FakeTagSongRepository();
+        repository.songs.put(song.id(), song);
+        AdminImportCandidateController controller = controller(new FakeReviewService(null, null), repository);
+
+        // Act
+        var response = controller.assignAdminCatalogSongTag(song.id(), new AdminCatalogSongTagAssignRequest()
+                .actor("editor-1")
+                .tagType(AdminCatalogTagType.SCRIPTURE)
+                .name("Philippians 4:13"));
+
+        // Assert
+        assertThat(response.getStatusCode().value()).isEqualTo(201);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().getTagType()).isEqualTo("SCRIPTURE");
+        assertThat(response.getBody().getSlug()).isEqualTo("philippians-4-13");
+        assertThat(response.getBody().getActive()).isTrue();
+        assertThat(repository.createdTagCount).isEqualTo(1);
+        assertThat(repository.songTags.get(song.id())).containsExactly(response.getBody().getTagId());
+        assertThat(repository.auditEvents)
+                .extracting(AdminAuditEvent::action, AdminAuditEvent::actor)
+                .containsExactly(org.assertj.core.groups.Tuple.tuple("ADMIN_CATALOG_SONG_TAG_ASSIGN", "editor-1"));
+    }
+
+    @Test
+    void assignSongTagReusesExistingTaxonomyTag() {
+        // Arrange
+        Song song = song("Amazing Grace", SongStatus.APPROVED);
+        Tag existing = new Tag(UUID.randomUUID(), TagType.THEME, "Repentance", "repentance", null, 0, true, Instant.EPOCH, Instant.EPOCH);
+        FakeTagSongRepository repository = new FakeTagSongRepository();
+        repository.songs.put(song.id(), song);
+        repository.tags.put(existing.id(), existing);
+        AdminImportCandidateController controller = controller(new FakeReviewService(null, null), repository);
+
+        // Act
+        var response = controller.assignAdminCatalogSongTag(song.id(), new AdminCatalogSongTagAssignRequest()
+                .actor("editor-1")
+                .tagType(AdminCatalogTagType.THEME)
+                .name("repentance"));
+
+        // Assert
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().getTagId()).isEqualTo(existing.id());
+        assertThat(repository.createdTagCount).isZero();
+    }
+
+    @Test
+    void assignSongTagRejectsUnknownSongOrBlankName() {
+        // Arrange
+        FakeTagSongRepository repository = new FakeTagSongRepository();
+        AdminImportCandidateController controller = controller(new FakeReviewService(null, null), repository);
+        Song song = song("Amazing Grace", SongStatus.APPROVED);
+        repository.songs.put(song.id(), song);
+
+        // Act / Assert
+        assertThatThrownBy(() -> controller.assignAdminCatalogSongTag(UUID.randomUUID(), new AdminCatalogSongTagAssignRequest()
+                        .actor("editor-1")
+                        .tagType(AdminCatalogTagType.THEME)
+                        .name("hope")))
+                .isInstanceOf(ResponseStatusException.class)
+                .extracting("statusCode")
+                .isEqualTo(org.springframework.http.HttpStatus.NOT_FOUND);
+        assertThatThrownBy(() -> controller.assignAdminCatalogSongTag(song.id(), new AdminCatalogSongTagAssignRequest()
+                        .actor("editor-1")
+                        .tagType(AdminCatalogTagType.THEME)
+                        .name("---")))
+                .isInstanceOf(ResponseStatusException.class)
+                .extracting("statusCode")
+                .isEqualTo(org.springframework.http.HttpStatus.BAD_REQUEST);
+    }
+
+    @Test
+    void removeSongTagDeletesAssignmentAndRecordsAuditEvent() {
+        // Arrange
+        Song song = song("Amazing Grace", SongStatus.APPROVED);
+        Tag tag = new Tag(UUID.randomUUID(), TagType.SCRIPTURE, "Philippians 4:13", "philippians-4-13", null, 0, true, Instant.EPOCH, Instant.EPOCH);
+        FakeTagSongRepository repository = new FakeTagSongRepository();
+        repository.songs.put(song.id(), song);
+        repository.tags.put(tag.id(), tag);
+        repository.songTags.put(song.id(), new java.util.LinkedHashSet<>(List.of(tag.id())));
+        AdminImportCandidateController controller = controller(new FakeReviewService(null, null), repository);
+
+        // Act
+        var response = controller.removeAdminCatalogSongTag(song.id(), tag.id(), "editor-1");
+
+        // Assert
+        assertThat(response.getStatusCode().value()).isEqualTo(204);
+        assertThat(repository.songTags.get(song.id())).isEmpty();
+        assertThat(repository.auditEvents)
+                .extracting(AdminAuditEvent::action, AdminAuditEvent::actor)
+                .containsExactly(org.assertj.core.groups.Tuple.tuple("ADMIN_CATALOG_SONG_TAG_REMOVE", "editor-1"));
+    }
+
+    @Test
+    void removeSongTagRejectsUnassignedTag() {
+        // Arrange
+        Song song = song("Amazing Grace", SongStatus.APPROVED);
+        Tag tag = new Tag(UUID.randomUUID(), TagType.THEME, "Repentance", "repentance", null, 0, true, Instant.EPOCH, Instant.EPOCH);
+        FakeTagSongRepository repository = new FakeTagSongRepository();
+        repository.songs.put(song.id(), song);
+        repository.tags.put(tag.id(), tag);
+        AdminImportCandidateController controller = controller(new FakeReviewService(null, null), repository);
+
+        // Act / Assert
+        assertThatThrownBy(() -> controller.removeAdminCatalogSongTag(song.id(), tag.id(), "editor-1"))
+                .isInstanceOf(ResponseStatusException.class)
+                .extracting("statusCode")
+                .isEqualTo(org.springframework.http.HttpStatus.NOT_FOUND);
+    }
+
+    private static final class FakeTagSongRepository extends InMemorySongRepository {
+
+        private final Map<UUID, Song> songs = new java.util.HashMap<>();
+        private final Map<UUID, Tag> tags = new java.util.HashMap<>();
+        private final Map<UUID, Set<UUID>> songTags = new java.util.HashMap<>();
+        private final List<AdminAuditEvent> auditEvents = new java.util.ArrayList<>();
+        private int createdTagCount;
+
+        @Override
+        public java.util.Optional<Song> findById(UUID id) {
+            return java.util.Optional.ofNullable(songs.get(id));
+        }
+
+        @Override
+        public java.util.Optional<Tag> findTagById(UUID id) {
+            return java.util.Optional.ofNullable(tags.get(id));
+        }
+
+        @Override
+        public java.util.Optional<Tag> findTagByTypeAndSlug(TagType tagType, String slug) {
+            return tags.values().stream()
+                    .filter(tag -> tag.tagType() == tagType && tag.slug().equals(slug))
+                    .findFirst();
+        }
+
+        @Override
+        public Tag createTag(CreateTagCommand command) {
+            Tag tag = new Tag(
+                    UUID.randomUUID(),
+                    command.tagType(),
+                    command.name(),
+                    command.slug(),
+                    command.description(),
+                    0,
+                    command.active(),
+                    Instant.EPOCH,
+                    Instant.EPOCH);
+            tags.put(tag.id(), tag);
+            createdTagCount++;
+            return tag;
+        }
+
+        @Override
+        public boolean addTagToSong(UUID songId, UUID tagId) {
+            return songTags.computeIfAbsent(songId, ignored -> new java.util.LinkedHashSet<>()).add(tagId);
+        }
+
+        @Override
+        public boolean removeTagFromSong(UUID songId, UUID tagId) {
+            Set<UUID> assigned = songTags.get(songId);
+            return assigned != null && assigned.remove(tagId);
+        }
+
+        @Override
+        public AdminAuditEvent appendPrivilegedActionAuditEvent(AdminAuditEvent event) {
+            auditEvents.add(event);
+            return event;
+        }
     }
 
     private static final class FakeSongRepository extends InMemorySongRepository {

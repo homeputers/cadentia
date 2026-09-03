@@ -185,6 +185,24 @@ class JdbcSongRepositoryIntegrationTest {
     }
 
     @Test
+    void removeTagFromSongDeletesOnlyTheRequestedAssignment() {
+        // Arrange
+        Song song = createSong();
+        Tag removed = repository.createTag(new CreateTagCommand(
+                TagType.THEME, "Repentance", "repentance", "Fixture taxonomy tag", true));
+        Tag kept = repository.createTag(new CreateTagCommand(
+                TagType.MOOD, "Reflective Removal Guard", "reflective-removal-guard", "Fixture taxonomy tag", true));
+        repository.addTagToSong(song.id(), removed.id());
+        repository.addTagToSong(song.id(), kept.id());
+
+        // Act / Assert
+        assertThat(repository.removeTagFromSong(song.id(), removed.id())).isTrue();
+        assertThat(repository.removeTagFromSong(song.id(), removed.id())).isFalse();
+        assertThat(repository.findTagsBySongId(song.id())).containsExactly(kept);
+        assertThat(repository.findTagById(removed.id())).contains(removed);
+    }
+
+    @Test
     void tagAssignmentWritesReportDuplicateMappingsWithoutCreatingExtraRows() {
         // Arrange
         Song song = createSong();

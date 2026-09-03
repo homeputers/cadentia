@@ -14,12 +14,14 @@ import com.cadentia.catalog.model.ApprovalType;
 import com.cadentia.catalog.model.ArrangementSourceType;
 import com.cadentia.catalog.model.CreateArrangementCommand;
 import com.cadentia.catalog.model.CreateLyricsDocumentCommand;
+import com.cadentia.catalog.model.CreateTagCommand;
 import com.cadentia.catalog.model.ImportCandidateReviewDecision;
 import com.cadentia.catalog.model.ImportCandidateStatus;
 import com.cadentia.catalog.model.KeyMode;
 import com.cadentia.catalog.model.LicenseType;
 import com.cadentia.catalog.model.LyricsFormat;
 import com.cadentia.catalog.model.SongStatus;
+import com.cadentia.catalog.model.TagType;
 import com.cadentia.catalog.model.UpdateArrangementCommand;
 import com.cadentia.catalog.model.UpdateLyricsDocumentCommand;
 import com.cadentia.catalog.model.UpdateSongCommand;
@@ -38,6 +40,7 @@ import com.cadentia.generated.model.AdminCatalogProvenanceRecord;
 import com.cadentia.generated.model.AdminCatalogSongDetailResponse;
 import com.cadentia.generated.model.AdminCatalogSongListResponse;
 import com.cadentia.generated.model.AdminCatalogSongSummary;
+import com.cadentia.generated.model.AdminCatalogSongTagAssignRequest;
 import com.cadentia.generated.model.AdminCatalogSongUpdateRequest;
 import com.cadentia.generated.model.AdminCatalogTag;
 import com.cadentia.generated.model.AdminDuplicateMatch;
@@ -387,6 +390,73 @@ public class AdminImportCandidateController implements AdminReviewApi {
                 Map.of("canonicalTitle", existing.canonicalTitle(), "songStatus", existing.songStatus().name()),
                 Map.of("canonicalTitle", updated.canonicalTitle(), "songStatus", updated.songStatus().name())));
         return ResponseEntity.ok(toCatalogSongDetail(updated));
+    }
+
+    @Override
+    @Transactional
+    @PreAuthorize("hasAnyAuthority(T(com.cadentia.api.security.RbacAuthorities).ROLE_CATALOG_EDITOR, T(com.cadentia.api.security.RbacAuthorities).ROLE_ADMIN)")
+    public ResponseEntity<AdminCatalogTag> assignAdminCatalogSongTag(
+            @PathVariable UUID songId,
+            @RequestBody AdminCatalogSongTagAssignRequest request) {
+        Song song = songRepository.findById(songId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Song not found"));
+        TagType tagType = TagType.valueOf(request.getTagType().getValue());
+        String name = request.getName().trim();
+        String slug = toTagSlug(name);
+        if (slug.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Tag name must contain at least one letter or digit");
+        }
+        Tag tag = songRepository.findTagByTypeAndSlug(tagType, slug)
+                .orElseGet(() -> songRepository.createTag(new CreateTagCommand(
+                        tagType, name, slug, blankToNull(request.getDescription()), true)));
+        songRepository.addTagToSong(song.id(), tag.id());
+        songRepository.appendPrivilegedActionAuditEvent(new AdminAuditEvent(
+                UUID.randomUUID(),
+                songId,
+                "SONG",
+                "ADMIN_CATALOG_SONG_TAG_ASSIGN",
+                request.getActor(),
+                java.time.Instant.now(),
+                "Admin catalog tag assignment",
+                Map.of(),
+                Map.of("tagId", tag.id().toString(), "tagType", tag.tagType().name(), "slug", tag.slug())));
+        return ResponseEntity.status(HttpStatus.CREATED).body(toTag(tag));
+    }
+
+    @Override
+    @Transactional
+    @PreAuthorize("hasAnyAuthority(T(com.cadentia.api.security.RbacAuthorities).ROLE_CATALOG_EDITOR, T(com.cadentia.api.security.RbacAuthorities).ROLE_ADMIN)")
+    public ResponseEntity<Void> removeAdminCatalogSongTag(
+            @PathVariable UUID songId,
+            @PathVariable UUID tagId,
+            @RequestParam String actor) {
+        songRepository.findById(songId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Song not found"));
+        Tag tag = songRepository.findTagById(tagId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Tag not assigned to song"));
+        if (!songRepository.removeTagFromSong(songId, tagId)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Tag not assigned to song");
+        }
+        songRepository.appendPrivilegedActionAuditEvent(new AdminAuditEvent(
+                UUID.randomUUID(),
+                songId,
+                "SONG",
+                "ADMIN_CATALOG_SONG_TAG_REMOVE",
+                actor,
+                java.time.Instant.now(),
+                "Admin catalog tag removal",
+                Map.of("tagId", tag.id().toString(), "tagType", tag.tagType().name(), "slug", tag.slug()),
+                Map.of()));
+        return ResponseEntity.noContent().build();
+    }
+
+    private static String toTagSlug(String value) {
+        if (value == null || value.isBlank()) {
+            return "";
+        }
+        return value.trim().toLowerCase(java.util.Locale.ROOT)
+                .replaceAll("[^a-z0-9-]+", "-")
+                .replaceAll("^-+|-+$", "");
     }
 
     @Override

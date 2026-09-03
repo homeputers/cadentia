@@ -740,6 +740,44 @@ AdminCatalogTag:
       nullable: true
     active:
       type: boolean
+AdminCatalogTagType:
+  type: string
+  enum:
+  - THEME
+  - MOOD
+  - OCCASION
+  - SCRIPTURE
+  - SEASON
+  - MUSICAL_STYLE
+  - AUDIENCE
+AdminCatalogSongTagAssignRequest:
+  type: object
+  additionalProperties: false
+  required:
+  - actor
+  - tagType
+  - name
+  properties:
+    actor:
+      type: string
+      minLength: 1
+      maxLength: 200
+      description: Reviewer or administrator identity recorded in the privileged
+        action audit trail.
+    tagType:
+      "$ref": "#/AdminCatalogTagType"
+    name:
+      type: string
+      minLength: 1
+      maxLength: 200
+      description: Curated tag display name. Resolved against the controlled
+        taxonomy by type and slugified name; a new active tag is created when no
+        match exists.
+      example: Philippians 4:10-20
+    description:
+      type: string
+      nullable: true
+      description: Optional taxonomy description used only when a new tag is created.
 ParserSeverity:
   type: string
   enum:
