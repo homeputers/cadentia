@@ -4,7 +4,7 @@ import type { AdminSession } from '../auth/session';
 import { adminEnvironment } from '../config/environment';
 import { createAdminApiClient, type AdminApiClient, type AdminApiError } from '../generated/cadentia-api/client';
 import { assignSongTag, CONTROLLED_TAG_TYPES, getReviewSong, removeSongTag, toMetadataDraft, updateReviewSong, uploadAndAttachResource, type AssetAttachment, type AttachmentDraft, type SongMetadataDraft, type SongReviewDetail as SongReviewDetailModel } from '../song-review';
-import { LocalizedView } from '../i18n';
+import { LocalizedView, translateText, useI18n } from '../i18n';
 import { ActionBadge, Badge, Breadcrumbs, DataTable, Field, PageHeader, StatePanel, redactSensitiveError } from './admin-ui';
 
 const label = (value?: string | null) => value ? value.replaceAll('_', ' ').toLowerCase().replace(/^./, (c) => c.toUpperCase()) : 'None';
@@ -503,7 +503,7 @@ const CatalogEvidence = ({ detail }: { detail: SongReviewDetailModel }) => (
     </section></LocalizedView>
 );
 
-const TagsSection = ({ tags, canEdit, tagDraft, onTagDraftChange, onAssignTag, onRemoveTag }: {
+export const TagsSection = ({ tags, canEdit, tagDraft, onTagDraftChange, onAssignTag, onRemoveTag }: {
     tags: SongReviewDetailModel['tags'];
     canEdit: boolean;
     tagDraft: { tagType: string; name: string };
@@ -511,6 +511,7 @@ const TagsSection = ({ tags, canEdit, tagDraft, onTagDraftChange, onAssignTag, o
     onAssignTag: (event: FormEvent) => void;
     onRemoveTag: (tagId: string) => void;
 }) => {
+    const { locale } = useI18n();
     const byType = tags.reduce<Record<string, typeof tags>>((acc, tag) => {
         const group = acc[tag.tagType] ?? [];
         group.push(tag);
@@ -537,7 +538,7 @@ const TagsSection = ({ tags, canEdit, tagDraft, onTagDraftChange, onAssignTag, o
                 ))
                 : <p>No tags assigned.</p>}
             <form className="admin-form-grid admin-form-grid__wide" aria-label="Assign tag" onSubmit={onAssignTag}>
-                <Field label="Tag type">{({ inputId }) => <select id={inputId} value={tagDraft.tagType} disabled={!canEdit} onChange={(event) => onTagDraftChange({ ...tagDraft, tagType: event.target.value })}>{CONTROLLED_TAG_TYPES.map((tagType) => <option key={tagType} value={tagType}>{label(tagType)}</option>)}</select>}</Field>
+                <Field label="Tag type">{({ inputId }) => <select id={inputId} value={tagDraft.tagType} disabled={!canEdit} onChange={(event) => onTagDraftChange({ ...tagDraft, tagType: event.target.value })}>{CONTROLLED_TAG_TYPES.map((tagType) => <option key={tagType} value={tagType}>{translateText(locale, label(tagType))}</option>)}</select>}</Field>
                 <Field label="Tag name" required>{({ inputId }) => <input id={inputId} value={tagDraft.name} disabled={!canEdit} onChange={(event) => onTagDraftChange({ ...tagDraft, name: event.target.value })} />}</Field>
                 <button type="submit" disabled={!canEdit || !tagDraft.name.trim()}>Assign tag</button>
             </form>

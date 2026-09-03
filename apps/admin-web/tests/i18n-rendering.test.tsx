@@ -6,6 +6,7 @@ import type { AdminSession } from '../src/auth/session';
 import type { AdminApiClient } from '../src/generated/cadentia-api/client';
 import { I18nProvider } from '../src/i18n';
 import { SongImport } from '../src/routes/SongImport';
+import { TagsSection } from '../src/routes/SongReviewDetail';
 import { ActionBadge, RoleBadge } from '../src/routes/admin-ui';
 
 let container: HTMLDivElement;
@@ -43,5 +44,42 @@ describe('admin-web Spanish rendering', () => {
         expect(container.textContent).toContain('Preparar canción manual');
         expect(container.textContent).not.toContain('Manual entry');
         expect(container.textContent).not.toContain('CSV import');
+    });
+
+    it('localizes tag type options and tag editing controls when the church locale is Spanish', async () => {
+        container = document.createElement('div');
+        document.body.appendChild(container);
+        await act(async () => {
+            root = createRoot(container);
+            root.render(<I18nProvider locale="es-GT"><TagsSection
+                tags={[{
+                    tagId: 'tag-1',
+                    tagType: 'SCRIPTURE',
+                    name: 'Philippians 4:13',
+                    slug: 'philippians-4-13',
+                    active: true,
+                }]}
+                canEdit={true}
+                tagDraft={{ tagType: 'THEME', name: '' }}
+                onTagDraftChange={() => undefined}
+                onAssignTag={(event) => event.preventDefault()}
+                onRemoveTag={() => undefined}
+            /></I18nProvider>);
+        });
+
+        const optionLabels = [...container.querySelectorAll('option')].map((option) => option.textContent);
+        expect(optionLabels).toEqual([
+            'Tema',
+            'Escritura',
+            'Ánimo',
+            'Ocasión',
+            'Temporada',
+            'Estilo musical',
+            'Audiencia',
+        ]);
+        expect(container.textContent).toContain('Tipo de etiqueta');
+        expect(container.textContent).toContain('Nombre de etiqueta');
+        expect(container.textContent).toContain('Asignar etiqueta');
+        expect(container.textContent).toContain('Eliminar');
     });
 });
