@@ -12,7 +12,9 @@ import com.cadentia.team.TeamPlanningModels.CreateMusicianCommand;
 import com.cadentia.team.TeamPlanningModels.InstrumentCode;
 import com.cadentia.team.TeamPlanningModels.MusicianRecord;
 import com.cadentia.team.TeamPlanningModels.MusicianRoleCode;
+import com.cadentia.team.TeamPlanningModels.MusicianSkillAssignmentRecord;
 import com.cadentia.team.TeamPlanningModels.RehearsalAssignmentRecord;
+import com.cadentia.team.TeamPlanningModels.RehearsalEventRecord;
 import com.cadentia.team.TeamPlanningModels.ServiceAssignmentRecord;
 import com.cadentia.team.TeamPlanningModels.ServiceRoster;
 import com.cadentia.team.TeamPlanningModels.SkillLevelCode;
@@ -55,6 +57,11 @@ public class AuthorizedTeamPlanningService {
         return repository.findMusician(musicianId).map(redactor::redact);
     }
 
+    public List<MusicianRecord> listMusiciansForRoster() {
+        authorizationPolicy.requireRosterRead();
+        return repository.listMusicians().stream().map(redactor::redact).toList();
+    }
+
     public Optional<MusicianRecord> findMusicianProfile(UUID musicianId) {
         Optional<MusicianRecord> musician = repository.findMusician(musicianId);
         if (musician.isEmpty()) {
@@ -71,7 +78,19 @@ public class AuthorizedTeamPlanningService {
     @Transactional
     public MusicianRecord createMusician(CreateMusicianCommand command, String reasonCode, String reference) {
         authorizationPolicy.requireSkillRangeMaintenance();
-        MusicianRecord musician = repository.createMusician(command);
+        CreateMusicianCommand normalized = command.createdBy() == null || command.createdBy().isBlank()
+                ? new CreateMusicianCommand(
+                        command.displayName(),
+                        command.accountPrincipal(),
+                        command.email(),
+                        command.phone(),
+                        command.primaryVocalRangeCode(),
+                        command.comfortableLowMidiNote(),
+                        command.comfortableHighMidiNote(),
+                        command.servingPreferenceCode(),
+                        authorizationPolicy.currentActor())
+                : command;
+        MusicianRecord musician = repository.createMusician(normalized);
         record(
                 PersonnelAuditAction.PERSONNEL_CONTACT_CHANGED,
                 PersonnelAuditTargetType.MUSICIAN,
@@ -91,6 +110,16 @@ public class AuthorizedTeamPlanningService {
                 snapshotRef("musicians", musician.musicianId()),
                 "primaryVocalRange,comfortableRange");
         return redactor.redact(musician);
+    }
+
+    public List<MusicianSkillAssignmentRecord> listMusicianSkillAssignments(UUID musicianId) {
+        MusicianRecord musician = repository.findMusician(musicianId)
+                .orElseThrow(() -> new AccessDeniedException(NO_EXISTENCE_LEAK_MESSAGE));
+        authorizationPolicy.requireMusicianProfileRead(musician);
+        if (!authorizationPolicy.canReadSensitiveSkillAndRangeData(musician)) {
+            return List.of();
+        }
+        return repository.listMusicianSkillAssignments(musicianId);
     }
 
     @Transactional
@@ -315,6 +344,33 @@ public class AuthorizedTeamPlanningService {
                 snapshotRef("service_team_assignments", original.assignmentId()),
                 "musicianId,substituteForAssignmentId,statusCode");
         return substitute;
+    }
+
+    public List<RehearsalEventRecord> listRehearsalEvents(UUID servicePlanId) {
+        authorizationPolicy.requireRosterRead();
+        return repository.listRehearsalEvents(servicePlanId);
+    }
+
+    @Transactional
+    public RehearsalEventRecord createRehearsalEvent(
+            UUID servicePlanId,
+            Instant startsAt,
+            Instant endsAt,
+            String location,
+            String reasonCode,
+            String reference) {
+        authorizationPolicy.requireAssignmentManagement();
+        RehearsalEventRecord event = repository.createRehearsalEvent(servicePlanId, startsAt, endsAt, location);
+        record(
+                PersonnelAuditAction.PERSONNEL_ASSIGNMENT_CHANGED,
+                PersonnelAuditTargetType.REHEARSAL_EVENT,
+                event.rehearsalEventId(),
+                reasonCode,
+                reference,
+                null,
+                snapshotRef("rehearsal_events", event.rehearsalEventId()),
+                "servicePlanId,startsAt,endsAt,location");
+        return event;
     }
 
     @Transactional

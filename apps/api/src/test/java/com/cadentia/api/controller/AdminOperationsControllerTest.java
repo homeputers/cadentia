@@ -106,7 +106,63 @@ class AdminOperationsControllerTest {
         assertThat(response.getRoles()).containsExactly("DOCTRINAL_REVIEWER");
         assertThat(response.getCapabilities()).containsExactly(
                 AdminCapability.VIEW_IMPORT_QUEUE,
-                AdminCapability.REVIEW_CATALOG);
+                AdminCapability.REVIEW_CATALOG,
+                AdminCapability.VIEW_TEAM_ROSTER);
+    }
+
+    @Test
+    void mapsNonLocalWorshipLeaderAuthorityToTeamManagementCapabilities() {
+        // Arrange
+        SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(
+                "worship-leader",
+                "password",
+                List.of(new SimpleGrantedAuthority(RbacAuthorities.ROLE_WORSHIP_LEADER))));
+        AdminOperationsController controller = controller("church-prod");
+
+        // Act
+        var response = controller.getAdminSession().getBody();
+
+        // Assert
+        assertThat(response).isNotNull();
+        assertThat(response.getCapabilities()).containsExactly(
+                AdminCapability.VIEW_TEAM_ROSTER,
+                AdminCapability.MANAGE_TEAM_ASSIGNMENTS);
+    }
+
+    @Test
+    void mapsNonLocalTeamSchedulerAuthorityToTeamManagementCapabilities() {
+        // Arrange
+        SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(
+                "team-scheduler",
+                "password",
+                List.of(new SimpleGrantedAuthority(RbacAuthorities.ROLE_TEAM_SCHEDULER))));
+        AdminOperationsController controller = controller("church-prod");
+
+        // Act
+        var response = controller.getAdminSession().getBody();
+
+        // Assert
+        assertThat(response).isNotNull();
+        assertThat(response.getCapabilities()).containsExactly(
+                AdminCapability.VIEW_TEAM_ROSTER,
+                AdminCapability.MANAGE_TEAM_ASSIGNMENTS);
+    }
+
+    @Test
+    void mapsNonLocalReportingViewerAuthorityToRosterViewOnlyCapability() {
+        // Arrange
+        SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(
+                "reporting-viewer",
+                "password",
+                List.of(new SimpleGrantedAuthority(RbacAuthorities.ROLE_REPORTING_VIEWER))));
+        AdminOperationsController controller = controller("church-prod");
+
+        // Act
+        var response = controller.getAdminSession().getBody();
+
+        // Assert
+        assertThat(response).isNotNull();
+        assertThat(response.getCapabilities()).containsExactly(AdminCapability.VIEW_TEAM_ROSTER);
     }
 
     @Test

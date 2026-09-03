@@ -380,3 +380,287 @@ TeamAssignmentHistoryResponse:
     changedAt:
       type: string
       format: date-time
+TeamVocalRangeCode:
+  type: string
+  enum:
+  - LOW
+  - MEDIUM
+  - HIGH
+  - UNKNOWN
+TeamSkillLevelCode:
+  type: string
+  enum:
+  - BEGINNER
+  - INTERMEDIATE
+  - ADVANCED
+  - DIRECTOR
+TeamServingPreferenceCode:
+  type: string
+  enum:
+  - PREFERRED
+  - AVAILABLE
+  - LIMITED
+  - DO_NOT_SCHEDULE
+TeamMusicianResponse:
+  type: object
+  description: Privacy-aware musician record. Contact, vocal-range, and serving-preference
+    fields are null unless the caller role is permitted to read them.
+  required:
+  - musicianId
+  - displayName
+  - active
+  properties:
+    musicianId:
+      type: string
+      format: uuid
+    displayName:
+      type: string
+    accountPrincipal:
+      type: string
+      nullable: true
+    email:
+      type: string
+      nullable: true
+    phone:
+      type: string
+      nullable: true
+    primaryVocalRangeCode:
+      "$ref": "#/TeamVocalRangeCode"
+      nullable: true
+    comfortableLowMidiNote:
+      type: integer
+      nullable: true
+    comfortableHighMidiNote:
+      type: integer
+      nullable: true
+    servingPreferenceCode:
+      "$ref": "#/TeamServingPreferenceCode"
+      nullable: true
+    active:
+      type: boolean
+CreateTeamMusicianRequest:
+  type: object
+  additionalProperties: false
+  required:
+  - displayName
+  properties:
+    displayName:
+      type: string
+      minLength: 1
+    accountPrincipal:
+      type: string
+      nullable: true
+    email:
+      type: string
+      nullable: true
+    phone:
+      type: string
+      nullable: true
+    primaryVocalRangeCode:
+      "$ref": "#/TeamVocalRangeCode"
+      nullable: true
+    comfortableLowMidiNote:
+      type: integer
+      nullable: true
+    comfortableHighMidiNote:
+      type: integer
+      nullable: true
+    servingPreferenceCode:
+      "$ref": "#/TeamServingPreferenceCode"
+      nullable: true
+    reasonCode:
+      type: string
+      nullable: true
+    reference:
+      type: string
+      nullable: true
+TeamAvailabilityWindowRequest:
+  type: object
+  additionalProperties: false
+  required:
+  - startsAt
+  - endsAt
+  - statusCode
+  properties:
+    startsAt:
+      type: string
+      format: date-time
+    endsAt:
+      type: string
+      format: date-time
+    statusCode:
+      "$ref": "#/TeamAssignmentStatusCode"
+    servicePlanId:
+      type: string
+      format: uuid
+      nullable: true
+    reasonCode:
+      type: string
+      nullable: true
+    reference:
+      type: string
+      nullable: true
+TeamAvailabilityWindowResponse:
+  type: object
+  required:
+  - availabilityWindowId
+  - musicianId
+  - startsAt
+  - endsAt
+  - statusCode
+  properties:
+    availabilityWindowId:
+      type: string
+      format: uuid
+    musicianId:
+      type: string
+      format: uuid
+    startsAt:
+      type: string
+      format: date-time
+    endsAt:
+      type: string
+      format: date-time
+    statusCode:
+      "$ref": "#/TeamAssignmentStatusCode"
+    servicePlanId:
+      type: string
+      format: uuid
+      nullable: true
+TeamRehearsalEventRequest:
+  type: object
+  additionalProperties: false
+  required:
+  - servicePlanId
+  - startsAt
+  - endsAt
+  properties:
+    servicePlanId:
+      type: string
+      format: uuid
+    startsAt:
+      type: string
+      format: date-time
+    endsAt:
+      type: string
+      format: date-time
+    location:
+      type: string
+      nullable: true
+TeamRehearsalEventResponse:
+  type: object
+  required:
+  - rehearsalEventId
+  - servicePlanId
+  - startsAt
+  - endsAt
+  properties:
+    rehearsalEventId:
+      type: string
+      format: uuid
+    servicePlanId:
+      type: string
+      format: uuid
+    startsAt:
+      type: string
+      format: date-time
+    endsAt:
+      type: string
+      format: date-time
+    location:
+      type: string
+      nullable: true
+TeamSkillAssignmentDomain:
+  type: string
+  enum:
+  - ROLE
+  - INSTRUMENT
+  - VOCAL_PART
+TeamMusicianRoleAssignmentRequest:
+  type: object
+  additionalProperties: false
+  required:
+  - roleCode
+  properties:
+    roleCode:
+      "$ref": "#/TeamMusicianRoleCode"
+    skillLevelCode:
+      "$ref": "#/TeamSkillLevelCode"
+      nullable: true
+    reasonCode:
+      type: string
+      nullable: true
+    reference:
+      type: string
+      nullable: true
+TeamMusicianInstrumentAssignmentRequest:
+  type: object
+  additionalProperties: false
+  required:
+  - instrumentCode
+  properties:
+    instrumentCode:
+      "$ref": "#/TeamInstrumentCode"
+    skillLevelCode:
+      "$ref": "#/TeamSkillLevelCode"
+      nullable: true
+    reasonCode:
+      type: string
+      nullable: true
+    reference:
+      type: string
+      nullable: true
+TeamMusicianVocalPartAssignmentRequest:
+  type: object
+  additionalProperties: false
+  required:
+  - vocalPartCode
+  properties:
+    vocalPartCode:
+      "$ref": "#/TeamVocalPartCode"
+    skillLevelCode:
+      "$ref": "#/TeamSkillLevelCode"
+      nullable: true
+    reasonCode:
+      type: string
+      nullable: true
+    reference:
+      type: string
+      nullable: true
+TeamMusicianSkillAssignmentResponse:
+  type: object
+  required:
+  - assignmentId
+  - musicianId
+  - domain
+  - code
+  properties:
+    assignmentId:
+      type: string
+      format: uuid
+    musicianId:
+      type: string
+      format: uuid
+    domain:
+      "$ref": "#/TeamSkillAssignmentDomain"
+    code:
+      type: string
+      description: Controlled vocabulary code for the assignment domain.
+    skillLevelCode:
+      "$ref": "#/TeamSkillLevelCode"
+      nullable: true
+TeamMusicianSkillsResponse:
+  type: object
+  description: Skill assignments for a musician. Empty unless the caller role is
+    permitted to read sensitive skill data.
+  required:
+  - musicianId
+  - assignments
+  properties:
+    musicianId:
+      type: string
+      format: uuid
+    assignments:
+      type: array
+      items:
+        "$ref": "#/TeamMusicianSkillAssignmentResponse"

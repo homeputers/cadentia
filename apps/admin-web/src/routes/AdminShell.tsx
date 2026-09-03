@@ -12,6 +12,9 @@ import { AuditRollback } from './AuditRollback';
 import { Diagnostics } from './Diagnostics';
 import { InstanceSettings } from './InstanceSettings';
 import { TelegramAccessRequests } from './TelegramAccessRequests';
+import { Musicians } from './Musicians';
+import { TeamAssignments } from './TeamAssignments';
+import { TeamAssignmentDetail } from './TeamAssignmentDetail';
 import { ActionBadge, AuditReferenceLink, Badge, Breadcrumbs, DataTable, PageHeader, RoleBadge, StatePanel, SupportDebugPanel, redactSensitiveError } from './admin-ui';
 import { createAdminApiClient, type AdminApiClient, type AdminApiError } from '../generated/cadentia-api/client';
 import { I18nProvider, LocalizedView, routeLabel, translate, useI18n, type TranslationKey } from '../i18n';
@@ -158,6 +161,16 @@ export const AdminShell = () => {
     }
     if (session && window.location.pathname === '/admin/telegram-access') {
         return withNav(<TelegramAccessRequests session={session} />);
+    }
+    if (session && window.location.pathname === '/admin/musicians') {
+        return withNav(<Musicians session={session} />);
+    }
+    if (session && window.location.pathname === '/admin/team-assignments') {
+        return withNav(<TeamAssignments session={session} />);
+    }
+    const teamDetailMatch = window.location.pathname.match(/^\/admin\/team-assignments\/([^/]+)$/);
+    if (session && teamDetailMatch) {
+        return withNav(<TeamAssignmentDetail session={session} servicePlanId={decodeURIComponent(teamDetailMatch[1])} />);
     }
     const detailMatch = window.location.pathname.match(/^\/admin\/imports\/([^/]+)$/);
     if (session && detailMatch) {

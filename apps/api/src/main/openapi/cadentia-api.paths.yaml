@@ -142,6 +142,24 @@
   "$ref": "./paths/team-assignments.yaml#/~1team-assignments~1services~1{servicePlanId}~1roster"
 "/team-assignments/musicians/{musicianId}/upcoming":
   "$ref": "./paths/team-assignments.yaml#/~1team-assignments~1musicians~1{musicianId}~1upcoming"
+"/team-assignments/musicians":
+  "$ref": "./paths/team-assignments.yaml#/~1team-assignments~1musicians"
+"/team-assignments/musicians/{musicianId}":
+  "$ref": "./paths/team-assignments.yaml#/~1team-assignments~1musicians~1{musicianId}"
+"/team-assignments/musicians/{musicianId}/availability-windows":
+  "$ref": "./paths/team-assignments.yaml#/~1team-assignments~1musicians~1{musicianId}~1availability-windows"
+"/team-assignments/musicians/{musicianId}/skills":
+  "$ref": "./paths/team-assignments.yaml#/~1team-assignments~1musicians~1{musicianId}~1skills"
+"/team-assignments/musicians/{musicianId}/roles":
+  "$ref": "./paths/team-assignments.yaml#/~1team-assignments~1musicians~1{musicianId}~1roles"
+"/team-assignments/musicians/{musicianId}/instruments":
+  "$ref": "./paths/team-assignments.yaml#/~1team-assignments~1musicians~1{musicianId}~1instruments"
+"/team-assignments/musicians/{musicianId}/vocal-parts":
+  "$ref": "./paths/team-assignments.yaml#/~1team-assignments~1musicians~1{musicianId}~1vocal-parts"
+"/team-assignments/rehearsal-events":
+  "$ref": "./paths/team-assignments.yaml#/~1team-assignments~1rehearsal-events"
+"/team-assignments/services/{servicePlanId}/rehearsal-events":
+  "$ref": "./paths/team-assignments.yaml#/~1team-assignments~1services~1{servicePlanId}~1rehearsal-events"
 "/team-assignments/services/{servicePlanId}/history":
   "$ref": "./paths/team-assignments.yaml#/~1team-assignments~1services~1{servicePlanId}~1history"
 "/service-plans/{servicePlanId}/rehearsal-sessions":

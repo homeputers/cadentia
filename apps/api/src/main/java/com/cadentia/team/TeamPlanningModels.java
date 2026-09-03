@@ -109,6 +109,20 @@ public final class TeamPlanningModels {
             boolean active) {
     }
 
+    public enum SkillAssignmentDomain {
+        ROLE,
+        INSTRUMENT,
+        VOCAL_PART
+    }
+
+    public record MusicianSkillAssignmentRecord(
+            UUID assignmentId,
+            UUID musicianId,
+            SkillAssignmentDomain domain,
+            String code,
+            SkillLevelCode skillLevelCode) {
+    }
+
     public record AvailabilityWindowRecord(
             UUID availabilityWindowId,
             UUID musicianId,

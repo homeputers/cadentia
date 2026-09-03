@@ -12,6 +12,8 @@ AdminCapability:
   - MANAGE_FEATURE_FLAGS
   - MANAGE_BOT_CHANNELS
   - MANAGE_TELEGRAM_ACCESS
+  - VIEW_TEAM_ROSTER
+  - MANAGE_TEAM_ASSIGNMENTS
 AdminAllowedAction:
   type: string
   enum:

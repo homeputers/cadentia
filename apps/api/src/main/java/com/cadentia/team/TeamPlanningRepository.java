@@ -9,6 +9,7 @@ import com.cadentia.team.TeamPlanningModels.CreateMusicianCommand;
 import com.cadentia.team.TeamPlanningModels.InstrumentCode;
 import com.cadentia.team.TeamPlanningModels.MusicianRecord;
 import com.cadentia.team.TeamPlanningModels.MusicianRoleCode;
+import com.cadentia.team.TeamPlanningModels.MusicianSkillAssignmentRecord;
 import com.cadentia.team.TeamPlanningModels.RehearsalAssignmentRecord;
 import com.cadentia.team.TeamPlanningModels.RehearsalEventRecord;
 import com.cadentia.team.TeamPlanningModels.ServiceAssignmentRecord;
@@ -34,11 +35,15 @@ public interface TeamPlanningRepository {
 
     Optional<MusicianRecord> findMusician(UUID musicianId);
 
+    List<MusicianRecord> listMusicians();
+
     UUID assignRole(UUID musicianId, MusicianRoleCode roleCode, SkillLevelCode skillLevelCode);
 
     UUID assignInstrument(UUID musicianId, InstrumentCode instrumentCode, SkillLevelCode skillLevelCode);
 
     UUID assignVocalPart(UUID musicianId, VocalPartCode vocalPartCode, SkillLevelCode skillLevelCode);
+
+    List<MusicianSkillAssignmentRecord> listMusicianSkillAssignments(UUID musicianId);
 
     AvailabilityWindowRecord createAvailabilityWindow(
             UUID musicianId,
@@ -107,6 +112,8 @@ public interface TeamPlanningRepository {
             Instant startsAt,
             Instant endsAt,
             String location);
+
+    List<RehearsalEventRecord> listRehearsalEvents(UUID servicePlanId);
 
     RehearsalAssignmentRecord createRehearsalAssignment(
             UUID rehearsalEventId,

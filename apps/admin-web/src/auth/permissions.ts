@@ -15,6 +15,8 @@ export const adminRoutes: AdminRoute[] = [
     { href: '/admin/diagnostics', label: 'Diagnostics', requiredCapability: 'VIEW_DIAGNOSTICS', requiredFeature: 'admin-diagnostics' },
     { href: '/admin/settings', label: 'Instance settings', requiredCapability: 'MANAGE_INSTANCE_CONFIGURATION' },
     { href: '/admin/telegram-access', label: 'Telegram access', requiredCapability: 'MANAGE_TELEGRAM_ACCESS' },
+    { href: '/admin/team-assignments', label: 'Team assignments', requiredCapability: 'VIEW_TEAM_ROSTER' },
+    { href: '/admin/musicians', label: 'Musicians', requiredCapability: 'MANAGE_TEAM_ASSIGNMENTS' },
 ];
 
 export const hasCapability = (session: AdminSession, capability: AdminCapability): boolean =>
