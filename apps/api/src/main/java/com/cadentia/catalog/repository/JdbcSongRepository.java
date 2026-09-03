@@ -436,6 +436,14 @@ public class JdbcSongRepository implements SongRepository {
     }
 
     @Override
+    public boolean removeTagFromSong(UUID songId, UUID tagId) {
+        return jdbcTemplate.update(
+                        "DELETE FROM song_tags WHERE song_id = :songId AND tag_id = :tagId",
+                        Map.of("songId", songId, "tagId", tagId))
+                == 1;
+    }
+
+    @Override
     public boolean addTagToArrangement(UUID arrangementId, UUID tagId) {
         return jdbcTemplate.update(
                         "INSERT INTO arrangement_tags (arrangement_id, tag_id) VALUES (:arrangementId, :tagId) "

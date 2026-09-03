@@ -158,6 +158,11 @@ public class InMemorySongRepository implements SongRepository {
     }
 
     @Override
+    public boolean removeTagFromSong(UUID songId, UUID tagId) {
+        return false;
+    }
+
+    @Override
     public boolean addTagToArrangement(UUID arrangementId, UUID tagId) {
         return false;
     }

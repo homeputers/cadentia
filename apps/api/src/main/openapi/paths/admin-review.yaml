@@ -190,6 +190,85 @@
         "$ref": "../components/shared/responses.yaml#/Forbidden"
       '404':
         description: Song or nested catalog record not found.
+"/admin/songs/{songId}/tags":
+  post:
+    tags:
+    - AdminReview
+    operationId: assignAdminCatalogSongTag
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - CATALOG_EDITOR
+    - ADMIN
+    summary: Assign a controlled tag to a song, creating it in the taxonomy when missing
+    parameters:
+    - in: path
+      name: songId
+      required: true
+      schema:
+        type: string
+        format: uuid
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            "$ref": "../components/schemas/admin-review.yaml#/AdminCatalogSongTagAssignRequest"
+    responses:
+      '201':
+        description: Assigned tag.
+        content:
+          application/json:
+            schema:
+              "$ref": "../components/schemas/admin-review.yaml#/AdminCatalogTag"
+      '400':
+        "$ref": "../components/shared/responses.yaml#/ValidationError"
+      '401':
+        "$ref": "../components/shared/responses.yaml#/Unauthorized"
+      '403':
+        "$ref": "../components/shared/responses.yaml#/Forbidden"
+      '404':
+        description: Song not found.
+"/admin/songs/{songId}/tags/{tagId}":
+  delete:
+    tags:
+    - AdminReview
+    operationId: removeAdminCatalogSongTag
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - CATALOG_EDITOR
+    - ADMIN
+    summary: Remove a controlled tag assignment from a song
+    parameters:
+    - in: path
+      name: songId
+      required: true
+      schema:
+        type: string
+        format: uuid
+    - in: path
+      name: tagId
+      required: true
+      schema:
+        type: string
+        format: uuid
+    - in: query
+      name: actor
+      required: true
+      schema:
+        type: string
+      description: Reviewer or administrator identity recorded in the privileged
+        action audit trail.
+    responses:
+      '204':
+        description: Tag assignment removed.
+      '401':
+        "$ref": "../components/shared/responses.yaml#/Unauthorized"
+      '403':
+        "$ref": "../components/shared/responses.yaml#/Forbidden"
+      '404':
+        description: Song not found or tag not assigned to the song.
 "/admin/import-candidates":
   get:
     tags:

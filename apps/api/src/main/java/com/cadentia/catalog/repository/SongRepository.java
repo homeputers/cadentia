@@ -88,6 +88,8 @@ public interface SongRepository {
 
     boolean addTagToSong(UUID songId, UUID tagId);
 
+    boolean removeTagFromSong(UUID songId, UUID tagId);
+
     boolean addTagToArrangement(UUID arrangementId, UUID tagId);
 
     boolean addTagToLyricsDocument(UUID lyricsDocumentId, UUID tagId);
