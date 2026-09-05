@@ -150,6 +150,23 @@ export type ArrangementMetadataDraft = Omit<CatalogArrangement, 'arrangementId' 
 };
 export type LyricsMetadataDraft = Pick<CatalogLyricsDocument, 'lyricsDocumentId' | 'format' | 'content' | 'containsChords' | 'containsSections' | 'sourceReference' | 'arrangementId'>;
 
+const sameLyricsMetadata = (left: LyricsMetadataDraft, right: LyricsMetadataDraft) =>
+    left.arrangementId === right.arrangementId
+    && left.format === right.format
+    && (left.content ?? '') === (right.content ?? '')
+    && left.containsChords === right.containsChords
+    && left.containsSections === right.containsSections
+    && left.sourceReference === right.sourceReference;
+
+export const changedLyricsDocuments = (draft: SongMetadataDraft, baseline: SongMetadataDraft): LyricsMetadataDraft[] =>
+    draft.lyricsDocuments.filter((lyrics) => {
+        if (lyrics.lyricsDocumentId.startsWith('new-')) {
+            return true;
+        }
+        const original = baseline.lyricsDocuments.find((candidate) => candidate.lyricsDocumentId === lyrics.lyricsDocumentId);
+        return !original || !sameLyricsMetadata(lyrics, original);
+    });
+
 export type AttachmentDraft = {
     targetType: 'song' | 'arrangement';
     targetId: string;
