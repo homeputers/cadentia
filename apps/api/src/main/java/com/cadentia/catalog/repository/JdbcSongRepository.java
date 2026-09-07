@@ -273,9 +273,20 @@ public class JdbcSongRepository implements SongRepository {
                     arrangement_id, format, content, content_hash, version_number, is_current,
                     contains_chords, contains_sections, source_reference, created_by
                 ) VALUES (
-                    :arrangementId, :format, :content, :contentHash, :versionNumber, :current,
+                    :arrangementId, :format, :content, :contentHash,
+                    GREATEST(
+                        :versionNumber,
+                        COALESCE((
+                            SELECT MAX(version_number) + 1
+                            FROM lyrics_documents
+                            WHERE arrangement_id = :arrangementId
+                        ), 1)
+                    ),
+                    :current,
                     :containsChords, :containsSections, :sourceReference, :createdBy
                 )
+                ON CONFLICT (arrangement_id, content_hash)
+                DO UPDATE SET is_current = EXCLUDED.is_current
                 RETURNING %s
                 """.formatted(LYRICS_COLUMNS);
         return jdbcTemplate.queryForObject(sql, lyricsParams(command), lyricsMapper());
@@ -308,6 +319,8 @@ public class JdbcSongRepository implements SongRepository {
                     :containsChords, :containsSections, :sourceReference, :createdBy
                 FROM lyrics_documents
                 WHERE arrangement_id = :arrangementId
+                ON CONFLICT (arrangement_id, content_hash)
+                DO UPDATE SET is_current = EXCLUDED.is_current
                 RETURNING %s
                 """.formatted(LYRICS_COLUMNS);
         return Optional.ofNullable(jdbcTemplate.queryForObject(

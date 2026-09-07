@@ -1,11 +1,59 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { assignSongTag, listReviewSongs, parseSongReviewFilters, removeSongTag, serializeSongReviewFilters, updateReviewSong, uploadAndAttachResource } from '../src/song-review';
+import { assignSongTag, changedLyricsDocuments, listReviewSongs, parseSongReviewFilters, removeSongTag, serializeSongReviewFilters, updateReviewSong, uploadAndAttachResource, type SongMetadataDraft } from '../src/song-review';
 import type { AdminApiClient } from '../src/generated/cadentia-api/client';
 
 describe('song review API adapter', () => {
     afterEach(() => {
         vi.unstubAllGlobals();
         vi.restoreAllMocks();
+    });
+
+    it('only returns changed or new lyrics documents for a metadata save', () => {
+        const baseline = {
+            lyricsDocuments: [{
+                lyricsDocumentId: 'lyrics-1',
+                arrangementId: 'arrangement-1',
+                format: 'plain_text',
+                content: 'same content',
+                containsChords: false,
+                containsSections: true,
+                sourceReference: 'source:1',
+            }],
+        } as SongMetadataDraft;
+        const draft = {
+            ...baseline,
+            lyricsDocuments: [{
+                ...baseline.lyricsDocuments[0],
+                content: 'edited content',
+            }, {
+                lyricsDocumentId: 'new-lyrics-1',
+                arrangementId: 'arrangement-2',
+                format: 'plain_text',
+                content: 'new content',
+                containsChords: false,
+                containsSections: false,
+                sourceReference: 'source:2',
+            }],
+        } as SongMetadataDraft;
+
+        expect(changedLyricsDocuments(draft, baseline).map((lyrics) => lyrics.lyricsDocumentId))
+            .toEqual(['lyrics-1', 'new-lyrics-1']);
+    });
+
+    it('does not return unchanged lyrics documents', () => {
+        const baseline = {
+            lyricsDocuments: [{
+                lyricsDocumentId: 'lyrics-1',
+                arrangementId: 'arrangement-1',
+                format: 'plain_text',
+                content: 'same content',
+                containsChords: false,
+                containsSections: true,
+                sourceReference: 'source:1',
+            }],
+        } as SongMetadataDraft;
+
+        expect(changedLyricsDocuments(baseline, baseline)).toEqual([]);
     });
 
     it('uses all statuses by default and omits the backend status parameter', async () => {

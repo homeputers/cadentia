@@ -353,6 +353,53 @@ class JdbcSongRepositoryIntegrationTest {
                 .containsExactly(false, false, true);
     }
 
+    @Test
+    void allocatesNextLyricsVersionWhenCreateCommandStartsAtOne() {
+        // Arrange
+        Song song = createSong();
+        Arrangement arrangement = createArrangement(song);
+        LyricsDocument initialDocument = repository.createLyricsDocument(new CreateLyricsDocumentCommand(
+                arrangement.id(), LyricsFormat.PLAIN_TEXT, "Initial fixture lyrics", "initial-version-hash", 1, true,
+                false, false, "fixture://lyrics/initial-version", "integration-test"));
+
+        // Act
+        LyricsDocument secondDocument = repository.createLyricsDocument(new CreateLyricsDocumentCommand(
+                arrangement.id(), LyricsFormat.PLAIN_TEXT, "Second fixture lyrics", "second-version-hash", 1, true,
+                false, false, "fixture://lyrics/second-version", "integration-test"));
+
+        // Assert
+        assertThat(initialDocument.versionNumber()).isEqualTo(1);
+        assertThat(secondDocument.versionNumber()).isEqualTo(2);
+        assertThat(repository.findLyricsDocumentsByArrangementId(arrangement.id()))
+                .extracting(LyricsDocument::versionNumber, LyricsDocument::current)
+                .containsExactly(
+                        Tuple.tuple(1, false),
+                        Tuple.tuple(2, true));
+    }
+
+    @Test
+    void creatingLyricsDocumentReusesExistingHashForArrangement() {
+        // Arrange
+        Song song = createSong();
+        Arrangement arrangement = createArrangement(song);
+        LyricsDocument initialDocument = repository.createLyricsDocument(new CreateLyricsDocumentCommand(
+                arrangement.id(), LyricsFormat.PLAIN_TEXT, "Repeated fixture lyrics", "repeated-create-hash", 1,
+                true, false, false, "fixture://lyrics/repeated-first", "integration-test"));
+
+        // Act
+        LyricsDocument repeatedDocument = repository.createLyricsDocument(new CreateLyricsDocumentCommand(
+                arrangement.id(), LyricsFormat.PLAIN_TEXT, "Repeated fixture lyrics", "repeated-create-hash", 1,
+                true, false, false, "fixture://lyrics/repeated-second", "integration-test"));
+
+        // Assert
+        assertThat(repeatedDocument.id()).isEqualTo(initialDocument.id());
+        assertThat(repeatedDocument.versionNumber()).isEqualTo(1);
+        assertThat(repeatedDocument.current()).isTrue();
+        assertThat(repository.findLyricsDocumentsByArrangementId(arrangement.id()))
+                .extracting(LyricsDocument::versionNumber, LyricsDocument::current)
+                .containsExactly(Tuple.tuple(1, true));
+    }
+
 
     @Test
     void storesDerivedParseResultsWithoutMutatingRawLyricsContent() {
@@ -519,7 +566,41 @@ class JdbcSongRepositoryIntegrationTest {
                 .extracting(LyricsDocument::content, LyricsDocument::versionNumber, LyricsDocument::current)
                 .containsExactly(
                         Tuple.tuple(initialContent, 1, false),
-                        Tuple.tuple(updatedContent, 2, true));
+                Tuple.tuple(updatedContent, 2, true));
+    }
+
+    @Test
+    void updatingLyricsDocumentReusesExistingHashWhenReturningToPriorContent() {
+        // Arrange
+        Song song = createSong();
+        Arrangement arrangement = createArrangement(song);
+        LyricsDocument initialDocument = repository.createLyricsDocument(new CreateLyricsDocumentCommand(
+                arrangement.id(), LyricsFormat.PLAIN_TEXT, "Initial fixture lyrics", "initial-reused-hash", 1, true,
+                false, false, "fixture://lyrics/initial-reused", "integration-test"));
+        LyricsDocument secondDocument = repository.createLyricsDocument(new CreateLyricsDocumentCommand(
+                arrangement.id(), LyricsFormat.PLAIN_TEXT, "Second fixture lyrics", "second-reused-hash", 1, true,
+                false, false, "fixture://lyrics/second-reused", "integration-test"));
+
+        // Act
+        LyricsDocument revertedDocument = repository.updateLyricsDocument(secondDocument.id(),
+                new UpdateLyricsDocumentCommand(
+                        LyricsFormat.PLAIN_TEXT,
+                        initialDocument.content(),
+                        initialDocument.contentHash(),
+                        false,
+                        false,
+                        "fixture://lyrics/reused",
+                        "editor@example.test"))
+                .orElseThrow();
+
+        // Assert
+        assertThat(revertedDocument.id()).isEqualTo(initialDocument.id());
+        assertThat(revertedDocument.current()).isTrue();
+        assertThat(repository.findLyricsDocumentsByArrangementId(arrangement.id()))
+                .extracting(LyricsDocument::versionNumber, LyricsDocument::current)
+                .containsExactly(
+                        Tuple.tuple(1, true),
+                        Tuple.tuple(2, false));
     }
 
     @Test

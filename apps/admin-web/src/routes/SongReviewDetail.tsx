@@ -3,7 +3,7 @@ import { hasCapability } from '../auth/permissions';
 import type { AdminSession } from '../auth/session';
 import { adminEnvironment } from '../config/environment';
 import { createAdminApiClient, type AdminApiClient, type AdminApiError } from '../generated/cadentia-api/client';
-import { assignSongTag, CONTROLLED_TAG_TYPES, getReviewSong, removeSongTag, toMetadataDraft, updateReviewSong, uploadAndAttachResource, type AssetAttachment, type AttachmentDraft, type SongMetadataDraft, type SongReviewDetail as SongReviewDetailModel } from '../song-review';
+import { assignSongTag, changedLyricsDocuments, CONTROLLED_TAG_TYPES, getReviewSong, removeSongTag, toMetadataDraft, updateReviewSong, uploadAndAttachResource, type AssetAttachment, type AttachmentDraft, type SongMetadataDraft, type SongReviewDetail as SongReviewDetailModel } from '../song-review';
 import { LocalizedView, translateText, useI18n } from '../i18n';
 import { ActionBadge, Badge, Breadcrumbs, ConfirmationDialog, DataTable, Field, PageHeader, StatePanel, redactSensitiveError } from './admin-ui';
 
@@ -74,7 +74,7 @@ export const SongReviewDetail = ({
         if (!draft || !detail) return;
         const loadedDraft = toMetadataDraft(detail, session.actorId);
         const arrangements = draft.arrangements;
-        const lyricsDocuments = draft.lyricsDocuments;
+        const lyricsDocuments = changedLyricsDocuments(draft, loadedDraft);
         setState('stale');
         try {
             await updateReviewSong(apiClient, songId, {
@@ -89,6 +89,8 @@ export const SongReviewDetail = ({
                 yearWritten: draft.yearWritten,
                 songStatus: draft.songStatus,
                 doctrinalNotes: draft.doctrinalNotes,
+                arrangements: [],
+                lyricsDocuments: [],
             });
             setNotice('Song metadata saved.');
             await load((nextDraft) => ({ ...nextDraft, arrangements, lyricsDocuments }));
@@ -120,7 +122,7 @@ export const SongReviewDetail = ({
             await updateReviewSong(apiClient, songId, {
                 ...loadedDraft,
                 arrangements: draft.arrangements,
-                lyricsDocuments: draft.lyricsDocuments,
+                lyricsDocuments: changedLyricsDocuments(draft, loadedDraft),
             });
             setNotice('Arrangements saved.');
             await load((nextDraft) => ({ ...nextDraft, ...songMetadata }));
