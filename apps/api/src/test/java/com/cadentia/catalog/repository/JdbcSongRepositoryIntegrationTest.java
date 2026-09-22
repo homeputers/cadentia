@@ -36,6 +36,7 @@ import com.cadentia.catalog.model.KeyMode;
 import com.cadentia.catalog.model.LicenseType;
 import com.cadentia.catalog.model.LyricsFormat;
 import com.cadentia.catalog.model.LyricsParseStatus;
+import com.cadentia.catalog.model.SongRole;
 import com.cadentia.catalog.model.SongStatus;
 import com.cadentia.catalog.model.TagType;
 import com.cadentia.catalog.model.UpdateLyricsParseResultCommand;
@@ -142,6 +143,52 @@ class JdbcSongRepositoryIntegrationTest {
         assertThat(repository.findById(song.id())).contains(updatedSong);
         assertThat(repository.findByNormalizedTitleAndLanguage(song.normalizedTitle(), song.primaryLanguage()))
                 .contains(updatedSong);
+    }
+
+    @Test
+    void persistsUpdatesAndClearsExplicitSongRoleClassification() {
+        // Arrange
+        Song song = createSong();
+
+        // Act
+        Song classified = repository.updateSong(song.id(), new UpdateSongCommand(
+                song.canonicalTitle(),
+                song.normalizedTitle(),
+                song.primaryLanguage(),
+                song.originalArtistDisplay(),
+                song.composerCredits(),
+                song.ccliNumber(),
+                song.yearWritten(),
+                song.songStatus(),
+                SongRole.WORSHIP,
+                song.doctrinalNotes())).orElseThrow();
+        Song cleared = repository.updateSong(song.id(), new UpdateSongCommand(
+                song.canonicalTitle(),
+                song.normalizedTitle(),
+                song.primaryLanguage(),
+                song.originalArtistDisplay(),
+                song.composerCredits(),
+                song.ccliNumber(),
+                song.yearWritten(),
+                song.songStatus(),
+                null,
+                song.doctrinalNotes())).orElseThrow();
+
+        // Assert
+        assertThat(song.songRole()).isNull();
+        assertThat(classified.songRole()).isEqualTo(SongRole.WORSHIP);
+        assertThat(repository.findById(song.id()).orElseThrow().songRole()).isNull();
+        assertThat(cleared.songRole()).isNull();
+    }
+
+    @Test
+    void databaseRejectsUnsupportedSongRole() {
+        // Arrange / Act / Assert
+        assertThatThrownBy(() -> jdbcTemplate.update("""
+                INSERT INTO songs (canonical_title, normalized_title, primary_language, song_status, song_role)
+                VALUES ('Invalid Role Fixture', 'invalid-role-fixture', 'en', 'DRAFT', 'ANTHEM')
+                """, Map.of()))
+                .hasMessageContaining("songs_song_role_valid");
     }
 
     @Test

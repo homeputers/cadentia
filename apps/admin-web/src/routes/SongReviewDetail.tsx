@@ -3,7 +3,7 @@ import { hasCapability } from '../auth/permissions';
 import type { AdminSession } from '../auth/session';
 import { adminEnvironment } from '../config/environment';
 import { createAdminApiClient, type AdminApiClient, type AdminApiError } from '../generated/cadentia-api/client';
-import { assignSongTag, changedLyricsDocuments, CONTROLLED_TAG_TYPES, getReviewSong, removeSongTag, toMetadataDraft, updateReviewSong, uploadAndAttachResource, type AssetAttachment, type AttachmentDraft, type SongMetadataDraft, type SongReviewDetail as SongReviewDetailModel } from '../song-review';
+import { assignSongTag, changedLyricsDocuments, CONTROLLED_TAG_TYPES, getReviewSong, removeSongTag, SONG_ROLES, toMetadataDraft, updateReviewSong, uploadAndAttachResource, type AssetAttachment, type AttachmentDraft, type SongMetadataDraft, type SongReviewDetail as SongReviewDetailModel } from '../song-review';
 import { LocalizedView, translateText, useI18n } from '../i18n';
 import { ActionBadge, Badge, Breadcrumbs, ConfirmationDialog, DataTable, Field, PageHeader, StatePanel, redactSensitiveError } from './admin-ui';
 
@@ -88,6 +88,7 @@ export const SongReviewDetail = ({
                 ccliNumber: draft.ccliNumber,
                 yearWritten: draft.yearWritten,
                 songStatus: draft.songStatus,
+                songRole: draft.songRole,
                 doctrinalNotes: draft.doctrinalNotes,
                 arrangements: [],
                 lyricsDocuments: [],
@@ -115,6 +116,7 @@ export const SongReviewDetail = ({
             ccliNumber: draft.ccliNumber,
             yearWritten: draft.yearWritten,
             songStatus: draft.songStatus,
+            songRole: draft.songRole,
             doctrinalNotes: draft.doctrinalNotes,
         };
         setState('stale');
@@ -300,7 +302,7 @@ const assetTypeForFile = (file: File, fallback: string) => {
     return fallback;
 };
 
-const SongMetadataForm = ({ draft, canEdit, onSaveSongMetadata, onSaveArrangementMetadata, onSongChange, onArrangementChange, onAddArrangement, onRemoveArrangement, onLyricsChange, onAddLyricsDocument, onRemoveLyricsDocument }: {
+export const SongMetadataForm = ({ draft, canEdit, onSaveSongMetadata, onSaveArrangementMetadata, onSongChange, onArrangementChange, onAddArrangement, onRemoveArrangement, onLyricsChange, onAddLyricsDocument, onRemoveLyricsDocument }: {
     draft: SongMetadataDraft;
     canEdit: boolean;
     onSaveSongMetadata: (event: FormEvent) => void;
@@ -313,13 +315,15 @@ const SongMetadataForm = ({ draft, canEdit, onSaveSongMetadata, onSaveArrangemen
     onAddLyricsDocument: (arrangementId: string) => void;
     onRemoveLyricsDocument: (lyricsDocumentId: string) => void;
 }) => {
+    const { locale } = useI18n();
     const existingArrangements = draft.arrangements.filter((a) => a.arrangementId && !a.arrangementId.startsWith('new-'));
     return (
     <LocalizedView><form className="admin-shell__panel admin-form-grid" aria-labelledby="song-metadata-title" onSubmit={(event) => event.preventDefault()}>
         <h2 id="song-metadata-title" className="admin-form-grid__wide">Song metadata</h2>
         <Field label="Title" required>{({ inputId }) => <input id={inputId} value={draft.canonicalTitle} disabled={!canEdit} onChange={(event) => onSongChange('canonicalTitle', event.target.value)} />}</Field>
         <Field label="Language" required>{({ inputId }) => <input id={inputId} value={draft.primaryLanguage} disabled={!canEdit} onChange={(event) => onSongChange('primaryLanguage', event.target.value)} />}</Field>
-        <Field label="Status">{({ inputId }) => <select id={inputId} value={draft.songStatus} disabled={!canEdit} onChange={(event) => onSongChange('songStatus', event.target.value)}>{['APPROVED', 'IN_REVIEW', 'DRAFT', 'REJECTED', 'ARCHIVED'].map((status) => <option key={status} value={status}>{label(status)}</option>)}</select>}</Field>
+        <Field label="Status">{({ inputId }) => <select id={inputId} value={draft.songStatus} disabled={!canEdit} onChange={(event) => onSongChange('songStatus', event.target.value)}>{['APPROVED', 'IN_REVIEW', 'DRAFT', 'REJECTED', 'ARCHIVED'].map((status) => <option key={status} value={status}>{translateText(locale, label(status))}</option>)}</select>}</Field>
+        <Field label="Song role">{({ inputId }) => <select id={inputId} value={draft.songRole ?? ''} disabled={!canEdit} onChange={(event) => onSongChange('songRole', event.target.value || null)}><option value="">—</option>{SONG_ROLES.map((role) => <option key={role} value={role}>{translateText(locale, label(role))}</option>)}</select>}</Field>
         <Field label="Artist">{({ inputId }) => <input id={inputId} value={draft.originalArtistDisplay ?? ''} disabled={!canEdit} onChange={(event) => onSongChange('originalArtistDisplay', event.target.value)} />}</Field>
         <Field label="Composers">{({ inputId }) => <input id={inputId} value={draft.composerCredits ?? ''} disabled={!canEdit} onChange={(event) => onSongChange('composerCredits', event.target.value)} />}</Field>
         <Field label="CCLI">{({ inputId }) => <input id={inputId} value={draft.ccliNumber ?? ''} disabled={!canEdit} onChange={(event) => onSongChange('ccliNumber', event.target.value)} />}</Field>
@@ -355,7 +359,7 @@ const SongMetadataForm = ({ draft, canEdit, onSaveSongMetadata, onSaveArrangemen
                     </div>
                     <div role="cell">
                         <label className="sr-only" htmlFor={`${rowId}-source`}>Arrangement source</label>
-                        <select id={`${rowId}-source`} value={arrangement.sourceType} disabled={!canEdit} onChange={(event) => onArrangementChange(arrangement.arrangementId ?? '', 'sourceType', event.target.value)}>{['ORIGINAL', 'LIVE', 'ACOUSTIC', 'STUDIO', 'TRANSLATION', 'CUSTOM', 'UNKNOWN'].map((source) => <option key={source} value={source}>{label(source)}</option>)}</select>
+                        <select id={`${rowId}-source`} value={arrangement.sourceType} disabled={!canEdit} onChange={(event) => onArrangementChange(arrangement.arrangementId ?? '', 'sourceType', event.target.value)}>{['ORIGINAL', 'LIVE', 'ACOUSTIC', 'STUDIO', 'TRANSLATION', 'CUSTOM', 'UNKNOWN'].map((source) => <option key={source} value={source}>{translateText(locale, label(source))}</option>)}</select>
                     </div>
                     <div role="cell">
                         <label className="sr-only" htmlFor={`${rowId}-key`}>Musical key</label>
@@ -363,7 +367,7 @@ const SongMetadataForm = ({ draft, canEdit, onSaveSongMetadata, onSaveArrangemen
                     </div>
                     <div role="cell">
                         <label className="sr-only" htmlFor={`${rowId}-keyMode`}>Key mode</label>
-                        <select id={`${rowId}-keyMode`} value={arrangement.keyMode ?? ''} disabled={!canEdit} onChange={(event) => onArrangementChange(arrangement.arrangementId ?? '', 'keyMode', event.target.value || null)}><option value="">—</option>{['MAJOR', 'MINOR', 'MODAL', 'UNKNOWN'].map((mode) => <option key={mode} value={mode}>{label(mode)}</option>)}</select>
+                        <select id={`${rowId}-keyMode`} value={arrangement.keyMode ?? ''} disabled={!canEdit} onChange={(event) => onArrangementChange(arrangement.arrangementId ?? '', 'keyMode', event.target.value || null)}><option value="">—</option>{['MAJOR', 'MINOR', 'MODAL', 'UNKNOWN'].map((mode) => <option key={mode} value={mode}>{translateText(locale, label(mode))}</option>)}</select>
                     </div>
                     <div role="cell">
                         <label className="sr-only" htmlFor={`${rowId}-tempo`}>Tempo BPM</label>
@@ -415,7 +419,7 @@ const SongMetadataForm = ({ draft, canEdit, onSaveSongMetadata, onSaveArrangemen
                             );
                         }}</Field>
                     )}
-                    <Field label="Format">{({ inputId }) => <select id={inputId} value={lyrics.format} disabled={!canEdit} onChange={(event) => onLyricsChange(lyrics.lyricsDocumentId, 'format', event.target.value)}>{['plain_text', 'chordpro', 'onsong', 'markdown'].map((format) => <option key={format} value={format}>{label(format)}</option>)}</select>}</Field>
+                    <Field label="Format">{({ inputId }) => <select id={inputId} value={lyrics.format} disabled={!canEdit} onChange={(event) => onLyricsChange(lyrics.lyricsDocumentId, 'format', event.target.value)}>{['plain_text', 'chordpro', 'onsong', 'markdown'].map((format) => <option key={format} value={format}>{translateText(locale, label(format))}</option>)}</select>}</Field>
                     <Field label="Source reference">{({ inputId }) => <input id={inputId} value={lyrics.sourceReference} disabled={!canEdit} onChange={(event) => onLyricsChange(lyrics.lyricsDocumentId, 'sourceReference', event.target.value)} />}</Field>
                     <Field label="Contains chords">{({ inputId }) => <input id={inputId} type="checkbox" checked={lyrics.containsChords} disabled={!canEdit} onChange={(event) => onLyricsChange(lyrics.lyricsDocumentId, 'containsChords', event.target.checked)} />}</Field>
                     <Field label="Lyrics content">{({ inputId }) => <textarea id={inputId} className="admin-form-grid__monospace" value={lyrics.content ?? ''} disabled={!canEdit} onChange={(event) => onLyricsChange(lyrics.lyricsDocumentId, 'content', event.target.value)} />}</Field>
@@ -470,7 +474,9 @@ const AttachmentCreateForm = ({ draft, selectedFile, arrangements, canEdit, onSu
     onTargetChange: (targetType: 'song' | 'arrangement', targetId: string) => void;
     onInputChange: (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
     onFileChange: (event: ChangeEvent<HTMLInputElement>) => void;
-}) => (
+}) => {
+    const { locale } = useI18n();
+    return (
     <LocalizedView><form className="admin-shell__panel admin-form-grid" aria-labelledby="add-resource-title" onSubmit={onSubmit}>
         <h2 id="add-resource-title" className="admin-form-grid__wide">Upload resource</h2>
         <Field label="Target">{({ inputId }) => <select id={inputId} value={`${draft.targetType}:${draft.targetId}`} disabled={!canEdit} onChange={(event) => {
@@ -479,13 +485,15 @@ const AttachmentCreateForm = ({ draft, selectedFile, arrangements, canEdit, onSu
         }}><option value={`song:${draft.targetType === 'song' ? draft.targetId : arrangements[0]?.songId ?? ''}`}>Song</option>{arrangements.map((arrangement) => <option key={arrangement.arrangementId} value={`arrangement:${arrangement.arrangementId}`}>{arrangement.name}</option>)}</select>}</Field>
         <Field label="File" required>{({ inputId }) => <input id={inputId} type="file" disabled={!canEdit} onChange={onFileChange} />}</Field>
         <Field label="Label" required>{({ inputId }) => <input id={inputId} name="displayLabel" value={draft.displayLabel} disabled={!canEdit} onChange={onInputChange} />}</Field>
-        <Field label="Type">{({ inputId }) => <select id={inputId} name="attachmentType" value={draft.attachmentType} disabled={!canEdit} onChange={onInputChange}>{['pdf', 'chord_chart', 'stem', 'backing_track', 'click_track', 'midi_cue', 'rehearsal_recording', 'preview', 'local_extension'].map((type) => <option key={type} value={type}>{label(type)}</option>)}</select>}</Field>
-        <Field label="Purpose">{({ inputId }) => <select id={inputId} name="purpose" value={draft.purpose} disabled={!canEdit} onChange={onInputChange}>{['primary_chart', 'reference', 'rehearsal', 'performance', 'evidence', 'follow_up', 'local_override'].map((purpose) => <option key={purpose} value={purpose}>{label(purpose)}</option>)}</select>}</Field>
-        <Field label="Visibility">{({ inputId }) => <select id={inputId} name="visibilityPolicy" value={draft.visibilityPolicy} disabled={!canEdit} onChange={onInputChange}>{['public_metadata', 'catalog_reviewers', 'worship_team', 'service_participants', 'admins_only', 'local_policy'].map((policy) => <option key={policy} value={policy}>{label(policy)}</option>)}</select>}</Field>
+        <Field label="Type">{({ inputId }) => <select id={inputId} name="attachmentType" value={draft.attachmentType} disabled={!canEdit} onChange={onInputChange}>{['pdf', 'chord_chart', 'stem', 'backing_track', 'click_track', 'midi_cue', 'rehearsal_recording', 'preview', 'local_extension'].map((type) => <option key={type} value={type}>{translateText(locale, label(type))}</option>)}</select>}</Field>
+        <Field label="Purpose">{({ inputId }) => <select id={inputId} name="purpose" value={draft.purpose} disabled={!canEdit} onChange={onInputChange}>{['primary_chart', 'reference', 'rehearsal', 'performance', 'evidence', 'follow_up', 'local_override'].map((purpose) => <option key={purpose} value={purpose}>{translateText(locale, label(purpose))}</option>)}</select>}</Field>
+        <Field label="Visibility">{({ inputId }) => <select id={inputId} name="visibilityPolicy" value={draft.visibilityPolicy} disabled={!canEdit} onChange={onInputChange}>{['public_metadata', 'catalog_reviewers', 'worship_team', 'service_participants', 'admins_only', 'local_policy'].map((policy) => <option key={policy} value={policy}>{translateText(locale, label(policy))}</option>)}</select>}</Field>
         <Field label="Required">{({ inputId }) => <input id={inputId} name="requiredForUse" type="checkbox" checked={draft.requiredForUse} disabled={!canEdit} onChange={onInputChange} />}</Field>
         <button type="submit" disabled={!canEdit || !selectedFile || !draft.displayLabel}>Upload and attach resource</button>
     </form></LocalizedView>
-);
+    );
+};
+
 
 const CatalogEvidence = ({ detail }: { detail: SongReviewDetailModel }) => (
     <LocalizedView><section className="admin-shell__panel" aria-labelledby="catalog-evidence-title">

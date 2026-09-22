@@ -218,6 +218,13 @@ public class SetExplanationFactory {
     }
 
     private static Set<String> normalizedRoles(RecommendableArrangement candidate) {
+        if (candidate.songRole() != null) {
+            return switch (candidate.songRole()) {
+                case BOTH -> Set.of("praise", "worship");
+                case PRAISE -> Set.of("praise");
+                case WORSHIP -> Set.of("worship");
+            };
+        }
         Set<String> roles = new HashSet<>();
         candidate.tags().stream().map(SetExplanationFactory::normalize).forEach(roles::add);
         candidate.controlledTags().stream()

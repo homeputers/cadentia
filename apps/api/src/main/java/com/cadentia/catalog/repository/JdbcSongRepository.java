@@ -34,6 +34,7 @@ import com.cadentia.catalog.model.KeyMode;
 import com.cadentia.catalog.model.LicenseType;
 import com.cadentia.catalog.model.LyricsFormat;
 import com.cadentia.catalog.model.LyricsParseStatus;
+import com.cadentia.catalog.model.SongRole;
 import com.cadentia.catalog.model.SongStatus;
 import com.cadentia.catalog.model.TagType;
 import com.cadentia.catalog.model.UpdateApprovalRecordCommand;
@@ -71,7 +72,7 @@ public class JdbcSongRepository implements SongRepository {
 
     private static final String SONG_COLUMNS = "id, canonical_title, normalized_title, primary_language, "
             + "original_artist_display, composer_credits, ccli_number, year_written, song_status, "
-            + "doctrinal_notes, created_at, updated_at";
+            + "song_role, doctrinal_notes, created_at, updated_at";
     private static final String ARRANGEMENT_COLUMNS = "id, song_id, name, normalized_name, source_type, language, "
             + "musical_key, key_mode, tempo_bpm, time_signature, duration_seconds, energy_level, difficulty_level, "
             + "default_for_song, is_active, created_at, updated_at";
@@ -120,10 +121,10 @@ public class JdbcSongRepository implements SongRepository {
         String sql = """
                 INSERT INTO songs (
                     canonical_title, normalized_title, primary_language, original_artist_display,
-                    composer_credits, ccli_number, year_written, song_status, doctrinal_notes
+                    composer_credits, ccli_number, year_written, song_status, song_role, doctrinal_notes
                 ) VALUES (
                     :canonicalTitle, :normalizedTitle, :primaryLanguage, :originalArtistDisplay,
-                    :composerCredits, :ccliNumber, :yearWritten, :songStatus, :doctrinalNotes
+                    :composerCredits, :ccliNumber, :yearWritten, :songStatus, :songRole, :doctrinalNotes
                 )
                 RETURNING %s
                 """.formatted(SONG_COLUMNS);
@@ -202,6 +203,7 @@ public class JdbcSongRepository implements SongRepository {
                     ccli_number = :ccliNumber,
                     year_written = :yearWritten,
                     song_status = :songStatus,
+                    song_role = :songRole,
                     doctrinal_notes = :doctrinalNotes,
                     updated_at = now()
                 WHERE id = :id
@@ -947,6 +949,7 @@ public class JdbcSongRepository implements SongRepository {
                 .addValue("ccliNumber", command.ccliNumber())
                 .addValue("yearWritten", command.yearWritten())
                 .addValue("songStatus", command.songStatus().name())
+                .addValue("songRole", command.songRole() == null ? null : command.songRole().name())
                 .addValue("doctrinalNotes", command.doctrinalNotes());
     }
 
@@ -960,6 +963,7 @@ public class JdbcSongRepository implements SongRepository {
                 .addValue("ccliNumber", command.ccliNumber())
                 .addValue("yearWritten", command.yearWritten())
                 .addValue("songStatus", command.songStatus().name())
+                .addValue("songRole", command.songRole() == null ? null : command.songRole().name())
                 .addValue("doctrinalNotes", command.doctrinalNotes());
     }
 
@@ -1216,6 +1220,7 @@ public class JdbcSongRepository implements SongRepository {
                 rs.getString("ccli_number"),
                 integer(rs, "year_written"),
                 SongStatus.valueOf(rs.getString("song_status")),
+                nullableEnum(rs.getString("song_role"), SongRole.class),
                 rs.getString("doctrinal_notes"),
                 instant(rs, "created_at"),
                 instant(rs, "updated_at"));

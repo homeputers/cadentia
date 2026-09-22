@@ -9,7 +9,31 @@ public record CreateSongCommand(
         String ccliNumber,
         Integer yearWritten,
         SongStatus songStatus,
+        SongRole songRole,
         String doctrinalNotes) {
+
+    public CreateSongCommand(
+            String canonicalTitle,
+            String normalizedTitle,
+            String primaryLanguage,
+            String originalArtistDisplay,
+            String composerCredits,
+            String ccliNumber,
+            Integer yearWritten,
+            SongStatus songStatus,
+            String doctrinalNotes) {
+        this(
+                canonicalTitle,
+                normalizedTitle,
+                primaryLanguage,
+                originalArtistDisplay,
+                composerCredits,
+                ccliNumber,
+                yearWritten,
+                songStatus,
+                null,
+                doctrinalNotes);
+    }
 
     public CreateSongCommand {
         canonicalTitle = CatalogValidation.requireText(canonicalTitle, "canonicalTitle");

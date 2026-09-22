@@ -1,12 +1,12 @@
 import React from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { act } from 'react-dom/test-utils';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { AdminSession } from '../src/auth/session';
 import type { AdminApiClient } from '../src/generated/cadentia-api/client';
 import { I18nProvider } from '../src/i18n';
 import { SongImport } from '../src/routes/SongImport';
-import { TagsSection } from '../src/routes/SongReviewDetail';
+import { SongMetadataForm, TagsSection } from '../src/routes/SongReviewDetail';
 import { ActionBadge, RoleBadge } from '../src/routes/admin-ui';
 
 let container: HTMLDivElement;
@@ -82,5 +82,103 @@ describe('admin-web Spanish rendering', () => {
         expect(container.textContent).toContain('Nombre de etiqueta');
         expect(container.textContent).toContain('Asignar etiqueta');
         expect(container.querySelector('button[aria-label="Eliminar etiqueta"]')).not.toBeNull();
+    });
+
+    it('localizes song metadata dropdown options when the church locale is Spanish', async () => {
+        container = document.createElement('div');
+        document.body.appendChild(container);
+        await act(async () => {
+            root = createRoot(container);
+            root.render(<I18nProvider locale="es-GT"><SongMetadataForm
+                draft={{
+                    actor: 'catalog-editor-1',
+                    canonicalTitle: 'Canción',
+                    primaryLanguage: 'es',
+                    songStatus: 'APPROVED',
+                    songRole: null,
+                    arrangements: [],
+                    lyricsDocuments: [],
+                }}
+                canEdit={true}
+                onSaveSongMetadata={(event) => event.preventDefault()}
+                onSaveArrangementMetadata={(event) => event.preventDefault()}
+                onSongChange={() => undefined}
+                onArrangementChange={() => undefined}
+                onAddArrangement={() => undefined}
+                onRemoveArrangement={() => undefined}
+                onLyricsChange={() => undefined}
+                onAddLyricsDocument={() => undefined}
+                onRemoveLyricsDocument={() => undefined}
+            /></I18nProvider>);
+        });
+
+        const optionLabels = [...container.querySelectorAll('option')].map((option) => option.textContent);
+        expect(optionLabels).toEqual([
+            'Aprobado',
+            'En revisión',
+            'Borrador',
+            'Rechazado',
+            'Archivado',
+            '—',
+            'Alabanza',
+            'Adoración',
+            'Ambos',
+        ]);
+        expect(container.textContent).toContain('Rol de la canción');
+        expect(container.textContent).not.toContain('Approved');
+        expect(container.textContent).not.toContain('Praise');
+    });
+
+    it('localizes option lists without React missing-key warnings', async () => {
+        const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+        container = document.createElement('div');
+        document.body.appendChild(container);
+        try {
+            await act(async () => {
+                root = createRoot(container);
+                root.render(<I18nProvider locale="es-GT"><SongMetadataForm
+                    draft={{
+                        actor: 'catalog-editor-1',
+                        canonicalTitle: 'Canción',
+                        primaryLanguage: 'es',
+                        songStatus: 'APPROVED',
+                        songRole: null,
+                        arrangements: [{
+                            arrangementId: 'arr-1',
+                            name: 'Default',
+                            normalizedName: '',
+                            sourceType: 'ORIGINAL',
+                            language: 'en',
+                            musicalKey: 'G',
+                            keyMode: 'MAJOR',
+                            tempoBpm: 96,
+                            timeSignature: '4/4',
+                            durationSeconds: null,
+                            energyLevel: 3,
+                            difficultyLevel: 2,
+                            defaultForSong: true,
+                            active: true,
+                        }],
+                        lyricsDocuments: [],
+                    }}
+                    canEdit={true}
+                    onSaveSongMetadata={(event) => event.preventDefault()}
+                    onSaveArrangementMetadata={(event) => event.preventDefault()}
+                    onSongChange={() => undefined}
+                    onArrangementChange={() => undefined}
+                    onAddArrangement={() => undefined}
+                    onRemoveArrangement={() => undefined}
+                    onLyricsChange={() => undefined}
+                    onAddLyricsDocument={() => undefined}
+                    onRemoveLyricsDocument={() => undefined}
+                /></I18nProvider>);
+            });
+
+            const keyWarnings = consoleError.mock.calls.filter(([first]) =>
+                typeof first === 'string' && first.includes('unique "key" prop'));
+            expect(keyWarnings).toEqual([]);
+        } finally {
+            consoleError.mockRestore();
+        }
     });
 });
