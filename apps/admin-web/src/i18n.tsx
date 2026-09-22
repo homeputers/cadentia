@@ -67,13 +67,14 @@ const messages = {
             telegramAccess: 'Telegram access',
             teamAssignments: 'Team assignments',
             musicians: 'Musicians',
+            userAdministration: 'User administration',
         },
     },
     es: {
-        admin: 'Administración', brand: 'Administración de Cadentia', sections: 'Secciones de administración', signedInAs: 'Sesión iniciada como', breadcrumb: 'Ruta de navegación', applyFilters: 'Aplicar filtros', retry: 'Reintentar', loading: 'Cargando datos administrativos…', empty: 'Ningún registro coincide con los filtros actuales.', partialFailure: 'No se pudieron cargar algunos datos. Las filas disponibles pueden estar incompletas.', stale: 'Mostrando datos en caché mientras se cargan datos actualizados.', unauthorized: 'Debes iniciar sesión para cargar detalles protegidos.', forbidden: 'No tienes acceso a este recurso administrativo. No se cargaron detalles protegidos.', error: 'La solicitud falló con un mensaje de error redactado.', role: 'Rol', allowedAction: 'Acción permitida', required: 'obligatorio', auditReference: 'Referencia de auditoría', supportDebug: 'Metadatos de soporte/depuración', buildVersion: 'Versión de compilación', buildCommit: 'Commit de compilación', buildTimestamp: 'Fecha de compilación', diagnostics: 'Diagnóstico', enabled: 'habilitado', disabled: 'deshabilitado', configured: 'configurado', missing: 'faltante', noSecrets: 'Aquí no se muestran secretos, tokens, cargas sin procesar, letras protegidas por derechos ni diagnósticos sensibles.', requiredAcknowledgement: 'Reconocimiento requerido:', auditActor: 'Actor de auditoría:', concurrency: 'Concurrencia/versión:', cancel: 'Cancelar', continue: 'Entiendo, continuar', previewedChanges: 'Cambios previsualizados', before: 'Antes', after: 'Después', shell: 'Base de la consola', accessDenied: 'Acceso denegado', missingInstance: 'Falta la instancia de iglesia', missingInstanceCopy: 'A la consola de administración le falta el contexto requerido de la instancia de iglesia.', signIn: 'Iniciar sesión en la administración de Cadentia', sessionExpired: 'La sesión expiró. Inicia sesión de nuevo.', shellUnavailable: 'Consola de administración no disponible', capabilityDenied: 'Función deshabilitada', protectedRoutes: 'Grupos de rutas protegidas', routeCopy: 'Solo se muestran en la barra superior las rutas permitidas por las capacidades actuales.', grantedCapabilities: 'Capacidades otorgadas', capabilityCopy: 'Estas insignias muestran lo que permite la sesión del backend. Los controles aparecen en cada sección cuando el flujo está disponible.', readOnly: 'Acceso de solo lectura. Los controles mutables están ocultos para facilitar el uso.', deploymentMetadata: 'Metadatos de despliegue', missingRuntime: 'Configuración de ejecución faltante', importSnapshot: 'Resumen de revisión de importaciones', openImportQueue: 'Abrir la cola completa de revisión', routes: { songImport: 'Importar canciones', importReview: 'Revisión de importaciones', reviewedSongs: 'Canciones revisadas', auditHistory: 'Historial de auditoría', diagnostics: 'Diagnóstico', instanceSettings: 'Configuración de instancia', telegramAccess: 'Acceso de Telegram', teamAssignments: 'Asignaciones del equipo', musicians: 'Músicos' },
+        admin: 'Administración', brand: 'Administración de Cadentia', sections: 'Secciones de administración', signedInAs: 'Sesión iniciada como', breadcrumb: 'Ruta de navegación', applyFilters: 'Aplicar filtros', retry: 'Reintentar', loading: 'Cargando datos administrativos…', empty: 'Ningún registro coincide con los filtros actuales.', partialFailure: 'No se pudieron cargar algunos datos. Las filas disponibles pueden estar incompletas.', stale: 'Mostrando datos en caché mientras se cargan datos actualizados.', unauthorized: 'Debes iniciar sesión para cargar detalles protegidos.', forbidden: 'No tienes acceso a este recurso administrativo. No se cargaron detalles protegidos.', error: 'La solicitud falló con un mensaje de error redactado.', role: 'Rol', allowedAction: 'Acción permitida', required: 'obligatorio', auditReference: 'Referencia de auditoría', supportDebug: 'Metadatos de soporte/depuración', buildVersion: 'Versión de compilación', buildCommit: 'Commit de compilación', buildTimestamp: 'Fecha de compilación', diagnostics: 'Diagnóstico', enabled: 'habilitado', disabled: 'deshabilitado', configured: 'configurado', missing: 'faltante', noSecrets: 'Aquí no se muestran secretos, tokens, cargas sin procesar, letras protegidas por derechos ni diagnósticos sensibles.', requiredAcknowledgement: 'Reconocimiento requerido:', auditActor: 'Actor de auditoría:', concurrency: 'Concurrencia/versión:', cancel: 'Cancelar', continue: 'Entiendo, continuar', previewedChanges: 'Cambios previsualizados', before: 'Antes', after: 'Después', shell: 'Base de la consola', accessDenied: 'Acceso denegado', missingInstance: 'Falta la instancia de iglesia', missingInstanceCopy: 'A la consola de administración le falta el contexto requerido de la instancia de iglesia.', signIn: 'Iniciar sesión en la administración de Cadentia', sessionExpired: 'La sesión expiró. Inicia sesión de nuevo.', shellUnavailable: 'Consola de administración no disponible', capabilityDenied: 'Función deshabilitada', protectedRoutes: 'Grupos de rutas protegidas', routeCopy: 'Solo se muestran en la barra superior las rutas permitidas por las capacidades actuales.', grantedCapabilities: 'Capacidades otorgadas', capabilityCopy: 'Estas insignias muestran lo que permite la sesión del backend. Los controles aparecen en cada sección cuando el flujo está disponible.', readOnly: 'Acceso de solo lectura. Los controles mutables están ocultos para facilitar el uso.', deploymentMetadata: 'Metadatos de despliegue', missingRuntime: 'Configuración de ejecución faltante', importSnapshot: 'Resumen de revisión de importaciones', openImportQueue: 'Abrir la cola completa de revisión', routes: { songImport: 'Importar canciones', importReview: 'Revisión de importaciones', reviewedSongs: 'Canciones revisadas', auditHistory: 'Historial de auditoría', diagnostics: 'Diagnóstico', instanceSettings: 'Configuración de instancia', telegramAccess: 'Acceso de Telegram', teamAssignments: 'Asignaciones del equipo', musicians: 'Músicos', userAdministration: 'Administración de usuarios' },
     },
     pt: {
-        admin: 'Administração', brand: 'Administração Cadentia', sections: 'Seções administrativas', signedInAs: 'Sessão iniciada como', breadcrumb: 'Trilha de navegação', applyFilters: 'Aplicar filtros', retry: 'Tentar novamente', loading: 'Carregando dados administrativos…', empty: 'Nenhum registro corresponde aos filtros atuais.', partialFailure: 'Alguns dados não puderam ser carregados. As linhas disponíveis podem estar incompletas.', stale: 'Exibindo dados em cache enquanto dados novos são carregados.', unauthorized: 'É necessário entrar antes de carregar detalhes protegidos.', forbidden: 'Você não tem acesso a este recurso administrativo. Nenhum detalhe protegido foi carregado.', error: 'A solicitação falhou com uma mensagem de erro ocultada.', role: 'Função', allowedAction: 'Ação permitida', required: 'obrigatório', auditReference: 'Referência de auditoria', supportDebug: 'Metadados de suporte/depuração', buildVersion: 'Versão da build', buildCommit: 'Commit da build', buildTimestamp: 'Data da build', diagnostics: 'Diagnóstico', enabled: 'ativado', disabled: 'desativado', configured: 'configurado', missing: 'ausente', noSecrets: 'Nenhum segredo, token, payload bruto, letra protegida por direitos autorais ou diagnóstico sensível é exibido aqui.', requiredAcknowledgement: 'Confirmação obrigatória:', auditActor: 'Ator da auditoria:', concurrency: 'Concorrência/versão:', cancel: 'Cancelar', continue: 'Entendo, continuar', previewedChanges: 'Alterações pré-visualizadas', before: 'Antes', after: 'Depois', shell: 'Base do console', accessDenied: 'Acesso negado', missingInstance: 'Instância da igreja ausente', missingInstanceCopy: 'O console administrativo não tem o contexto necessário da instância da igreja.', signIn: 'Entrar na administração Cadentia', sessionExpired: 'A sessão expirou. Entre novamente.', shellUnavailable: 'Console administrativo indisponível', capabilityDenied: 'Recurso desativado', protectedRoutes: 'Grupos de rotas protegidas', routeCopy: 'Somente as rotas correspondentes às capacidades atuais aparecem na barra de navegação.', grantedCapabilities: 'Capacidades concedidas', capabilityCopy: 'Estas etiquetas mostram o que a sessão do backend permite. Os controles aparecem em cada seção quando o fluxo está disponível.', readOnly: 'Acesso somente leitura. Os controles de mutação ficam ocultos para facilitar o uso.', deploymentMetadata: 'Metadados de implantação', missingRuntime: 'Configuração de execução ausente', importSnapshot: 'Resumo da revisão de importações', openImportQueue: 'Abrir fila completa de revisão', routes: { songImport: 'Importar músicas', importReview: 'Revisão de importações', reviewedSongs: 'Músicas revisadas', auditHistory: 'Histórico de auditoria', diagnostics: 'Diagnóstico', instanceSettings: 'Configurações da instância', telegramAccess: 'Acesso ao Telegram', teamAssignments: 'Designações da equipe', musicians: 'Músicos' },
+        admin: 'Administração', brand: 'Administração Cadentia', sections: 'Seções administrativas', signedInAs: 'Sessão iniciada como', breadcrumb: 'Trilha de navegação', applyFilters: 'Aplicar filtros', retry: 'Tentar novamente', loading: 'Carregando dados administrativos…', empty: 'Nenhum registro corresponde aos filtros atuais.', partialFailure: 'Alguns dados não puderam ser carregados. As linhas disponíveis podem estar incompletas.', stale: 'Exibindo dados em cache enquanto dados novos são carregados.', unauthorized: 'É necessário entrar antes de carregar detalhes protegidos.', forbidden: 'Você não tem acesso a este recurso administrativo. Nenhum detalhe protegido foi carregado.', error: 'A solicitação falhou com uma mensagem de erro ocultada.', role: 'Função', allowedAction: 'Ação permitida', required: 'obrigatório', auditReference: 'Referência de auditoria', supportDebug: 'Metadados de suporte/depuração', buildVersion: 'Versão da build', buildCommit: 'Commit da build', buildTimestamp: 'Data da build', diagnostics: 'Diagnóstico', enabled: 'ativado', disabled: 'desativado', configured: 'configurado', missing: 'ausente', noSecrets: 'Nenhum segredo, token, payload bruto, letra protegida por direitos autorais ou diagnóstico sensível é exibido aqui.', requiredAcknowledgement: 'Confirmação obrigatória:', auditActor: 'Ator da auditoria:', concurrency: 'Concorrência/versão:', cancel: 'Cancelar', continue: 'Entendo, continuar', previewedChanges: 'Alterações pré-visualizadas', before: 'Antes', after: 'Depois', shell: 'Base do console', accessDenied: 'Acesso negado', missingInstance: 'Instância da igreja ausente', missingInstanceCopy: 'O console administrativo não tem o contexto necessário da instância da igreja.', signIn: 'Entrar na administração Cadentia', sessionExpired: 'A sessão expirou. Entre novamente.', shellUnavailable: 'Console administrativo indisponível', capabilityDenied: 'Recurso desativado', protectedRoutes: 'Grupos de rotas protegidas', routeCopy: 'Somente as rotas correspondentes às capacidades atuais aparecem na barra de navegação.', grantedCapabilities: 'Capacidades concedidas', capabilityCopy: 'Estas etiquetas mostram o que a sessão do backend permite. Os controles aparecem em cada seção quando o fluxo está disponível.', readOnly: 'Acesso somente leitura. Os controles de mutação ficam ocultos para facilitar o uso.', deploymentMetadata: 'Metadados de implantação', missingRuntime: 'Configuração de execução ausente', importSnapshot: 'Resumo da revisão de importações', openImportQueue: 'Abrir fila completa de revisão', routes: { songImport: 'Importar músicas', importReview: 'Revisão de importações', reviewedSongs: 'Músicas revisadas', auditHistory: 'Histórico de auditoria', diagnostics: 'Diagnóstico', instanceSettings: 'Configurações da instância', telegramAccess: 'Acesso ao Telegram', teamAssignments: 'Designações da equipe', musicians: 'Músicos', userAdministration: 'Administração de usuários' },
     },
 } as const;
 
@@ -503,6 +504,7 @@ const spanishPhrases: Record<string, string> = {
     'attachments': 'adjuntos',
     'No attachments returned.': 'No se devolvieron adjuntos.',
     'Song metadata': 'Metadatos de la canción',
+    'Song role': 'Rol de la canción',
     'Save song metadata': 'Guardar metadatos de la canción',
     'Composers': 'Compositores',
     'Year': 'Año',
@@ -676,6 +678,77 @@ const spanishPhrases: Record<string, string> = {
     'Code': 'Código',
 };
 
+const adminUserSpanishPhrases: Record<string, string> = {
+    Admin: 'Administración',
+    'User administration': 'Administración de usuarios',
+    'Administration': 'Administración',
+    'Provision identities from the configured identity provider and assign tenant-scoped roles. Changes take effect on the next authenticated request.': 'Provisiona identidades del proveedor de identidad configurado y asigna roles por iglesia. Los cambios se aplican en la siguiente solicitud autenticada.',
+    'Provision user': 'Provisionar usuario',
+    'Identity-provider subject': 'Asunto del proveedor de identidad',
+    'sub from the identity provider': 'sub del proveedor de identidad',
+    'Display name': 'Nombre visible',
+    'Email': 'Correo electrónico',
+    'Initial roles': 'Roles iniciales',
+    'Provision identity': 'Provisionar identidad',
+    'Provisioned users': 'Usuarios provisionados',
+    'You do not have permission to manage users.': 'No tienes permiso para administrar usuarios.',
+    'User administration could not be loaded.': 'No se pudo cargar la administración de usuarios.',
+    'That identity is already provisioned for this church instance.': 'Esa identidad ya está provisionada para esta iglesia.',
+    'The user could not be created.': 'No se pudo crear el usuario.',
+    'The role update could not be saved. Refresh and try again if another administrator changed this user.': 'No se pudo guardar la actualización de roles. Actualiza e inténtalo de nuevo si otro administrador cambió este usuario.',
+    'The user status could not be changed. Refresh and try again if another administrator changed this user.': 'No se pudo cambiar el estado del usuario. Actualiza e inténtalo de nuevo si otro administrador cambió este usuario.',
+    'No email': 'Sin correo electrónico',
+    'Save roles': 'Guardar roles',
+    'Suspend': 'Suspender',
+    'Reactivate': 'Reactivar',
+    'Roles': 'Roles',
+    'Identity': 'Identidad',
+    'Effective roles': 'Roles efectivos',
+    'Role and status actions': 'Acciones de rol y estado',
+    'Tenant-scoped admin users': 'Usuarios administrativos de esta iglesia',
+    'Reason for role changes': 'Motivo de los cambios de rol',
+    'Required before saving a role assignment.': 'Obligatorio antes de guardar una asignación de rol.',
+    'Admin users': 'Usuarios administrativos',
+    'Select at least one role. You can change assignments later with a required reason.': 'Selecciona al menos un rol. Después puedes cambiar las asignaciones con un motivo obligatorio.',
+    'SUSPENDED': 'Suspendido',
+};
+
+const portuguesePhrases: Record<string, string> = {
+    Admin: 'Administração',
+    'User administration': 'Administração de usuários',
+    'Administration': 'Administração',
+    'Provision identities from the configured identity provider and assign tenant-scoped roles. Changes take effect on the next authenticated request.': 'Provisione identidades do provedor de identidade configurado e atribua funções por igreja. As alterações entram em vigor na próxima solicitação autenticada.',
+    'Provision user': 'Provisionar usuário',
+    'Identity-provider subject': 'Assunto do provedor de identidade',
+    'sub from the identity provider': 'sub do provedor de identidade',
+    'Display name': 'Nome de exibição',
+    'Email': 'E-mail',
+    'Initial roles': 'Funções iniciais',
+    'Provision identity': 'Provisionar identidade',
+    'Provisioned users': 'Usuários provisionados',
+    'You do not have permission to manage users.': 'Você não tem permissão para administrar usuários.',
+    'User administration could not be loaded.': 'Não foi possível carregar a administração de usuários.',
+    'That identity is already provisioned for this church instance.': 'Essa identidade já está provisionada para esta igreja.',
+    'The user could not be created.': 'Não foi possível criar o usuário.',
+    'The role update could not be saved. Refresh and try again if another administrator changed this user.': 'Não foi possível salvar a atualização das funções. Atualize e tente novamente se outro administrador alterou este usuário.',
+    'The user status could not be changed. Refresh and try again if another administrator changed this user.': 'Não foi possível alterar o status do usuário. Atualize e tente novamente se outro administrador alterou este usuário.',
+    'No email': 'Sem e-mail',
+    'Save roles': 'Salvar funções',
+    'Suspend': 'Suspender',
+    'Reactivate': 'Reativar',
+    'Roles': 'Funções',
+    'Identity': 'Identidade',
+    'Effective roles': 'Funções efetivas',
+    'Role and status actions': 'Ações de função e status',
+    'Tenant-scoped admin users': 'Usuários administrativos desta igreja',
+    'Reason for role changes': 'Motivo das alterações de função',
+    'Required before saving a role assignment.': 'Obrigatório antes de salvar uma atribuição de função.',
+    'Admin users': 'Usuários administrativos',
+    'Select at least one role. You can change assignments later with a required reason.': 'Selecione pelo menos uma função. Depois, você poderá alterar as atribuições com um motivo obrigatório.',
+    'ACTIVE': 'Ativo',
+    'SUSPENDED': 'Suspenso',
+};
+
 const roleTranslations: Record<string, string> = {
     ADMIN: 'Administrador',
     VIEWER: 'Consulta',
@@ -683,6 +756,9 @@ const roleTranslations: Record<string, string> = {
     CATALOG_EDITOR: 'Editor del catálogo',
     DOCTRINAL_REVIEWER: 'Revisor doctrinal',
     MUSICAL_REVIEWER: 'Revisor musical',
+    TEAM_SCHEDULER: 'Planificador de equipos',
+    REPORTING_VIEWER: 'Consulta de informes',
+    INTEGRATION_MANAGER: 'Administrador de integraciones',
     'catalog.admin.approve': 'Aprobación del catálogo',
     'catalog.admin.review': 'Revisión del catálogo',
     'role.integration_manager': 'Administrador de integraciones',
@@ -691,6 +767,20 @@ const roleTranslations: Record<string, string> = {
     'role.integration manager': 'Administrador de integraciones',
     'role.reporting viewer': 'Consulta de informes',
     'role.team scheduler': 'Planificador de equipos',
+    ASSIGNED_MUSICIAN: 'Músico asignado',
+};
+
+const portugueseRoleTranslations: Record<string, string> = {
+    ADMIN: 'Administrador',
+    VIEWER: 'Consulta',
+    WORSHIP_LEADER: 'Líder de adoração',
+    CATALOG_EDITOR: 'Editor do catálogo',
+    DOCTRINAL_REVIEWER: 'Revisor doutrinário',
+    MUSICAL_REVIEWER: 'Revisor musical',
+    TEAM_SCHEDULER: 'Planejador de equipes',
+    ASSIGNED_MUSICIAN: 'Músico designado',
+    REPORTING_VIEWER: 'Consulta de relatórios',
+    INTEGRATION_MANAGER: 'Administrador de integrações',
 };
 
 const capabilityTranslations: Record<string, string> = {
@@ -736,6 +826,8 @@ const codeTranslations: Record<string, string> = {
     'Theme': 'Tema', 'Scripture': 'Escritura', 'Mood': 'Ánimo', 'Occasion': 'Ocasión', 'Season': 'Temporada', 'Musical style': 'Estilo musical', 'Audience': 'Audiencia',
     'BEGINNER': 'Principiante', 'INTERMEDIATE': 'Intermedio', 'ADVANCED': 'Avanzado', 'DIRECTOR': 'Director',
     'ROLE': 'Rol', 'INSTRUMENT': 'Instrumento', 'VOCAL_PART': 'Parte vocal',
+    'Praise': 'Alabanza', 'Worship': 'Adoración', 'Both': 'Ambos',
+    'PRAISE': 'Alabanza', 'WORSHIP': 'Adoración', 'BOTH': 'Ambos',
 };
 
 export const normalizeLocale = (value?: string | null): SupportedLocale => {
@@ -752,7 +844,7 @@ export const translateText = (locale: string | null | undefined, source: string)
     const normalized = normalizeLocale(locale);
     if (normalized === 'es') {
         const humanized = source.replaceAll('_', ' ').replaceAll('.', ' ').toLowerCase().replace(/^./, (c) => c.toUpperCase());
-        const direct = spanishPhrases[source] ?? codeTranslations[source] ?? codeTranslations[humanized];
+        const direct = spanishPhrases[source] ?? adminUserSpanishPhrases[source] ?? codeTranslations[source] ?? codeTranslations[humanized];
         if (direct) return direct;
         if (source.includes(',')) {
             const translatedParts = source.split(',').map((part) => {
@@ -764,6 +856,7 @@ export const translateText = (locale: string | null | undefined, source: string)
         }
         return source;
     }
+    if (normalized === 'pt') return portuguesePhrases[source] ?? source;
     const key = englishMessageValue(source) as TranslationKey | undefined;
     if (key) return translate(locale, key);
     return source;
@@ -776,7 +869,9 @@ export const localizedLabel = (locale: string | null | undefined, value?: string
 };
 
 export const localizedRole = (locale: string | null | undefined, role: string): string => {
-    if (normalizeLocale(locale) === 'es') return roleTranslations[role] ?? localizedLabel(locale, role);
+    const normalized = normalizeLocale(locale);
+    if (normalized === 'es') return roleTranslations[role] ?? localizedLabel(locale, role);
+    if (normalized === 'pt') return portugueseRoleTranslations[role] ?? role.replaceAll('_', ' ');
     return role.replaceAll('_', ' ');
 };
 
@@ -789,7 +884,8 @@ const localizedPropNames = ['aria-label', 'title', 'placeholder', 'label', 'desc
 
 const localizeNode = (node: ReactNode, locale: SupportedLocale): ReactNode => {
     if (typeof node === 'string') return translateText(locale, node);
-    if (Array.isArray(node)) return node.map((child) => localizeNode(child, locale));
+    // Children.map prefixes stable keys so rebuilt arrays do not trip React's missing-key dev warning.
+    if (Array.isArray(node)) return Children.map(node, (child) => localizeNode(child, locale));
     if (!isValidElement(node)) return node;
     const props = { ...(node.props as Record<string, unknown>) };
     if ('children' in props) props.children = localizeNode(props.children as ReactNode, locale);
@@ -827,7 +923,7 @@ export const I18nProvider = ({ locale, children }: { locale?: string | null; chi
 export const useI18n = () => useContext(I18nContext);
 
 export const routeTranslationKey = (label: string): string => ({
-    'Song import': 'songImport', 'Import review': 'importReview', 'Reviewed songs': 'reviewedSongs', 'Audit history': 'auditHistory', Diagnostics: 'diagnostics', 'Instance settings': 'instanceSettings', 'Telegram access': 'telegramAccess', 'Team assignments': 'teamAssignments', 'Musicians': 'musicians',
+    'Song import': 'songImport', 'Import review': 'importReview', 'Reviewed songs': 'reviewedSongs', 'Audit history': 'auditHistory', Diagnostics: 'diagnostics', 'Instance settings': 'instanceSettings', 'Telegram access': 'telegramAccess', 'Team assignments': 'teamAssignments', 'Musicians': 'musicians', 'User administration': 'userAdministration',
 }[label] ?? label);
 
 export const routeLabel = (locale: string | null | undefined, label: string): string => {
