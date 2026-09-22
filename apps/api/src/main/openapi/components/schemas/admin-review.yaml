@@ -287,6 +287,14 @@ AdminCatalogSongSummary:
       nullable: true
     songStatus:
       type: string
+    songRole:
+      type: string
+      enum:
+      - PRAISE
+      - WORSHIP
+      - BOTH
+      nullable: true
+      description: Language-neutral setlist role classification; null means unclassified and the recommendation engine falls back to praise/worship tag slugs.
     updatedAt:
       type: string
       format: date-time
@@ -402,6 +410,14 @@ AdminCatalogSongUpdateRequest:
       - APPROVED
       - REJECTED
       - ARCHIVED
+    songRole:
+      type: string
+      enum:
+      - PRAISE
+      - WORSHIP
+      - BOTH
+      nullable: true
+      description: Optional language-neutral setlist role classification. Null or omitted stores unclassified; the recommendation engine then falls back to praise/worship tag slugs.
     doctrinalNotes:
       type: string
       maxLength: 4000

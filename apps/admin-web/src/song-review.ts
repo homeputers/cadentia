@@ -18,6 +18,7 @@ export type CatalogSongSummary = {
     ccliNumber?: string | null;
     yearWritten?: number | null;
     songStatus: string;
+    songRole?: string | null;
     updatedAt: string;
     arrangementCount: number;
 };
@@ -140,6 +141,7 @@ export type SongMetadataDraft = {
     ccliNumber?: string | null;
     yearWritten?: number | null;
     songStatus: string;
+    songRole?: string | null;
     doctrinalNotes?: string | null;
     arrangements: ArrangementMetadataDraft[];
     lyricsDocuments: LyricsMetadataDraft[];
@@ -368,6 +370,7 @@ export const toMetadataDraft = (detail: SongReviewDetail, actor: string): SongMe
     ccliNumber: detail.song.ccliNumber,
     yearWritten: detail.song.yearWritten,
     songStatus: detail.song.songStatus,
+    songRole: detail.song.songRole ?? null,
     doctrinalNotes: detail.doctrinalNotes,
     arrangements: detail.arrangements.map(({ arrangementId, name, normalizedName, sourceType, language, musicalKey, keyMode, tempoBpm, timeSignature, durationSeconds, energyLevel, difficultyLevel, defaultForSong, active }) => ({
         arrangementId,
@@ -404,6 +407,8 @@ export type SongTagAssignmentDraft = {
 };
 
 export const CONTROLLED_TAG_TYPES = ['THEME', 'SCRIPTURE', 'MOOD', 'OCCASION', 'SEASON', 'MUSICAL_STYLE', 'AUDIENCE'] as const;
+
+export const SONG_ROLES = ['PRAISE', 'WORSHIP', 'BOTH'] as const;
 
 export const assignSongTag = (client: AdminApiClient, songId: string, draft: SongTagAssignmentDraft): Promise<CatalogTag> => client.request<CatalogTag>(`/admin/songs/${encodeURIComponent(songId)}/tags`, {
     method: 'POST',

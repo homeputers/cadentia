@@ -21,8 +21,10 @@ import com.cadentia.catalog.model.ImportMethod;
 import com.cadentia.catalog.model.KeyMode;
 import com.cadentia.catalog.model.LicenseType;
 import com.cadentia.catalog.model.LyricsFormat;
+import com.cadentia.catalog.model.SongRole;
 import com.cadentia.catalog.model.SongStatus;
 import com.cadentia.catalog.model.TagType;
+import com.cadentia.catalog.model.UpdateSongCommand;
 import com.cadentia.catalog.repository.JdbcSongRepository;
 import java.math.BigDecimal;
 import java.util.Comparator;
@@ -531,6 +533,42 @@ class JdbcCandidateRetrieverIntegrationTest {
                     assertThat(row.name()).isEqualTo("Joy");
                     assertThat(row.arrangementCount()).isEqualTo(2);
                 });
+    }
+
+    @Test
+    void findCandidatesExposesExplicitSongRoleClassification() {
+        // Arrange
+        CatalogContent classified = createCatalogContent("role-classified");
+        Song classifiedSong = classified.song();
+        songRepository.updateSong(classifiedSong.id(), new UpdateSongCommand(
+                classifiedSong.canonicalTitle(),
+                classifiedSong.normalizedTitle(),
+                classifiedSong.primaryLanguage(),
+                classifiedSong.originalArtistDisplay(),
+                classifiedSong.composerCredits(),
+                classifiedSong.ccliNumber(),
+                classifiedSong.yearWritten(),
+                classifiedSong.songStatus(),
+                SongRole.WORSHIP,
+                classifiedSong.doctrinalNotes()));
+        approveAllRequiredGates(classified, ApprovalStatus.APPROVED);
+        CatalogContent unclassified = createCatalogContent("role-unclassified");
+        approveAllRequiredGates(unclassified, ApprovalStatus.APPROVED);
+
+        // Act
+        List<RecommendableArrangement> candidates = candidateRetriever.findCandidates(defaultCriteria());
+
+        // Assert
+        assertThat(candidates)
+                .filteredOn(candidate -> candidate.arrangementId().equals(classified.arrangement().id()))
+                .singleElement()
+                .extracting(RecommendableArrangement::songRole)
+                .isEqualTo(SongRole.WORSHIP);
+        assertThat(candidates)
+                .filteredOn(candidate -> candidate.arrangementId().equals(unclassified.arrangement().id()))
+                .singleElement()
+                .extracting(RecommendableArrangement::songRole)
+                .isNull();
     }
 
     private static CandidateSearchCriteria defaultCriteria() {

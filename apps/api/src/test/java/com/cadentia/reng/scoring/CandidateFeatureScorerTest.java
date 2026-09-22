@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.cadentia.catalog.model.ApprovalStatus;
 import com.cadentia.catalog.model.KeyMode;
+import com.cadentia.catalog.model.SongRole;
 import com.cadentia.catalog.model.TagType;
 import com.cadentia.reng.ApprovalGateSummary;
 import com.cadentia.reng.RecommendableArrangement;
@@ -97,6 +98,41 @@ class CandidateFeatureScorerTest {
                     assertThat(component.rawScore()).isEqualTo(0.75d);
                     assertThat(component.weightedContribution()).isCloseTo(0.075d, org.assertj.core.data.Offset.offset(1.0e-9d));
                 });
+    }
+
+    @Test
+    void explicitSongRoleScoresRoleFitWithoutTags() {
+        // Arrange
+        RecommendableArrangement praisedCandidate = candidateWithRole(SongRole.PRAISE, List.of());
+        RecommendableArrangement bothCandidate = candidateWithRole(SongRole.BOTH, List.of());
+
+        // Act / Assert
+        assertThat(scorer.scoreCandidate(praisedCandidate, request(), scoringProfile()).componentScores())
+                .filteredOn(component -> component.componentCode().equals(CandidateFeatureScorer.ROLE_FIT))
+                .singleElement()
+                .extracting(ScoringComponentScore::rawScore)
+                .isEqualTo(0.8d);
+        assertThat(scorer.scoreCandidate(bothCandidate, request(), scoringProfile()).componentScores())
+                .filteredOn(component -> component.componentCode().equals(CandidateFeatureScorer.ROLE_FIT))
+                .singleElement()
+                .extracting(ScoringComponentScore::rawScore)
+                .isEqualTo(1.0d);
+    }
+
+    @Test
+    void explicitSongRoleOverridesLegacyTagClassification() {
+        // Arrange
+        RecommendableArrangement candidate = candidateWithRole(SongRole.WORSHIP, List.of("praise", "worship"));
+
+        // Act
+        CandidateFeatureScorer.CandidateFeatureScore score = scorer.scoreCandidate(candidate, request(), scoringProfile());
+
+        // Assert
+        assertThat(score.componentScores())
+                .filteredOn(component -> component.componentCode().equals(CandidateFeatureScorer.ROLE_FIT))
+                .singleElement()
+                .extracting(ScoringComponentScore::rawScore)
+                .isEqualTo(0.8d);
     }
 
     @Test
@@ -230,6 +266,26 @@ class CandidateFeatureScorerTest {
                 List.of(),
                 List.of(),
                 approvedSummary());
+    }
+
+    private static RecommendableArrangement candidateWithRole(SongRole songRole, List<String> tags) {
+        return new RecommendableArrangement(
+                UUID.randomUUID(),
+                UUID.randomUUID(),
+                UUID.randomUUID(),
+                "Song",
+                "en",
+                "G",
+                KeyMode.MAJOR,
+                120,
+                "4/4",
+                80,
+                tags,
+                List.of(),
+                List.of(),
+                approvedSummary(),
+                null,
+                songRole);
     }
 
     private static RecommendableArrangement candidate(

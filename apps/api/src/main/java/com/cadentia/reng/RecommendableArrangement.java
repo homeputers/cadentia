@@ -1,6 +1,7 @@
 package com.cadentia.reng;
 
 import com.cadentia.catalog.model.KeyMode;
+import com.cadentia.catalog.model.SongRole;
 import java.util.List;
 import java.util.UUID;
 
@@ -19,12 +20,48 @@ public record RecommendableArrangement(
         List<RecommendationTag> controlledTags,
         List<RecommendationTag> matchedTags,
         ApprovalGateSummary approvalGateSummary,
-        ArrangementTransitionMetadata transitionMetadata) {
+        ArrangementTransitionMetadata transitionMetadata,
+        SongRole songRole) {
 
     public RecommendableArrangement {
         tags = tags == null ? List.of() : List.copyOf(tags);
         controlledTags = controlledTags == null ? List.of() : List.copyOf(controlledTags);
         matchedTags = matchedTags == null ? List.of() : List.copyOf(matchedTags);
+    }
+
+    public RecommendableArrangement(
+            UUID arrangementId,
+            UUID songId,
+            UUID currentLyricsDocumentId,
+            String title,
+            String language,
+            String musicalKey,
+            KeyMode keyMode,
+            int bpm,
+            String timeSignature,
+            int energy,
+            List<String> tags,
+            List<RecommendationTag> controlledTags,
+            List<RecommendationTag> matchedTags,
+            ApprovalGateSummary approvalGateSummary,
+            ArrangementTransitionMetadata transitionMetadata) {
+        this(
+                arrangementId,
+                songId,
+                currentLyricsDocumentId,
+                title,
+                language,
+                musicalKey,
+                keyMode,
+                bpm,
+                timeSignature,
+                energy,
+                tags,
+                controlledTags,
+                matchedTags,
+                approvalGateSummary,
+                transitionMetadata,
+                null);
     }
 
     public RecommendableArrangement(
@@ -57,6 +94,7 @@ public record RecommendableArrangement(
                 controlledTags,
                 matchedTags,
                 approvalGateSummary,
+                null,
                 null);
     }
 
@@ -88,6 +126,7 @@ public record RecommendableArrangement(
                 List.of(),
                 List.of(),
                 approvalGateSummary,
+                null,
                 null);
     }
 
@@ -109,6 +148,7 @@ public record RecommendableArrangement(
                 controlledTags,
                 matchedTags,
                 approvalGateSummary,
-                transitionMetadata);
+                transitionMetadata,
+                songRole);
     }
 }

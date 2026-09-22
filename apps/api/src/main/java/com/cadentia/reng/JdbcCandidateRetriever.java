@@ -2,6 +2,7 @@ package com.cadentia.reng;
 
 import com.cadentia.catalog.model.ApprovalStatus;
 import com.cadentia.catalog.model.KeyMode;
+import com.cadentia.catalog.model.SongRole;
 import com.cadentia.catalog.model.TagType;
 import java.sql.Array;
 import java.sql.SQLException;
@@ -25,7 +26,7 @@ public class JdbcCandidateRetriever implements CandidateRetriever {
             + "language, musical_key, key_mode, bpm, time_signature, energy, tags, song_doctrinal_status, "
             + "song_editorial_status, song_licensing_status, arrangement_musical_status, "
             + "arrangement_editorial_status, lyrics_doctrinal_status, lyrics_editorial_status, "
-            + "lyrics_licensing_status";
+            + "lyrics_licensing_status, song_role";
 
     private final NamedParameterJdbcTemplate jdbcTemplate;
 
@@ -215,6 +216,8 @@ public class JdbcCandidateRetriever implements CandidateRetriever {
                 rs.getString("time_signature"),
                 rs.getInt("energy"),
                 textArray(rs.getArray("tags")),
+                List.of(),
+                List.of(),
                 new ApprovalGateSummary(
                         ApprovalStatus.valueOf(rs.getString("song_doctrinal_status")),
                         ApprovalStatus.valueOf(rs.getString("song_editorial_status")),
@@ -223,7 +226,9 @@ public class JdbcCandidateRetriever implements CandidateRetriever {
                         ApprovalStatus.valueOf(rs.getString("arrangement_editorial_status")),
                         ApprovalStatus.valueOf(rs.getString("lyrics_doctrinal_status")),
                         ApprovalStatus.valueOf(rs.getString("lyrics_editorial_status")),
-                        ApprovalStatus.valueOf(rs.getString("lyrics_licensing_status"))));
+                        ApprovalStatus.valueOf(rs.getString("lyrics_licensing_status"))),
+                null,
+                rs.getString("song_role") == null ? null : SongRole.valueOf(rs.getString("song_role")));
     }
 
     private static RowMapper<RecommendationTagRow> recommendationTagRowMapper() {

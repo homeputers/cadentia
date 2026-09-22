@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { assignSongTag, changedLyricsDocuments, listReviewSongs, parseSongReviewFilters, removeSongTag, serializeSongReviewFilters, updateReviewSong, uploadAndAttachResource, type SongMetadataDraft } from '../src/song-review';
+import { assignSongTag, changedLyricsDocuments, listReviewSongs, parseSongReviewFilters, removeSongTag, serializeSongReviewFilters, toMetadataDraft, updateReviewSong, uploadAndAttachResource, type SongMetadataDraft, type SongReviewDetail } from '../src/song-review';
 import type { AdminApiClient } from '../src/generated/cadentia-api/client';
 
 describe('song review API adapter', () => {
@@ -221,6 +221,42 @@ describe('song review API adapter', () => {
         const [path, init] = request.mock.calls[0] as [string, RequestInit];
         expect(path).toBe('/admin/songs/song-1/tags/tag-9?actor=editor+1');
         expect(init.method).toBe('DELETE');
+    });
+
+    it('maps and sends the language-neutral song role classification', async () => {
+        const detail = {
+            song: {
+                songId: 'song-1',
+                canonicalTitle: 'Song',
+                primaryLanguage: 'es',
+                songStatus: 'APPROVED',
+                songRole: 'WORSHIP',
+                updatedAt: '2026-09-07T00:00:00Z',
+                arrangementCount: 0,
+            },
+            doctrinalNotes: null,
+            arrangements: [],
+            provenance: [],
+            approvals: [],
+            tags: [],
+        } as unknown as SongReviewDetail;
+
+        const draft = toMetadataDraft(detail, 'editor-1');
+        expect(draft.songRole).toBe('WORSHIP');
+
+        const request = vi.fn().mockResolvedValue({});
+        await updateReviewSong({ getAdminSession: vi.fn(), request } as unknown as AdminApiClient, 'song-1', {
+            ...draft,
+            songRole: 'BOTH',
+        });
+        const body = JSON.parse(String(request.mock.calls[0][1].body));
+        expect(body.songRole).toBe('BOTH');
+
+        await updateReviewSong({ getAdminSession: vi.fn(), request } as unknown as AdminApiClient, 'song-1', {
+            ...draft,
+            songRole: null,
+        });
+        expect(JSON.parse(String(request.mock.calls[1][1].body)).songRole).toBeNull();
     });
 
     it('includes all arrangement fields in update payload', async () => {

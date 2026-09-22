@@ -1,5 +1,6 @@
 package com.cadentia.reng.scoring;
 
+import com.cadentia.catalog.model.SongRole;
 import com.cadentia.catalog.model.TagType;
 import com.cadentia.catalog.scripture.CanonicalScriptureReference.MatchTier;
 import com.cadentia.reng.RecommendableArrangement;
@@ -257,6 +258,12 @@ public class CandidateFeatureScorer {
     }
 
     private static double roleFit(RecommendableArrangement candidate) {
+        if (candidate.songRole() != null) {
+            return switch (candidate.songRole()) {
+                case BOTH -> 1.0d;
+                case PRAISE, WORSHIP -> 0.8d;
+            };
+        }
         boolean praise = candidate.tags().stream().map(CandidateFeatureScorer::normalize).anyMatch("praise"::equals);
         boolean worship = candidate.tags().stream().map(CandidateFeatureScorer::normalize).anyMatch("worship"::equals);
         if (praise && worship) {

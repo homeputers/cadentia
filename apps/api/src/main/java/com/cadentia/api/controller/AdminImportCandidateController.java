@@ -20,6 +20,7 @@ import com.cadentia.catalog.model.ImportCandidateStatus;
 import com.cadentia.catalog.model.KeyMode;
 import com.cadentia.catalog.model.LicenseType;
 import com.cadentia.catalog.model.LyricsFormat;
+import com.cadentia.catalog.model.SongRole;
 import com.cadentia.catalog.model.SongStatus;
 import com.cadentia.catalog.model.TagType;
 import com.cadentia.catalog.model.UpdateArrangementCommand;
@@ -297,6 +298,7 @@ public class AdminImportCandidateController implements AdminReviewApi {
                         blankToNull(request.getCcliNumber()),
                         request.getYearWritten(),
                         SongStatus.valueOf(request.getSongStatus().getValue()),
+                        request.getSongRole() == null ? null : SongRole.valueOf(request.getSongRole().getValue()),
                         blankToNull(request.getDoctrinalNotes())))
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Song not found"));
 
@@ -1070,6 +1072,7 @@ public class AdminImportCandidateController implements AdminReviewApi {
                 .ccliNumber(song.ccliNumber())
                 .yearWritten(song.yearWritten())
                 .songStatus(song.songStatus().name())
+                .songRole(song.songRole() == null ? null : AdminCatalogSongSummary.SongRoleEnum.valueOf(song.songRole().name()))
                 .updatedAt(OffsetDateTime.ofInstant(song.updatedAt(), ZoneOffset.UTC))
                 .arrangementCount(arrangementCount);
     }
