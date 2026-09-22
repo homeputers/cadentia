@@ -44,7 +44,7 @@ export const createAdminApiClient = ({
     fetchImpl?: typeof fetch;
 }): AdminApiClient => {
     const request = async <T>(path: string, init: RequestInit = {}, mutation?: MutationContext): Promise<T> => {
-        const token = await getAccessToken();
+        const token = await getAccessToken() ?? (typeof window === 'undefined' ? null : window.sessionStorage.getItem('cadentia.admin.access-token'));
         const headers = new Headers(init.headers);
         headers.set('Accept', 'application/json');
         headers.set('X-Church-Instance-Id', environment.churchInstanceId);

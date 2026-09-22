@@ -11,6 +11,7 @@ public final class RbacAuthorities {
     public static final String ROLE_ASSIGNED_MUSICIAN = "role.assigned_musician";
     public static final String ROLE_REPORTING_VIEWER = "role.reporting_viewer";
     public static final String ROLE_INTEGRATION_MANAGER = "role.integration_manager";
+    public static final String ROLE_VIEWER = "role.viewer";
 
     private RbacAuthorities() {
     }

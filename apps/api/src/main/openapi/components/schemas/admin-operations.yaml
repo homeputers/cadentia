@@ -14,6 +14,7 @@ AdminCapability:
   - MANAGE_TELEGRAM_ACCESS
   - VIEW_TEAM_ROSTER
   - MANAGE_TEAM_ASSIGNMENTS
+  - MANAGE_USERS
 AdminAllowedAction:
   type: string
   enum:

@@ -1,5 +1,8 @@
 package com.cadentia.api.controller;
 
+import com.cadentia.admin.AdminUserRecord;
+import com.cadentia.admin.AdminUserRepository;
+import com.cadentia.admin.AdminUserStatus;
 import com.cadentia.api.security.RbacAuthorities;
 import com.cadentia.generated.api.AdminOperationsApi;
 import com.cadentia.generated.model.AdminCapability;
@@ -21,6 +24,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -30,25 +34,38 @@ public class AdminOperationsController implements AdminOperationsApi {
 
     private final String instanceId;
     private final AdminOperationsService adminOperationsService;
+    private final AdminUserRepository adminUserRepository;
 
     public AdminOperationsController(
             @Value("${cadentia.instance.id:local-development}") String instanceId,
-            AdminOperationsService adminOperationsService) {
+            AdminOperationsService adminOperationsService,
+            AdminUserRepository adminUserRepository) {
         this.instanceId = instanceId;
         this.adminOperationsService = adminOperationsService;
+        this.adminUserRepository = adminUserRepository;
+    }
+
+    /** Compatibility constructor used by focused controller tests that do not load persistence. */
+    public AdminOperationsController(String instanceId, AdminOperationsService adminOperationsService) {
+        this.instanceId = instanceId;
+        this.adminOperationsService = adminOperationsService;
+        this.adminUserRepository = null;
     }
 
     @Override
+    @PreAuthorize("hasAuthority(T(com.cadentia.api.security.RbacAuthorities).ROLE_ADMIN)")
     public ResponseEntity<AdminDiagnosticsResponse> getAdminDiagnostics(String xChurchInstanceId) {
         return ResponseEntity.ok(adminOperationsService.diagnostics(xChurchInstanceId));
     }
 
     @Override
+    @PreAuthorize("hasAuthority(T(com.cadentia.api.security.RbacAuthorities).ROLE_ADMIN)")
     public ResponseEntity<AdminInstanceConfigurationResponse> getAdminInstanceConfiguration(String xChurchInstanceId) {
         return ResponseEntity.ok(adminOperationsService.instanceConfiguration(xChurchInstanceId));
     }
 
     @Override
+    @PreAuthorize("hasAnyAuthority(T(com.cadentia.api.security.RbacAuthorities).ROLE_VIEWER, T(com.cadentia.api.security.RbacAuthorities).ROLE_WORSHIP_LEADER, T(com.cadentia.api.security.RbacAuthorities).ROLE_CATALOG_EDITOR, T(com.cadentia.api.security.RbacAuthorities).ROLE_DOCTRINAL_REVIEWER, T(com.cadentia.api.security.RbacAuthorities).ROLE_MUSICAL_REVIEWER, T(com.cadentia.api.security.RbacAuthorities).ROLE_ADMIN, T(com.cadentia.api.security.RbacAuthorities).ROLE_TEAM_SCHEDULER, T(com.cadentia.api.security.RbacAuthorities).ROLE_ASSIGNED_MUSICIAN, T(com.cadentia.api.security.RbacAuthorities).ROLE_REPORTING_VIEWER, T(com.cadentia.api.security.RbacAuthorities).ROLE_INTEGRATION_MANAGER)")
     public ResponseEntity<AdminSessionResponse> getAdminSession() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String actorId = authentication == null ? "anonymous" : authentication.getName();
@@ -58,20 +75,25 @@ public class AdminOperationsController implements AdminOperationsApi {
                         .map(GrantedAuthority::getAuthority)
                         .toList();
 
+        AdminUserRecord provisionedUser = findProvisionedUser(actorId);
+        List<String> effectiveAuthorities = provisionedUser == null
+                ? authorities
+                : provisionedUser.roles().stream().map(AdminOperationsController::roleAuthority).toList();
         List<String> roles = isLocalDevelopment()
                 ? List.of("ADMIN")
-                : authorities.stream()
-                        .map(AdminOperationsController::normalizeRole)
-                        .toList();
+                : provisionedUser == null
+                        ? authorities.stream().map(AdminOperationsController::normalizeRole).toList()
+                        : provisionedUser.roles();
 
         List<AdminCapability> capabilities = isLocalDevelopment()
                 ? Arrays.asList(AdminCapability.values())
-                : capabilitiesForAuthorities(authorities);
+                : capabilitiesForAuthorities(effectiveAuthorities);
         String effectiveActorId = isLocalDevelopment() ? "local-admin-approver" : actorId;
+        String displayName = provisionedUser == null ? effectiveActorId : provisionedUser.displayName();
 
         AdminSessionResponse response = new AdminSessionResponse()
                 .actorId(effectiveActorId)
-                .displayName(effectiveActorId)
+                .displayName(displayName)
                 .churchInstanceId(instanceId)
                 .locale(adminOperationsService.locale())
                 .roles(roles)
@@ -80,12 +102,23 @@ public class AdminOperationsController implements AdminOperationsApi {
         return ResponseEntity.ok(response);
     }
 
+    private AdminUserRecord findProvisionedUser(String actorId) {
+        if (isLocalDevelopment() || adminUserRepository == null || actorId == null || actorId.isBlank()) {
+            return null;
+        }
+        return adminUserRepository.findByExternalSubject(instanceId, actorId)
+                .filter(user -> user.status() == AdminUserStatus.ACTIVE)
+                .orElse(null);
+    }
+
     @Override
+    @PreAuthorize("hasAuthority(T(com.cadentia.api.security.RbacAuthorities).ROLE_ADMIN)")
     public ResponseEntity<AdminFeatureFlagListResponse> listAdminFeatureFlags(String xChurchInstanceId) {
         return ResponseEntity.ok(adminOperationsService.featureFlags(xChurchInstanceId));
     }
 
     @Override
+    @PreAuthorize("hasAuthority(T(com.cadentia.api.security.RbacAuthorities).ROLE_ADMIN)")
     public ResponseEntity<AdminFeatureFlagChangePreviewResponse> previewAdminFeatureFlagChange(
             String xChurchInstanceId,
             String flagKey,
@@ -94,6 +127,7 @@ public class AdminOperationsController implements AdminOperationsApi {
     }
 
     @Override
+    @PreAuthorize("hasAuthority(T(com.cadentia.api.security.RbacAuthorities).ROLE_ADMIN)")
     public ResponseEntity<AdminFeatureFlagResponse> confirmAdminFeatureFlagChange(
             String xChurchInstanceId,
             String flagKey,
@@ -102,6 +136,7 @@ public class AdminOperationsController implements AdminOperationsApi {
     }
 
     @Override
+    @PreAuthorize("hasAuthority(T(com.cadentia.api.security.RbacAuthorities).ROLE_ADMIN)")
     public ResponseEntity<AdminInstanceConfigurationResponse> updateAdminInstanceConfiguration(
             String xChurchInstanceId,
             UpdateAdminInstanceConfigurationRequest request) {
@@ -114,6 +149,7 @@ public class AdminOperationsController implements AdminOperationsApi {
 
     private static String normalizeRole(String authority) {
         return switch (authority) {
+            case RbacAuthorities.ROLE_VIEWER, "ROLE_VIEWER" -> "VIEWER";
             case RbacAuthorities.ROLE_ADMIN, "ROLE_ADMIN" -> "ADMIN";
             case RbacAuthorities.ROLE_WORSHIP_LEADER, "ROLE_WORSHIP_LEADER" -> "WORSHIP_LEADER";
             case RbacAuthorities.ROLE_CATALOG_EDITOR, "ROLE_CATALOG_EDITOR" -> "CATALOG_EDITOR";
@@ -123,11 +159,18 @@ public class AdminOperationsController implements AdminOperationsApi {
         };
     }
 
+    private static String roleAuthority(String role) {
+        return "role." + role.toLowerCase();
+    }
+
     private static List<AdminCapability> capabilitiesForAuthorities(List<String> authorities) {
         if (hasAnyAuthority(authorities, RbacAuthorities.ROLE_ADMIN, "ROLE_ADMIN")) {
             return Arrays.asList(AdminCapability.values());
         }
         Set<AdminCapability> capabilities = new LinkedHashSet<>();
+        if (hasAnyAuthority(authorities, RbacAuthorities.ROLE_VIEWER, "ROLE_VIEWER")) {
+            capabilities.add(AdminCapability.VIEW_IMPORT_QUEUE);
+        }
         if (hasAnyAuthority(
                 authorities,
                 RbacAuthorities.ROLE_CATALOG_EDITOR,

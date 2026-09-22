@@ -1,0 +1,148 @@
+"/admin/users":
+  get:
+    tags:
+    - AdminUserAdministration
+    operationId: listAdminUsers
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - ADMIN
+    summary: List users provisioned for the current church instance
+    parameters:
+    - "$ref": "../components/shared/parameters.yaml#/ChurchInstanceIdHeader"
+    - in: query
+      name: status
+      required: false
+      schema:
+        "$ref": "../components/schemas/admin-users.yaml#/AdminUserStatus"
+    - in: query
+      name: search
+      required: false
+      schema:
+        type: string
+        maxLength: 120
+    responses:
+      '200':
+        description: Tenant-scoped users and their assigned roles.
+        content:
+          application/json:
+            schema:
+              "$ref": "../components/schemas/admin-users.yaml#/AdminUserListResponse"
+      '401':
+        "$ref": "../components/shared/responses.yaml#/Unauthorized"
+      '403':
+        "$ref": "../components/shared/responses.yaml#/Forbidden"
+  post:
+    tags:
+    - AdminUserAdministration
+    operationId: createAdminUser
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - ADMIN
+    summary: Provision an authenticated identity for the current church instance
+    parameters:
+    - "$ref": "../components/shared/parameters.yaml#/ChurchInstanceIdHeader"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            "$ref": "../components/schemas/admin-users.yaml#/CreateAdminUserRequest"
+    responses:
+      '201':
+        description: Provisioned user.
+        content:
+          application/json:
+            schema:
+              "$ref": "../components/schemas/admin-users.yaml#/AdminUser"
+      '400':
+        "$ref": "../components/shared/responses.yaml#/ValidationError"
+      '401':
+        "$ref": "../components/shared/responses.yaml#/Unauthorized"
+      '403':
+        "$ref": "../components/shared/responses.yaml#/Forbidden"
+      '409':
+        "$ref": "../components/shared/responses.yaml#/Conflict"
+"/admin/users/{userId}":
+  patch:
+    tags:
+    - AdminUserAdministration
+    operationId: updateAdminUser
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - ADMIN
+    summary: Update a provisioned user's profile or active status
+    parameters:
+    - "$ref": "../components/shared/parameters.yaml#/ChurchInstanceIdHeader"
+    - in: path
+      name: userId
+      required: true
+      schema:
+        type: string
+        format: uuid
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            "$ref": "../components/schemas/admin-users.yaml#/UpdateAdminUserRequest"
+    responses:
+      '200':
+        description: Updated user.
+        content:
+          application/json:
+            schema:
+              "$ref": "../components/schemas/admin-users.yaml#/AdminUser"
+      '400':
+        "$ref": "../components/shared/responses.yaml#/ValidationError"
+      '401':
+        "$ref": "../components/shared/responses.yaml#/Unauthorized"
+      '403':
+        "$ref": "../components/shared/responses.yaml#/Forbidden"
+      '404':
+        "$ref": "../components/shared/responses.yaml#/NotFound"
+      '409':
+        "$ref": "../components/shared/responses.yaml#/Conflict"
+"/admin/users/{userId}/roles":
+  put:
+    tags:
+    - AdminUserAdministration
+    operationId: replaceAdminUserRoles
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - ADMIN
+    summary: Replace a user's roles with an audited RBAC assignment
+    parameters:
+    - "$ref": "../components/shared/parameters.yaml#/ChurchInstanceIdHeader"
+    - in: path
+      name: userId
+      required: true
+      schema:
+        type: string
+        format: uuid
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            "$ref": "../components/schemas/admin-users.yaml#/ReplaceAdminUserRolesRequest"
+    responses:
+      '200':
+        description: Updated user with the effective roles.
+        content:
+          application/json:
+            schema:
+              "$ref": "../components/schemas/admin-users.yaml#/AdminUser"
+      '400':
+        "$ref": "../components/shared/responses.yaml#/ValidationError"
+      '401':
+        "$ref": "../components/shared/responses.yaml#/Unauthorized"
+      '403':
+        "$ref": "../components/shared/responses.yaml#/Forbidden"
+      '404':
+        "$ref": "../components/shared/responses.yaml#/NotFound"
+      '409':
+        "$ref": "../components/shared/responses.yaml#/Conflict"

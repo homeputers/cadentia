@@ -1,6 +1,6 @@
 package com.cadentia.api.config;
 
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -23,7 +23,7 @@ import org.springframework.security.web.authentication.AnonymousAuthenticationFi
  * authorities even though the admin console sends no OAuth credentials.
  */
 @Configuration
-@ConditionalOnProperty(name = "cadentia.instance.id", havingValue = "local-development")
+@ConditionalOnExpression("'${cadentia.instance.id:}' == 'local-development' && '${cadentia.auth.provider:local}' == 'local'")
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
 @Order(1)
 public class LocalDevelopmentBypassSecurityConfig {

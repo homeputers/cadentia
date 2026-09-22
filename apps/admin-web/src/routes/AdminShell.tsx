@@ -15,6 +15,7 @@ import { TelegramAccessRequests } from './TelegramAccessRequests';
 import { Musicians } from './Musicians';
 import { TeamAssignments } from './TeamAssignments';
 import { TeamAssignmentDetail } from './TeamAssignmentDetail';
+import { AdminUsers } from './AdminUsers';
 import { ActionBadge, AuditReferenceLink, Badge, Breadcrumbs, DataTable, PageHeader, RoleBadge, StatePanel, SupportDebugPanel, redactSensitiveError } from './admin-ui';
 import { createAdminApiClient, type AdminApiClient, type AdminApiError } from '../generated/cadentia-api/client';
 import { I18nProvider, LocalizedView, routeLabel, translate, useI18n, type TranslationKey } from '../i18n';
@@ -164,6 +165,9 @@ export const AdminShell = () => {
     }
     if (session && window.location.pathname === '/admin/musicians') {
         return withNav(<Musicians session={session} />);
+    }
+    if (session && window.location.pathname === '/admin/users') {
+        return withNav(<I18nProvider locale={session.locale}><AdminUsers session={session} /></I18nProvider>);
     }
     if (session && window.location.pathname === '/admin/team-assignments') {
         return withNav(<TeamAssignments session={session} />);

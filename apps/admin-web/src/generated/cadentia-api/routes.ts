@@ -41,6 +41,9 @@ export type CadentiaApiRoute =
     | '/admin/telegram/access-requests/{requestId}:reject'
     | '/admin/telegram/bots/{botId}/status'
     | '/admin/telegram/channels/{channelId}/settings'
+    | '/admin/users'
+    | '/admin/users/{userId}'
+    | '/admin/users/{userId}/roles'
     | '/asset-attachments'
     | '/asset-attachments/{attachmentId}'
     | '/assets'
@@ -138,6 +141,7 @@ export type CadentiaApiOperationId =
     | 'createAdminImportCandidateReviewNote'
     | 'createAdminManualSongImport'
     | 'createAdminRollbackPreview'
+    | 'createAdminUser'
     | 'createArrangementOverride'
     | 'createAssetAttachment'
     | 'createAssetUpload'
@@ -186,6 +190,7 @@ export type CadentiaApiOperationId =
     | 'listAdminCatalogSongs'
     | 'listAdminFeatureFlags'
     | 'listAdminImportCandidates'
+    | 'listAdminUsers'
     | 'listArrangementOverrides'
     | 'listAssetAttachments'
     | 'listAssets'
@@ -215,6 +220,7 @@ export type CadentiaApiOperationId =
     | 'renderEffectiveArrangement'
     | 'reorderServicePlanBlocks'
     | 'reorderServiceTeamAssignments'
+    | 'replaceAdminUserRoles'
     | 'requestAssetAccess'
     | 'requestConversationClarification'
     | 'resetFeedbackScopeState'
@@ -228,6 +234,7 @@ export type CadentiaApiOperationId =
     | 'transitionReadinessState'
     | 'updateAdminCatalogSong'
     | 'updateAdminInstanceConfiguration'
+    | 'updateAdminUser'
     | 'updateArrangementOverride'
     | 'updateConversationSessionSlots'
     | 'updateRehearsalIssueActionOwner'
@@ -287,6 +294,9 @@ export const cadentiaApiRoutes = [
     '/admin/telegram/access-requests/{requestId}:reject',
     '/admin/telegram/bots/{botId}/status',
     '/admin/telegram/channels/{channelId}/settings',
+    '/admin/users',
+    '/admin/users/{userId}',
+    '/admin/users/{userId}/roles',
     '/asset-attachments',
     '/asset-attachments/{attachmentId}',
     '/assets',
@@ -398,6 +408,9 @@ export const cadentiaApiRouteRefs: Record<CadentiaApiRoute, string> = {
     '/admin/telegram/access-requests/{requestId}:reject': './paths/telegram.yaml#/~1admin~1telegram~1access-requests~1{requestId}:reject',
     '/admin/telegram/bots/{botId}/status': './paths/telegram.yaml#/~1admin~1telegram~1bots~1{botId}~1status',
     '/admin/telegram/channels/{channelId}/settings': './paths/telegram.yaml#/~1admin~1telegram~1channels~1{channelId}~1settings',
+    '/admin/users': './paths/admin-users.yaml#/~1admin~1users',
+    '/admin/users/{userId}': './paths/admin-users.yaml#/~1admin~1users~1{userId}',
+    '/admin/users/{userId}/roles': './paths/admin-users.yaml#/~1admin~1users~1{userId}~1roles',
     '/asset-attachments': './paths/assets.yaml#/~1asset-attachments',
     '/asset-attachments/{attachmentId}': './paths/assets.yaml#/~1asset-attachments~1{attachmentId}',
     '/assets': './paths/assets.yaml#/~1assets',
@@ -496,6 +509,7 @@ export const cadentiaApiOperations = [
     { operationId: 'createAdminImportCandidateReviewNote', method: 'POST', path: '/admin/import-candidates/{candidateId}/notes', ref: './paths/admin-review.yaml#/~1admin~1import-candidates~1{candidateId}~1notes' },
     { operationId: 'createAdminManualSongImport', method: 'POST', path: '/admin/song-imports/manual', ref: './paths/admin-review.yaml#/~1admin~1song-imports~1manual' },
     { operationId: 'createAdminRollbackPreview', method: 'POST', path: '/admin/rollback-previews', ref: './paths/admin-review.yaml#/~1admin~1rollback-previews' },
+    { operationId: 'createAdminUser', method: 'POST', path: '/admin/users', ref: './paths/admin-users.yaml#/~1admin~1users' },
     { operationId: 'createArrangementOverride', method: 'POST', path: '/service-plans/{servicePlanId}/arrangement-overrides', ref: './paths/rehearsal-workflow.yaml#/~1service-plans~1{servicePlanId}~1arrangement-overrides' },
     { operationId: 'createAssetAttachment', method: 'POST', path: '/asset-attachments', ref: './paths/assets.yaml#/~1asset-attachments' },
     { operationId: 'createAssetUpload', method: 'POST', path: '/assets/uploads', ref: './paths/assets.yaml#/~1assets~1uploads' },
@@ -544,6 +558,7 @@ export const cadentiaApiOperations = [
     { operationId: 'listAdminCatalogSongs', method: 'GET', path: '/admin/songs', ref: './paths/admin-review.yaml#/~1admin~1songs' },
     { operationId: 'listAdminFeatureFlags', method: 'GET', path: '/admin/feature-flags', ref: './paths/admin-operations.yaml#/~1admin~1feature-flags' },
     { operationId: 'listAdminImportCandidates', method: 'GET', path: '/admin/import-candidates', ref: './paths/admin-review.yaml#/~1admin~1import-candidates' },
+    { operationId: 'listAdminUsers', method: 'GET', path: '/admin/users', ref: './paths/admin-users.yaml#/~1admin~1users' },
     { operationId: 'listArrangementOverrides', method: 'GET', path: '/service-plans/{servicePlanId}/arrangement-overrides', ref: './paths/rehearsal-workflow.yaml#/~1service-plans~1{servicePlanId}~1arrangement-overrides' },
     { operationId: 'listAssetAttachments', method: 'GET', path: '/asset-attachments', ref: './paths/assets.yaml#/~1asset-attachments' },
     { operationId: 'listAssets', method: 'GET', path: '/assets', ref: './paths/assets.yaml#/~1assets' },
@@ -573,6 +588,7 @@ export const cadentiaApiOperations = [
     { operationId: 'renderEffectiveArrangement', method: 'GET', path: '/service-plans/{servicePlanId}/effective-arrangements/{arrangementId}', ref: './paths/rehearsal-workflow.yaml#/~1service-plans~1{servicePlanId}~1effective-arrangements~1{arrangementId}' },
     { operationId: 'reorderServicePlanBlocks', method: 'POST', path: '/service-plans/{servicePlanId}/blocks:order', ref: './paths/service-plans.yaml#/~1service-plans~1{servicePlanId}~1blocks:order' },
     { operationId: 'reorderServiceTeamAssignments', method: 'POST', path: '/team-assignments/services/{servicePlanId}/reorder', ref: './paths/team-assignments.yaml#/~1team-assignments~1services~1{servicePlanId}~1reorder' },
+    { operationId: 'replaceAdminUserRoles', method: 'PUT', path: '/admin/users/{userId}/roles', ref: './paths/admin-users.yaml#/~1admin~1users~1{userId}~1roles' },
     { operationId: 'requestAssetAccess', method: 'POST', path: '/assets/{assetId}/versions/{assetVersionId}/access-requests', ref: './paths/assets.yaml#/~1assets~1{assetId}~1versions~1{assetVersionId}~1access-requests' },
     { operationId: 'requestConversationClarification', method: 'POST', path: '/conversation-sessions/{sessionId}/clarify', ref: './paths/conversation-sessions.yaml#/~1conversation-sessions~1{sessionId}~1clarify' },
     { operationId: 'resetFeedbackScopeState', method: 'POST', path: '/feedback/scopes/{scopeLayer}/{scopeId}/reset', ref: './paths/feedback-tuning.yaml#/~1feedback~1scopes~1{scopeLayer}~1{scopeId}~1reset' },
@@ -586,6 +602,7 @@ export const cadentiaApiOperations = [
     { operationId: 'transitionReadinessState', method: 'POST', path: '/service-plans/{servicePlanId}/readiness-transitions', ref: './paths/rehearsal-workflow.yaml#/~1service-plans~1{servicePlanId}~1readiness-transitions' },
     { operationId: 'updateAdminCatalogSong', method: 'PUT', path: '/admin/songs/{songId}', ref: './paths/admin-review.yaml#/~1admin~1songs~1{songId}' },
     { operationId: 'updateAdminInstanceConfiguration', method: 'PUT', path: '/admin/instance-configuration', ref: './paths/admin-operations.yaml#/~1admin~1instance-configuration' },
+    { operationId: 'updateAdminUser', method: 'PATCH', path: '/admin/users/{userId}', ref: './paths/admin-users.yaml#/~1admin~1users~1{userId}' },
     { operationId: 'updateArrangementOverride', method: 'PATCH', path: '/service-plans/{servicePlanId}/arrangement-overrides/{arrangementOverrideId}', ref: './paths/rehearsal-workflow.yaml#/~1service-plans~1{servicePlanId}~1arrangement-overrides~1{arrangementOverrideId}' },
     { operationId: 'updateConversationSessionSlots', method: 'PATCH', path: '/conversation-sessions/{sessionId}/slots', ref: './paths/conversation-sessions.yaml#/~1conversation-sessions~1{sessionId}~1slots' },
     { operationId: 'updateRehearsalIssueActionOwner', method: 'PATCH', path: '/service-plans/{servicePlanId}/issue-actions/{actionId}/owner', ref: './paths/rehearsal-workflow.yaml#/~1service-plans~1{servicePlanId}~1issue-actions~1{actionId}~1owner' },
