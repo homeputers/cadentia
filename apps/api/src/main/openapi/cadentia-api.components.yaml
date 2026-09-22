@@ -225,6 +225,20 @@ schemas:
     "$ref": "./components/schemas/admin-operations.yaml#/AdminOptimisticConcurrency"
   AdminSessionResponse:
     "$ref": "./components/schemas/admin-operations.yaml#/AdminSessionResponse"
+  AdminRole:
+    "$ref": "./components/schemas/admin-users.yaml#/AdminRole"
+  AdminUserStatus:
+    "$ref": "./components/schemas/admin-users.yaml#/AdminUserStatus"
+  AdminUser:
+    "$ref": "./components/schemas/admin-users.yaml#/AdminUser"
+  AdminUserListResponse:
+    "$ref": "./components/schemas/admin-users.yaml#/AdminUserListResponse"
+  CreateAdminUserRequest:
+    "$ref": "./components/schemas/admin-users.yaml#/CreateAdminUserRequest"
+  UpdateAdminUserRequest:
+    "$ref": "./components/schemas/admin-users.yaml#/UpdateAdminUserRequest"
+  ReplaceAdminUserRolesRequest:
+    "$ref": "./components/schemas/admin-users.yaml#/ReplaceAdminUserRolesRequest"
   AdminDiagnosticsResponse:
     "$ref": "./components/schemas/admin-operations.yaml#/AdminDiagnosticsResponse"
   AdminInstanceConfigurationResponse:

@@ -42,6 +42,12 @@
   "$ref": "./paths/feedback-tuning.yaml#/~1feedback~1scopes~1{scopeLayer}~1{scopeId}~1reset"
 "/admin/session":
   "$ref": "./paths/admin-operations.yaml#/~1admin~1session"
+"/admin/users":
+  "$ref": "./paths/admin-users.yaml#/~1admin~1users"
+"/admin/users/{userId}":
+  "$ref": "./paths/admin-users.yaml#/~1admin~1users~1{userId}"
+"/admin/users/{userId}/roles":
+  "$ref": "./paths/admin-users.yaml#/~1admin~1users~1{userId}~1roles"
 "/admin/diagnostics":
   "$ref": "./paths/admin-operations.yaml#/~1admin~1diagnostics"
 "/admin/instance-configuration":

@@ -58,4 +58,19 @@ describe('church-instance i18n', () => {
         expect(translateText('es-GT', 'Musical style')).toBe('Estilo musical');
         expect(translateText('es-GT', 'Audience')).toBe('Audiencia');
     });
+
+    it('translates the song role labels from the church locale', () => {
+        expect(translateText('es-GT', 'Song role')).toBe('Rol de la canción');
+        expect(translateText('es-GT', 'Praise')).toBe('Alabanza');
+        expect(translateText('es-GT', 'Worship')).toBe('Adoración');
+        expect(translateText('es-GT', 'Both')).toBe('Ambos');
+    });
+
+    it('translates user administration copy and roles for Spanish and Portuguese churches', () => {
+        expect(routeLabel('pt-BR', 'User administration')).toBe('Administração de usuários');
+        expect(translateText('es-GT', 'Identity-provider subject')).toBe('Asunto del proveedor de identidad');
+        expect(translateText('pt-BR', 'Reason for role changes')).toBe('Motivo das alterações de função');
+        expect(localizedRole('es-GT', 'INTEGRATION_MANAGER')).toBe('Administrador de integraciones');
+        expect(localizedRole('pt-BR', 'ASSIGNED_MUSICIAN')).toBe('Músico designado');
+    });
 });

@@ -1,0 +1,145 @@
+AdminRole:
+  type: string
+  enum:
+  - VIEWER
+  - WORSHIP_LEADER
+  - CATALOG_EDITOR
+  - DOCTRINAL_REVIEWER
+  - MUSICAL_REVIEWER
+  - ADMIN
+  - TEAM_SCHEDULER
+  - ASSIGNED_MUSICIAN
+  - REPORTING_VIEWER
+  - INTEGRATION_MANAGER
+AdminUserStatus:
+  type: string
+  enum:
+  - ACTIVE
+  - SUSPENDED
+AdminUser:
+  type: object
+  required:
+  - userId
+  - churchInstanceId
+  - externalSubject
+  - displayName
+  - status
+  - roles
+  - version
+  - createdAt
+  - updatedAt
+  properties:
+    userId:
+      type: string
+      format: uuid
+    churchInstanceId:
+      type: string
+    externalSubject:
+      type: string
+      minLength: 1
+      description: Stable subject identifier issued by the configured identity provider.
+    displayName:
+      type: string
+    email:
+      type: string
+      format: email
+      nullable: true
+    status:
+      "$ref": "#/AdminUserStatus"
+    roles:
+      type: array
+      uniqueItems: true
+      items:
+        "$ref": "#/AdminRole"
+    version:
+      type: integer
+      format: int64
+    createdAt:
+      type: string
+      format: date-time
+    updatedAt:
+      type: string
+      format: date-time
+AdminUserListResponse:
+  type: object
+  required:
+  - items
+  - totalItems
+  properties:
+    items:
+      type: array
+      items:
+        "$ref": "#/AdminUser"
+    totalItems:
+      type: integer
+      format: int64
+CreateAdminUserRequest:
+  type: object
+  additionalProperties: false
+  required:
+  - externalSubject
+  - displayName
+  - roles
+  properties:
+    externalSubject:
+      type: string
+      minLength: 1
+      maxLength: 200
+    displayName:
+      type: string
+      minLength: 1
+      maxLength: 200
+    email:
+      type: string
+      format: email
+      nullable: true
+    roles:
+      type: array
+      minItems: 1
+      uniqueItems: true
+      items:
+        "$ref": "#/AdminRole"
+UpdateAdminUserRequest:
+  type: object
+  additionalProperties: false
+  required:
+  - displayName
+  - status
+  - expectedVersion
+  properties:
+    displayName:
+      type: string
+      minLength: 1
+      maxLength: 200
+    email:
+      type: string
+      format: email
+      nullable: true
+    status:
+      "$ref": "#/AdminUserStatus"
+    expectedVersion:
+      type: integer
+      format: int64
+      minimum: 1
+ReplaceAdminUserRolesRequest:
+  type: object
+  additionalProperties: false
+  required:
+  - roles
+  - expectedVersion
+  - reason
+  properties:
+    roles:
+      type: array
+      minItems: 1
+      uniqueItems: true
+      items:
+        "$ref": "#/AdminRole"
+    expectedVersion:
+      type: integer
+      format: int64
+      minimum: 1
+    reason:
+      type: string
+      minLength: 1
+      maxLength: 500
