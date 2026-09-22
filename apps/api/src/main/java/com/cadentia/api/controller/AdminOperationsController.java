@@ -19,6 +19,7 @@ import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -36,6 +37,7 @@ public class AdminOperationsController implements AdminOperationsApi {
     private final AdminOperationsService adminOperationsService;
     private final AdminUserRepository adminUserRepository;
 
+    @Autowired
     public AdminOperationsController(
             @Value("${cadentia.instance.id:local-development}") String instanceId,
             AdminOperationsService adminOperationsService,
