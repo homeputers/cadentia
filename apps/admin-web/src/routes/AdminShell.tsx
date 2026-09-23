@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { adminEnvironment, missingRequiredEnvironment } from '../config/environment';
-import { bootstrapAdminSession, type AdminSession, type PermissionState } from '../auth/session';
+import { bootstrapAdminSession, buildSecureSignInUrl, loginWithPassword, logoutFirstParty, requestPasswordReset, type AdminSession, type PermissionState } from '../auth/session';
 import { canAccessRoute, canRenderAction, visibleRoutes } from '../auth/permissions';
 import { defaultImportCandidateFilters, listImportCandidates, type ImportCandidateQueueResponse } from '../import-candidates';
 import { ImportCandidateQueue } from './ImportCandidateQueue';
@@ -16,13 +16,19 @@ import { Musicians } from './Musicians';
 import { TeamAssignments } from './TeamAssignments';
 import { TeamAssignmentDetail } from './TeamAssignmentDetail';
 import { AdminUsers } from './AdminUsers';
+import { AccountActivation } from './AccountActivation';
 import { ActionBadge, AuditReferenceLink, Badge, Breadcrumbs, DataTable, PageHeader, RoleBadge, StatePanel, SupportDebugPanel, redactSensitiveError } from './admin-ui';
 import { createAdminApiClient, type AdminApiClient, type AdminApiError } from '../generated/cadentia-api/client';
 import { I18nProvider, LocalizedView, routeLabel, translate, useI18n, type TranslationKey } from '../i18n';
 import './admin-shell.css';
 
-const TopNav = ({ session, routes }: { session: AdminSession; routes: Array<{ href: string; label: string }> }) => {
+const TopNav = ({ session, routes, onLogout }: { session: AdminSession; routes: Array<{ href: string; label: string }>; onLogout: () => Promise<void> }) => {
     const { t } = useI18n();
+    const [loggingOut, setLoggingOut] = useState(false);
+    const handleLogout = () => {
+        setLoggingOut(true);
+        void onLogout();
+    };
     return <header className="admin-topnav">
         <a className="admin-topnav__brand" href="/admin">{t('brand')}</a>
         <nav aria-label={t('sections')}>
@@ -46,21 +52,68 @@ const TopNav = ({ session, routes }: { session: AdminSession; routes: Array<{ hr
                 <div className="admin-topnav__roles">
                     {session.roles.map((role) => <RoleBadge key={role} role={role} />)}
                 </div>
+                <button type="button" className="secondary admin-topnav__logout" disabled={loggingOut} onClick={handleLogout}>{t('logout')}</button>
             </div>
         </details>
     </header>;
 };
 
-const renderPermissionState = (state: PermissionState, t: (key: TranslationKey) => string) => {
+const LoginForm = ({ onAuthenticated }: { onAuthenticated: (state: PermissionState) => void }) => {
+    const { t } = useI18n();
+    const [mode, setMode] = useState<'login' | 'forgot'>('login');
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [busy, setBusy] = useState(false);
+    const [error, setError] = useState('');
+    const [message, setMessage] = useState('');
+
+    const submit = async (event: React.FormEvent) => {
+        event.preventDefault();
+        setBusy(true);
+        setError('');
+        setMessage('');
+        try {
+            if (mode === 'forgot') {
+                await requestPasswordReset(adminEnvironment, email);
+                setMessage(t('authResetRequested'));
+            } else {
+                await loginWithPassword(adminEnvironment, email, password);
+                onAuthenticated(await bootstrapAdminSession({ environment: adminEnvironment }));
+            }
+        } catch {
+            setError(mode === 'forgot' ? t('error') : t('authInvalidCredentials'));
+        } finally {
+            setBusy(false);
+        }
+    };
+
+    return <form className="admin-auth-form" onSubmit={(event) => void submit(event)}>
+        <h3>{mode === 'forgot' ? t('authForgotPassword') : t('signIn')}</h3>
+        {message && <p role="status">{message}</p>}
+        {error && <p role="alert" className="admin-shell__warning">{error}</p>}
+        <label>{t('authEmail')}<input type="email" autoComplete="email" required value={email} onChange={(event) => setEmail(event.target.value)} /></label>
+        {mode === 'login' && <label>{t('authPassword')}<input type="password" autoComplete="current-password" required value={password} onChange={(event) => setPassword(event.target.value)} /></label>}
+        <button type="submit" disabled={busy}>{busy ? t('authSigningIn') : mode === 'forgot' ? t('authSendReset') : t('authSignIn')}</button>
+        <button type="button" className="secondary" onClick={() => { setMode(mode === 'login' ? 'forgot' : 'login'); setError(''); setMessage(''); }}>
+            {mode === 'login' ? t('authForgotPassword') : t('authBackToSignIn')}
+        </button>
+    </form>;
+};
+
+const renderPermissionState = (state: PermissionState, t: (key: TranslationKey) => string, onAuthenticated: (state: PermissionState) => void) => {
     switch (state.kind) {
         case 'loading':
             return <StatePanel state="loading" title="Session loading" />;
         case 'missing-church-instance':
             return <StatePanel state="error" title={t('missingInstance')}>{t('missingInstanceCopy')}</StatePanel>;
         case 'unauthenticated':
-            return <a className="admin-shell__button" href={state.signInUrl}>{t('signIn')}</a>;
+            return adminEnvironment.authMode === 'first-party'
+                ? <LoginForm onAuthenticated={onAuthenticated} />
+                : <a className="admin-shell__button" href={state.signInUrl}>{t('signIn')}</a>;
         case 'expired-session':
-            return <a className="admin-shell__button" href={state.signInUrl}>{t('sessionExpired')}</a>;
+            return adminEnvironment.authMode === 'first-party'
+                ? <LoginForm onAuthenticated={onAuthenticated} />
+                : <a className="admin-shell__button" href={state.signInUrl}>{t('sessionExpired')}</a>;
         case 'forbidden':
             return <StatePanel state="forbidden" title={t('accessDenied')} />;
         case 'disabled-feature':
@@ -117,11 +170,11 @@ const ImportCandidateSummary = ({ apiClient = createAdminApiClient({ environment
 };
 
 export const AdminShell = () => {
-    const { t: defaultT } = useI18n();
     const [permissionState, setPermissionState] = useState<PermissionState>({ kind: 'loading' });
     const missingEnvironment = missingRequiredEnvironment(adminEnvironment);
 
     useEffect(() => {
+        if (window.location.pathname === '/auth/activate') return;
         let isActive = true;
         void bootstrapAdminSession({ environment: adminEnvironment }).then((state) => {
             if (isActive) setPermissionState(state);
@@ -133,10 +186,19 @@ export const AdminShell = () => {
     const routes = useMemo(() => (session ? visibleRoutes(session, adminEnvironment.featureFlags) : []), [session]);
     const blockedDirectRoute = session && !canAccessRoute(session, adminEnvironment.featureFlags, window.location.pathname);
 
-    const t = (key: TranslationKey) => session ? translate(session.locale, key) : defaultT(key);
-    const withNav = (page: JSX.Element) => session
-        ? <I18nProvider locale={session.locale}><TopNav session={session} routes={routes} />{page}</I18nProvider>
-        : page;
+    const t = (key: TranslationKey) => translate(session?.locale ?? adminEnvironment.locale, key);
+    const handleLogout = async () => {
+        await logoutFirstParty(adminEnvironment);
+        setPermissionState({ kind: 'unauthenticated', signInUrl: await buildSecureSignInUrl(adminEnvironment) });
+    };
+    const withNav = (page: JSX.Element) => <I18nProvider locale={session?.locale ?? adminEnvironment.locale}>
+        {session && <TopNav session={session} routes={routes} onLogout={handleLogout} />}
+        {page}
+    </I18nProvider>;
+
+    if (window.location.pathname === '/auth/activate') {
+        return <I18nProvider locale={adminEnvironment.locale}><AccountActivation /></I18nProvider>;
+    }
 
     if (blockedDirectRoute) {
         return withNav(<main className="admin-shell"><Breadcrumbs items={[{ label: t('admin'), href: '/admin' }, { label: t('accessDenied') }]} /><StatePanel state="forbidden" title={t('accessDenied')}>{t('forbidden')}</StatePanel></main>);
@@ -198,7 +260,7 @@ export const AdminShell = () => {
             {permissionState.kind !== 'authenticated' ? (
                 <section aria-labelledby="admin-permission-title" className="admin-shell__panel">
                     <h2 id="admin-permission-title">{t('accessDenied')}</h2>
-                    {renderPermissionState(permissionState, t)}
+                    {renderPermissionState(permissionState, t, setPermissionState)}
                 </section>
             ) : (
                 <section aria-labelledby="admin-nav-title" className="admin-shell__panel">

@@ -10,6 +10,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.List;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -31,7 +32,10 @@ final class DatabaseRbacAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication != null && authentication.isAuthenticated() && request.getRequestURI().startsWith("/admin/")) {
+        if (authentication != null
+                && authentication.isAuthenticated()
+                && !(authentication instanceof AnonymousAuthenticationToken)
+                && request.getRequestURI().startsWith("/admin/")) {
             AdminUserRecord user = repository.findByExternalSubject(instanceId, authentication.getName()).orElse(null);
             List<SimpleGrantedAuthority> authorities = user != null && user.status() == AdminUserStatus.ACTIVE
                     ? user.roles().stream().map(DatabaseRbacAuthenticationFilter::toAuthority).toList()

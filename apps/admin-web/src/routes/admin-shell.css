@@ -68,6 +68,7 @@ body { background: var(--bg-page); margin: 0; }
 .admin-topnav__popover { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-md); display: flex; flex-direction: column; gap: var(--space-2); min-width: 14rem; padding: var(--space-3); position: absolute; right: 0; top: calc(100% + var(--space-2)); z-index: 10; }
 .admin-topnav__roles { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 .admin-topnav__name { font-size: 0.9rem; font-weight: 600; white-space: nowrap; }
+.admin-topnav__logout { align-self: stretch; margin-top: var(--space-2); width: 100%; }
 
 /* ---------- Headers ---------- */
 .admin-shell__header, .admin-page-header { border-bottom: 1px solid var(--border); margin-bottom: var(--space-5); padding-bottom: var(--space-4); }
@@ -115,6 +116,11 @@ button.ghost:hover:not(:disabled) { background: var(--surface-inset); border-col
 button.danger { background: var(--danger); border-color: var(--danger); }
 button.danger:hover:not(:disabled) { background: var(--danger-hover); border-color: var(--danger-hover); }
 button.danger:disabled { background: #ead1d7; border-color: #d8a8b4; color: #7a3343; }
+.admin-auth-form { display: grid; gap: var(--space-3); max-width: 26rem; }
+.admin-auth-form h3 { margin: 0; }
+.admin-auth-form label { color: var(--text); display: grid; font-weight: 600; gap: var(--space-1); }
+.admin-auth-form input { width: 100%; }
+.admin-auth-form button + button { margin-left: var(--space-2); }
 
 /* ---------- Breadcrumbs ---------- */
 .admin-breadcrumbs ol { display: flex; flex-wrap: wrap; gap: var(--space-2); font-size: 0.9rem; list-style: none; margin: 0 0 var(--space-3); padding: 0; }
@@ -133,7 +139,7 @@ button.danger:disabled { background: #ead1d7; border-color: #d8a8b4; color: #7a3
 .admin-field__error { color: var(--danger); font-size: 0.9rem; font-weight: 600; margin: 0; }
 .admin-field__required { color: var(--danger); }
 
-.admin-shell input[type="text"], .admin-shell input[type="number"], .admin-shell input[type="date"], .admin-shell input[type="search"], .admin-shell input[type="email"], .admin-shell input[type="url"], .admin-shell input:not([type]), .admin-shell textarea, .admin-shell select {
+.admin-shell input[type="text"], .admin-shell input[type="number"], .admin-shell input[type="date"], .admin-shell input[type="search"], .admin-shell input[type="email"], .admin-shell input[type="password"], .admin-shell input[type="url"], .admin-shell input:not([type]), .admin-shell textarea, .admin-shell select {
     background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--radius-md); color: var(--text); font-family: inherit; font-size: 0.95rem; min-height: 2.4rem; padding: 0.45rem 0.6rem; width: 100%;
 }
 .admin-shell textarea { min-height: 5rem; resize: vertical; }
@@ -181,6 +187,9 @@ button.danger:disabled { background: #ead1d7; border-color: #d8a8b4; color: #7a3
 .admin-users-provision-fields { align-items: start; display: grid; gap: var(--space-4); grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .admin-users-provision-actions { align-items: flex-start; display: flex; flex-wrap: wrap; gap: var(--space-3); }
 .admin-users-provision-actions p { color: var(--muted); flex: 1 1 20rem; margin: 0.55rem 0 0; max-width: 38rem; }
+.admin-shell__success { background: var(--success-bg); border: 1px solid var(--success); border-radius: var(--radius-md); color: #065f46; margin: 0; padding: var(--space-3); }
+.admin-user-invitation { align-items: center; background: var(--surface-subtle); border: 1px solid var(--border); border-radius: var(--radius-md); display: flex; flex-wrap: wrap; gap: var(--space-3); padding: var(--space-3); }
+.admin-user-invitation a { overflow-wrap: anywhere; }
 .admin-users-role-picker { background: var(--surface-subtle); border: 1px solid var(--border); border-radius: var(--radius-md); display: grid; gap: var(--space-2); grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); padding: var(--space-3); }
 .admin-users-role-picker label { align-items: center; display: flex; gap: 0.5rem; min-height: 2rem; }
 .admin-users-role-picker input { flex: 0 0 auto; }

@@ -69,6 +69,7 @@ describe('church-instance i18n', () => {
     it('translates user administration copy and roles for Spanish and Portuguese churches', () => {
         expect(routeLabel('pt-BR', 'User administration')).toBe('Administração de usuários');
         expect(translateText('es-GT', 'Identity-provider subject')).toBe('Asunto del proveedor de identidad');
+        expect(translateText('es-GT', 'Provision first-party accounts by email and assign tenant-scoped roles. Changes take effect on the next authenticated request.')).toBe('Provisiona cuentas internas por correo electrónico y asigna roles por iglesia. Los cambios se aplican en la siguiente solicitud autenticada.');
         expect(translateText('pt-BR', 'Reason for role changes')).toBe('Motivo das alterações de função');
         expect(localizedRole('es-GT', 'INTEGRATION_MANAGER')).toBe('Administrador de integraciones');
         expect(localizedRole('pt-BR', 'ASSIGNED_MUSICIAN')).toBe('Músico designado');

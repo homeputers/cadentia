@@ -8,6 +8,7 @@ export type AdminUser = {
     externalSubject: string;
     displayName: string;
     email?: string | null;
+    invitationUrl?: string | null;
     status: AdminUserStatus;
     roles: AdminUserRole[];
     version: number;
@@ -25,7 +26,7 @@ export const listAdminUsers = (apiClient: AdminApiClient, status?: AdminUserStat
     return apiClient.request<{ items: AdminUser[]; totalItems: number }>(`/admin/users${suffix}`);
 };
 
-export const createAdminUser = (apiClient: AdminApiClient, actorId: string, payload: { externalSubject: string; displayName: string; email?: string; roles: AdminUserRole[] }) =>
+export const createAdminUser = (apiClient: AdminApiClient, actorId: string, payload: { externalSubject?: string; email?: string; displayName: string; roles: AdminUserRole[] }) =>
     apiClient.request<AdminUser>('/admin/users', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }, { actorId });
 
 export const updateAdminUser = (apiClient: AdminApiClient, actorId: string, user: AdminUser, payload: { displayName: string; email?: string; status: AdminUserStatus }) =>

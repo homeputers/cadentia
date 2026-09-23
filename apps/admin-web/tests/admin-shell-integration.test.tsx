@@ -303,8 +303,10 @@ const setEnvironment = (overrides: Partial<AdminEnvironment> = {}) => {
     Object.assign(adminEnvironment, {
         apiBaseUrl: '/api',
         authIssuerUrl: 'https://idp.example.test',
+        authMode: 'first-party',
         identityProviderClientId: 'cadentia-admin',
         churchInstanceId: 'church-1',
+        locale: 'en-US',
         featureFlags: ['admin-diagnostics'],
         diagnosticsEnabled: true,
         buildVersion: 'test',
@@ -341,11 +343,29 @@ beforeEach(() => {
 afterEach(() => {
     act(() => { root?.unmount(); });
     container?.remove();
+    window.sessionStorage.clear();
     Object.assign(adminEnvironment, originalEnvironment);
     vi.restoreAllMocks();
 });
 
 describe('admin shell integration smoke', () => {
+    it('renders the unauthenticated shell and password form in the configured church locale', async () => {
+        setEnvironment({ locale: 'es-GT' });
+        const fetchImpl = vi.fn().mockResolvedValue(response({ error: 'unauthorized' }, 401));
+        vi.stubGlobal('fetch', fetchImpl);
+
+        const node = await renderShell('/admin');
+
+        expect(document.documentElement.lang).toBe('es');
+        expect(node.textContent).toContain('Acceso denegado');
+        expect(node.textContent).toContain('Base de la consola');
+        expect(node.textContent).toContain('Iniciar sesión en la administración de Cadentia');
+        expect(node.textContent).toContain('Correo electrónico');
+        expect(node.textContent).toContain('Contraseña');
+        expect(node.textContent).toContain('¿Olvidaste tu contraseña?');
+        expect(node.querySelector('input[type="password"]')).not.toBeNull();
+    });
+
     it('bootstraps the authenticated shell, renders role-aware navigation, and loads the import snapshot', async () => {
         const fetchImpl = vi.fn().mockImplementation((input: RequestInfo | URL) => {
             const url = String(input);
@@ -367,6 +387,30 @@ describe('admin shell integration smoke', () => {
         expect(node.textContent).toContain('Instance settings');
         expect(node.textContent).toContain('Safe Shell Title');
         expect(node.textContent).not.toContain('rawPayload');
+    });
+
+    it('revokes the first-party session and returns to the login screen from the user menu', async () => {
+        window.sessionStorage.setItem('cadentia.admin.refresh-token', 'refresh-token');
+        const fetchImpl = vi.fn().mockImplementation((input: RequestInfo | URL) => {
+            const url = String(input);
+            if (url === '/api/admin/session') return Promise.resolve(response(adminSession));
+            if (url.startsWith('/api/admin/import-candidates')) return Promise.resolve(response(queueResponse));
+            if (url === 'https://idp.example.test/auth/logout') return Promise.resolve(new Response(null, { status: 204 }));
+            return Promise.resolve(response({ error: 'unexpected' }, 404));
+        });
+        vi.stubGlobal('fetch', fetchImpl);
+
+        const node = await renderShell('/admin');
+        const logoutButton = node.querySelector('.admin-topnav__logout') as HTMLButtonElement;
+        await act(async () => {
+            logoutButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+            await Promise.resolve();
+        });
+
+        expect(fetchImpl).toHaveBeenCalledWith('https://idp.example.test/auth/logout', expect.objectContaining({ method: 'POST' }));
+        expect(window.sessionStorage.getItem('cadentia.admin.refresh-token')).toBeNull();
+        expect(node.textContent).toContain('Sign in to Cadentia admin');
+        expect(node.querySelector('.admin-topnav__logout')).toBeNull();
     });
 
     it('blocks direct routes that the authenticated session cannot access', async () => {

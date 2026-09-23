@@ -1,5 +1,7 @@
 import { adminEnvironment, type AdminEnvironment } from '../config/environment';
 import { createAdminApiClient, type AdminApiClient, type AdminApiError } from '../generated/cadentia-api/client';
+import { ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY, refreshFirstPartyAccessToken } from './tokens';
+export { refreshFirstPartyAccessToken } from './tokens';
 
 export type AdminRole =
     | 'VIEWER'
@@ -47,7 +49,6 @@ export type PermissionState =
 
 export type AccessTokenProvider = () => Promise<string | null>;
 
-const ACCESS_TOKEN_KEY = 'cadentia.admin.access-token';
 const PKCE_VERIFIER_KEY = 'cadentia.admin.pkce-verifier';
 const OIDC_STATE_KEY = 'cadentia.admin.oidc-state';
 const OIDC_REDIRECT_URI_KEY = 'cadentia.admin.redirect-uri';
@@ -56,6 +57,7 @@ const defaultAccessTokenProvider: AccessTokenProvider = async () =>
     typeof window === 'undefined' ? null : window.sessionStorage.getItem(ACCESS_TOKEN_KEY);
 
 export const buildSignInUrl = (environment: AdminEnvironment, returnTo = window.location.href): string => {
+    if (environment.authMode === 'first-party') return '#admin-login';
     if (!environment.authIssuerUrl || !environment.identityProviderClientId) {
         return '#admin-auth-not-configured';
     }
@@ -77,6 +79,7 @@ const sha256Base64Url = async (value: string): Promise<string> =>
     base64Url(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value))));
 
 export const buildSecureSignInUrl = async (environment: AdminEnvironment, returnTo = window.location.href): Promise<string> => {
+    if (environment.authMode === 'first-party') return '#admin-login';
     if (!environment.authIssuerUrl || !environment.identityProviderClientId) {
         return '#admin-auth-not-configured';
     }
@@ -98,6 +101,7 @@ export const buildSecureSignInUrl = async (environment: AdminEnvironment, return
 
 export const completeAuthorizationCodeLogin = async (environment: AdminEnvironment): Promise<void> => {
     if (typeof window === 'undefined') return;
+    if (environment.authMode === 'first-party') return;
     const params = new URLSearchParams(window.location.search);
     const code = params.get('code');
     if (!code) return;
@@ -126,6 +130,56 @@ export const completeAuthorizationCodeLogin = async (environment: AdminEnvironme
     window.sessionStorage.removeItem(OIDC_STATE_KEY);
     window.sessionStorage.removeItem(OIDC_REDIRECT_URI_KEY);
     window.history.replaceState({}, document.title, window.location.pathname + window.location.hash);
+};
+
+type FirstPartyTokenResponse = { accessToken?: string; refreshToken?: string };
+
+const resolveAuthUrl = (environment: AdminEnvironment, path: string): string =>
+    new URL(path, environment.authIssuerUrl.endsWith('/') ? environment.authIssuerUrl : `${environment.authIssuerUrl}/`).toString();
+
+export const loginWithPassword = async (environment: AdminEnvironment, email: string, password: string): Promise<void> => {
+    const response = await fetch(resolveAuthUrl(environment, 'auth/login'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ email, password }),
+    });
+    if (!response.ok) throw Object.assign(new Error('Sign-in failed.'), { status: response.status });
+    const tokens = await response.json() as FirstPartyTokenResponse;
+    if (!tokens.accessToken || !tokens.refreshToken) throw new Error('Authentication response was incomplete.');
+    window.sessionStorage.setItem(ACCESS_TOKEN_KEY, tokens.accessToken);
+    window.sessionStorage.setItem(REFRESH_TOKEN_KEY, tokens.refreshToken);
+};
+
+export const requestPasswordReset = async (environment: AdminEnvironment, email: string): Promise<void> => {
+    const response = await fetch(resolveAuthUrl(environment, 'auth/password/forgot'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ email }),
+    });
+    if (!response.ok) throw new Error('Password reset request failed.');
+};
+
+export const activatePassword = async (environment: AdminEnvironment, token: string, newPassword: string): Promise<void> => {
+    const response = await fetch(resolveAuthUrl(environment, 'auth/password/reset'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ token, newPassword }),
+    });
+    if (!response.ok) throw Object.assign(new Error('Account activation failed.'), { status: response.status });
+};
+
+export const logoutFirstParty = async (environment: AdminEnvironment): Promise<void> => {
+    if (typeof window === 'undefined') return;
+    const refreshToken = window.sessionStorage.getItem(REFRESH_TOKEN_KEY);
+    if (environment.authMode === 'first-party' && refreshToken) {
+        await fetch(resolveAuthUrl(environment, 'auth/logout'), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+            body: JSON.stringify({ refreshToken }),
+        }).catch(() => undefined);
+    }
+    window.sessionStorage.removeItem(ACCESS_TOKEN_KEY);
+    window.sessionStorage.removeItem(REFRESH_TOKEN_KEY);
 };
 
 export const isFeatureEnabled = (environment: AdminEnvironment, feature: string): boolean =>

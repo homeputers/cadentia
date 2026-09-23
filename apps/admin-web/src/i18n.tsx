@@ -46,6 +46,17 @@ const messages = {
         missingInstanceCopy: 'Admin console is missing required church-instance context.',
         signIn: 'Sign in to Cadentia admin',
         sessionExpired: 'Session expired. Sign in again.',
+        authEmail: 'Email',
+        authPassword: 'Password',
+        authForgotPassword: 'Forgot password?',
+        authSignIn: 'Sign in',
+        authSigningIn: 'Signing in…',
+        authInvalidCredentials: 'The email or password is incorrect.',
+        authResetLink: 'Password reset will be available here soon.',
+        authSendReset: 'Send reset instructions',
+        authResetRequested: 'If an account exists for that email, reset instructions have been sent.',
+        authBackToSignIn: 'Back to sign in',
+        logout: 'Sign out',
         shellUnavailable: 'Admin shell unavailable',
         capabilityDenied: 'Feature disabled',
         protectedRoutes: 'Protected route groups',
@@ -71,14 +82,30 @@ const messages = {
         },
     },
     es: {
-        admin: 'Administración', brand: 'Administración de Cadentia', sections: 'Secciones de administración', signedInAs: 'Sesión iniciada como', breadcrumb: 'Ruta de navegación', applyFilters: 'Aplicar filtros', retry: 'Reintentar', loading: 'Cargando datos administrativos…', empty: 'Ningún registro coincide con los filtros actuales.', partialFailure: 'No se pudieron cargar algunos datos. Las filas disponibles pueden estar incompletas.', stale: 'Mostrando datos en caché mientras se cargan datos actualizados.', unauthorized: 'Debes iniciar sesión para cargar detalles protegidos.', forbidden: 'No tienes acceso a este recurso administrativo. No se cargaron detalles protegidos.', error: 'La solicitud falló con un mensaje de error redactado.', role: 'Rol', allowedAction: 'Acción permitida', required: 'obligatorio', auditReference: 'Referencia de auditoría', supportDebug: 'Metadatos de soporte/depuración', buildVersion: 'Versión de compilación', buildCommit: 'Commit de compilación', buildTimestamp: 'Fecha de compilación', diagnostics: 'Diagnóstico', enabled: 'habilitado', disabled: 'deshabilitado', configured: 'configurado', missing: 'faltante', noSecrets: 'Aquí no se muestran secretos, tokens, cargas sin procesar, letras protegidas por derechos ni diagnósticos sensibles.', requiredAcknowledgement: 'Reconocimiento requerido:', auditActor: 'Actor de auditoría:', concurrency: 'Concurrencia/versión:', cancel: 'Cancelar', continue: 'Entiendo, continuar', previewedChanges: 'Cambios previsualizados', before: 'Antes', after: 'Después', shell: 'Base de la consola', accessDenied: 'Acceso denegado', missingInstance: 'Falta la instancia de iglesia', missingInstanceCopy: 'A la consola de administración le falta el contexto requerido de la instancia de iglesia.', signIn: 'Iniciar sesión en la administración de Cadentia', sessionExpired: 'La sesión expiró. Inicia sesión de nuevo.', shellUnavailable: 'Consola de administración no disponible', capabilityDenied: 'Función deshabilitada', protectedRoutes: 'Grupos de rutas protegidas', routeCopy: 'Solo se muestran en la barra superior las rutas permitidas por las capacidades actuales.', grantedCapabilities: 'Capacidades otorgadas', capabilityCopy: 'Estas insignias muestran lo que permite la sesión del backend. Los controles aparecen en cada sección cuando el flujo está disponible.', readOnly: 'Acceso de solo lectura. Los controles mutables están ocultos para facilitar el uso.', deploymentMetadata: 'Metadatos de despliegue', missingRuntime: 'Configuración de ejecución faltante', importSnapshot: 'Resumen de revisión de importaciones', openImportQueue: 'Abrir la cola completa de revisión', routes: { songImport: 'Importar canciones', importReview: 'Revisión de importaciones', reviewedSongs: 'Canciones revisadas', auditHistory: 'Historial de auditoría', diagnostics: 'Diagnóstico', instanceSettings: 'Configuración de instancia', telegramAccess: 'Acceso de Telegram', teamAssignments: 'Asignaciones del equipo', musicians: 'Músicos', userAdministration: 'Administración de usuarios' },
+        admin: 'Administración', brand: 'Administración de Cadentia', sections: 'Secciones de administración', signedInAs: 'Sesión iniciada como', breadcrumb: 'Ruta de navegación', applyFilters: 'Aplicar filtros', retry: 'Reintentar', loading: 'Cargando datos administrativos…', empty: 'Ningún registro coincide con los filtros actuales.', partialFailure: 'No se pudieron cargar algunos datos. Las filas disponibles pueden estar incompletas.', stale: 'Mostrando datos en caché mientras se cargan datos actualizados.', unauthorized: 'Debes iniciar sesión para cargar detalles protegidos.', forbidden: 'No tienes acceso a este recurso administrativo. No se cargaron detalles protegidos.', error: 'La solicitud falló con un mensaje de error redactado.', role: 'Rol', allowedAction: 'Acción permitida', required: 'obligatorio', auditReference: 'Referencia de auditoría', supportDebug: 'Metadatos de soporte/depuración', buildVersion: 'Versión de compilación', buildCommit: 'Commit de compilación', buildTimestamp: 'Fecha de compilación', diagnostics: 'Diagnóstico', enabled: 'habilitado', disabled: 'deshabilitado', configured: 'configurado', missing: 'faltante', noSecrets: 'Aquí no se muestran secretos, tokens, cargas sin procesar, letras protegidas por derechos ni diagnósticos sensibles.', requiredAcknowledgement: 'Reconocimiento requerido:', auditActor: 'Actor de auditoría:', concurrency: 'Concurrencia/versión:', cancel: 'Cancelar', continue: 'Entiendo, continuar', previewedChanges: 'Cambios previsualizados', before: 'Antes', after: 'Después', shell: 'Base de la consola', accessDenied: 'Acceso denegado', missingInstance: 'Falta la instancia de iglesia', missingInstanceCopy: 'A la consola de administración le falta el contexto requerido de la instancia de iglesia.', signIn: 'Iniciar sesión en la administración de Cadentia', sessionExpired: 'La sesión expiró. Inicia sesión de nuevo.', authEmail: 'Correo electrónico', authPassword: 'Contraseña', authForgotPassword: '¿Olvidaste tu contraseña?', authSignIn: 'Iniciar sesión', authSigningIn: 'Iniciando sesión…', authInvalidCredentials: 'El correo electrónico o la contraseña no son correctos.', authResetLink: 'El restablecimiento de contraseña estará disponible aquí pronto.', shellUnavailable: 'Consola de administración no disponible', capabilityDenied: 'Función deshabilitada', protectedRoutes: 'Grupos de rutas protegidas', routeCopy: 'Solo se muestran en la barra superior las rutas permitidas por las capacidades actuales.', grantedCapabilities: 'Capacidades otorgadas', capabilityCopy: 'Estas insignias muestran lo que permite la sesión del backend. Los controles aparecen en cada sección cuando el flujo está disponible.', readOnly: 'Acceso de solo lectura. Los controles mutables están ocultos para facilitar el uso.', deploymentMetadata: 'Metadatos de despliegue', missingRuntime: 'Configuración de ejecución faltante', importSnapshot: 'Resumen de revisión de importaciones', openImportQueue: 'Abrir la cola completa de revisión', routes: { songImport: 'Importar canciones', importReview: 'Revisión de importaciones', reviewedSongs: 'Canciones revisadas', auditHistory: 'Historial de auditoría', diagnostics: 'Diagnóstico', instanceSettings: 'Configuración de instancia', telegramAccess: 'Acceso de Telegram', teamAssignments: 'Asignaciones del equipo', musicians: 'Músicos', userAdministration: 'Administración de usuarios' },
     },
     pt: {
-        admin: 'Administração', brand: 'Administração Cadentia', sections: 'Seções administrativas', signedInAs: 'Sessão iniciada como', breadcrumb: 'Trilha de navegação', applyFilters: 'Aplicar filtros', retry: 'Tentar novamente', loading: 'Carregando dados administrativos…', empty: 'Nenhum registro corresponde aos filtros atuais.', partialFailure: 'Alguns dados não puderam ser carregados. As linhas disponíveis podem estar incompletas.', stale: 'Exibindo dados em cache enquanto dados novos são carregados.', unauthorized: 'É necessário entrar antes de carregar detalhes protegidos.', forbidden: 'Você não tem acesso a este recurso administrativo. Nenhum detalhe protegido foi carregado.', error: 'A solicitação falhou com uma mensagem de erro ocultada.', role: 'Função', allowedAction: 'Ação permitida', required: 'obrigatório', auditReference: 'Referência de auditoria', supportDebug: 'Metadados de suporte/depuração', buildVersion: 'Versão da build', buildCommit: 'Commit da build', buildTimestamp: 'Data da build', diagnostics: 'Diagnóstico', enabled: 'ativado', disabled: 'desativado', configured: 'configurado', missing: 'ausente', noSecrets: 'Nenhum segredo, token, payload bruto, letra protegida por direitos autorais ou diagnóstico sensível é exibido aqui.', requiredAcknowledgement: 'Confirmação obrigatória:', auditActor: 'Ator da auditoria:', concurrency: 'Concorrência/versão:', cancel: 'Cancelar', continue: 'Entendo, continuar', previewedChanges: 'Alterações pré-visualizadas', before: 'Antes', after: 'Depois', shell: 'Base do console', accessDenied: 'Acesso negado', missingInstance: 'Instância da igreja ausente', missingInstanceCopy: 'O console administrativo não tem o contexto necessário da instância da igreja.', signIn: 'Entrar na administração Cadentia', sessionExpired: 'A sessão expirou. Entre novamente.', shellUnavailable: 'Console administrativo indisponível', capabilityDenied: 'Recurso desativado', protectedRoutes: 'Grupos de rotas protegidas', routeCopy: 'Somente as rotas correspondentes às capacidades atuais aparecem na barra de navegação.', grantedCapabilities: 'Capacidades concedidas', capabilityCopy: 'Estas etiquetas mostram o que a sessão do backend permite. Os controles aparecem em cada seção quando o fluxo está disponível.', readOnly: 'Acesso somente leitura. Os controles de mutação ficam ocultos para facilitar o uso.', deploymentMetadata: 'Metadados de implantação', missingRuntime: 'Configuração de execução ausente', importSnapshot: 'Resumo da revisão de importações', openImportQueue: 'Abrir fila completa de revisão', routes: { songImport: 'Importar músicas', importReview: 'Revisão de importações', reviewedSongs: 'Músicas revisadas', auditHistory: 'Histórico de auditoria', diagnostics: 'Diagnóstico', instanceSettings: 'Configurações da instância', telegramAccess: 'Acesso ao Telegram', teamAssignments: 'Designações da equipe', musicians: 'Músicos', userAdministration: 'Administração de usuários' },
+        admin: 'Administração', brand: 'Administração Cadentia', sections: 'Seções administrativas', signedInAs: 'Sessão iniciada como', breadcrumb: 'Trilha de navegação', applyFilters: 'Aplicar filtros', retry: 'Tentar novamente', loading: 'Carregando dados administrativos…', empty: 'Nenhum registro corresponde aos filtros atuais.', partialFailure: 'Alguns dados não puderam ser carregados. As linhas disponíveis podem estar incompletas.', stale: 'Exibindo dados em cache enquanto dados novos são carregados.', unauthorized: 'É necessário entrar antes de carregar detalhes protegidos.', forbidden: 'Você não tem acesso a este recurso administrativo. Nenhum detalhe protegido foi carregado.', error: 'A solicitação falhou com uma mensagem de erro ocultada.', role: 'Função', allowedAction: 'Ação permitida', required: 'obrigatório', auditReference: 'Referência de auditoria', supportDebug: 'Metadados de suporte/depuração', buildVersion: 'Versão da build', buildCommit: 'Commit da build', buildTimestamp: 'Data da build', diagnostics: 'Diagnóstico', enabled: 'ativado', disabled: 'desativado', configured: 'configurado', missing: 'ausente', noSecrets: 'Nenhum segredo, token, payload bruto, letra protegida por direitos autorais ou diagnóstico sensível é exibido aqui.', requiredAcknowledgement: 'Confirmação obrigatória:', auditActor: 'Ator da auditoria:', concurrency: 'Concorrência/versão:', cancel: 'Cancelar', continue: 'Entendo, continuar', previewedChanges: 'Alterações pré-visualizadas', before: 'Antes', after: 'Depois', shell: 'Base do console', accessDenied: 'Acesso negado', missingInstance: 'Instância da igreja ausente', missingInstanceCopy: 'O console administrativo não tem o contexto necessário da instância da igreja.', signIn: 'Entrar na administração Cadentia', sessionExpired: 'A sessão expirou. Entre novamente.', authEmail: 'E-mail', authPassword: 'Senha', authForgotPassword: 'Esqueceu a senha?', authSignIn: 'Entrar', authSigningIn: 'Entrando…', authInvalidCredentials: 'O e-mail ou a senha estão incorretos.', authResetLink: 'A redefinição de senha estará disponível aqui em breve.', shellUnavailable: 'Console administrativo indisponível', capabilityDenied: 'Recurso desativado', protectedRoutes: 'Grupos de rotas protegidas', routeCopy: 'Somente as rotas correspondentes às capacidades atuais aparecem na barra de navegação.', grantedCapabilities: 'Capacidades concedidas', capabilityCopy: 'Estas etiquetas mostram o que a sessão do backend permite. Os controles aparecem em cada seção quando o fluxo está disponível.', readOnly: 'Acesso somente leitura. Os controles de mutação ficam ocultos para facilitar o uso.', deploymentMetadata: 'Metadados de implantação', missingRuntime: 'Configuração de execução ausente', importSnapshot: 'Resumo da revisão de importações', openImportQueue: 'Abrir fila completa de revisão', routes: { songImport: 'Importar músicas', importReview: 'Revisão de importações', reviewedSongs: 'Músicas revisadas', auditHistory: 'Histórico de auditoria', diagnostics: 'Diagnóstico', instanceSettings: 'Configurações da instância', telegramAccess: 'Acesso ao Telegram', teamAssignments: 'Designações da equipe', musicians: 'Músicos', userAdministration: 'Administração de usuários' },
     },
 } as const;
 
 export type TranslationKey = keyof typeof messages.en;
+
+const localeAuthTranslations: Record<SupportedLocale, Partial<Record<TranslationKey, string>>> = {
+    en: {},
+    es: {
+        authSendReset: 'Enviar instrucciones de restablecimiento',
+        authResetRequested: 'Si existe una cuenta para ese correo, se enviaron las instrucciones de restablecimiento.',
+        authBackToSignIn: 'Volver a iniciar sesión',
+        logout: 'Cerrar sesión',
+    },
+    pt: {
+        authSendReset: 'Enviar instruções de redefinição',
+        authResetRequested: 'Se existir uma conta para este e-mail, as instruções de redefinição foram enviadas.',
+        authBackToSignIn: 'Voltar para entrar',
+        logout: 'Sair',
+    },
+};
 
 const spanishPhrases: Record<string, string> = {
     'Session loading': 'Cargando sesión',
@@ -679,22 +706,46 @@ const spanishPhrases: Record<string, string> = {
 };
 
 const adminUserSpanishPhrases: Record<string, string> = {
+    'Activate your Cadentia account': 'Activa tu cuenta de Cadentia',
+    'Set a password to finish activating your account.': 'Establece una contraseña para terminar de activar tu cuenta.',
+    'New password': 'Nueva contraseña',
+    'Confirm password': 'Confirmar contraseña',
+    'Use at least 12 characters.': 'Usa al menos 12 caracteres.',
+    'Activating account…': 'Activando cuenta…',
+    'Activate account': 'Activar cuenta',
+    'Your account is ready. Sign in with your email and new password.': 'Tu cuenta está lista. Inicia sesión con tu correo y tu nueva contraseña.',
+    'Go to sign in': 'Ir a iniciar sesión',
+    'This activation link is missing its token.': 'A este enlace de activación le falta el token.',
+    'The passwords do not match.': 'Las contraseñas no coinciden.',
+    'This activation link is invalid or expired. Request a new invitation from an administrator.': 'Este enlace de activación no es válido o expiró. Solicita una nueva invitación a un administrador.',
     Admin: 'Administración',
     'User administration': 'Administración de usuarios',
     'Administration': 'Administración',
-    'Provision identities from the configured identity provider and assign tenant-scoped roles. Changes take effect on the next authenticated request.': 'Provisiona identidades del proveedor de identidad configurado y asigna roles por iglesia. Los cambios se aplican en la siguiente solicitud autenticada.',
+    'Provision first-party accounts by email and assign tenant-scoped roles. Changes take effect on the next authenticated request.': 'Provisiona cuentas internas por correo electrónico y asigna roles por iglesia. Los cambios se aplican en la siguiente solicitud autenticada.',
+    'Create first-party accounts, send an activation link, and assign church-scoped roles. Changes take effect on the next authenticated request.': 'Crea cuentas internas, envía un enlace de activación y asigna roles por iglesia. Los cambios se aplican en la siguiente solicitud autenticada.',
     'Provision user': 'Provisionar usuario',
+    'Add user': 'Agregar usuario',
     'Identity-provider subject': 'Asunto del proveedor de identidad',
     'sub from the identity provider': 'sub del proveedor de identidad',
     'Display name': 'Nombre visible',
     'Email': 'Correo electrónico',
     'Initial roles': 'Roles iniciales',
+    'Provision account': 'Provisionar cuenta',
+    'Create user and invite': 'Crear usuario y enviar invitación',
     'Provision identity': 'Provisionar identidad',
     'Provisioned users': 'Usuarios provisionados',
     'You do not have permission to manage users.': 'No tienes permiso para administrar usuarios.',
     'User administration could not be loaded.': 'No se pudo cargar la administración de usuarios.',
-    'That identity is already provisioned for this church instance.': 'Esa identidad ya está provisionada para esta iglesia.',
+    'That identity is already provisioned for this church instance.': 'Esa cuenta ya está provisionada para esta iglesia.',
+    'No active first-party account exists for that email, and the account invitation could not be created.': 'No existe una cuenta interna activa para ese correo y no se pudo crear la invitación.',
+    'The authentication service could not resolve this account. Check that it is running and that CADENTIA_AUTH_INTERNAL_API_KEY matches in both services.': 'El servicio de autenticación no pudo resolver esta cuenta. Comprueba que esté ejecutándose y que CADENTIA_AUTH_INTERNAL_API_KEY coincida en ambos servicios.',
+    'First-party authentication is not configured in the API.': 'La autenticación interna no está configurada en la API.',
     'The user could not be created.': 'No se pudo crear el usuario.',
+    'User created. Share the activation link with the new user so they can set a password.': 'Usuario creado. Comparte el enlace de activación para que pueda establecer una contraseña.',
+    'User access was created. The user can sign in with their existing authentication account.': 'Se creó el acceso. El usuario puede iniciar sesión con su cuenta de autenticación existente.',
+    'Activation link': 'Enlace de activación',
+    'Open activation link': 'Abrir enlace de activación',
+    'Copy activation link': 'Copiar enlace de activación',
     'The role update could not be saved. Refresh and try again if another administrator changed this user.': 'No se pudo guardar la actualización de roles. Actualiza e inténtalo de nuevo si otro administrador cambió este usuario.',
     'The user status could not be changed. Refresh and try again if another administrator changed this user.': 'No se pudo cambiar el estado del usuario. Actualiza e inténtalo de nuevo si otro administrador cambió este usuario.',
     'No email': 'Sin correo electrónico',
@@ -714,22 +765,46 @@ const adminUserSpanishPhrases: Record<string, string> = {
 };
 
 const portuguesePhrases: Record<string, string> = {
+    'Activate your Cadentia account': 'Ative sua conta Cadentia',
+    'Set a password to finish activating your account.': 'Defina uma senha para concluir a ativação da sua conta.',
+    'New password': 'Nova senha',
+    'Confirm password': 'Confirmar senha',
+    'Use at least 12 characters.': 'Use pelo menos 12 caracteres.',
+    'Activating account…': 'Ativando conta…',
+    'Activate account': 'Ativar conta',
+    'Your account is ready. Sign in with your email and new password.': 'Sua conta está pronta. Entre com seu e-mail e sua nova senha.',
+    'Go to sign in': 'Ir para entrar',
+    'This activation link is missing its token.': 'Este link de ativação não contém o token.',
+    'The passwords do not match.': 'As senhas não coincidem.',
+    'This activation link is invalid or expired. Request a new invitation from an administrator.': 'Este link de ativação é inválido ou expirou. Solicite um novo convite a um administrador.',
     Admin: 'Administração',
     'User administration': 'Administração de usuários',
     'Administration': 'Administração',
-    'Provision identities from the configured identity provider and assign tenant-scoped roles. Changes take effect on the next authenticated request.': 'Provisione identidades do provedor de identidade configurado e atribua funções por igreja. As alterações entram em vigor na próxima solicitação autenticada.',
+    'Provision first-party accounts by email and assign tenant-scoped roles. Changes take effect on the next authenticated request.': 'Provisione contas internas por e-mail e atribua funções por igreja. As alterações entram em vigor na próxima solicitação autenticada.',
+    'Create first-party accounts, send an activation link, and assign church-scoped roles. Changes take effect on the next authenticated request.': 'Crie contas internas, envie um link de ativação e atribua funções por igreja. As alterações entram em vigor na próxima solicitação autenticada.',
     'Provision user': 'Provisionar usuário',
+    'Add user': 'Adicionar usuário',
     'Identity-provider subject': 'Assunto do provedor de identidade',
     'sub from the identity provider': 'sub do provedor de identidade',
     'Display name': 'Nome de exibição',
     'Email': 'E-mail',
     'Initial roles': 'Funções iniciais',
+    'Provision account': 'Provisionar conta',
+    'Create user and invite': 'Criar usuário e enviar convite',
     'Provision identity': 'Provisionar identidade',
     'Provisioned users': 'Usuários provisionados',
     'You do not have permission to manage users.': 'Você não tem permissão para administrar usuários.',
     'User administration could not be loaded.': 'Não foi possível carregar a administração de usuários.',
-    'That identity is already provisioned for this church instance.': 'Essa identidade já está provisionada para esta igreja.',
+    'That identity is already provisioned for this church instance.': 'Essa conta já está provisionada para esta igreja.',
+    'No active first-party account exists for that email, and the account invitation could not be created.': 'Não existe uma conta interna ativa para esse e-mail e não foi possível criar o convite.',
+    'The authentication service could not resolve this account. Check that it is running and that CADENTIA_AUTH_INTERNAL_API_KEY matches in both services.': 'O serviço de autenticação não conseguiu localizar esta conta. Verifique se ele está em execução e se CADENTIA_AUTH_INTERNAL_API_KEY é igual nos dois serviços.',
+    'First-party authentication is not configured in the API.': 'A autenticação interna não está configurada na API.',
     'The user could not be created.': 'Não foi possível criar o usuário.',
+    'User created. Share the activation link with the new user so they can set a password.': 'Usuário criado. Compartilhe o link de ativação para que ele possa definir uma senha.',
+    'User access was created. The user can sign in with their existing authentication account.': 'O acesso foi criado. O usuário pode entrar com a conta de autenticação existente.',
+    'Activation link': 'Link de ativação',
+    'Open activation link': 'Abrir link de ativação',
+    'Copy activation link': 'Copiar link de ativação',
     'The role update could not be saved. Refresh and try again if another administrator changed this user.': 'Não foi possível salvar a atualização das funções. Atualize e tente novamente se outro administrador alterou este usuário.',
     'The user status could not be changed. Refresh and try again if another administrator changed this user.': 'Não foi possível alterar o status do usuário. Atualize e tente novamente se outro administrador alterou este usuário.',
     'No email': 'Sem e-mail',
@@ -905,7 +980,9 @@ export const LocalizedView = ({ children }: { children: ReactNode }) => {
 
 export const translate = (locale: string | null | undefined, key: TranslationKey): string => {
     const normalized = normalizeLocale(locale);
-    const value = messages[normalized][key];
+    const localizedOverride = localeAuthTranslations[normalized][key];
+    if (localizedOverride) return localizedOverride;
+    const value = (messages[normalized] as unknown as Record<string, unknown>)[key];
     return typeof value === 'string' ? value : messages.en[key] as string;
 };
 
