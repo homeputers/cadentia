@@ -12,7 +12,8 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: ${CADENTIA_AUTH_ISSUER_URL:}
+          issuer-uri: ${CADENTIA_AUTH_ISSUER_URL:http://localhost:8081}
+          jwk-set-uri: ${CADENTIA_AUTH_JWK_SET_URI:http://localhost:8081/oauth2/jwks}
 
 server:
   port: ${PORT:8080}
@@ -47,6 +48,10 @@ cadentia:
     id: ${CADENTIA_INSTANCE_ID:local-development}
   auth:
     provider: ${CADENTIA_AUTH_PROVIDER:local}
+    service-base-url: ${CADENTIA_AUTH_SERVICE_BASE_URL:http://localhost:8081}
+    internal-api-key: ${CADENTIA_AUTH_INTERNAL_API_KEY:}
+    admin-web-base-url: ${CADENTIA_ADMIN_WEB_BASE_URL:http://localhost:5173}
+    bootstrap-admin-email: ${CADENTIA_AUTH_BOOTSTRAP_EMAIL:}
   local-admin:
     username: ${CADENTIA_LOCAL_ADMIN_USERNAME:admin}
     password: ${CADENTIA_LOCAL_ADMIN_PASSWORD:cadentia}

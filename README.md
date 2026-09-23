@@ -164,6 +164,18 @@ cd apps/api
 mvn spring-boot:run
 ```
 
+To run the first-party authentication flow, start `apps/auth-service` first and
+set the same `CADENTIA_AUTH_INTERNAL_API_KEY` in both services. The API run
+configuration must include `CADENTIA_AUTH_PROVIDER=first-party`,
+`CADENTIA_AUTH_ISSUER_URL=http://localhost:8081`, and
+`CADENTIA_AUTH_JWK_SET_URI=http://localhost:8081/oauth2/jwks`. Set
+`CADENTIA_ADMIN_WEB_BASE_URL=http://localhost:5173` on the API so newly
+created users receive a local activation link. IntelliJ does
+not automatically load the repository `.env.example`, so add these variables
+to the Spring Boot run configuration explicitly. If the API is left on its
+`local` provider, Spring Security intentionally challenges protected requests
+with HTTP Basic, which produces the browser username/password dialog.
+
 ### Live local Telegram webhook testing
 
 For local Telegram testing, expose the API through a public HTTPS tunnel and

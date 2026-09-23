@@ -22,4 +22,21 @@ describe('admin environment contract', () => {
             'VITE_CADENTIA_CHURCH_INSTANCE_ID',
         ]);
     });
+
+    it('does not require an OIDC client when first-party auth is selected', () => {
+        const environment: AdminEnvironment = {
+            apiBaseUrl: 'http://localhost:8080',
+            authIssuerUrl: 'http://localhost:8081',
+            authMode: 'first-party',
+            identityProviderClientId: '',
+            churchInstanceId: 'local-development',
+            featureFlags: [],
+            diagnosticsEnabled: false,
+            buildVersion: '0.1.0',
+            buildCommit: 'local',
+            buildTimestamp: 'local',
+        };
+
+        expect(missingRequiredEnvironment(environment)).toEqual([]);
+    });
 });

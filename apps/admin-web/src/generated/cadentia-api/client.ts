@@ -1,4 +1,5 @@
 import type { AdminEnvironment } from '../../config/environment';
+import { refreshFirstPartyAccessToken } from '../../auth/tokens';
 import type { AccessTokenProvider, AdminSession } from '../../auth/session';
 
 export type AdminApiError = Error & {
@@ -58,11 +59,23 @@ export const createAdminApiClient = ({
             headers.set('If-Match', mutation.etag);
         }
 
-        const response = await fetchImpl(resolveApiUrl(path, environment.apiBaseUrl), {
+        let response = await fetchImpl(resolveApiUrl(path, environment.apiBaseUrl), {
             ...init,
             credentials: 'include',
             headers,
         });
+
+        if (response.status === 401 && environment.authMode === 'first-party') {
+            const refreshedToken = await refreshFirstPartyAccessToken(environment, fetchImpl);
+            if (refreshedToken) {
+                headers.set('Authorization', `Bearer ${refreshedToken}`);
+                response = await fetchImpl(resolveApiUrl(path, environment.apiBaseUrl), {
+                    ...init,
+                    credentials: 'include',
+                    headers,
+                });
+            }
+        }
 
         if (!response.ok) {
             throw await toApiError(response);

@@ -1,0 +1,42 @@
+spring:
+  application:
+    name: cadentia-auth-service
+  datasource:
+    url: ${CADENTIA_DB_URL:jdbc:postgresql://localhost:5432/cadentia}
+    username: ${CADENTIA_DB_USERNAME:cadentia}
+    password: ${CADENTIA_DB_PASSWORD:cadentia}
+    hikari:
+      connection-init-sql: SET search_path TO cadentia_auth, public
+  flyway:
+    enabled: true
+    schemas: cadentia_auth
+    default-schema: cadentia_auth
+    create-schemas: true
+    locations: classpath:db/migration
+
+server:
+  port: ${PORT:8081}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+cadentia:
+  auth:
+    issuer: ${CADENTIA_AUTH_ISSUER:http://localhost:8081}
+    access-token-ttl: ${CADENTIA_AUTH_ACCESS_TOKEN_TTL:PT15M}
+    refresh-token-ttl: ${CADENTIA_AUTH_REFRESH_TOKEN_TTL:P30D}
+    password-reset-ttl: ${CADENTIA_AUTH_PASSWORD_RESET_TTL:PT30M}
+    max-failed-login-attempts: ${CADENTIA_AUTH_MAX_FAILED_LOGIN_ATTEMPTS:5}
+    lock-duration: ${CADENTIA_AUTH_LOCK_DURATION:PT15M}
+    allow-registration: ${CADENTIA_AUTH_ALLOW_REGISTRATION:false}
+    log-password-reset-tokens: ${CADENTIA_AUTH_LOG_PASSWORD_RESET_TOKENS:false}
+    private-key-base64: ${CADENTIA_AUTH_PRIVATE_KEY_BASE64:}
+    public-key-base64: ${CADENTIA_AUTH_PUBLIC_KEY_BASE64:}
+    allowed-origins: ${CADENTIA_AUTH_ALLOWED_ORIGINS:http://localhost:5173}
+    internal-api-key: ${CADENTIA_AUTH_INTERNAL_API_KEY:}
+    bootstrap-email: ${CADENTIA_AUTH_BOOTSTRAP_EMAIL:}
+    bootstrap-display-name: ${CADENTIA_AUTH_BOOTSTRAP_DISPLAY_NAME:}
+    bootstrap-password: ${CADENTIA_AUTH_BOOTSTRAP_PASSWORD:}

@@ -31,3 +31,7 @@ NotFound:
   description: Requested administrative resource was not found or is not available to this actor.
 NotImplemented:
   description: Capability is documented but persistent backend support is not configured for this instance.
+BadGateway:
+  description: An upstream authentication service returned an unexpected response or could not be reached.
+ServiceUnavailable:
+  description: The requested authentication integration is not configured.

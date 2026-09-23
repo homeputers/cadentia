@@ -1,6 +1,7 @@
 package com.cadentia.api.controller;
 
 import com.cadentia.admin.AdminUserAdministrationService;
+import com.cadentia.admin.AdminUserCreationResult;
 import com.cadentia.admin.AdminUserRecord;
 import com.cadentia.admin.AdminUserStatus;
 import com.cadentia.generated.api.AdminUserAdministrationApi;
@@ -22,17 +23,21 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.util.UriComponentsBuilder;
 
 @RestController
 public class AdminUserAdministrationController implements AdminUserAdministrationApi {
 
     private final String instanceId;
+    private final String adminWebBaseUrl;
     private final AdminUserAdministrationService service;
 
     public AdminUserAdministrationController(
             @Value("${cadentia.instance.id:local-development}") String instanceId,
+            @Value("${cadentia.auth.admin-web-base-url:http://localhost:5173}") String adminWebBaseUrl,
             AdminUserAdministrationService service) {
         this.instanceId = instanceId;
+        this.adminWebBaseUrl = adminWebBaseUrl;
         this.service = service;
     }
 
@@ -50,9 +55,17 @@ public class AdminUserAdministrationController implements AdminUserAdministratio
     @PreAuthorize("hasAuthority(T(com.cadentia.api.security.RbacAuthorities).ROLE_ADMIN)")
     public ResponseEntity<AdminUser> createAdminUser(String xChurchInstanceId, CreateAdminUserRequest request) {
         requireInstanceScope(xChurchInstanceId);
-        AdminUserRecord user = service.create(instanceId, request.getExternalSubject(), request.getDisplayName(), request.getEmail(),
+        AdminUserCreationResult result = service.create(instanceId, request.getExternalSubject(), request.getDisplayName(), request.getEmail(),
                 request.getRoles().stream().map(Enum::name).toList());
-        return ResponseEntity.status(HttpStatus.CREATED).body(toApi(user));
+        AdminUser response = toApi(result.user());
+        if (result.activationToken() != null && !result.activationToken().isBlank()) {
+            response.setInvitationUrl(UriComponentsBuilder.fromUriString(adminWebBaseUrl)
+                    .path("/auth/activate")
+                    .queryParam("token", result.activationToken())
+                    .build()
+                    .toUri());
+        }
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @Override

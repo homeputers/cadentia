@@ -21,6 +21,7 @@
 
     <modules>
         <module>apps/api</module>
+        <module>apps/auth-service</module>
     </modules>
 
     <properties>

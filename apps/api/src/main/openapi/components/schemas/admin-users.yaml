@@ -44,6 +44,12 @@ AdminUser:
       type: string
       format: email
       nullable: true
+    invitationUrl:
+      type: string
+      format: uri
+      nullable: true
+      readOnly: true
+      description: One-time activation URL returned only when a new first-party account is created.
     status:
       "$ref": "#/AdminUserStatus"
     roles:
@@ -77,7 +83,6 @@ CreateAdminUserRequest:
   type: object
   additionalProperties: false
   required:
-  - externalSubject
   - displayName
   - roles
   properties:
@@ -85,6 +90,7 @@ CreateAdminUserRequest:
       type: string
       minLength: 1
       maxLength: 200
+      description: Stable subject identifier for an external identity provider. Omit this field when the configured auth provider is first-party; the API derives it from email.
     displayName:
       type: string
       minLength: 1
@@ -93,6 +99,7 @@ CreateAdminUserRequest:
       type: string
       format: email
       nullable: true
+      description: First-party account email. If no account exists, the API creates an invitation; otherwise the existing account is provisioned.
     roles:
       type: array
       minItems: 1

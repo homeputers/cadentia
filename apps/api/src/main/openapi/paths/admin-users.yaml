@@ -40,7 +40,7 @@
     - bearerAuth: []
     x-required-roles:
     - ADMIN
-    summary: Provision an authenticated identity for the current church instance
+    summary: Create or provision a user for the current church instance
     parameters:
     - "$ref": "../components/shared/parameters.yaml#/ChurchInstanceIdHeader"
     requestBody:
@@ -64,6 +64,10 @@
         "$ref": "../components/shared/responses.yaml#/Forbidden"
       '409':
         "$ref": "../components/shared/responses.yaml#/Conflict"
+      '502':
+        "$ref": "../components/shared/responses.yaml#/BadGateway"
+      '503':
+        "$ref": "../components/shared/responses.yaml#/ServiceUnavailable"
 "/admin/users/{userId}":
   patch:
     tags:

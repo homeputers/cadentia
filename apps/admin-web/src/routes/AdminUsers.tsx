@@ -11,9 +11,12 @@ const defaultClient = () => createAdminApiClient({ environment: adminEnvironment
 export const AdminUsers = ({ session, apiClient = defaultClient() }: { session: AdminSession; apiClient?: AdminApiClient }) => {
     const { locale } = useI18n();
     const copy = (source: string) => translateText(locale, source);
+    const isFirstParty = adminEnvironment.authMode !== 'oidc';
     const [users, setUsers] = useState<AdminUser[]>([]);
     const [state, setState] = useState<'loading' | 'ready' | 'empty' | 'error'>('loading');
     const [error, setError] = useState('');
+    const [notice, setNotice] = useState('');
+    const [invitationUrl, setInvitationUrl] = useState<string | null>(null);
     const [subject, setSubject] = useState('');
     const [displayName, setDisplayName] = useState('');
     const [email, setEmail] = useState('');
@@ -38,15 +41,37 @@ export const AdminUsers = ({ session, apiClient = defaultClient() }: { session: 
     useEffect(() => { void load(); }, []);
 
     const submitCreate = async () => {
-        if (!subject.trim() || !displayName.trim() || newRoles.length === 0) return;
+        if (!(isFirstParty ? email.trim() : subject.trim()) || !displayName.trim() || newRoles.length === 0) return;
         setBusy(true);
+        setError('');
+        setNotice('');
+        setInvitationUrl(null);
         try {
-            const created = await createAdminUser(apiClient, session.actorId, { externalSubject: subject.trim(), displayName: displayName.trim(), email: email.trim() || undefined, roles: newRoles });
+            const created = await createAdminUser(apiClient, session.actorId, {
+                ...(isFirstParty ? { email: email.trim() } : { externalSubject: subject.trim() }),
+                displayName: displayName.trim(),
+                roles: newRoles,
+            });
             setUsers((current) => [...current, created].sort((left, right) => left.displayName.localeCompare(right.displayName)));
             setSubject(''); setDisplayName(''); setEmail(''); setNewRoles(['VIEWER']);
             setState('ready');
+            if (created.invitationUrl) {
+                setNotice(copy('User created. Share the activation link with the new user so they can set a password.'));
+                setInvitationUrl(created.invitationUrl);
+            } else {
+                setNotice(copy('User access was created. The user can sign in with their existing authentication account.'));
+            }
         } catch (caught) {
-            setError((caught as AdminApiError).status === 409 ? copy('That identity is already provisioned for this church instance.') : copy('The user could not be created.'));
+            const status = (caught as AdminApiError).status;
+            setError(status === 409
+                ? copy('That identity is already provisioned for this church instance.')
+                    : status === 404
+                        ? copy('No active first-party account exists for that email, and the account invitation could not be created.')
+                    : status === 502
+                        ? copy('The authentication service could not resolve this account. Check that it is running and that CADENTIA_AUTH_INTERNAL_API_KEY matches in both services.')
+                        : status === 503
+                            ? copy('First-party authentication is not configured in the API.')
+                            : copy('The user could not be created.'));
         } finally { setBusy(false); }
     };
 
@@ -80,7 +105,7 @@ export const AdminUsers = ({ session, apiClient = defaultClient() }: { session: 
     const rows = users.map((user) => {
         const selected = editingRoles[user.userId] ?? user.roles;
         return [
-            <><strong>{user.displayName}</strong><br /><small>{user.email || copy('No email')} · {user.externalSubject}</small></>,
+            <><strong>{user.displayName}</strong><br /><small>{user.email || copy('No email')}{!isFirstParty && ` · ${user.externalSubject}`}</small></>,
             <Badge severity={user.status === 'ACTIVE' ? 'success' : 'warning'}>{copy(user.status)}</Badge>,
             <>{user.roles.map((role) => <RoleBadge key={role} role={role} />)}</>,
             <div className="admin-user-actions">{roleCheckboxes(selected, (roles) => setEditingRoles((current) => ({ ...current, [user.userId]: roles })))}<button type="button" disabled={busy || !reason.trim() || selected.length === 0} onClick={() => void saveRoles(user)}>{copy('Save roles')}</button><button type="button" className="secondary" disabled={busy} onClick={() => void toggleStatus(user)}>{copy(user.status === 'ACTIVE' ? 'Suspend' : 'Reactivate')}</button></div>,
@@ -89,20 +114,25 @@ export const AdminUsers = ({ session, apiClient = defaultClient() }: { session: 
 
     return <main className="admin-shell" aria-labelledby="admin-users-title">
         <Breadcrumbs items={[{ label: 'Admin', href: '/admin' }, { label: 'User administration' }]} />
-        <PageHeader eyebrow="Administration" title="User administration" titleId="admin-users-title" description="Provision identities from the configured identity provider and assign tenant-scoped roles. Changes take effect on the next authenticated request." />
+        <PageHeader eyebrow="Administration" title="User administration" titleId="admin-users-title" description={isFirstParty ? 'Create first-party accounts, send an activation link, and assign church-scoped roles. Changes take effect on the next authenticated request.' : 'Provision identities from the configured identity provider and assign tenant-scoped roles. Changes take effect on the next authenticated request.'} />
         <section className="admin-shell__panel" aria-labelledby="create-user-title">
-            <h2 id="create-user-title">{copy('Provision user')}</h2>
+            <h2 id="create-user-title">{copy(isFirstParty ? 'Add user' : 'Provision user')}</h2>
             <form className="admin-users-provision-grid" onSubmit={(event) => { event.preventDefault(); void submitCreate(); }}>
                 <div className="admin-users-provision-fields">
-                    <Field label="Identity-provider subject" required>{({ inputId }) => <input id={inputId} value={subject} onChange={(event) => setSubject(event.target.value)} placeholder="sub from the identity provider" />}</Field>
-                    <Field label="Display name" required>{({ inputId }) => <input id={inputId} value={displayName} onChange={(event) => setDisplayName(event.target.value)} />}</Field>
-                    <Field label="Email">{({ inputId }) => <input id={inputId} type="email" value={email} onChange={(event) => setEmail(event.target.value)} />}</Field>
+                    {isFirstParty ? <Field label="Email" required>{({ inputId }) => <input id={inputId} type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="user@example.com" autoComplete="email" />}</Field> : <Field label="Identity-provider subject" required>{({ inputId }) => <input id={inputId} value={subject} onChange={(event) => setSubject(event.target.value)} placeholder="sub from the identity provider" />}</Field>}
+                    <Field label="Display name" required>{({ inputId }) => <input id={inputId} value={displayName} onChange={(event) => setDisplayName(event.target.value)} autoComplete="name" />}</Field>
                 </div>
                 <Field label="Initial roles" required>{() => roleCheckboxes(newRoles, setNewRoles)}</Field>
                 <div className="admin-users-provision-actions">
-                    <button type="submit" disabled={busy || !subject.trim() || !displayName.trim() || !newRoles.length}>{copy('Provision identity')}</button>
+                    <button type="submit" disabled={busy || !(isFirstParty ? email.trim() : subject.trim()) || !displayName.trim() || !newRoles.length}>{copy(isFirstParty ? 'Create user and invite' : 'Provision identity')}</button>
                     <p>{copy('Select at least one role. You can change assignments later with a required reason.')}</p>
                 </div>
+                {notice && <p role="status" className="admin-shell__success">{notice}</p>}
+                {invitationUrl && <div className="admin-user-invitation" role="status">
+                    <strong>{copy('Activation link')}</strong>
+                    <a href={invitationUrl} target="_blank" rel="noreferrer">{copy('Open activation link')}</a>
+                    <button type="button" className="secondary" onClick={() => void navigator.clipboard?.writeText(invitationUrl)}>{copy('Copy activation link')}</button>
+                </div>}
             </form>
         </section>
         <section className="admin-shell__panel" aria-labelledby="users-list-title">

@@ -1,10 +1,15 @@
 package com.cadentia.admin;
 
+import com.cadentia.api.auth.FirstPartyAuthClient;
+import com.cadentia.api.auth.FirstPartyAuthInvitation;
+import com.cadentia.api.auth.FirstPartyAuthUser;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
@@ -19,25 +24,58 @@ public class AdminUserAdministrationService {
             "ADMIN", "TEAM_SCHEDULER", "ASSIGNED_MUSICIAN", "REPORTING_VIEWER", "INTEGRATION_MANAGER");
 
     private final AdminUserRepository repository;
+    private final ObjectProvider<FirstPartyAuthClient> firstPartyAuthClient;
+    private final String authProvider;
 
-    public AdminUserAdministrationService(AdminUserRepository repository) {
+    public AdminUserAdministrationService(
+            AdminUserRepository repository,
+            ObjectProvider<FirstPartyAuthClient> firstPartyAuthClient,
+            @Value("${cadentia.auth.provider:local}") String authProvider) {
         this.repository = repository;
+        this.firstPartyAuthClient = firstPartyAuthClient;
+        this.authProvider = authProvider;
     }
 
     public List<AdminUserRecord> list(String churchInstanceId, AdminUserStatus status, String search) {
         return repository.findAll(churchInstanceId, status, search);
     }
 
-    public AdminUserRecord create(
+    public AdminUserCreationResult create(
             String churchInstanceId,
             String externalSubject,
             String displayName,
             String email,
             List<String> roles) {
-        validateIdentity(externalSubject, displayName);
         List<String> normalizedRoles = normalizeRoles(roles);
+        String activationToken = null;
+        if ("first-party".equals(authProvider)) {
+            if (email == null || email.isBlank()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "An email is required for a first-party account.");
+            }
+            FirstPartyAuthClient authClient = firstPartyAuthClient.getIfAvailable();
+            if (authClient == null) {
+                throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
+                        "First-party auth service integration is not configured.");
+            }
+            FirstPartyAuthUser authUser;
+            try {
+                authUser = authClient.findByEmail(email);
+            } catch (ResponseStatusException exception) {
+                if (exception.getStatusCode() != HttpStatus.NOT_FOUND) {
+                    throw exception;
+                }
+                FirstPartyAuthInvitation invitation = authClient.invite(email, displayName);
+                authUser = new FirstPartyAuthUser(invitation.userId(), invitation.email(), invitation.displayName());
+                activationToken = invitation.activationToken();
+            }
+            externalSubject = authUser.userId().toString();
+            email = authUser.email();
+            displayName = authUser.displayName();
+        }
+        validateIdentity(externalSubject, displayName);
         try {
-            return repository.create(churchInstanceId, externalSubject.trim(), displayName.trim(), normalizeEmail(email), normalizedRoles);
+            AdminUserRecord user = repository.create(churchInstanceId, externalSubject.trim(), displayName.trim(), normalizeEmail(email), normalizedRoles);
+            return new AdminUserCreationResult(user, activationToken);
         } catch (DataIntegrityViolationException exception) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "An identity with this subject is already provisioned.", exception);
         }
