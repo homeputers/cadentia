@@ -31,6 +31,13 @@ cadentia:
       absolute-lifetime: ${CADENTIA_CONVERSATION_ABSOLUTE_LIFETIME:PT4H}
   application:
     version: ${CADENTIA_APPLICATION_VERSION:0.1.0}
+  musicbrainz:
+    enabled: ${CADENTIA_MUSICBRAINZ_ENABLED:false}
+    base-url: ${CADENTIA_MUSICBRAINZ_BASE_URL:https://musicbrainz.org/ws/2}
+    user-agent: ${CADENTIA_MUSICBRAINZ_USER_AGENT:Cadentia/0.1.0 (https://github.com/cadentia/cadentia)}
+    timeout: ${CADENTIA_MUSICBRAINZ_TIMEOUT:PT10S}
+    minimum-request-interval: ${CADENTIA_MUSICBRAINZ_MINIMUM_REQUEST_INTERVAL:PT1S}
+    cache-ttl: ${CADENTIA_MUSICBRAINZ_CACHE_TTL:PT24H}
   llm:
     enabled: ${CADENTIA_LLM_ENABLED:false}
     provider: ${CADENTIA_LLM_PROVIDER:ollama}

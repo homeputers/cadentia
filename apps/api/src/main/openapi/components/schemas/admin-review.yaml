@@ -1747,3 +1747,286 @@ BulkActionResponse:
     auditReferenceId:
       type: string
       nullable: true
+
+MusicBrainzProposalStatus:
+  type: string
+  enum:
+  - PROPOSED
+  - ACCEPTED
+  - REJECTED
+  - SUPERSEDED
+MusicBrainzField:
+  type: string
+  enum:
+  - CANONICAL_TITLE
+  - ORIGINAL_ARTIST_DISPLAY
+  - ARRANGEMENT_NAME
+  - MUSICBRAINZ_LINKAGE
+MusicBrainzArtist:
+  type: object
+  required:
+  - mbid
+  - name
+  properties:
+    mbid:
+      type: string
+      format: uuid
+    name:
+      type: string
+    sortName:
+      type: string
+      nullable: true
+    type:
+      type: string
+      nullable: true
+    country:
+      type: string
+      nullable: true
+MusicBrainzReleaseGroup:
+  type: object
+  required:
+  - mbid
+  - title
+  properties:
+    mbid:
+      type: string
+      format: uuid
+    title:
+      type: string
+    primaryType:
+      type: string
+      nullable: true
+    firstReleaseDate:
+      type: string
+      nullable: true
+MusicBrainzRelease:
+  type: object
+  required:
+  - mbid
+  - title
+  properties:
+    mbid:
+      type: string
+      format: uuid
+    title:
+      type: string
+    status:
+      type: string
+      nullable: true
+    date:
+      type: string
+      nullable: true
+    country:
+      type: string
+      nullable: true
+MusicBrainzRecording:
+  type: object
+  required:
+  - mbid
+  - title
+  properties:
+    mbid:
+      type: string
+      format: uuid
+    title:
+      type: string
+    lengthMilliseconds:
+      type: integer
+      nullable: true
+    discNumber:
+      type: integer
+      nullable: true
+    trackNumber:
+      type: integer
+      nullable: true
+    isrcs:
+      type: array
+      items:
+        type: string
+    sourceUri:
+      type: string
+      format: uri
+MusicBrainzCandidate:
+  type: object
+  required:
+  - proposalId
+  - status
+  - score
+  - recording
+  properties:
+    proposalId:
+      type: string
+      format: uuid
+    status:
+      "$ref": "#/MusicBrainzProposalStatus"
+    score:
+      type: number
+      minimum: 0
+      maximum: 1
+    artist:
+      allOf:
+      - "$ref": "#/MusicBrainzArtist"
+      nullable: true
+    releaseGroup:
+      allOf:
+      - "$ref": "#/MusicBrainzReleaseGroup"
+      nullable: true
+    release:
+      allOf:
+      - "$ref": "#/MusicBrainzRelease"
+      nullable: true
+    recording:
+      "$ref": "#/MusicBrainzRecording"
+    warnings:
+      type: array
+      items:
+        type: string
+    sourceReferences:
+      type: array
+      items:
+        type: string
+        format: uri
+MusicBrainzSearchRequest:
+  type: object
+  additionalProperties: false
+  required:
+  - title
+  properties:
+    title:
+      type: string
+      minLength: 1
+      maxLength: 240
+    artist:
+      type: string
+      maxLength: 240
+      nullable: true
+    album:
+      type: string
+      maxLength: 240
+      nullable: true
+    recordingMbid:
+      type: string
+      format: uuid
+      nullable: true
+    limit:
+      type: integer
+      minimum: 1
+      maximum: 10
+      default: 5
+MusicBrainzSearchResponse:
+  type: object
+  required:
+  - enabled
+  - cacheHit
+  - proposals
+  properties:
+    enabled:
+      type: boolean
+    cacheHit:
+      type: boolean
+    proposals:
+      type: array
+      items:
+        "$ref": "#/MusicBrainzCandidate"
+MusicBrainzResponse:
+  type: object
+  required:
+  - enabled
+  - proposals
+  properties:
+    enabled:
+      type: boolean
+    acceptedProposalId:
+      type: string
+      format: uuid
+      nullable: true
+    proposals:
+      type: array
+      items:
+        "$ref": "#/MusicBrainzCandidate"
+MusicBrainzPreviewRequest:
+  type: object
+  additionalProperties: false
+  required:
+  - selectedFields
+  properties:
+    arrangementId:
+      type: string
+      format: uuid
+      nullable: true
+    selectedFields:
+      type: array
+      minItems: 1
+      items:
+        "$ref": "#/MusicBrainzField"
+MusicBrainzFieldDiff:
+  type: object
+  required:
+  - field
+  - proposed
+  - conflict
+  properties:
+    field:
+      "$ref": "#/MusicBrainzField"
+    current:
+      type: string
+      nullable: true
+    proposed:
+      type: string
+      nullable: true
+    conflict:
+      type: boolean
+MusicBrainzPreviewResponse:
+  type: object
+  required:
+  - proposalId
+  - selectedFields
+  - fields
+  - warnings
+  properties:
+    proposalId:
+      type: string
+      format: uuid
+    arrangementId:
+      type: string
+      format: uuid
+      nullable: true
+    selectedFields:
+      type: array
+      items:
+        "$ref": "#/MusicBrainzField"
+    fields:
+      type: array
+      items:
+        "$ref": "#/MusicBrainzFieldDiff"
+    warnings:
+      type: array
+      items:
+        type: string
+    etag:
+      type: string
+MusicBrainzDecisionRequest:
+  type: object
+  additionalProperties: false
+  required:
+  - actor
+  - selectedFields
+  - rationale
+  properties:
+    actor:
+      type: string
+      minLength: 1
+      maxLength: 160
+    arrangementId:
+      type: string
+      format: uuid
+      nullable: true
+    selectedFields:
+      type: array
+      minItems: 1
+      items:
+        "$ref": "#/MusicBrainzField"
+    rationale:
+      type: string
+      minLength: 1
+      maxLength: 2000
