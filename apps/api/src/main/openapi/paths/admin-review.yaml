@@ -269,6 +269,230 @@
         "$ref": "../components/shared/responses.yaml#/Forbidden"
       '404':
         description: Song not found or tag not assigned to the song.
+
+"/admin/songs/{songId}/musicbrainz":
+  get:
+    tags:
+    - AdminReview
+    operationId: getAdminSongMusicBrainz
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - CATALOG_EDITOR
+    - DOCTRINAL_REVIEWER
+    - MUSICAL_REVIEWER
+    - ADMIN
+    summary: Fetch MusicBrainz normalization proposals and accepted linkage for a song
+    parameters:
+    - in: path
+      name: songId
+      required: true
+      schema:
+        type: string
+        format: uuid
+    responses:
+      '200':
+        description: MusicBrainz normalization state.
+        content:
+          application/json:
+            schema:
+              "$ref": "../components/schemas/admin-review.yaml#/MusicBrainzResponse"
+      '401':
+        "$ref": "../components/shared/responses.yaml#/Unauthorized"
+      '403':
+        "$ref": "../components/shared/responses.yaml#/Forbidden"
+      '404':
+        description: Song not found.
+"/admin/songs/{songId}/musicbrainz/search":
+  post:
+    tags:
+    - AdminReview
+    operationId: searchAdminSongMusicBrainz
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - CATALOG_EDITOR
+    - ADMIN
+    summary: Search MusicBrainz for deterministic song normalization candidates
+    parameters:
+    - in: path
+      name: songId
+      required: true
+      schema:
+        type: string
+        format: uuid
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            "$ref": "../components/schemas/admin-review.yaml#/MusicBrainzSearchRequest"
+    responses:
+      '200':
+        description: MusicBrainz candidates.
+        content:
+          application/json:
+            schema:
+              "$ref": "../components/schemas/admin-review.yaml#/MusicBrainzSearchResponse"
+      '400':
+        "$ref": "../components/shared/responses.yaml#/ValidationError"
+      '401':
+        "$ref": "../components/shared/responses.yaml#/Unauthorized"
+      '403':
+        "$ref": "../components/shared/responses.yaml#/Forbidden"
+      '404':
+        description: Song not found.
+      '429':
+        description: MusicBrainz request throttled; retry later.
+"/admin/songs/{songId}/musicbrainz/proposals/{proposalId}:preview":
+  post:
+    tags:
+    - AdminReview
+    operationId: previewAdminSongMusicBrainzProposal
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - CATALOG_EDITOR
+    - ADMIN
+    summary: Preview MusicBrainz field-level changes before acceptance
+    parameters:
+    - in: path
+      name: songId
+      required: true
+      schema:
+        type: string
+        format: uuid
+    - in: path
+      name: proposalId
+      required: true
+      schema:
+        type: string
+        format: uuid
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            "$ref": "../components/schemas/admin-review.yaml#/MusicBrainzPreviewRequest"
+    responses:
+      '200':
+        description: Field-level normalization preview.
+        content:
+          application/json:
+            schema:
+              "$ref": "../components/schemas/admin-review.yaml#/MusicBrainzPreviewResponse"
+      '400':
+        "$ref": "../components/shared/responses.yaml#/ValidationError"
+      '401':
+        "$ref": "../components/shared/responses.yaml#/Unauthorized"
+      '403':
+        "$ref": "../components/shared/responses.yaml#/Forbidden"
+      '404':
+        description: Song or proposal not found.
+"/admin/songs/{songId}/musicbrainz/proposals/{proposalId}:accept":
+  post:
+    tags:
+    - AdminReview
+    operationId: acceptAdminSongMusicBrainzProposal
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - CATALOG_EDITOR
+    - ADMIN
+    summary: Accept a MusicBrainz proposal and apply selected catalog fields
+    parameters:
+    - in: path
+      name: songId
+      required: true
+      schema:
+        type: string
+        format: uuid
+    - in: path
+      name: proposalId
+      required: true
+      schema:
+        type: string
+        format: uuid
+    - in: header
+      name: If-Match
+      required: true
+      schema:
+        type: string
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            "$ref": "../components/schemas/admin-review.yaml#/MusicBrainzDecisionRequest"
+    responses:
+      '200':
+        description: Accepted MusicBrainz state.
+        content:
+          application/json:
+            schema:
+              "$ref": "../components/schemas/admin-review.yaml#/MusicBrainzResponse"
+      '400':
+        "$ref": "../components/shared/responses.yaml#/ValidationError"
+      '401':
+        "$ref": "../components/shared/responses.yaml#/Unauthorized"
+      '403':
+        "$ref": "../components/shared/responses.yaml#/Forbidden"
+      '404':
+        description: Song or proposal not found.
+      '409':
+        description: Catalog version is stale.
+"/admin/songs/{songId}/musicbrainz/proposals/{proposalId}:reject":
+  post:
+    tags:
+    - AdminReview
+    operationId: rejectAdminSongMusicBrainzProposal
+    security:
+    - bearerAuth: []
+    x-required-roles:
+    - CATALOG_EDITOR
+    - ADMIN
+    summary: Reject a MusicBrainz normalization proposal
+    parameters:
+    - in: path
+      name: songId
+      required: true
+      schema:
+        type: string
+        format: uuid
+    - in: path
+      name: proposalId
+      required: true
+      schema:
+        type: string
+        format: uuid
+    - in: header
+      name: If-Match
+      required: true
+      schema:
+        type: string
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            "$ref": "../components/schemas/admin-review.yaml#/MusicBrainzDecisionRequest"
+    responses:
+      '200':
+        description: Updated MusicBrainz state.
+        content:
+          application/json:
+            schema:
+              "$ref": "../components/schemas/admin-review.yaml#/MusicBrainzResponse"
+      '400':
+        "$ref": "../components/shared/responses.yaml#/ValidationError"
+      '401':
+        "$ref": "../components/shared/responses.yaml#/Unauthorized"
+      '403':
+        "$ref": "../components/shared/responses.yaml#/Forbidden"
+      '404':
+        description: Song or proposal not found.
+      '409':
+        description: Catalog version is stale.
 "/admin/import-candidates":
   get:
     tags:

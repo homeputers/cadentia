@@ -5,6 +5,7 @@ import { adminEnvironment } from '../config/environment';
 import { createAdminApiClient, type AdminApiClient, type AdminApiError } from '../generated/cadentia-api/client';
 import { assignSongTag, changedLyricsDocuments, CONTROLLED_TAG_TYPES, getReviewSong, removeSongTag, SONG_ROLES, toMetadataDraft, updateReviewSong, uploadAndAttachResource, type AssetAttachment, type AttachmentDraft, type SongMetadataDraft, type SongReviewDetail as SongReviewDetailModel } from '../song-review';
 import { LocalizedView, translateText, useI18n } from '../i18n';
+import { acceptMusicBrainz, getMusicBrainzState, previewMusicBrainz, rejectMusicBrainz, searchMusicBrainz, type MusicBrainzCandidate, type MusicBrainzField, type MusicBrainzPreview, type MusicBrainzState } from '../musicbrainz';
 import { ActionBadge, Badge, Breadcrumbs, ConfirmationDialog, DataTable, Field, PageHeader, StatePanel, redactSensitiveError } from './admin-ui';
 
 const label = (value?: string | null) => value ? value.replaceAll('_', ' ').toLowerCase().replace(/^./, (c) => c.toUpperCase()) : 'None';
@@ -285,6 +286,7 @@ export const SongReviewDetail = ({
             <StatePanel state={state} title="Song resources" onRetry={() => void load()}>{error && <p>{error}</p>}</StatePanel>
             {detail && draft && <>
                 <SongMetadataForm draft={draft} canEdit={canEdit} onSaveSongMetadata={saveSongMetadata} onSaveArrangementMetadata={saveArrangementMetadata} onSongChange={updateDraft} onArrangementChange={updateArrangement} onAddArrangement={addArrangement} onRemoveArrangement={removeArrangement} onLyricsChange={updateLyrics} onAddLyricsDocument={addLyricsDocument} onRemoveLyricsDocument={removeLyricsDocument} />
+                <MusicBrainzNormalizationPanel session={session} detail={detail} canEdit={canEdit} apiClient={apiClient} onCatalogUpdated={() => void load()} />
                 <TagsSection tags={detail.tags} canEdit={canEdit} actor={session.actorId} tagDraft={tagDraft} onTagDraftChange={setTagDraft} onAssignTag={assignTag} onRemoveTag={removeTag} />
                 <AttachmentCreateForm draft={attachmentDraft} selectedFile={attachmentFile} arrangements={arrangementOptions} canEdit={canEdit} onSubmit={addAttachment} onTargetChange={updateAttachmentTarget} onInputChange={updateAttachmentInput} onFileChange={updateAttachmentFile} />
                 <AttachmentSection title="Song attachments" caption="Song asset attachments" attachments={detail.songAttachments} />
@@ -300,6 +302,176 @@ const assetTypeForFile = (file: File, fallback: string) => {
     if (file.type.startsWith('audio/')) return 'rehearsal_recording';
     if (file.name.toLowerCase().endsWith('.mid') || file.name.toLowerCase().endsWith('.midi')) return 'midi_cue';
     return fallback;
+};
+
+const MusicBrainzNormalizationPanel = ({ session, detail, canEdit, apiClient, onCatalogUpdated }: {
+    session: AdminSession;
+    detail: SongReviewDetailModel;
+    canEdit: boolean;
+    apiClient: AdminApiClient;
+    onCatalogUpdated: () => void;
+}) => {
+    const { locale } = useI18n();
+    const copy = (source: string) => translateText(locale, source);
+    const [state, setState] = useState<MusicBrainzState | null>(null);
+    const [panelState, setPanelState] = useState<'loading' | 'ready' | 'error' | 'forbidden'>('loading');
+    const [error, setError] = useState('');
+    const [notice, setNotice] = useState('');
+    const [title, setTitle] = useState(detail.song.canonicalTitle);
+    const [artist, setArtist] = useState(detail.song.originalArtistDisplay ?? '');
+    const [album, setAlbum] = useState('');
+    const [selectedProposalId, setSelectedProposalId] = useState('');
+    const [arrangementId, setArrangementId] = useState(detail.arrangements[0]?.arrangementId ?? '');
+    const [selectedFields, setSelectedFields] = useState<MusicBrainzField[]>(['MUSICBRAINZ_LINKAGE', 'CANONICAL_TITLE', 'ORIGINAL_ARTIST_DISPLAY']);
+    const [preview, setPreview] = useState<MusicBrainzPreview | null>(null);
+    const [rationale, setRationale] = useState('');
+
+    const handleError = (caught: unknown) => {
+        const apiError = caught as AdminApiError;
+        setError(apiError.status === 429 ? copy('MusicBrainz is rate-limited. Please wait and retry.') : redactSensitiveError(apiError.message));
+        setPanelState(apiError.status === 403 ? 'forbidden' : 'error');
+    };
+
+    const load = async () => {
+        setPanelState('loading');
+        try {
+            setState(await getMusicBrainzState(apiClient, detail.song.songId));
+            setPanelState('ready');
+        } catch (caught) {
+            handleError(caught);
+        }
+    };
+
+    useEffect(() => { void load(); }, [detail.song.songId]);
+
+    const selectedCandidate = state?.proposals?.find((candidate) => candidate.proposalId === selectedProposalId) ?? null;
+
+    const loadPreview = async (candidate: MusicBrainzCandidate, fields = selectedFields, targetArrangement = arrangementId) => {
+        if (!candidate) return;
+        try {
+            const next = await previewMusicBrainz(apiClient, detail.song.songId, candidate.proposalId, {
+                arrangementId: targetArrangement || undefined,
+                selectedFields: fields,
+            });
+            setPreview(next);
+        } catch (caught) {
+            handleError(caught);
+        }
+    };
+
+    const runSearch = async (event: FormEvent) => {
+        event.preventDefault();
+        setError('');
+        setNotice('');
+        setPanelState('loading');
+        try {
+            const response = await searchMusicBrainz(apiClient, detail.song.songId, {
+                title,
+                artist: artist || undefined,
+                album: album || undefined,
+                limit: 5,
+            });
+            setState({ enabled: response.enabled, proposals: response.proposals });
+            setSelectedProposalId(response.proposals[0]?.proposalId ?? '');
+            setPreview(null);
+            setNotice(response.cacheHit ? copy('Loaded cached MusicBrainz results.') : copy('MusicBrainz results loaded for review.'));
+            setPanelState('ready');
+        } catch (caught) {
+            handleError(caught);
+        }
+    };
+
+    useEffect(() => {
+        if (selectedCandidate) void loadPreview(selectedCandidate);
+    }, [selectedProposalId, arrangementId, selectedFields.join('|')]);
+
+    const toggleField = (field: MusicBrainzField) => {
+        const next = selectedFields.includes(field)
+            ? selectedFields.filter((current) => current !== field)
+            : [...selectedFields, field];
+        if (next.length === 0) return;
+        setSelectedFields(next);
+        if (selectedCandidate) void loadPreview(selectedCandidate, next);
+    };
+
+    const accept = async () => {
+        if (!selectedCandidate || !preview || !rationale.trim()) return;
+        setPanelState('loading');
+        try {
+            await acceptMusicBrainz(apiClient, detail.song.songId, selectedCandidate.proposalId, {
+                actor: session.actorId,
+                arrangementId: arrangementId || undefined,
+                selectedFields,
+                rationale,
+            }, preview.etag);
+            setNotice(copy('MusicBrainz metadata accepted and catalog provenance recorded.'));
+            setRationale('');
+            setPreview(null);
+            await load();
+            onCatalogUpdated();
+        } catch (caught) {
+            handleError(caught);
+        }
+    };
+
+    const reject = async () => {
+        if (!selectedCandidate || !preview || !rationale.trim()) return;
+        setPanelState('loading');
+        try {
+            await rejectMusicBrainz(apiClient, detail.song.songId, selectedCandidate.proposalId, {
+                actor: session.actorId,
+                rationale,
+            }, preview.etag);
+            setNotice(copy('MusicBrainz proposal rejected.'));
+            setRationale('');
+            setPreview(null);
+            await load();
+        } catch (caught) {
+            handleError(caught);
+        }
+    };
+
+    return <LocalizedView><section className="admin-shell__panel" aria-labelledby="musicbrainz-normalization-title">
+        <h2 id="musicbrainz-normalization-title">{copy('Normalize with MusicBrainz')}</h2>
+        <p>{copy('MusicBrainz metadata is proposed for review. Nothing changes until you explicitly accept selected fields.')}</p>
+        {panelState === 'loading' && <p role="status">{copy('Loading MusicBrainz normalization...')}</p>}
+        {panelState === 'forbidden' && <StatePanel state="forbidden" title={copy('MusicBrainz normalization unavailable')} />}
+        {panelState === 'error' && <StatePanel state="error" title={copy('MusicBrainz normalization unavailable')} onRetry={() => void load()}>{error}</StatePanel>}
+        {panelState === 'ready' && state && !state.enabled && <StatePanel state="empty" title={copy('MusicBrainz is disabled')}>{copy('Enable the server-side MusicBrainz integration to search metadata.')}</StatePanel>}
+        {panelState === 'ready' && state?.enabled && <>
+            {notice && <p role="status" className="admin-shell__warning">{notice}</p>}
+            <form className="admin-form-grid" aria-label={copy('Search MusicBrainz')} onSubmit={runSearch}>
+                <Field label="Title" required>{({ inputId }) => <input id={inputId} value={title} disabled={!canEdit} onChange={(event) => setTitle(event.target.value)} />}</Field>
+                <Field label="Artist">{({ inputId }) => <input id={inputId} value={artist} disabled={!canEdit} onChange={(event) => setArtist(event.target.value)} />}</Field>
+                <Field label="Album">{({ inputId }) => <input id={inputId} value={album} disabled={!canEdit} onChange={(event) => setAlbum(event.target.value)} />}</Field>
+                <button type="submit" disabled={!canEdit || !title.trim()}>{copy('Search MusicBrainz')}</button>
+            </form>
+            {(state.proposals ?? []).length === 0 ? <p>{copy('No MusicBrainz candidates found.')}</p> : <DataTable caption="MusicBrainz candidates" columns={['Select', 'Track', 'Artist', 'Album', 'Release', 'Score', 'Status']} rows={(state.proposals ?? []).map((candidate) => [
+                <button type="button" className="secondary" disabled={!canEdit || candidate.status !== 'PROPOSED'} onClick={() => setSelectedProposalId(candidate.proposalId)} aria-pressed={selectedProposalId === candidate.proposalId}>{selectedProposalId === candidate.proposalId ? copy('Selected') : copy('Review')}</button>,
+                <><strong>{candidate.recording.title}</strong><br /><small>{candidate.recording.trackNumber ? `${copy('Track')} ${candidate.recording.trackNumber}` : copy('Track position unavailable')}</small></>,
+                candidate.artist?.name ?? copy('Unknown artist'),
+                candidate.releaseGroup?.title ?? copy('Unknown album'),
+                <>{candidate.release?.title ?? copy('Unknown release')}<br /><small>{[candidate.release?.status ? copy(label(candidate.release.status)) : null, candidate.release?.date, candidate.release?.country].filter(Boolean).join(' · ') || copy('Edition details unavailable')}</small></>,
+                `${Math.round(candidate.score * 100)}%`,
+                <Badge severity={candidate.status === 'ACCEPTED' ? 'success' : candidate.status === 'REJECTED' ? 'danger' : 'neutral'}>{copy(label(candidate.status))}</Badge>,
+            ])} />}
+            {selectedCandidate && <section className="admin-shell__subsection" aria-labelledby="musicbrainz-preview-title">
+                <h3 id="musicbrainz-preview-title">{copy('Review selected metadata')}</h3>
+                <p><a href={selectedCandidate.recording.sourceUri} target="_blank" rel="noreferrer">{copy('Open recording in MusicBrainz')}</a></p>
+                <p>{selectedCandidate.recording.discNumber ? `${copy('Disc')} ${selectedCandidate.recording.discNumber} · ` : ''}{selectedCandidate.recording.trackNumber ? `${copy('Track')} ${selectedCandidate.recording.trackNumber} · ` : ''}{selectedCandidate.recording.lengthMilliseconds ? `${Math.round(selectedCandidate.recording.lengthMilliseconds / 1000)} ${copy('seconds')}` : copy('Duration unavailable')} · {selectedCandidate.recording.isrcs.length ? `${copy('ISRC')} ${selectedCandidate.recording.isrcs.join(', ')}` : copy('No ISRC reported')}</p>
+                <p>{copy('Release group')}: {selectedCandidate.releaseGroup?.title ?? copy('Unavailable')} · {copy('Edition')}: {selectedCandidate.release?.title ?? copy('Unavailable')}{selectedCandidate.release?.date ? ` · ${selectedCandidate.release.date}` : ''}{selectedCandidate.release?.country ? ` · ${selectedCandidate.release.country}` : ''}</p>
+                <Field label="Target arrangement">{({ inputId }) => <select id={inputId} disabled={!canEdit} value={arrangementId} onChange={(event) => setArrangementId(event.target.value)}><option value="">{copy('Song-level metadata only')}</option>{detail.arrangements.map((arrangement) => <option key={arrangement.arrangementId} value={arrangement.arrangementId}>{arrangement.name}</option>)}</select>}</Field>
+                <fieldset disabled={!canEdit}>
+                    <legend>{copy('Fields to apply')}</legend>
+                    {(['MUSICBRAINZ_LINKAGE', 'CANONICAL_TITLE', 'ORIGINAL_ARTIST_DISPLAY', 'ARRANGEMENT_NAME'] as MusicBrainzField[]).map((field) => <label key={field}><input type="checkbox" checked={selectedFields.includes(field)} onChange={() => toggleField(field)} /> {copy(label(field))}</label>)}
+                </fieldset>
+                {preview && <DataTable caption={copy('MusicBrainz field preview')} columns={['Field', 'Current', 'Proposed', 'Conflict']} rows={preview.fields.map((field) => [copy(label(field.field)), field.current ?? copy('None'), field.proposed ?? copy('None'), field.conflict ? copy('Yes') : copy('No')])} />}
+                <Field label="Review rationale" required>{({ inputId }) => <textarea id={inputId} value={rationale} disabled={!canEdit} onChange={(event) => setRationale(event.target.value)} placeholder={copy('Explain why this match is accepted or rejected.')} />}</Field>
+                <button type="button" disabled={!canEdit || !preview || !rationale.trim()} onClick={() => void accept()}>{copy('Accept selected fields')}</button>
+                <button type="button" className="danger" disabled={!canEdit || !preview || !rationale.trim()} onClick={() => void reject()}>{copy('Reject proposal')}</button>
+            </section>}
+        </>}
+    </section></LocalizedView>;
 };
 
 export const SongMetadataForm = ({ draft, canEdit, onSaveSongMetadata, onSaveArrangementMetadata, onSongChange, onArrangementChange, onAddArrangement, onRemoveArrangement, onLyricsChange, onAddLyricsDocument, onRemoveLyricsDocument }: {

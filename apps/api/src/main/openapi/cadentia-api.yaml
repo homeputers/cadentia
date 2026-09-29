@@ -125,6 +125,16 @@ paths:
     "$ref": "./paths/admin-review.yaml#/~1admin~1songs"
   "/admin/songs/{songId}":
     "$ref": "./paths/admin-review.yaml#/~1admin~1songs~1{songId}"
+  "/admin/songs/{songId}/musicbrainz":
+    "$ref": "./paths/admin-review.yaml#/~1admin~1songs~1{songId}~1musicbrainz"
+  "/admin/songs/{songId}/musicbrainz/search":
+    "$ref": "./paths/admin-review.yaml#/~1admin~1songs~1{songId}~1musicbrainz~1search"
+  "/admin/songs/{songId}/musicbrainz/proposals/{proposalId}:preview":
+    "$ref": "./paths/admin-review.yaml#/~1admin~1songs~1{songId}~1musicbrainz~1proposals~1{proposalId}:preview"
+  "/admin/songs/{songId}/musicbrainz/proposals/{proposalId}:accept":
+    "$ref": "./paths/admin-review.yaml#/~1admin~1songs~1{songId}~1musicbrainz~1proposals~1{proposalId}:accept"
+  "/admin/songs/{songId}/musicbrainz/proposals/{proposalId}:reject":
+    "$ref": "./paths/admin-review.yaml#/~1admin~1songs~1{songId}~1musicbrainz~1proposals~1{proposalId}:reject"
   "/admin/songs/{songId}/tags":
     "$ref": "./paths/admin-review.yaml#/~1admin~1songs~1{songId}~1tags"
   "/admin/songs/{songId}/tags/{tagId}":
@@ -493,6 +503,18 @@ components:
       "$ref": "./components/schemas/admin-review.yaml#/AdminCatalogApprovalRecord"
     AdminCatalogTag:
       "$ref": "./components/schemas/admin-review.yaml#/AdminCatalogTag"
+    MusicBrainzSearchRequest:
+      "$ref": "./components/schemas/admin-review.yaml#/MusicBrainzSearchRequest"
+    MusicBrainzSearchResponse:
+      "$ref": "./components/schemas/admin-review.yaml#/MusicBrainzSearchResponse"
+    MusicBrainzResponse:
+      "$ref": "./components/schemas/admin-review.yaml#/MusicBrainzResponse"
+    MusicBrainzPreviewRequest:
+      "$ref": "./components/schemas/admin-review.yaml#/MusicBrainzPreviewRequest"
+    MusicBrainzPreviewResponse:
+      "$ref": "./components/schemas/admin-review.yaml#/MusicBrainzPreviewResponse"
+    MusicBrainzDecisionRequest:
+      "$ref": "./components/schemas/admin-review.yaml#/MusicBrainzDecisionRequest"
     AdminImportCandidateQueueItem:
       "$ref": "./components/schemas/admin-review.yaml#/AdminImportCandidateQueueItem"
     AdminDuplicateMatch:

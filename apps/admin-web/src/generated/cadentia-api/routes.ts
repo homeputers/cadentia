@@ -34,6 +34,11 @@ export type CadentiaApiRoute =
     | '/admin/song-imports/manual'
     | '/admin/songs'
     | '/admin/songs/{songId}'
+    | '/admin/songs/{songId}/musicbrainz'
+    | '/admin/songs/{songId}/musicbrainz/proposals/{proposalId}:accept'
+    | '/admin/songs/{songId}/musicbrainz/proposals/{proposalId}:preview'
+    | '/admin/songs/{songId}/musicbrainz/proposals/{proposalId}:reject'
+    | '/admin/songs/{songId}/musicbrainz/search'
     | '/admin/songs/{songId}/tags'
     | '/admin/songs/{songId}/tags/{tagId}'
     | '/admin/telegram/access-requests'
@@ -115,6 +120,7 @@ export type CadentiaApiRoute =
     | '/telegram/webhooks/{botId}';
 
 export type CadentiaApiOperationId =
+    | 'acceptAdminSongMusicBrainzProposal'
     | 'acceptTelegramWebhookUpdate'
     | 'approveTelegramAccessRequest'
     | 'archiveArrangementOverride'
@@ -174,6 +180,7 @@ export type CadentiaApiOperationId =
     | 'getAdminImportCandidateDuplicates'
     | 'getAdminInstanceConfiguration'
     | 'getAdminSession'
+    | 'getAdminSongMusicBrainz'
     | 'getAsset'
     | 'getAssetVersionLicensing'
     | 'getConversationSessionState'
@@ -210,10 +217,12 @@ export type CadentiaApiOperationId =
     | 'listUpcomingTeamAssignmentsForMusician'
     | 'openAdminModerationFlag'
     | 'previewAdminFeatureFlagChange'
+    | 'previewAdminSongMusicBrainzProposal'
     | 'publishServicePlan'
     | 'recordFeedbackEvent'
     | 'recoverConversationSession'
     | 'registerPluginPackage'
+    | 'rejectAdminSongMusicBrainzProposal'
     | 'rejectTelegramAccessRequest'
     | 'removeAdminCatalogSongTag'
     | 'removeServiceTeamAssignment'
@@ -227,6 +236,7 @@ export type CadentiaApiOperationId =
     | 'resolveAdminModerationFlag'
     | 'revokePluginPackage'
     | 'searchAdminAuditEvents'
+    | 'searchAdminSongMusicBrainz'
     | 'searchCatalog'
     | 'submitAdminImportCandidateApprovalAction'
     | 'submitAdminImportCandidateMergeDecision'
@@ -287,6 +297,11 @@ export const cadentiaApiRoutes = [
     '/admin/song-imports/manual',
     '/admin/songs',
     '/admin/songs/{songId}',
+    '/admin/songs/{songId}/musicbrainz',
+    '/admin/songs/{songId}/musicbrainz/proposals/{proposalId}:accept',
+    '/admin/songs/{songId}/musicbrainz/proposals/{proposalId}:preview',
+    '/admin/songs/{songId}/musicbrainz/proposals/{proposalId}:reject',
+    '/admin/songs/{songId}/musicbrainz/search',
     '/admin/songs/{songId}/tags',
     '/admin/songs/{songId}/tags/{tagId}',
     '/admin/telegram/access-requests',
@@ -401,6 +416,11 @@ export const cadentiaApiRouteRefs: Record<CadentiaApiRoute, string> = {
     '/admin/song-imports/manual': './paths/admin-review.yaml#/~1admin~1song-imports~1manual',
     '/admin/songs': './paths/admin-review.yaml#/~1admin~1songs',
     '/admin/songs/{songId}': './paths/admin-review.yaml#/~1admin~1songs~1{songId}',
+    '/admin/songs/{songId}/musicbrainz': './paths/admin-review.yaml#/~1admin~1songs~1{songId}~1musicbrainz',
+    '/admin/songs/{songId}/musicbrainz/proposals/{proposalId}:accept': './paths/admin-review.yaml#/~1admin~1songs~1{songId}~1musicbrainz~1proposals~1{proposalId}:accept',
+    '/admin/songs/{songId}/musicbrainz/proposals/{proposalId}:preview': './paths/admin-review.yaml#/~1admin~1songs~1{songId}~1musicbrainz~1proposals~1{proposalId}:preview',
+    '/admin/songs/{songId}/musicbrainz/proposals/{proposalId}:reject': './paths/admin-review.yaml#/~1admin~1songs~1{songId}~1musicbrainz~1proposals~1{proposalId}:reject',
+    '/admin/songs/{songId}/musicbrainz/search': './paths/admin-review.yaml#/~1admin~1songs~1{songId}~1musicbrainz~1search',
     '/admin/songs/{songId}/tags': './paths/admin-review.yaml#/~1admin~1songs~1{songId}~1tags',
     '/admin/songs/{songId}/tags/{tagId}': './paths/admin-review.yaml#/~1admin~1songs~1{songId}~1tags~1{tagId}',
     '/admin/telegram/access-requests': './paths/telegram.yaml#/~1admin~1telegram~1access-requests',
@@ -483,6 +503,7 @@ export const cadentiaApiRouteRefs: Record<CadentiaApiRoute, string> = {
 };
 
 export const cadentiaApiOperations = [
+    { operationId: 'acceptAdminSongMusicBrainzProposal', method: 'POST', path: '/admin/songs/{songId}/musicbrainz/proposals/{proposalId}:accept', ref: './paths/admin-review.yaml#/~1admin~1songs~1{songId}~1musicbrainz~1proposals~1{proposalId}:accept' },
     { operationId: 'acceptTelegramWebhookUpdate', method: 'POST', path: '/telegram/webhooks/{botId}', ref: './paths/telegram.yaml#/~1telegram~1webhooks~1{botId}' },
     { operationId: 'approveTelegramAccessRequest', method: 'POST', path: '/admin/telegram/access-requests/{requestId}:approve', ref: './paths/telegram.yaml#/~1admin~1telegram~1access-requests~1{requestId}:approve' },
     { operationId: 'archiveArrangementOverride', method: 'DELETE', path: '/service-plans/{servicePlanId}/arrangement-overrides/{arrangementOverrideId}', ref: './paths/rehearsal-workflow.yaml#/~1service-plans~1{servicePlanId}~1arrangement-overrides~1{arrangementOverrideId}' },
@@ -542,6 +563,7 @@ export const cadentiaApiOperations = [
     { operationId: 'getAdminImportCandidateDuplicates', method: 'GET', path: '/admin/import-candidates/{candidateId}/duplicates', ref: './paths/admin-review.yaml#/~1admin~1import-candidates~1{candidateId}~1duplicates' },
     { operationId: 'getAdminInstanceConfiguration', method: 'GET', path: '/admin/instance-configuration', ref: './paths/admin-operations.yaml#/~1admin~1instance-configuration' },
     { operationId: 'getAdminSession', method: 'GET', path: '/admin/session', ref: './paths/admin-operations.yaml#/~1admin~1session' },
+    { operationId: 'getAdminSongMusicBrainz', method: 'GET', path: '/admin/songs/{songId}/musicbrainz', ref: './paths/admin-review.yaml#/~1admin~1songs~1{songId}~1musicbrainz' },
     { operationId: 'getAsset', method: 'GET', path: '/assets/{assetId}', ref: './paths/assets.yaml#/~1assets~1{assetId}' },
     { operationId: 'getAssetVersionLicensing', method: 'GET', path: '/assets/{assetId}/versions/{assetVersionId}/licensing', ref: './paths/assets.yaml#/~1assets~1{assetId}~1versions~1{assetVersionId}~1licensing' },
     { operationId: 'getConversationSessionState', method: 'GET', path: '/conversation-sessions/{sessionId}', ref: './paths/conversation-sessions.yaml#/~1conversation-sessions~1{sessionId}' },
@@ -578,10 +600,12 @@ export const cadentiaApiOperations = [
     { operationId: 'listUpcomingTeamAssignmentsForMusician', method: 'GET', path: '/team-assignments/musicians/{musicianId}/upcoming', ref: './paths/team-assignments.yaml#/~1team-assignments~1musicians~1{musicianId}~1upcoming' },
     { operationId: 'openAdminModerationFlag', method: 'POST', path: '/admin/import-candidates/{candidateId}/moderation-flags', ref: './paths/admin-review.yaml#/~1admin~1import-candidates~1{candidateId}~1moderation-flags' },
     { operationId: 'previewAdminFeatureFlagChange', method: 'POST', path: '/admin/feature-flags/{flagKey}:preview', ref: './paths/admin-operations.yaml#/~1admin~1feature-flags~1{flagKey}:preview' },
+    { operationId: 'previewAdminSongMusicBrainzProposal', method: 'POST', path: '/admin/songs/{songId}/musicbrainz/proposals/{proposalId}:preview', ref: './paths/admin-review.yaml#/~1admin~1songs~1{songId}~1musicbrainz~1proposals~1{proposalId}:preview' },
     { operationId: 'publishServicePlan', method: 'POST', path: '/service-plans/{servicePlanId}/publish', ref: './paths/service-plans.yaml#/~1service-plans~1{servicePlanId}~1publish' },
     { operationId: 'recordFeedbackEvent', method: 'POST', path: '/feedback/events', ref: './paths/feedback-tuning.yaml#/~1feedback~1events' },
     { operationId: 'recoverConversationSession', method: 'POST', path: '/conversation-sessions/{sessionId}/recover', ref: './paths/conversation-sessions.yaml#/~1conversation-sessions~1{sessionId}~1recover' },
     { operationId: 'registerPluginPackage', method: 'POST', path: '/admin/plugins', ref: './paths/plugins.yaml#/~1admin~1plugins' },
+    { operationId: 'rejectAdminSongMusicBrainzProposal', method: 'POST', path: '/admin/songs/{songId}/musicbrainz/proposals/{proposalId}:reject', ref: './paths/admin-review.yaml#/~1admin~1songs~1{songId}~1musicbrainz~1proposals~1{proposalId}:reject' },
     { operationId: 'rejectTelegramAccessRequest', method: 'POST', path: '/admin/telegram/access-requests/{requestId}:reject', ref: './paths/telegram.yaml#/~1admin~1telegram~1access-requests~1{requestId}:reject' },
     { operationId: 'removeAdminCatalogSongTag', method: 'DELETE', path: '/admin/songs/{songId}/tags/{tagId}', ref: './paths/admin-review.yaml#/~1admin~1songs~1{songId}~1tags~1{tagId}' },
     { operationId: 'removeServiceTeamAssignment', method: 'DELETE', path: '/team-assignments/services/{servicePlanId}/assignments/{assignmentId}', ref: './paths/team-assignments.yaml#/~1team-assignments~1services~1{servicePlanId}~1assignments~1{assignmentId}' },
@@ -595,6 +619,7 @@ export const cadentiaApiOperations = [
     { operationId: 'resolveAdminModerationFlag', method: 'POST', path: '/admin/moderation-flags/{flagId}/resolve', ref: './paths/admin-review.yaml#/~1admin~1moderation-flags~1{flagId}~1resolve' },
     { operationId: 'revokePluginPackage', method: 'POST', path: '/admin/plugins/{pluginVersionId}:revoke', ref: './paths/plugins.yaml#/~1admin~1plugins~1{pluginVersionId}:revoke' },
     { operationId: 'searchAdminAuditEvents', method: 'GET', path: '/admin/audit-events', ref: './paths/admin-review.yaml#/~1admin~1audit-events' },
+    { operationId: 'searchAdminSongMusicBrainz', method: 'POST', path: '/admin/songs/{songId}/musicbrainz/search', ref: './paths/admin-review.yaml#/~1admin~1songs~1{songId}~1musicbrainz~1search' },
     { operationId: 'searchCatalog', method: 'POST', path: '/catalog/search', ref: './paths/search.yaml#/~1catalog~1search' },
     { operationId: 'submitAdminImportCandidateApprovalAction', method: 'POST', path: '/admin/import-candidates/{candidateId}/approval-actions', ref: './paths/admin-review.yaml#/~1admin~1import-candidates~1{candidateId}~1approval-actions' },
     { operationId: 'submitAdminImportCandidateMergeDecision', method: 'POST', path: '/admin/import-candidates/{candidateId}/merge-decisions', ref: './paths/admin-review.yaml#/~1admin~1import-candidates~1{candidateId}~1merge-decisions' },

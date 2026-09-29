@@ -26,6 +26,9 @@ import com.cadentia.catalog.model.TagType;
 import com.cadentia.catalog.model.UpdateArrangementCommand;
 import com.cadentia.catalog.model.UpdateLyricsDocumentCommand;
 import com.cadentia.catalog.model.UpdateSongCommand;
+import com.cadentia.catalog.musicbrainz.MusicBrainzClientException;
+import com.cadentia.catalog.musicbrainz.MusicBrainzModels;
+import com.cadentia.catalog.musicbrainz.MusicBrainzNormalizationService;
 import com.cadentia.catalog.repository.SongRepository;
 import com.cadentia.generated.api.AdminReviewApi;
 import com.cadentia.generated.model.AdminApprovalState;
@@ -44,6 +47,20 @@ import com.cadentia.generated.model.AdminCatalogSongSummary;
 import com.cadentia.generated.model.AdminCatalogSongTagAssignRequest;
 import com.cadentia.generated.model.AdminCatalogSongUpdateRequest;
 import com.cadentia.generated.model.AdminCatalogTag;
+import com.cadentia.generated.model.MusicBrainzArtist;
+import com.cadentia.generated.model.MusicBrainzCandidate;
+import com.cadentia.generated.model.MusicBrainzDecisionRequest;
+import com.cadentia.generated.model.MusicBrainzField;
+import com.cadentia.generated.model.MusicBrainzFieldDiff;
+import com.cadentia.generated.model.MusicBrainzPreviewRequest;
+import com.cadentia.generated.model.MusicBrainzPreviewResponse;
+import com.cadentia.generated.model.MusicBrainzProposalStatus;
+import com.cadentia.generated.model.MusicBrainzRecording;
+import com.cadentia.generated.model.MusicBrainzRelease;
+import com.cadentia.generated.model.MusicBrainzReleaseGroup;
+import com.cadentia.generated.model.MusicBrainzResponse;
+import com.cadentia.generated.model.MusicBrainzSearchRequest;
+import com.cadentia.generated.model.MusicBrainzSearchResponse;
 import com.cadentia.generated.model.AdminDuplicateMatch;
 import com.cadentia.generated.model.AdminDuplicateSummary;
 import com.cadentia.generated.model.AdminImportCandidateDetailResponse;
@@ -125,6 +142,8 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.lang.Nullable;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -142,6 +161,7 @@ public class AdminImportCandidateController implements AdminReviewApi {
     private final AdminImportReviewService reviewService;
     private final AdminSongImportService songImportService;
     private final SongRepository songRepository;
+    private final MusicBrainzNormalizationService musicBrainzService;
     private final TitleNormalizer titleNormalizer = new TitleNormalizer();
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -149,9 +169,19 @@ public class AdminImportCandidateController implements AdminReviewApi {
             AdminImportReviewService reviewService,
             AdminSongImportService songImportService,
             SongRepository songRepository) {
+        this(reviewService, songImportService, songRepository, null);
+    }
+
+    @Autowired
+    public AdminImportCandidateController(
+            AdminImportReviewService reviewService,
+            AdminSongImportService songImportService,
+            SongRepository songRepository,
+            @Nullable MusicBrainzNormalizationService musicBrainzService) {
         this.reviewService = reviewService;
         this.songImportService = songImportService;
         this.songRepository = songRepository;
+        this.musicBrainzService = musicBrainzService;
     }
 
     @Override
@@ -276,6 +306,72 @@ public class AdminImportCandidateController implements AdminReviewApi {
         Song song = songRepository.findById(songId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Song not found"));
         return ResponseEntity.ok(toCatalogSongDetail(song));
+    }
+
+    @Override
+    @PreAuthorize("hasAnyAuthority(T(com.cadentia.api.security.RbacAuthorities).ROLE_CATALOG_EDITOR, T(com.cadentia.api.security.RbacAuthorities).ROLE_DOCTRINAL_REVIEWER, T(com.cadentia.api.security.RbacAuthorities).ROLE_MUSICAL_REVIEWER, T(com.cadentia.api.security.RbacAuthorities).ROLE_ADMIN)")
+    public ResponseEntity<MusicBrainzResponse> getAdminSongMusicBrainz(@PathVariable UUID songId) {
+        return ResponseEntity.ok(toMusicBrainzResponse(requireMusicBrainzService().getState(songId)));
+    }
+
+    @Override
+    @PreAuthorize("hasAnyAuthority(T(com.cadentia.api.security.RbacAuthorities).ROLE_CATALOG_EDITOR, T(com.cadentia.api.security.RbacAuthorities).ROLE_ADMIN)")
+    public ResponseEntity<MusicBrainzSearchResponse> searchAdminSongMusicBrainz(
+            @PathVariable UUID songId,
+            @RequestBody MusicBrainzSearchRequest request) {
+        try {
+            MusicBrainzModels.SearchResult result = requireMusicBrainzService().search(songId,
+                    new MusicBrainzModels.SearchRequest(
+                            request.getTitle(), request.getArtist(), request.getAlbum(), request.getRecordingMbid(),
+                            request.getLimit() == null ? 5 : request.getLimit()),
+                    "admin-web");
+            return ResponseEntity.ok(new MusicBrainzSearchResponse(result.enabled(), result.cacheHit(),
+                    result.proposals().stream().map(AdminImportCandidateController::toMusicBrainzCandidate).toList()));
+        } catch (MusicBrainzClientException exception) {
+            HttpStatus status = exception.status() == 429 ? HttpStatus.TOO_MANY_REQUESTS : HttpStatus.SERVICE_UNAVAILABLE;
+            throw new ResponseStatusException(status, "MusicBrainz is temporarily unavailable");
+        }
+    }
+
+    @Override
+    @PreAuthorize("hasAnyAuthority(T(com.cadentia.api.security.RbacAuthorities).ROLE_CATALOG_EDITOR, T(com.cadentia.api.security.RbacAuthorities).ROLE_ADMIN)")
+    public ResponseEntity<MusicBrainzPreviewResponse> previewAdminSongMusicBrainzProposal(
+            @PathVariable UUID songId,
+            @PathVariable UUID proposalId,
+            @RequestBody MusicBrainzPreviewRequest request) {
+        MusicBrainzModels.Preview preview = requireMusicBrainzService().preview(songId, proposalId,
+                request.getArrangementId(), request.getSelectedFields().stream()
+                        .map(field -> MusicBrainzModels.Field.valueOf(field.getValue())).toList());
+        return ResponseEntity.ok(new MusicBrainzPreviewResponse(
+                preview.proposalId(), preview.selectedFields().stream().map(field -> MusicBrainzField.fromValue(field.name())).toList(),
+                preview.fields().stream().map(AdminImportCandidateController::toMusicBrainzFieldDiff).toList(),
+                preview.warnings()).arrangementId(preview.arrangementId()).etag(preview.etag()));
+    }
+
+    @Override
+    @PreAuthorize("hasAnyAuthority(T(com.cadentia.api.security.RbacAuthorities).ROLE_CATALOG_EDITOR, T(com.cadentia.api.security.RbacAuthorities).ROLE_ADMIN)")
+    public ResponseEntity<MusicBrainzResponse> acceptAdminSongMusicBrainzProposal(
+            @PathVariable UUID songId,
+            @PathVariable UUID proposalId,
+            @RequestHeader("If-Match") String ifMatch,
+            @RequestBody MusicBrainzDecisionRequest request) {
+        MusicBrainzModels.State state = requireMusicBrainzService().accept(songId, proposalId,
+                request.getArrangementId(), request.getSelectedFields() == null ? List.of() : request.getSelectedFields().stream()
+                        .map(field -> MusicBrainzModels.Field.valueOf(field.getValue())).toList(),
+                request.getActor(), request.getRationale(), ifMatch);
+        return ResponseEntity.ok(toMusicBrainzResponse(state));
+    }
+
+    @Override
+    @PreAuthorize("hasAnyAuthority(T(com.cadentia.api.security.RbacAuthorities).ROLE_CATALOG_EDITOR, T(com.cadentia.api.security.RbacAuthorities).ROLE_ADMIN)")
+    public ResponseEntity<MusicBrainzResponse> rejectAdminSongMusicBrainzProposal(
+            @PathVariable UUID songId,
+            @PathVariable UUID proposalId,
+            @RequestHeader("If-Match") String ifMatch,
+            @RequestBody MusicBrainzDecisionRequest request) {
+        MusicBrainzModels.State state = requireMusicBrainzService().reject(songId, proposalId,
+                request.getActor(), request.getRationale(), ifMatch);
+        return ResponseEntity.ok(toMusicBrainzResponse(state));
     }
 
     @Override
@@ -1312,5 +1408,63 @@ public class AdminImportCandidateController implements AdminReviewApi {
                 .excludeFromRecommendation(flag.excludeFromRecommendation())
                 .openedAt(OffsetDateTime.ofInstant(flag.openedAt(), ZoneOffset.UTC))
                 .updatedAt(OffsetDateTime.ofInstant(flag.updatedAt(), ZoneOffset.UTC));
+    }
+
+    private MusicBrainzNormalizationService requireMusicBrainzService() {
+        if (musicBrainzService == null) {
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "MusicBrainz normalization is unavailable");
+        }
+        return musicBrainzService;
+    }
+
+    private static MusicBrainzResponse toMusicBrainzResponse(MusicBrainzModels.State state) {
+        MusicBrainzResponse response = new MusicBrainzResponse(
+                state.enabled(), state.proposals().stream()
+                        .map(AdminImportCandidateController::toMusicBrainzCandidate).toList());
+        return response.acceptedProposalId(state.acceptedProposalId());
+    }
+
+    private static MusicBrainzCandidate toMusicBrainzCandidate(MusicBrainzModels.Candidate candidate) {
+        MusicBrainzCandidate response = new MusicBrainzCandidate(
+                candidate.proposalId(), MusicBrainzProposalStatus.fromValue(candidate.status().name()),
+                candidate.score(), toMusicBrainzRecording(candidate.recording()));
+        response.artist(toMusicBrainzArtist(candidate.artist()))
+                .releaseGroup(toMusicBrainzReleaseGroup(candidate.releaseGroup()))
+                .release(toMusicBrainzRelease(candidate.release()))
+                .warnings(candidate.warnings())
+                .sourceReferences(candidate.sourceReferences().stream().map(java.net.URI::create).toList());
+        return response;
+    }
+
+    private static MusicBrainzArtist toMusicBrainzArtist(MusicBrainzModels.Artist artist) {
+        return artist == null ? null : new MusicBrainzArtist(artist.mbid(), artist.name())
+                .sortName(artist.sortName()).type(artist.type()).country(artist.country());
+    }
+
+    private static MusicBrainzReleaseGroup toMusicBrainzReleaseGroup(MusicBrainzModels.ReleaseGroup releaseGroup) {
+        return releaseGroup == null ? null : new MusicBrainzReleaseGroup(releaseGroup.mbid(), releaseGroup.title())
+                .primaryType(releaseGroup.primaryType()).firstReleaseDate(releaseGroup.firstReleaseDate());
+    }
+
+    private static MusicBrainzRelease toMusicBrainzRelease(MusicBrainzModels.Release release) {
+        return release == null ? null : new MusicBrainzRelease(release.mbid(), release.title())
+                .status(release.status()).date(release.date()).country(release.country());
+    }
+
+    private static MusicBrainzRecording toMusicBrainzRecording(MusicBrainzModels.Recording recording) {
+        return new MusicBrainzRecording(recording.mbid(), recording.title())
+                .lengthMilliseconds(recording.lengthMilliseconds())
+                .discNumber(recording.discNumber())
+                .trackNumber(recording.trackNumber())
+                .isrcs(recording.isrcs())
+                .sourceUri(java.net.URI.create(recording.sourceUri()));
+    }
+
+    private static MusicBrainzFieldDiff toMusicBrainzFieldDiff(MusicBrainzModels.FieldDiff field) {
+        return new MusicBrainzFieldDiff()
+                .field(MusicBrainzField.fromValue(field.field().name()))
+                .current(field.current())
+                .proposed(field.proposed())
+                .conflict(field.conflict());
     }
 }

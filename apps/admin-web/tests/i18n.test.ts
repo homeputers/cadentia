@@ -66,6 +66,15 @@ describe('church-instance i18n', () => {
         expect(translateText('es-GT', 'Both')).toBe('Ambos');
     });
 
+    it('translates MusicBrainz normalization review copy for Spanish and Portuguese churches', () => {
+        expect(translateText('es-GT', 'Normalize with MusicBrainz')).toBe('Normalizar con MusicBrainz');
+        expect(translateText('es-GT', 'Accept selected fields')).toBe('Aceptar campos seleccionados');
+        expect(translateText('es-GT', 'Musicbrainz linkage')).toBe('Vinculación de MusicBrainz');
+        expect(translateText('pt-BR', 'Normalize with MusicBrainz')).toBe('Normalizar com MusicBrainz');
+        expect(translateText('pt-BR', 'Reject proposal')).toBe('Rejeitar proposta');
+        expect(translateText('pt-BR', 'Target arrangement')).toBe('Arranjo de destino');
+    });
+
     it('translates user administration copy and roles for Spanish and Portuguese churches', () => {
         expect(routeLabel('pt-BR', 'User administration')).toBe('Administração de usuários');
         expect(translateText('es-GT', 'Identity-provider subject')).toBe('Asunto del proveedor de identidad');
